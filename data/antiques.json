@@ -1,0 +1,39 @@
+[
+  {
+    "id": "mechanism-sample",
+    "title": "抜け殻の機構",
+    "description": "木の台の上に置かれた、灰色の樹脂の骨格。歯車と押し出しの跡。もともと何かの中にあった部品で、今は中身だけが残っている。",
+    "location": "京都",
+    "images": ["/uploads/antiques/mechanism-sample/1.png"],
+    "createdAt": "2026-06-23T11:00:00.000Z",
+    "orientation": "landscape",
+    "price": 15000,
+    "priceLabel": "¥15,000",
+    "forSale": true,
+    "sold": false
+  },
+  {
+    "id": "nail-frame-sample",
+    "title": "釘打ち枠",
+    "description": "木の枠に錆びた釘。誰かの仕事のあとが、まだ残っている。",
+    "location": "京都",
+    "images": [],
+    "createdAt": "2026-06-23T00:00:00.000Z",
+    "price": 8800,
+    "priceLabel": "¥8,800",
+    "forSale": true,
+    "sold": false
+  },
+  {
+    "id": "tea-bowl-sample",
+    "title": "染付茶碗",
+    "description": "釉の流れが止まった、小さな茶碗。欠けた縁が、使われた証。",
+    "location": "京都",
+    "images": [],
+    "createdAt": "2026-06-23T00:00:00.000Z",
+    "price": 12000,
+    "priceLabel": "¥12,000",
+    "forSale": true,
+    "sold": false
+  }
+]

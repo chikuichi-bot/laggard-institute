@@ -1,0 +1,20 @@
+[
+  {
+    "id": "sea-glass-sample",
+    "title": "色あせたガラス",
+    "description": "波打ち際で拾った、色の抜けたガラス片。",
+    "location": "漂着物",
+    "foundAt": "2026-06",
+    "images": [],
+    "createdAt": "2026-06-23T00:00:00.000Z"
+  },
+  {
+    "id": "salt-wood-sample",
+    "title": "塩を帯びた木片",
+    "description": "塩を帯びた木片。どこから来たのかは、もうわからない。",
+    "location": "漂着物",
+    "foundAt": "2026-06",
+    "images": [],
+    "createdAt": "2026-06-23T00:00:00.000Z"
+  }
+]
