@@ -9,6 +9,13 @@ type PhotoPickerProps = {
   hint?: string;
 };
 
+function fileListFromArray(files: File[]): FileList | null {
+  if (files.length === 0) return null;
+  const transfer = new DataTransfer();
+  files.forEach((file) => transfer.items.add(file));
+  return transfer.files;
+}
+
 export default function PhotoPicker({
   files,
   onChange,
@@ -27,6 +34,25 @@ export default function PhotoPicker({
     setPreviews(urls);
     return () => urls.forEach((url) => URL.revokeObjectURL(url));
   }, [files]);
+
+  function removeAt(index: number) {
+    if (!files) return;
+    const next = Array.from(files);
+    next.splice(index, 1);
+    onChange(fileListFromArray(next));
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
+
+  function appendFiles(incoming: FileList | null) {
+    if (!incoming || incoming.length === 0) return;
+    const merged = [...Array.from(files ?? []), ...Array.from(incoming)];
+    onChange(fileListFromArray(merged));
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
 
   return (
     <div className="photo-picker">
@@ -48,14 +74,24 @@ export default function PhotoPicker({
         capture="environment"
         multiple
         className="photo-picker-input"
-        onChange={(e) => onChange(e.target.files)}
+        onChange={(e) => appendFiles(e.target.files)}
       />
 
       {previews.length > 0 ? (
         <div className="photo-picker-previews">
           {previews.map((src, index) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={src} src={src} alt={`プレビュー ${index + 1}`} />
+            <div key={src} className="photo-existing-wrap">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt={`プレビュー ${index + 1}`} />
+              <button
+                type="button"
+                className="photo-existing-remove"
+                onClick={() => removeAt(index)}
+                aria-label={`プレビュー ${index + 1} を外す`}
+              >
+                ×
+              </button>
+            </div>
           ))}
         </div>
       ) : null}

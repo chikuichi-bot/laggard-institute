@@ -1,26 +1,80 @@
 import Link from "next/link";
-import { CONTACT_EMAIL } from "@/lib/constants";
-import { categoryBasePath, categoryLabel } from "@/lib/items";
+import DetailPhotoViewer from "@/components/DetailPhotoViewer";
+import { catalogDisplayTitle, categoryBasePath, categoryLabel } from "@/lib/category";
+import { canPurchaseItem } from "@/lib/purchase-mailto";
 import type { CatalogItem, ItemCategory } from "@/lib/types";
 
 type ItemDetailViewProps = {
   category: ItemCategory;
   item: CatalogItem;
+  items: CatalogItem[];
 };
 
-function purchaseMailto(item: CatalogItem) {
-  const subject = encodeURIComponent(`購入希望：${item.title}`);
-  const body = encodeURIComponent(
-    `${item.title} について購入を検討しています。\n\n商品ID: ${item.id}\n`,
-  );
-  return `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
-}
-
-export default function ItemDetailView({ category, item }: ItemDetailViewProps) {
+export default function ItemDetailView({ category, item, items }: ItemDetailViewProps) {
   const base = categoryBasePath(category);
   const isAntique = category === "antiques";
-  const canPurchase = isAntique && item.forSale && !item.sold;
-  const [hero, ...thumbs] = item.images;
+  const displayTitle = catalogDisplayTitle(item, category);
+  const canPurchase = canPurchaseItem(item);
+
+  if (isAntique) {
+    return (
+      <article className="detail-page detail-page--antique">
+        <header className="detail-antique-intro">
+            <p className="detail-antique-eyebrow">{categoryLabel(category)}</p>
+            <h1 className="detail-antique-title">{item.title}</h1>
+            <dl className="detail-antique-facts">
+              <div className="detail-antique-fact">
+                <dt>状態</dt>
+                <dd>
+                  {item.sold ? (
+                    <span className="detail-antique-badge detail-antique-badge--sold">売約済み</span>
+                  ) : item.forSale ? (
+                    <span className="detail-antique-badge detail-antique-badge--sale">販売中</span>
+                  ) : (
+                    "展示"
+                  )}
+                </dd>
+              </div>
+              {item.priceLabel ? (
+                <div className="detail-antique-fact">
+                  <dt>価格</dt>
+                  <dd className="detail-antique-price">{item.priceLabel}</dd>
+                </div>
+              ) : null}
+              {item.location ? (
+                <div className="detail-antique-fact">
+                  <dt>場所</dt>
+                  <dd>{item.location}</dd>
+                </div>
+              ) : null}
+            </dl>
+        </header>
+
+        <DetailPhotoViewer category={category} item={item} items={items} />
+
+        {item.description ? (
+          <section className="detail-antique-section" aria-labelledby="detail-antique-about-heading">
+            <h2 id="detail-antique-about-heading" className="detail-antique-section-title">
+              説明
+            </h2>
+            <p className="detail-antique-description">{item.description}</p>
+          </section>
+        ) : null}
+
+        {canPurchase ? (
+          <section className="detail-antique-section detail-antique-section--actions">
+            <Link
+              href={`/antiques/${item.id}/purchase`}
+              className="action-btn action-btn--primary detail-antique-buy"
+            >
+              購入のお問い合わせ
+            </Link>
+            <p className="detail-antique-note">記入ページへ進み、内容をお送りください。</p>
+          </section>
+        ) : null}
+      </article>
+    );
+  }
 
   return (
     <>
@@ -28,54 +82,16 @@ export default function ItemDetailView({ category, item }: ItemDetailViewProps) 
         <Link href={base} className="action-btn">
           ← {categoryLabel(category)}一覧
         </Link>
-        {canPurchase ? (
-          <a className="action-btn action-btn--primary" href={purchaseMailto(item)}>
-            購入のお問い合わせ
-          </a>
-        ) : null}
       </div>
 
-      <article className="detail-card detail-card--photo">
-        <div className="detail-photos">
-          {hero ? (
-            <>
-              <figure className="detail-hero">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={hero} alt={item.title} />
-              </figure>
-              {thumbs.length > 0 ? (
-                <div className="detail-thumbs">
-                  {thumbs.map((src, index) => (
-                    <figure key={src}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt={`${item.title} ${index + 2}`} />
-                    </figure>
-                  ))}
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div className="item-placeholder item-placeholder--hero" aria-hidden>
-              <span>写真なし</span>
-            </div>
-          )}
-        </div>
+      <article className="detail-page detail-page--photo">
+        <DetailPhotoViewer category={category} item={item} items={items} />
 
-        <div className="detail-body">
-          <div className="text-wrapper detail-vertical-wrap">
-            <p className="vertical-text">{item.description}</p>
-          </div>
-
-          <footer className="detail-meta-block">
-            <h1>{item.title}</h1>
-            {item.location ? <p>{item.location}</p> : null}
-            {item.foundAt ? <p>{item.foundAt}</p> : null}
-            {isAntique && item.priceLabel ? (
-              <p className="detail-price">{item.priceLabel}</p>
-            ) : null}
-            {isAntique && item.sold ? <p className="item-card-sold">売約済み</p> : null}
+        {displayTitle ? (
+          <footer className="detail-meta-block detail-meta-block--place-only">
+            <h1>{displayTitle}</h1>
           </footer>
-        </div>
+        ) : null}
       </article>
     </>
   );

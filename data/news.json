@@ -1,0 +1,19 @@
+{
+  "updatedAt": "2026-06-24T00:00:00.000Z",
+  "items": [
+    {
+      "id": "omikuji-bunko-update",
+      "title": "おみくじ文庫、最新版を公開しました",
+      "body": "青空文庫から偶然の一節を引く小さな図書館。App Store でダウンロードできます。",
+      "href": "https://apps.apple.com/jp/app/%E3%81%8A%E3%81%BF%E3%81%8F%E3%81%98%E6%96%87%E5%BA%AB/id6760742804",
+      "createdAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
+      "id": "antiques-new",
+      "title": "古道具、新入荷",
+      "body": "ラガード研究所にて、境内で見つけた古道具を展示・販売しています。",
+      "href": "/antiques",
+      "createdAt": "2026-06-15T00:00:00.000Z"
+    }
+  ]
+}

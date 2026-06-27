@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import FramedCatalog from "@/components/FramedCatalog";
 import ItemGrid from "@/components/ItemGrid";
 import SiteShell from "@/components/SiteShell";
 import { readCatalog, sortByFoundOrder } from "@/lib/items";
@@ -9,7 +10,9 @@ export default async function SeaPage() {
 
   return (
     <SiteShell tagline="海辺に届いた、漂着物の記録。">
-      <ItemGrid category="sea" items={items} />
+      <FramedCatalog>
+        <ItemGrid category="sea" items={items} />
+      </FramedCatalog>
     </SiteShell>
   );
 }

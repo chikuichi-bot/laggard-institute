@@ -1,20 +1,242 @@
 [
   {
-    "id": "sea-glass-sample",
-    "title": "色あせたガラス",
-    "description": "波打ち際で拾った、色の抜けたガラス片。",
-    "location": "漂着物",
+    "id": "sea-glass-grid",
+    "title": "海",
+    "description": "",
+    "location": "海",
     "foundAt": "2026-06",
-    "images": [],
-    "createdAt": "2026-06-23T00:00:00.000Z"
+    "images": [
+      "/uploads/sea/sea-glass-grid/1.png"
+    ],
+    "createdAt": "2026-06-24T12:00:00.000Z",
+    "orientation": "landscape"
   },
   {
-    "id": "salt-wood-sample",
-    "title": "塩を帯びた木片",
-    "description": "塩を帯びた木片。どこから来たのかは、もうわからない。",
-    "location": "漂着物",
+    "id": "sea-drift-root",
+    "title": "海",
+    "description": "",
+    "location": "海",
     "foundAt": "2026-06",
-    "images": [],
-    "createdAt": "2026-06-23T00:00:00.000Z"
+    "images": [
+      "/uploads/sea/sea-drift-root/1.png"
+    ],
+    "createdAt": "2026-06-24T12:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "sea-worn-soccer-ball",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-worn-soccer-ball/1.png"
+    ],
+    "createdAt": "2026-06-24T12:02:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-bulb-wire",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-bulb-wire/1.png"
+    ],
+    "createdAt": "2026-06-24T12:03:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-glass-bottles",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-glass-bottles/1.png"
+    ],
+    "createdAt": "2026-06-24T12:04:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-lightbox-white-objects",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-lightbox-white-objects/1.png"
+    ],
+    "createdAt": "2026-06-24T12:05:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-pottery-rai",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-pottery-rai/1.png"
+    ],
+    "createdAt": "2026-06-24T12:06:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-plastic-fragments",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-plastic-fragments/1.png"
+    ],
+    "createdAt": "2026-06-24T12:07:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-sphere-bowl",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-sphere-bowl/1.png"
+    ],
+    "createdAt": "2026-06-24T12:08:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-dome-caps",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-dome-caps/1.png"
+    ],
+    "createdAt": "2026-06-24T12:09:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-beachcombed-collection",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-beachcombed-collection/1.png"
+    ],
+    "createdAt": "2026-06-24T13:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-fishing-line-tangle",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-fishing-line-tangle/1.png"
+    ],
+    "createdAt": "2026-06-24T13:01:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-rusted-bowl-fragment",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-rusted-bowl-fragment/1.png"
+    ],
+    "createdAt": "2026-06-24T13:02:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-line-with-barnacles",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-line-with-barnacles/1.png"
+    ],
+    "createdAt": "2026-06-24T13:03:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-line-tangle-held",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-line-tangle-held/1.png"
+    ],
+    "createdAt": "2026-06-24T13:04:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-golf-balls-pair",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-golf-balls-pair/1.png"
+    ],
+    "createdAt": "2026-06-24T13:05:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-line-tangle-portrait",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-line-tangle-portrait/1.png"
+    ],
+    "createdAt": "2026-06-24T13:06:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "sea-plastic-fragment-ball",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-plastic-fragment-ball/1.png"
+    ],
+    "createdAt": "2026-06-24T13:07:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-golf-ball-worn",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-golf-ball-worn/1.png"
+    ],
+    "createdAt": "2026-06-24T13:08:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-golf-ball-tan",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/sea/sea-golf-ball-tan/1.png"
+    ],
+    "createdAt": "2026-06-24T13:09:00.000Z",
+    "orientation": "landscape"
   }
 ]

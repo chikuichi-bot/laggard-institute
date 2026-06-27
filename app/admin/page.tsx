@@ -18,6 +18,16 @@ const tasks = [
     label: "海で拾ったもの",
     desc: "漂着物を記録する",
   },
+  {
+    href: "/admin/edit",
+    label: "掲載を編集",
+    desc: "写真の削除・差し替え、タイトル変更",
+  },
+  {
+    href: "/admin/news",
+    label: "ニュースを編集",
+    desc: "トップのお知らせを書き換える",
+  },
 ];
 
 const views = [

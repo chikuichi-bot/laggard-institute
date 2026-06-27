@@ -6,17 +6,12 @@ export default function ContactPage() {
 
   return (
     <SiteShell tagline="お問い合わせ・展示・漂着物について。">
-      <div className="action-bar">
-        <a className="action-btn action-btn--primary" href={mailto}>
-          {CONTACT_EMAIL}
-        </a>
-      </div>
-
-      <article className="content-card content-card--flat">
-        <div className="horizontal-body contact-block">
-          <p>
-            古道具のご購入、漂着物について、展示へのご参加、アプリについてのご質問など、お気軽にどうぞ。
-          </p>
+      <article className="content-card content-card--contact">
+        <div className="contact-block horizontal-body">
+          <p>ご質問など、お気軽にどうぞ。</p>
+          <a className="action-btn action-btn--primary contact-email" href={mailto}>
+            {CONTACT_EMAIL}
+          </a>
           <p className="detail-meta-plain">ラガード研究所 / 淡嶋健仁</p>
         </div>
       </article>

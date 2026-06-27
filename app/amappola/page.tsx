@@ -3,12 +3,12 @@ import VerticalCard from "@/components/VerticalCard";
 
 export default function AmappolaPage() {
   return (
-    <SiteShell tagline="言葉になる前の地平線を見る、詩集。">
+    <SiteShell tagline="街に落ちていた、名前のない言葉。">
       <VerticalCard
         text={
-          "アマポーラ詩集は、意味を届けるのではなく、存在として残す詩集です。語り手の内面ではなく、外から見える光景と声だけ。世界に落ちている言葉を採集し、標本にする。おみくじ文庫は、その態度を機械にしたもの。"
+          "アマポーラ詩集は、街や日常に落ちていた言葉や風景を、余計な説明をせず、そのまま残した詩集です。意味を届けるのではなく、そこにあったものを見るための本です。"
         }
-        meta="アマポーラ詩集 / 見方の正本"
+        meta="アマポーラ詩集 / 淡嶋健仁"
       />
     </SiteShell>
   );

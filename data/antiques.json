@@ -4,7 +4,11 @@
     "title": "抜け殻の機構",
     "description": "木の台の上に置かれた、灰色の樹脂の骨格。歯車と押し出しの跡。もともと何かの中にあった部品で、今は中身だけが残っている。",
     "location": "京都",
-    "images": ["/uploads/antiques/mechanism-sample/1.png"],
+    "images": [
+      "/uploads/antiques/mechanism-sample/1.png",
+      "/uploads/antiques/mechanism-sample/2.png",
+      "/uploads/antiques/mechanism-sample/3.png"
+    ],
     "createdAt": "2026-06-23T11:00:00.000Z",
     "orientation": "landscape",
     "price": 15000,

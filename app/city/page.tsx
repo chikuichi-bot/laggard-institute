@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import FramedCatalog from "@/components/FramedCatalog";
 import ItemGrid from "@/components/ItemGrid";
 import SiteShell from "@/components/SiteShell";
 import { readCatalog, sortByFoundOrder } from "@/lib/items";
@@ -9,7 +10,9 @@ export default async function CityPage() {
 
   return (
     <SiteShell tagline="街に落ちていた、名前のない断片。">
-      <ItemGrid category="city" items={items} />
+      <FramedCatalog>
+        <ItemGrid category="city" items={items} />
+      </FramedCatalog>
     </SiteShell>
   );
 }

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PhotoPicker from "@/components/PhotoPicker";
+import { isPhotoOnlyCategory } from "@/lib/category";
 import { loadAdminSecret, saveAdminSecret } from "@/lib/admin-auth";
 import type { ItemCategory } from "@/lib/types";
 
@@ -23,6 +24,7 @@ export default function UploadItemForm({
   defaults = {},
 }: UploadItemFormProps) {
   const router = useRouter();
+  const photoOnly = isPhotoOnlyCategory(category);
   const {
     location: defaultLocation = "",
     forSale: defaultForSale = category === "antiques",
@@ -70,6 +72,13 @@ export default function UploadItemForm({
       return;
     }
 
+    const trimmedLocation = location.trim();
+    if (photoOnly && !trimmedLocation) {
+      setMessage("場所を入力してください。");
+      setStatus("error");
+      return;
+    }
+
     if (rememberSecret && secret) {
       saveAdminSecret(secret);
     }
@@ -80,9 +89,9 @@ export default function UploadItemForm({
     const body = new FormData();
     body.set("secret", secret);
     body.set("category", category);
-    body.set("title", title);
-    body.set("description", description);
-    body.set("location", location);
+    body.set("title", photoOnly ? trimmedLocation : title);
+    body.set("description", photoOnly ? "" : description);
+    body.set("location", trimmedLocation);
     body.set("foundAt", foundAt);
     body.set("priceLabel", priceLabel);
     body.set("forSale", forSale ? "true" : "false");
@@ -135,40 +144,45 @@ export default function UploadItemForm({
             onChange={setFiles}
             hint={
               category === "antiques"
-                ? "1枚目が一覧のメイン写真。別角度は追加で選べます。"
-                : "撮った向き（縦・横）のまま掲載されます。"
+                ? "× で外せます。1枚目が一覧のメイン写真。"
+                : "× で外せます。撮った向き（縦・横）のまま掲載されます。"
             }
           />
 
-          <label className="form-field">
-            <span>タイトル</span>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={category === "antiques" ? "例：抜け殻の機構" : "例：点眼の切れ端"}
-              required
-            />
-          </label>
+          {!photoOnly ? (
+            <>
+              <label className="form-field">
+                <span>タイトル</span>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="例：抜け殻の機構"
+                  required
+                />
+              </label>
+
+              <label className="form-field">
+                <span>説明（詳細ページの縦書き文）</span>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={5}
+                  placeholder="そのまま見た印象を、短い文で。"
+                  required
+                />
+              </label>
+            </>
+          ) : null}
 
           <label className="form-field">
-            <span>説明（詳細ページの縦書き文）</span>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-              placeholder="そのまま見た印象を、短い文で。"
-              required
-            />
-          </label>
-
-          <label className="form-field">
-            <span>場所・メモ</span>
+            <span>{photoOnly ? "場所" : "場所・メモ"}</span>
             <input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder={category === "antiques" ? "京都" : "西成、岸辺 など"}
+              placeholder={photoOnly ? "西成、左京区聖護院円頓美町 など" : "京都"}
+              required={photoOnly}
             />
           </label>
 

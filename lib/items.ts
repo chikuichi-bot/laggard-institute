@@ -1,6 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { categoryBasePath, categoryLabel } from "./category";
 import type { ItemCategory } from "./types";
+
+export { categoryBasePath, categoryLabel };
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -39,23 +42,8 @@ export function makeItemId(title: string) {
   return base ? `${base}-${suffix}` : `item-${suffix}`;
 }
 
-export function categoryLabel(category: ItemCategory) {
-  switch (category) {
-    case "antiques":
-      return "古道具";
-    case "city":
-      return "街で拾った物";
-    case "sea":
-      return "海で拾ったもの";
-  }
-}
-
 export function sortByFoundOrder(items: import("./types").CatalogItem[]) {
   return [...items].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
-}
-
-export function categoryBasePath(category: ItemCategory) {
-  return `/${category}`;
 }

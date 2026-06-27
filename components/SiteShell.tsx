@@ -26,7 +26,7 @@ export default function SiteShell({ tagline, children }: SiteShellProps) {
           <h1>ラガード研究所</h1>
         </Link>
         <p className="tagline">
-          {tagline ?? "古道具と、拾ったものと、言葉の標本。"}
+          {tagline ?? "古道具と、拾ったものと、"}
         </p>
       </header>
 
