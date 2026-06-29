@@ -1047,6 +1047,11 @@ body:has(.content-card--home) {
   color: var(--text-sub);
 }
 
+.purchase-page-lead--sub {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 .purchase-page-product {
   padding-bottom: 22px;
   border-bottom: 1px dashed var(--border-color);
@@ -1720,6 +1725,13 @@ body:has(.content-card--home) {
   letter-spacing: 0.04em;
 }
 
+.form-field-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-sub);
+  letter-spacing: 0.03em;
+}
+
 .form-field--row {
   flex-direction: row;
   align-items: center;
@@ -1856,6 +1868,43 @@ body:has(.content-card--home) {
   font-weight: normal;
   color: var(--text-sub);
   letter-spacing: 0.08em;
+}
+
+.admin-section-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-sub);
+  letter-spacing: 0.04em;
+}
+
+.admin-status-list {
+  margin: 0 0 10px;
+  padding-left: 1.2em;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+}
+
+.admin-setup-steps {
+  margin: 0 0 12px;
+  padding-left: 1.2em;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+}
+
+.admin-setup-steps a {
+  color: var(--text-main);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-setup-steps code {
+  font-size: 12px;
+  letter-spacing: 0.02em;
 }
 
 .admin-form-card {

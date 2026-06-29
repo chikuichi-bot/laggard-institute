@@ -8,6 +8,7 @@ import {
   readImageSize,
 } from "@/lib/image-meta";
 import { makeItemId, readCatalog, writeCatalog } from "@/lib/items";
+import { parsePriceFields } from "@/lib/price";
 import {
   deleteItemUploadDir,
   deletePublicFile,
@@ -92,7 +93,10 @@ export async function POST(request: Request) {
   }
 
   const foundAt = String(form.get("foundAt") ?? "").trim() || undefined;
-  const priceLabel = String(form.get("priceLabel") ?? "").trim() || undefined;
+  const pricing = parsePriceFields(
+    String(form.get("price") ?? ""),
+    String(form.get("priceLabel") ?? ""),
+  );
   const forSale = String(form.get("forSale") ?? "") === "true";
 
   const item: CatalogItem = {
@@ -106,7 +110,7 @@ export async function POST(request: Request) {
     orientation,
     ...(category === "antiques"
       ? {
-          priceLabel,
+          ...pricing,
           forSale,
           sold: false,
         }
@@ -160,7 +164,12 @@ export async function PATCH(request: Request) {
   item.foundAt = String(form.get("foundAt") ?? "").trim() || undefined;
 
   if (category === "antiques") {
-    item.priceLabel = String(form.get("priceLabel") ?? "").trim() || undefined;
+    const pricing = parsePriceFields(
+      String(form.get("price") ?? ""),
+      String(form.get("priceLabel") ?? ""),
+    );
+    item.price = pricing.price;
+    item.priceLabel = pricing.priceLabel;
     item.forSale = String(form.get("forSale") ?? "") === "true";
     item.sold = String(form.get("sold") ?? "") === "true";
   }

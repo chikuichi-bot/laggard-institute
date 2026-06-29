@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AdminShell from "@/components/AdminShell";
+import { getStripeWebhookSecret, isStripeCheckoutAvailable } from "@/lib/stripe";
 
 const tasks = [
   {
@@ -37,6 +38,9 @@ const views = [
 ];
 
 export default function AdminHubPage() {
+  const stripeKeySet = isStripeCheckoutAvailable();
+  const stripeWebhookSet = Boolean(getStripeWebhookSecret());
+
   return (
     <AdminShell
       title="作業"
@@ -55,6 +59,49 @@ export default function AdminHubPage() {
           </Link>
         ))}
       </div>
+
+      <section className="admin-section">
+        <h2 className="admin-section-title">カード決済（Stripe）</h2>
+        <ul className="admin-status-list">
+          <li>STRIPE_SECRET_KEY: {stripeKeySet ? "設定済" : "未設定"}</li>
+          <li>
+            STRIPE_WEBHOOK_SECRET:{" "}
+            {stripeWebhookSet ? "設定済" : "未設定（本番では推奨）"}
+          </li>
+        </ul>
+        {!stripeKeySet ? (
+          <>
+            <ol className="admin-setup-steps">
+              <li>
+                <a
+                  href="https://dashboard.stripe.com/test/apikeys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Stripe テスト API キー
+                </a>
+                を開き、「シークレットキー」（<code>sk_test_...</code>）をコピー
+              </li>
+              <li>
+                プロジェクトの <code>.env.local</code> の <code>STRIPE_SECRET_KEY=</code>{" "}
+                の右に貼り付け
+              </li>
+              <li>開発サーバーを再起動（<code>npm run dev</code>）</li>
+            </ol>
+            <p className="admin-section-note">
+              Webhook（<code>whsec_...</code>）はローカルでは省略できます。決済完了ページで売約済みに更新されます。
+              本番では Stripe ダッシュボードで{" "}
+              <code>/api/stripe/webhook</code> に <code>checkout.session.completed</code>{" "}
+              を登録してください。
+            </p>
+          </>
+        ) : !stripeWebhookSet ? (
+          <p className="admin-section-note">
+            Webhook 未設定でも、決済完了ページで売約済みに更新されます。本番デプロイ後は Webhook
+            の設定を推奨します。
+          </p>
+        ) : null}
+      </section>
 
       <section className="admin-section">
         <h2 className="admin-section-title">掲載を確認</h2>

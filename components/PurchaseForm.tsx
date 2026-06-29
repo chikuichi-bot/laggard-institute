@@ -12,10 +12,17 @@ import type { CatalogItem } from "@/lib/types";
 type PurchaseFormProps = {
   item: CatalogItem;
   stripeAvailable: boolean;
+  cardCheckoutReady: boolean;
 };
 
-export default function PurchaseForm({ item, stripeAvailable }: PurchaseFormProps) {
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("bank_transfer");
+export default function PurchaseForm({
+  item,
+  stripeAvailable,
+  cardCheckoutReady,
+}: PurchaseFormProps) {
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>(
+    cardCheckoutReady ? "credit_card" : "bank_transfer",
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -49,13 +56,29 @@ export default function PurchaseForm({ item, stripeAvailable }: PurchaseFormProp
       paymentMethod,
     };
 
-    if (paymentMethod === "credit_card" && stripeAvailable) {
+    if (paymentMethod === "credit_card") {
+      if (!cardCheckoutReady) {
+        setError(
+          stripeAvailable
+            ? "この商品はカード決済の価格が未設定です。銀行振込をお選びください。"
+            : "カード決済は現在準備中です。銀行振込をお選びください。",
+        );
+        return;
+      }
+
       setLoading(true);
       try {
         const response = await fetch("/api/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ itemId: item.id }),
+          body: JSON.stringify({
+            itemId: item.id,
+            name: trimmedName,
+            email: trimmedEmail,
+            phone: phone.trim(),
+            address: address.trim(),
+            message: message.trim(),
+          }),
         });
         const payload = (await response.json()) as { url?: string; error?: string };
         if (!response.ok || !payload.url) {
@@ -76,17 +99,17 @@ export default function PurchaseForm({ item, stripeAvailable }: PurchaseFormProp
   }
 
   const submitLabel =
-    paymentMethod === "credit_card" && stripeAvailable
+    paymentMethod === "credit_card" && cardCheckoutReady
       ? "カードで支払う"
       : paymentMethod === "bank_transfer"
         ? "振込で購入を申し込む"
         : "内容を送る";
 
   const submitNote =
-    paymentMethod === "credit_card" && stripeAvailable
+    paymentMethod === "credit_card" && cardCheckoutReady
       ? "Stripe の安全な決済ページへ移動します。"
       : paymentMethod === "credit_card"
-        ? "カード決済準備中のため、メールアプリが開きます。"
+        ? "カード決済の準備ができていません。銀行振込をお選びください。"
         : "送信ボタンでメールアプリが開きます。振込先は下記をご確認ください。";
 
   return (
@@ -100,26 +123,35 @@ export default function PurchaseForm({ item, stripeAvailable }: PurchaseFormProp
         </h2>
 
         <div className="purchase-payment-options" role="radiogroup" aria-labelledby="purchase-payment-heading">
-          {paymentMethodOptions.map((option) => (
-            <label
-              key={option.id}
-              className={`purchase-payment-option${paymentMethod === option.id ? " is-selected" : ""}${
-                option.id === "credit_card" && !stripeAvailable ? " is-disabled-hint" : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name="paymentMethod"
-                value={option.id}
-                checked={paymentMethod === option.id}
-                onChange={() => setPaymentMethod(option.id)}
-              />
-              <span className="purchase-payment-option-body">
-                <span className="purchase-payment-option-label">{option.label}</span>
-                <span className="purchase-payment-option-desc">{option.description}</span>
-              </span>
-            </label>
-          ))}
+          {paymentMethodOptions.map((option) => {
+            const cardDisabled = option.id === "credit_card" && !cardCheckoutReady;
+            return (
+              <label
+                key={option.id}
+                className={`purchase-payment-option${paymentMethod === option.id ? " is-selected" : ""}${
+                  cardDisabled ? " is-disabled-hint" : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value={option.id}
+                  checked={paymentMethod === option.id}
+                  onChange={() => setPaymentMethod(option.id)}
+                />
+                <span className="purchase-payment-option-body">
+                  <span className="purchase-payment-option-label">{option.label}</span>
+                  <span className="purchase-payment-option-desc">
+                    {cardDisabled && stripeAvailable
+                      ? "価格（円）が未設定のため利用できません"
+                      : cardDisabled
+                        ? "現在準備中です"
+                        : option.description}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
         </div>
 
         {paymentMethod === "bank_transfer" ? (
@@ -151,14 +183,17 @@ export default function PurchaseForm({ item, stripeAvailable }: PurchaseFormProp
         ) : (
           <div className="purchase-payment-info">
             <h3 className="purchase-payment-info-title">クレジットカード</h3>
-            {stripeAvailable ? (
+            {cardCheckoutReady ? (
               <p className="purchase-payment-info-note">
                 Visa、Mastercard、American Express などがご利用いただけます。送信後、Stripe
                 の決済ページへ移動します。
+                {item.priceLabel ? `（${item.priceLabel}）` : null}
               </p>
             ) : (
               <p className="purchase-payment-info-note">
-                カード決済は現在準備中です。送信後、メールでカード決済のご案内をいたします。お急ぎの場合は銀行振込をご利用ください。
+                {stripeAvailable
+                  ? "この商品のカード決済価格が未設定です。管理画面で価格（円）を設定するか、銀行振込をご利用ください。"
+                  : "カード決済は現在準備中です。銀行振込をご利用ください。"}
               </p>
             )}
           </div>

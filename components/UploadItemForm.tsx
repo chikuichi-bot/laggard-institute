@@ -36,7 +36,7 @@ export default function UploadItemForm({
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState(defaultLocation);
   const [foundAt, setFoundAt] = useState("");
-  const [priceLabel, setPriceLabel] = useState("");
+  const [priceYen, setPriceYen] = useState("");
   const [forSale, setForSale] = useState(defaultForSale);
   const [secret, setSecret] = useState("");
   const [rememberSecret, setRememberSecret] = useState(true);
@@ -57,7 +57,7 @@ export default function UploadItemForm({
     setDescription("");
     setLocation(defaultLocation);
     setFoundAt("");
-    setPriceLabel("");
+    setPriceYen("");
     setForSale(defaultForSale);
     setFiles(null);
     setStatus("idle");
@@ -93,7 +93,7 @@ export default function UploadItemForm({
     body.set("description", photoOnly ? "" : description);
     body.set("location", trimmedLocation);
     body.set("foundAt", foundAt);
-    body.set("priceLabel", priceLabel);
+    body.set("price", priceYen);
     body.set("forSale", forSale ? "true" : "false");
     Array.from(files).forEach((file) => body.append("images", file));
 
@@ -208,14 +208,15 @@ export default function UploadItemForm({
                 <span>販売する（購入ボタンを表示）</span>
               </label>
               <label className="form-field">
-                <span>価格表示</span>
+                <span>価格（円）</span>
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={priceLabel}
-                  onChange={(e) => setPriceLabel(e.target.value)}
-                  placeholder="¥8,800"
+                  value={priceYen}
+                  onChange={(e) => setPriceYen(e.target.value)}
+                  placeholder="8800"
                 />
+                <span className="form-field-hint">カード決済には数値の価格が必要です</span>
               </label>
             </>
           ) : null}

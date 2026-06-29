@@ -26,7 +26,7 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
   const [description, setDescription] = useState(item.description);
   const [location, setLocation] = useState(item.location ?? "");
   const [foundAt, setFoundAt] = useState(foundAtForInput(item.foundAt));
-  const [priceLabel, setPriceLabel] = useState(item.priceLabel ?? "");
+  const [priceYen, setPriceYen] = useState(item.price ? String(item.price) : "");
   const [forSale, setForSale] = useState(item.forSale ?? false);
   const [sold, setSold] = useState(item.sold ?? false);
   const [secret, setSecret] = useState("");
@@ -72,7 +72,7 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
     body.set("description", photoOnly ? "" : description);
     body.set("location", location);
     body.set("foundAt", foundAt);
-    body.set("priceLabel", priceLabel);
+    body.set("price", priceYen);
     body.set("forSale", forSale ? "true" : "false");
     body.set("sold", sold ? "true" : "false");
     body.append("removeImages", url);
@@ -110,7 +110,7 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
     body.set("description", photoOnly ? "" : description);
     body.set("location", location);
     body.set("foundAt", foundAt);
-    body.set("priceLabel", priceLabel);
+    body.set("price", priceYen);
     body.set("forSale", forSale ? "true" : "false");
     body.set("sold", sold ? "true" : "false");
     removeImages.forEach((url) => body.append("removeImages", url));
@@ -321,14 +321,15 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
                 <span>売約済み</span>
               </label>
               <label className="form-field">
-                <span>価格表示</span>
+                <span>価格（円）</span>
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={priceLabel}
-                  onChange={(e) => setPriceLabel(e.target.value)}
-                  placeholder="¥8,800"
+                  value={priceYen}
+                  onChange={(e) => setPriceYen(e.target.value)}
+                  placeholder="8800"
                 />
+                <span className="form-field-hint">カード決済には数値の価格が必要です（例: 8800 → ¥8,800）</span>
               </label>
             </>
           ) : null}

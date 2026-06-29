@@ -18,6 +18,7 @@ export default async function AntiquePurchasePage({ params }: Props) {
 
   const hero = item.images[0];
   const stripeAvailable = isStripeCheckoutAvailable();
+  const cardCheckoutReady = stripeAvailable && Boolean(item.price && item.price > 0);
 
   return (
     <SiteShell tagline="購入のお問い合わせ">
@@ -66,7 +67,11 @@ export default async function AntiquePurchasePage({ params }: Props) {
           </div>
         </section>
 
-        <PurchaseForm item={item} stripeAvailable={stripeAvailable} />
+        <PurchaseForm
+          item={item}
+          stripeAvailable={stripeAvailable}
+          cardCheckoutReady={cardCheckoutReady}
+        />
       </article>
     </SiteShell>
   );
