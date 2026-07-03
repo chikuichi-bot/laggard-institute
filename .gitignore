@@ -16,6 +16,10 @@
 # next.js
 /.next/
 /out/
+/lagado/
+/lagado-wakasa-uploads.zip
+/lagado-wakasa-uploads/
+.lolipop-skip-*/
 
 # production
 /build
@@ -23,6 +27,8 @@
 # misc
 .DS_Store
 *.pem
+public/videos/*.mov
+public/videos/*.m4v
 
 # debug
 npm-debug.log*

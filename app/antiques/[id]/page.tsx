@@ -1,11 +1,14 @@
-export const dynamic = "force-dynamic";
-
 import ItemDetailView from "@/components/ItemDetailView";
 import SiteShell from "@/components/SiteShell";
 import { getItem, readCatalog, sortByFoundOrder } from "@/lib/items";
+import { catalogStaticParams } from "@/lib/static-params";
 import { notFound } from "next/navigation";
 
 type Props = { params: Promise<{ id: string }> };
+
+export function generateStaticParams() {
+  return catalogStaticParams("antiques");
+}
 
 export default async function AntiqueDetailPage({ params }: Props) {
   const { id } = await params;

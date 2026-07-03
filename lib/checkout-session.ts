@@ -14,15 +14,26 @@ export function checkoutProductImageUrl(origin: string, imagePath?: string) {
   return `${origin}${imagePath}`;
 }
 
-export function isPaidAntiqueCheckout(
+export type CheckoutCategory = "antiques" | "amappola";
+
+export function isPaidCheckout(
   session: Stripe.Checkout.Session,
   expectedItemId: string,
+  category: CheckoutCategory,
 ) {
   return (
     session.payment_status === "paid" &&
     session.metadata?.itemId === expectedItemId &&
-    session.metadata?.category === "antiques"
+    session.metadata?.category === category
   );
+}
+
+/** @deprecated use isPaidCheckout */
+export function isPaidAntiqueCheckout(
+  session: Stripe.Checkout.Session,
+  expectedItemId: string,
+) {
+  return isPaidCheckout(session, expectedItemId, "antiques");
 }
 
 export async function retrieveCheckoutSession(sessionId: string) {
@@ -30,13 +41,25 @@ export async function retrieveCheckoutSession(sessionId: string) {
   return stripe.checkout.sessions.retrieve(sessionId);
 }
 
-/** 決済確認後に売約済みへ（Webhook・完了ページ共通・冪等） */
-export async function fulfillAntiqueCheckout(sessionId: string, expectedItemId: string) {
+/** 決済確認後（Webhook・完了ページ共通・冪等） */
+export async function fulfillCheckout(
+  sessionId: string,
+  expectedItemId: string,
+  category: CheckoutCategory,
+) {
   const session = await retrieveCheckoutSession(sessionId);
-  if (!isPaidAntiqueCheckout(session, expectedItemId)) {
+  if (!isPaidCheckout(session, expectedItemId, category)) {
     return { fulfilled: false as const, session };
   }
 
-  await markItemSold("antiques", expectedItemId);
+  if (category === "antiques") {
+    await markItemSold("antiques", expectedItemId);
+  }
+
   return { fulfilled: true as const, session };
+}
+
+/** @deprecated use fulfillCheckout */
+export async function fulfillAntiqueCheckout(sessionId: string, expectedItemId: string) {
+  return fulfillCheckout(sessionId, expectedItemId, "antiques");
 }

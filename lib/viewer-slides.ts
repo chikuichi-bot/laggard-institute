@@ -1,3 +1,4 @@
+import { assetUrl } from "./asset-path";
 import type { CatalogItem, ItemCategory } from "./types";
 
 export type ViewerSlide = {
@@ -12,7 +13,7 @@ export function buildViewerSlides(items: CatalogItem[]): ViewerSlide[] {
   return items.flatMap((item) =>
     item.images.map((imageSrc, imageIndex) => ({
       itemId: item.id,
-      imageSrc,
+      imageSrc: assetUrl(imageSrc),
       title: item.title,
       imageIndex,
     })),

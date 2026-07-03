@@ -264,6 +264,57 @@ body:has(.content-card--home) {
   letter-spacing: 0.06em;
 }
 
+.detail-page--amappola {
+  width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: visible;
+  padding-bottom: 28px;
+}
+
+.detail-page--amappola .amappola-cover--hero {
+  margin: 0;
+  padding: 12px;
+  width: 100%;
+  background: #e8e2d4;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.detail-page--amappola .amappola-cover--hero img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.amappola-author {
+  margin: -8px 0 0;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--text-sub);
+}
+
+.amappola-description {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.amappola-description .detail-antique-description {
+  margin: 0;
+}
+
+.amappola-price-display {
+  margin: 0 0 4px;
+  text-align: center;
+  font-size: 17px;
+}
+
 .card-actions {
   display: none;
 }
@@ -516,6 +567,221 @@ body:has(.content-card--home) {
   overflow: visible;
 }
 
+.business-calendar {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.business-calendar-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.business-calendar-hours,
+.business-calendar-schedule,
+.business-calendar-note {
+  margin: 0;
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  font-size: 14px;
+  line-height: 1.7;
+  letter-spacing: 0.08em;
+  color: var(--text-main);
+}
+
+.business-calendar-note {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.business-calendar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.business-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.business-calendar-nav-btn {
+  margin: 0;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+
+.business-calendar-nav-btn:hover,
+.business-calendar-nav-btn:focus-visible {
+  color: var(--text-main);
+  outline: none;
+}
+
+.business-calendar-month {
+  margin: 0;
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
+
+.business-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.business-calendar-weekday,
+.business-calendar-cell {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.business-calendar-weekday {
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-sub);
+}
+
+.business-calendar-cell {
+  border-radius: 999px;
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  font-size: 14px;
+  color: var(--text-sub);
+}
+
+.business-calendar-cell--empty {
+  visibility: hidden;
+}
+
+.business-calendar-cell--open {
+  background: rgba(120, 96, 72, 0.16);
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.business-calendar-cell--today {
+  box-shadow: inset 0 0 0 1px rgba(120, 96, 72, 0.45);
+}
+
+.business-calendar-day {
+  line-height: 1;
+}
+
+.business-calendar-legend {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-sub);
+}
+
+.business-calendar-legend-mark {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(120, 96, 72, 0.16);
+}
+
+.business-calendar-upcoming-title {
+  margin: 0 0 10px;
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: var(--text-main);
+}
+
+.business-calendar-upcoming-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--text-sub);
+}
+
+.open-days-edit-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.open-days-edit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.open-days-edit-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border-color);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+}
+
+.business-calendar-schedule {
+  font-size: 15px;
+  letter-spacing: 0.1em;
+}
+
+.open-days-weekdays {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.open-days-weekday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.open-days-weekday-item {
+  margin: 0;
+}
+
 .news-block {
   width: 100%;
   max-width: 560px;
@@ -611,6 +877,24 @@ body:has(.content-card--home) {
   justify-content: center;
 }
 
+.apps-video-wrap {
+  width: 100%;
+  max-width: 560px;
+  margin: 14px 0 0;
+  aspect-ratio: 16 / 9;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px dashed var(--border-color);
+  overflow: hidden;
+}
+
+.apps-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  background: #b1a79a;
+}
+
 .content-card--apps {
   flex-direction: column;
   align-items: stretch;
@@ -640,10 +924,154 @@ body:has(.content-card--home) {
   flex: 1;
   min-height: 0;
   width: 100%;
-  height: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
+}
+
+.home-latest-shell {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-latest-footer {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  background: var(--card-bg);
+}
+
+.home-latest-footer--single {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+}
+
+.home-latest-footer--single .home-latest-place {
+  grid-column: 1;
+}
+
+.home-latest-footer--single .home-latest-controls {
+  grid-column: 1;
+  grid-row: 2;
+  margin-top: 4px;
+}
+
+.home-latest-controls {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin: 0 8px 14px;
+}
+
+.home-latest-shuffle {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--text-sub);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-latest-autoplay {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+    "Noto Serif JP", serif;
+  line-height: 1;
+  letter-spacing: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 1.75rem;
+}
+
+.home-latest-autoplay-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.home-latest-autoplay-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.home-latest-autoplay--off {
+  color: var(--text-sub);
+}
+
+.home-latest-autoplay--off .home-latest-autoplay-icon {
+  font-size: 13px;
+  letter-spacing: -0.12em;
+}
+
+.home-latest-autoplay--standby {
+  color: var(--text-main);
+  opacity: 0.55;
+}
+
+.home-latest-autoplay--running {
+  color: var(--text-main);
+}
+
+.home-latest-autoplay--running .home-latest-autoplay-icon {
+  animation: home-autoplay-pulse 1.4s ease-in-out infinite;
+}
+
+.home-latest-autoplay--running .home-latest-autoplay-dot {
+  animation: home-autoplay-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes home-autoplay-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.home-latest-shuffle:hover,
+.home-latest-shuffle:focus-visible,
+.home-latest-autoplay:hover,
+.home-latest-autoplay:focus-visible {
+  color: var(--text-main);
+  outline: none;
+  opacity: 1;
+}
+
+.home-latest-footer:not(.home-latest-footer--single) .home-latest-place:first-child {
+  grid-column: 1;
+}
+
+.home-latest-footer:not(.home-latest-footer--single) .home-latest-place:nth-child(2) {
+  grid-column: 3;
 }
 
 .home-latest-duo--single {
@@ -681,8 +1109,8 @@ body:has(.content-card--home) {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 10px 0 14px;
-  padding: 0 12px;
+  margin: 10px 0 0;
+  padding: 0 12px 14px;
   background: var(--card-bg);
 }
 
@@ -987,6 +1415,16 @@ body:has(.content-card--home) {
   max-width: 320px;
 }
 
+.detail-antique-buy--secondary {
+  margin-top: 4px;
+}
+
+.detail-antique-section--actions-secondary {
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-color);
+  margin-top: 8px;
+}
+
 .detail-antique-note {
   margin: 0;
   font-size: 12px;
@@ -1050,6 +1488,133 @@ body:has(.content-card--home) {
 .purchase-page-lead--sub {
   margin-top: 8px;
   font-size: 13px;
+}
+
+.purchase-order-summary {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.purchase-order-summary-title {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--text-main);
+}
+
+.purchase-order-summary-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.purchase-order-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+.purchase-order-summary-row dt {
+  margin: 0;
+  color: var(--text-sub);
+}
+
+.purchase-order-summary-row dd {
+  margin: 0;
+  text-align: right;
+  color: var(--text-main);
+}
+
+.purchase-order-summary-row--total {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 15px;
+}
+
+.purchase-order-summary-row--total dt,
+.purchase-order-summary-row--total dd {
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.purchase-order-summary-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-sub);
+  font-weight: 400;
+}
+
+.purchase-order-summary--prominent {
+  margin-top: 20px;
+  border-width: 2px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.purchase-order-summary--prominent .purchase-order-summary-row--total dd {
+  font-size: 22px;
+  letter-spacing: 0.06em;
+}
+
+.detail-antique-fact--total dt {
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.detail-antique-price--total {
+  font-size: 1.35em;
+}
+
+.purchase-price-hint {
+  font-size: 13px;
+  color: var(--text-sub);
+  letter-spacing: 0.04em;
+}
+
+.purchase-submit-total {
+  width: 100%;
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: var(--text-sub);
+}
+
+.purchase-submit-total strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text-main);
+  letter-spacing: 0.08em;
+}
+
+.purchase-section-note {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  color: var(--text-sub);
+}
+
+.inquiry-form .purchase-form-fields {
+  padding: 0 20px 8px;
+}
+
+.detail-page--inquiry .purchase-page-lead a {
+  color: var(--text-main);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .purchase-page-product {
@@ -1456,6 +2021,26 @@ body:has(.content-card--home) {
 .item-card-body {
   padding: 4px 5px 5px;
   border-top: 1px solid var(--border-color);
+}
+
+.item-card--antique .item-card-body {
+  padding: 6px 6px 7px;
+}
+
+.item-card--antique .item-card-body h2 {
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.item-card--antique .item-card-price,
+.item-card--antique .item-card-sold {
+  font-size: 11px;
+  margin-top: 3px;
 }
 
 .item-card-body h2 {
@@ -2005,6 +2590,42 @@ body:has(.content-card--home) {
   font-family: inherit;
 }
 
+.sortable-image-list .sortable-image-item {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.sortable-image-list .sortable-image-item:active {
+  cursor: grabbing;
+}
+
+.sortable-image-item--dragging {
+  opacity: 0.55;
+}
+
+.sortable-image-item--over {
+  outline: 2px dashed var(--border-color);
+  outline-offset: -2px;
+}
+
+.sortable-image-index {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--border-color);
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  pointer-events: none;
+}
+
 .admin-empty {
   margin: 0;
   text-align: center;
@@ -2054,13 +2675,24 @@ body:has(.content-card--home) {
   background: var(--card-bg);
 }
 
+.admin-item-row--multi-thumb {
+  align-items: flex-start;
+}
+
 .admin-item-thumb-wrap {
   flex-shrink: 0;
 }
 
+.admin-item-thumb-wrap--multi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 224px;
+}
+
 .admin-item-thumb {
-  width: 48px;
-  height: 48px;
+  width: 108px;
+  height: 108px;
   border-radius: 6px;
   object-fit: contain;
   background: #e8e2d4;
@@ -2101,6 +2733,7 @@ body:has(.content-card--home) {
   font-size: 20px;
   color: var(--text-sub);
   line-height: 1;
+  align-self: center;
 }
 
 .form-field--check input {

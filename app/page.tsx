@@ -1,4 +1,3 @@
-export const dynamic = "force-dynamic";
 
 import HomeLatestPhoto from "@/components/HomeLatestPhoto";
 import SiteShell from "@/components/SiteShell";

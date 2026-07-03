@@ -1,7 +1,8 @@
 import Link from "next/link";
 import SiteShell from "@/components/SiteShell";
-import { fulfillAntiqueCheckout } from "@/lib/checkout-session";
+import { fulfillCheckout } from "@/lib/checkout-session";
 import { getItem } from "@/lib/items";
+import { formatPriceLabel } from "@/lib/price";
 import { isStripeCheckoutAvailable } from "@/lib/stripe";
 import { notFound } from "next/navigation";
 
@@ -18,14 +19,20 @@ export default async function PurchaseSuccessPage({ params, searchParams }: Prop
 
   let verified = false;
   let customerEmail: string | undefined;
+  let shippingYen: number | undefined;
+  let shippingLabel: string | undefined;
+  let amountTotal: number | undefined;
 
   if (sessionId && isStripeCheckoutAvailable()) {
     try {
-      const result = await fulfillAntiqueCheckout(sessionId, item.id);
+      const result = await fulfillCheckout(sessionId, item.id, "antiques");
       verified = result.fulfilled;
       if (verified) {
         customerEmail =
           result.session.customer_details?.email ?? result.session.customer_email ?? undefined;
+        shippingYen = Number(result.session.metadata?.shippingYen) || undefined;
+        shippingLabel = result.session.metadata?.shippingLabel;
+        amountTotal = result.session.amount_total ?? undefined;
       }
     } catch {
       verified = false;
@@ -47,9 +54,14 @@ export default async function PurchaseSuccessPage({ params, searchParams }: Prop
               ? `${item.title} のご購入を確認しました。${customerEmail ? `（${customerEmail}）` : ""} 発送・受け渡しのご案内をいたします。`
               : `${item.title} のご購入ありがとうございます。確認のうえ、ご連絡いたします。`}
           </p>
-          {itemAfter?.priceLabel ? (
+          {verified && amountTotal ? (
             <p className="purchase-page-lead purchase-page-lead--sub">
-              お支払い金額: {itemAfter.priceLabel}
+              お支払い合計: {formatPriceLabel(amountTotal)}
+              {shippingYen ? `（送料 ${formatPriceLabel(shippingYen)}${shippingLabel ? ` · ${shippingLabel}` : ""}）` : ""}
+            </p>
+          ) : itemAfter?.priceLabel ? (
+            <p className="purchase-page-lead purchase-page-lead--sub">
+              商品代金: {itemAfter.priceLabel}
             </p>
           ) : null}
           {verified && itemAfter?.sold ? (

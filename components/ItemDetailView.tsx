@@ -41,6 +41,12 @@ export default function ItemDetailView({ category, item, items }: ItemDetailView
                   <dd className="detail-antique-price">{item.priceLabel}</dd>
                 </div>
               ) : null}
+              {item.kind ? (
+                <div className="detail-antique-fact">
+                  <dt>カテゴリー</dt>
+                  <dd>{item.kind}</dd>
+                </div>
+              ) : null}
               {item.location ? (
                 <div className="detail-antique-fact">
                   <dt>場所</dt>
@@ -67,9 +73,20 @@ export default function ItemDetailView({ category, item, items }: ItemDetailView
               href={`/antiques/${item.id}/purchase`}
               className="action-btn action-btn--primary detail-antique-buy"
             >
+              購入に進む
+            </Link>
+            <p className="detail-antique-note">
+              お支払い・発送先のご記入はこちらから。
+            </p>
+            <Link
+              href={`/antiques/${item.id}/inquiry`}
+              className="action-btn detail-antique-buy detail-antique-buy--secondary"
+            >
               購入のお問い合わせ
             </Link>
-            <p className="detail-antique-note">記入ページへ進み、内容をお送りください。</p>
+            <p className="detail-antique-note">
+              購入前のご質問・ご相談はこちらから。
+            </p>
           </section>
         ) : null}
       </article>

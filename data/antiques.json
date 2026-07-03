@@ -1,43 +1,575 @@
 [
   {
-    "id": "mechanism-sample",
-    "title": "抜け殻の機構",
-    "description": "木の台の上に置かれた、灰色の樹脂の骨格。歯車と押し出しの跡。もともと何かの中にあった部品で、今は中身だけが残っている。",
+    "id": "pottery-leaf-imprint",
+    "title": "葉の印",
+    "description": "白い木板にもたれかかる、葉の印が押された陶器の欠片。",
     "location": "京都",
     "images": [
-      "/uploads/antiques/mechanism-sample/1.png",
-      "/uploads/antiques/mechanism-sample/2.png",
-      "/uploads/antiques/mechanism-sample/3.png"
+      "/uploads/antiques/pottery-leaf-imprint/1.png"
     ],
-    "createdAt": "2026-06-23T11:00:00.000Z",
+    "createdAt": "2026-06-29T14:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "wood-carving-fusetsu-kansaku",
+    "title": "風雪（寛作）",
+    "description": "角ばった面取りの木彫り人形。口だけ赤線。台座に「風雪」「寛作」の刻みがある。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/wood-carving-fusetsu-kansaku/2.png",
+      "/uploads/antiques/wood-carving-fusetsu-kansaku/3.png",
+      "/uploads/antiques/wood-carving-fusetsu-kansaku/1.png"
+    ],
+    "createdAt": "2026-06-24T12:00:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": false
+  },
+  {
+    "id": "painted-shell-landscape",
+    "title": "貝の小さな風景",
+    "description": "ホタテ貝の内側に、湖と山と雲の風景が描かれている。裏は風化した白い殻のまま。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/painted-shell-landscape/2.png",
+      "/uploads/antiques/painted-shell-landscape/1.png"
+    ],
+    "createdAt": "2026-06-24T14:00:00.000Z",
+    "orientation": "square",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "chawan-dai",
+    "title": "大",
+    "kind": "茶碗",
+    "description": "飴色の釉。内側に墨で「大」の一字。高台の茶碗。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/chawan-dai/1.png",
+      "/uploads/antiques/chawan-dai/2.png",
+      "/uploads/antiques/chawan-dai/3.png",
+      "/uploads/antiques/chawan-dai/4.png"
+    ],
+    "createdAt": "2026-06-24T21:00:00.000Z",
     "orientation": "landscape",
-    "price": 15000,
-    "priceLabel": "¥15,000",
-    "forSale": true,
+    "forSale": false,
     "sold": false
   },
   {
-    "id": "nail-frame-sample",
-    "title": "釘打ち枠",
-    "description": "木の枠に錆びた釘。誰かの仕事のあとが、まだ残っている。",
+    "id": "wood-miniature-chair-box",
+    "title": "小さな椅子",
+    "description": "左に細い脚の木製ミニチュア椅子。右に横溝の入った小箱、四隅に青緑の鋲。",
     "location": "京都",
-    "images": [],
-    "createdAt": "2026-06-23T00:00:00.000Z",
-    "price": 8800,
-    "priceLabel": "¥8,800",
-    "forSale": true,
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/wood-miniature-chair-box/1.png"
+    ],
+    "createdAt": "2026-06-24T23:45:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
     "sold": false
   },
   {
-    "id": "tea-bowl-sample",
-    "title": "染付茶碗",
-    "description": "釉の流れが止まった、小さな茶碗。欠けた縁が、使われた証。",
+    "id": "ceramic-cup-red-handle",
+    "title": "赤い耳",
+    "kind": "湯呑",
+    "description": "白い釉に黒の筆描。取っ手だけ赤い、手捻りの湯呑。",
     "location": "京都",
-    "images": [],
-    "createdAt": "2026-06-23T00:00:00.000Z",
-    "price": 12000,
-    "priceLabel": "¥12,000",
-    "forSale": true,
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/ceramic-cup-red-handle/1.png",
+      "/uploads/antiques/ceramic-cup-red-handle/2.png",
+      "/uploads/antiques/ceramic-cup-red-handle/3.png",
+      "/uploads/antiques/ceramic-cup-red-handle/4.png"
+    ],
+    "createdAt": "2026-06-25T00:30:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
     "sold": false
+  },
+  {
+    "id": "pipe-cleaner-figure",
+    "title": "モールの人",
+    "kind": "人形",
+    "description": "ビーズの頭、紫とベージュのモール。首に赤い毛糸、小さな木片の台に立つ。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/pipe-cleaner-figure/1.png",
+      "/uploads/antiques/pipe-cleaner-figure/2.png",
+      "/uploads/antiques/pipe-cleaner-figure/3.png",
+      "/uploads/antiques/pipe-cleaner-figure/4.png"
+    ],
+    "createdAt": "2026-06-25T01:00:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": false
+  },
+  {
+    "id": "wood-toy-airplane",
+    "title": "木の飛行機",
+    "kind": "おもちゃ",
+    "description": "白い木製の玩具飛行機。翼に黄い花、コックピットは黄色。細い針金で浮かせる。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/wood-toy-airplane/1.png",
+      "/uploads/antiques/wood-toy-airplane/2.png"
+    ],
+    "createdAt": "2026-06-25T02:30:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "mug-big-strawberry",
+    "title": "BIG STRAWBERRY",
+    "kind": "マグ",
+    "description": "白い磁器のマグ。大きな苺の絵、「一期一会」「温故知新」の文字。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/mug-big-strawberry/1.png"
+    ],
+    "createdAt": "2026-06-25T06:00:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "berlin-wall-fragment",
+    "title": "ベルリンの壁",
+    "description": "コンクリートの破片。赤い落書きの名残。アクリルケースに「die Mauer / the wall / 壁」「Berlin」「13.8.1961 – 9.11.1989」。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/berlin-wall-fragment/1.png",
+      "/uploads/antiques/berlin-wall-fragment/2.png"
+    ],
+    "createdAt": "2026-06-25T07:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": false
+  },
+  {
+    "id": "wood-toy-boat",
+    "title": "木の船",
+    "kind": "おもちゃ",
+    "description": "白と茶の木製玩具船。二つの黒い煙突、船尾にプロペラ。ゴムバンドで動く。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/wood-toy-boat/1.png",
+      "/uploads/antiques/wood-toy-boat/2.png"
+    ],
+    "createdAt": "2026-06-25T09:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "nippon-crucible",
+    "title": "坩堝",
+    "description": "白い耐火坩堝と蓋。「1 NIPPON CRUCIBLE CO」の刻印。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/nippon-crucible/1.png",
+      "/uploads/antiques/nippon-crucible/2.png",
+      "/uploads/antiques/nippon-crucible/3.png",
+      "/uploads/antiques/nippon-crucible/4.png",
+      "/uploads/antiques/nippon-crucible/5.png"
+    ],
+    "createdAt": "2026-06-25T13:00:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "french-glass-cup",
+    "title": "フランスのコップ",
+    "kind": "湯呑",
+    "description": "緑がかった玻璃のコップ。縦の溝。口縁はすり減っている。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/french-glass-cup/1.png"
+    ],
+    "createdAt": "2026-06-25T14:00:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "shokupan-model",
+    "title": "食パンの模型",
+    "description": "厚切り食パンの食品模型。二枚重ね、ビニール袋入り。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/shokupan-model/1.png",
+      "/uploads/antiques/shokupan-model/2.png",
+      "/uploads/antiques/shokupan-model/3.png"
+    ],
+    "createdAt": "2026-06-25T14:30:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "wood-blue-fan-rack",
+    "title": "青い扇",
+    "description": "水色の木製。扇形に区切られた四つの穴。塗装は剥げている。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/wood-blue-fan-rack/1.png",
+      "/uploads/antiques/wood-blue-fan-rack/2.png",
+      "/uploads/antiques/wood-blue-fan-rack/3.png"
+    ],
+    "createdAt": "2026-06-25T16:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "karakuri-cat",
+    "title": "からくり猫",
+    "kind": "人形",
+    "description": "黒猫のからくり人形。縮緬の着物、紫の箱に花の絵。横の柄で動く。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/karakuri-cat/1.png",
+      "/uploads/antiques/karakuri-cat/2.png",
+      "/uploads/antiques/karakuri-cat/3.png",
+      "/uploads/antiques/karakuri-cat/4.png"
+    ],
+    "createdAt": "2026-06-25T17:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": false
+  },
+  {
+    "id": "nagisa-matchbox",
+    "title": "マッチ箱",
+    "description": "テアトルナギサ・熱海。「コーヒーシネマナギサアタミ」。裏に湘南電車の時刻表（昭和32年）。",
+    "location": "熱海",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/nagisa-matchbox/1.png",
+      "/uploads/antiques/nagisa-matchbox/2.png",
+      "/uploads/antiques/nagisa-matchbox/3.png",
+      "/uploads/antiques/nagisa-matchbox/4.png"
+    ],
+    "createdAt": "2026-06-25T17:30:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "molecular-model",
+    "title": "分子模型",
+    "description": "自作の分子模型。赤と青の線、透明な球、木の台。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/molecular-model/1.png",
+      "/uploads/antiques/molecular-model/2.png",
+      "/uploads/antiques/molecular-model/3.png",
+      "/uploads/antiques/molecular-model/4.png"
+    ],
+    "createdAt": "2026-06-25T18:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "bamboo-cup",
+    "title": "竹コップ",
+    "kind": "湯呑",
+    "description": "竹製のコップ。細い取っ手は二つの鋲で留めている。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/bamboo-cup/1.png",
+      "/uploads/antiques/bamboo-cup/2.png",
+      "/uploads/antiques/bamboo-cup/3.png"
+    ],
+    "createdAt": "2026-06-25T18:30:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": false
+  },
+  {
+    "id": "kaiju-tower-diorama",
+    "title": "塔と怪獣",
+    "kind": "おもちゃ",
+    "description": "粘土の赤い塔、虫、緑の竜。黒い台の上。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/kaiju-tower-diorama/1.png",
+      "/uploads/antiques/kaiju-tower-diorama/2.png",
+      "/uploads/antiques/kaiju-tower-diorama/3.png"
+    ],
+    "createdAt": "2026-06-25T21:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": false
+  },
+  {
+    "id": "tulip-wall-hanger",
+    "title": "ハンガー",
+    "description": "木製のチューリップ形。花は赤、葉は黒に近い茶。下に金属のフック。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/tulip-wall-hanger/1.png",
+      "/uploads/antiques/tulip-wall-hanger/2.png",
+      "/uploads/antiques/tulip-wall-hanger/3.png",
+      "/uploads/antiques/tulip-wall-hanger/4.png"
+    ],
+    "createdAt": "2026-06-25T21:30:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "shishimai-kurama",
+    "title": "獅子舞",
+    "kind": "人形",
+    "description": "くらま山の文字が入った阿吽の一対。土製の小さな狛犬。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/shishimai-kurama/1.png",
+      "/uploads/antiques/shishimai-kurama/2.png",
+      "/uploads/antiques/shishimai-kurama/3.png",
+      "/uploads/antiques/shishimai-kurama/4.png"
+    ],
+    "createdAt": "2026-06-26T04:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "green-tram-toy",
+    "title": "路面電車",
+    "kind": "おもちゃ",
+    "description": "緑色の金属製おもちゃ。窓の切り抜きと屋根のパンタグラフ。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/green-tram-toy/1.png"
+    ],
+    "createdAt": "2026-06-26T06:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "thick-round-glasses",
+    "title": "丸い眼鏡",
+    "description": "黒い丸枠。レンズは厚い。片方のツルは欠けている。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/thick-round-glasses/1.png",
+      "/uploads/antiques/thick-round-glasses/2.png",
+      "/uploads/antiques/thick-round-glasses/3.png",
+      "/uploads/antiques/thick-round-glasses/4.png"
+    ],
+    "createdAt": "2026-06-29T18:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "glass-cat",
+    "title": "ガラス猫",
+    "kind": "人形",
+    "description": "緑色のガラス製。首に赤い紐。目と鼻は白い点。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/glass-cat/1.png",
+      "/uploads/antiques/glass-cat/2.png",
+      "/uploads/antiques/glass-cat/3.png",
+      "/uploads/antiques/glass-cat/4.png"
+    ],
+    "createdAt": "2026-06-29T20:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "cardboard-box-divider",
+    "title": "箱の入れ物",
+    "description": "段ボールの仕切り。細い板を組み合わせた格子。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/cardboard-box-divider/1.png",
+      "/uploads/antiques/cardboard-box-divider/2.png",
+      "/uploads/antiques/cardboard-box-divider/3.png",
+      "/uploads/antiques/cardboard-box-divider/4.png"
+    ],
+    "createdAt": "2026-07-03T01:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "glass-kenzan",
+    "title": "剣山",
+    "description": "ガラス製の剣山。ループ状の透明な管が放射状に組まれ、気泡が含まれる。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/glass-kenzan/1.png",
+      "/uploads/antiques/glass-kenzan/2.png",
+      "/uploads/antiques/glass-kenzan/3.png"
+    ],
+    "createdAt": "2026-07-03T03:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "globe-paper-collection",
+    "title": "地球儀の紙の集まり",
+    "description": "割れた地球儀の紙片を、透明な丸い容器に集めたもの。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/globe-paper-collection/1.png",
+      "/uploads/antiques/globe-paper-collection/2.png",
+      "/uploads/antiques/globe-paper-collection/3.png",
+      "/uploads/antiques/globe-paper-collection/4.png"
+    ],
+    "createdAt": "2026-07-03T05:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "clay-bird-figurine",
+    "title": "鳥",
+    "kind": "人形",
+    "description": "素焼きの小さな鳥。赤茶色の模様が手描き。底面に「Copy from Kanellopoulos Museum ATHENS」の刻印。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/clay-bird-figurine/1.png",
+      "/uploads/antiques/clay-bird-figurine/2.png",
+      "/uploads/antiques/clay-bird-figurine/3.png",
+      "/uploads/antiques/clay-bird-figurine/4.png",
+      "/uploads/antiques/clay-bird-figurine/5.png"
+    ],
+    "createdAt": "2026-07-03T06:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "horseshoe-magnets-trio",
+    "title": "磁石",
+    "description": "大中小の三つの蹄形磁石。上部は赤塗り、大きいものは脚が黒。極先端に S/N の刻印。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/horseshoe-magnets-trio/1.png",
+      "/uploads/antiques/horseshoe-magnets-trio/2.png",
+      "/uploads/antiques/horseshoe-magnets-trio/3.png",
+      "/uploads/antiques/horseshoe-magnets-trio/4.png",
+      "/uploads/antiques/horseshoe-magnets-trio/5.png"
+    ],
+    "createdAt": "2026-07-03T07:00:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "mechanical-parts-assemblage",
+    "title": "部品",
+    "description": "古い機械・電気部品を組み合わせた小さな抽象立体。金属板、配線、円盤、木台、U字型の金属脚。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/mechanical-parts-assemblage/1.png",
+      "/uploads/antiques/mechanical-parts-assemblage/2.png",
+      "/uploads/antiques/mechanical-parts-assemblage/3.png",
+      "/uploads/antiques/mechanical-parts-assemblage/4.png"
+    ],
+    "createdAt": "2026-07-03T12:00:00.000Z",
+    "orientation": "square",
+    "forSale": false,
+    "sold": false
+  },
+  {
+    "id": "black-sphere-assemblage",
+    "title": "黒い球",
+    "description": "左に黒い球、砂色の繊維質な矩形の塊。その右端に小さな灰色の球。下に風化した木片。漂着物を組み立てた小さな立体。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/black-sphere-assemblage/1.png",
+      "/uploads/antiques/black-sphere-assemblage/2.png"
+    ],
+    "createdAt": "2026-07-03T12:30:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "nagashima-yasuro-objet",
+    "title": "長嶋康朗のオブジェ",
+    "description": "筆の毛を頭にした小さなオブジェ。胴体は銀色の箔張り、さえた線で顔。三本の針金脚が三脚のように立てている。長嶋康朗作。",
+    "location": "京都",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/antiques/nagashima-yasuro-objet/1.png"
+    ],
+    "createdAt": "2026-07-03T12:31:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "floating-character-ballpoint-pen",
+    "title": "フローティングボールペン",
+    "description": "黒い胴のフローティングボールペン。琥珀色の液の中に、ミッキーマウスのようなキャラクター人形が浮かぶ。",
+    "location": "京都",
+    "foundAt": "2026-07",
+    "images": [
+      "/uploads/antiques/floating-character-ballpoint-pen/1.png",
+      "/uploads/antiques/floating-character-ballpoint-pen/2.png",
+      "/uploads/antiques/floating-character-ballpoint-pen/3.png",
+      "/uploads/antiques/floating-character-ballpoint-pen/4.png"
+    ],
+    "createdAt": "2026-07-03T11:00:00.000Z",
+    "orientation": "portrait",
+    "forSale": false,
+    "sold": true
+  },
+  {
+    "id": "headless-drummer-toy-soldier",
+    "title": "太鼓持ち",
+    "kind": "おもちゃ",
+    "description": "頭のない金属製の兵隊人形。大きな太鼓を背負い、緑の台座付き。塗装は剥げている。",
+    "location": "京都",
+    "foundAt": "2026-07",
+    "images": [
+      "/uploads/antiques/headless-drummer-toy-soldier/1.png",
+      "/uploads/antiques/headless-drummer-toy-soldier/2.png",
+      "/uploads/antiques/headless-drummer-toy-soldier/3.png"
+    ],
+    "createdAt": "2026-07-03T10:02:00.000Z",
+    "orientation": "landscape",
+    "forSale": false,
+    "sold": true
   }
 ]

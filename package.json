@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:keep": "bash scripts/dev-keep.sh",
     "build": "next build",
+    "build:lolipop": "bash scripts/build-lolipop.sh",
     "start": "next start",
     "lint": "eslint"
   },

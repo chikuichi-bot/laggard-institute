@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { INSTITUTE_NAME } from "@/lib/constants";
 
 type AdminShellProps = {
   title: string;
@@ -22,7 +23,7 @@ export default function AdminShell({
             ← 作業メニュー
           </Link>
         ) : null}
-        <p className="admin-eyebrow">ラガード研究所</p>
+        <p className="admin-eyebrow">{INSTITUTE_NAME}</p>
         <h1>{title}</h1>
         {tagline ? <p className="admin-tagline">{tagline}</p> : null}
       </header>

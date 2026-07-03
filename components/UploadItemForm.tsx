@@ -38,6 +38,7 @@ export default function UploadItemForm({
   const [foundAt, setFoundAt] = useState("");
   const [priceYen, setPriceYen] = useState("");
   const [forSale, setForSale] = useState(defaultForSale);
+  const [kind, setKind] = useState("");
   const [secret, setSecret] = useState("");
   const [rememberSecret, setRememberSecret] = useState(true);
   const [files, setFiles] = useState<FileList | null>(null);
@@ -59,6 +60,7 @@ export default function UploadItemForm({
     setFoundAt("");
     setPriceYen("");
     setForSale(defaultForSale);
+    setKind("");
     setFiles(null);
     setStatus("idle");
     setMessage("");
@@ -95,6 +97,7 @@ export default function UploadItemForm({
     body.set("foundAt", foundAt);
     body.set("price", priceYen);
     body.set("forSale", forSale ? "true" : "false");
+    body.set("kind", kind);
     Array.from(files).forEach((file) => body.append("images", file));
 
     try {
@@ -199,6 +202,15 @@ export default function UploadItemForm({
 
           {showPrice ? (
             <>
+              <label className="form-field">
+                <span>カテゴリー</span>
+                <input
+                  type="text"
+                  value={kind}
+                  onChange={(e) => setKind(e.target.value)}
+                  placeholder="茶碗"
+                />
+              </label>
               <label className="form-field form-field--row form-field--check">
                 <input
                   type="checkbox"

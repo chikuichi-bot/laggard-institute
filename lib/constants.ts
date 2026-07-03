@@ -1,17 +1,18 @@
 export const CONTACT_EMAIL = "lagadolab@gmail.com";
 
-export const INSTITUTE_NAME = "ラガード研究所";
+export const INSTITUTE_NAME = "古道具ラガード研究所";
 
 export const INSTITUTE_ADDRESS =
   "〒606-8266 京都市左京区北白川久保田町60-11 ウィングビル2F";
 
-/** 銀行振込先（実際の口座情報に差し替えてください） */
+/** 銀行振込先（出典: Obsidian ゆるメモ — みずほ銀行 出町支店） */
 export const BANK_TRANSFER = {
-  bankName: "○○銀行",
-  branchName: "○○支店",
+  bankName: "みずほ銀行",
+  branchName: "出町支店",
+  branchCode: "587",
   accountType: "普通",
-  accountNumber: "1234567",
-  accountHolder: "アワシマケンジ",
+  accountNumber: "2419659",
+  accountHolder: "アワシマ タケヒト",
   note: "振込手数料はお客様負担となります。入金確認後、順次ご連絡いたします。",
 };
 

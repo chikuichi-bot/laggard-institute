@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { checkoutProductImageUrl } from "@/lib/checkout-session";
+import {
+  checkoutProductImageUrl,
+  type CheckoutCategory,
+} from "@/lib/checkout-session";
+import { getAmappolaProduct, canPurchaseAmappola, AMAPPOLA_PRODUCT_ID } from "@/lib/amappola";
 import { getStripe, isStripeCheckoutAvailable } from "@/lib/stripe";
 import { getItem } from "@/lib/items";
 import { canPurchaseItem } from "@/lib/purchase-mailto";
+import { calculateShipping } from "@/lib/shipping";
+import type { CatalogItem } from "@/lib/types";
 
 type CheckoutBody = {
   itemId?: string;
+  category?: CheckoutCategory;
   name?: string;
   email?: string;
   phone?: string;
@@ -23,6 +30,31 @@ function checkoutErrorMessage(error: unknown) {
     return error.message;
   }
   return "決済ページの作成に失敗しました。";
+}
+
+async function resolveCheckoutItem(
+  itemId: string,
+  categoryHint?: CheckoutCategory,
+): Promise<{ item: CatalogItem; category: CheckoutCategory } | null> {
+  if (itemId === AMAPPOLA_PRODUCT_ID || categoryHint === "amappola") {
+    const item = getAmappolaProduct();
+    if (item.id !== itemId || !canPurchaseAmappola()) return null;
+    return { item, category: "amappola" };
+  }
+
+  const item = await getItem("antiques", itemId);
+  if (!item || !canPurchaseItem(item)) return null;
+  return { item, category: "antiques" };
+}
+
+function purchaseSuccessPath(category: CheckoutCategory, itemId: string) {
+  if (category === "amappola") return `/amappola/purchase/success`;
+  return `/antiques/${itemId}/purchase/success`;
+}
+
+function purchaseCancelPath(category: CheckoutCategory, itemId: string) {
+  if (category === "amappola") return `/amappola/purchase`;
+  return `/antiques/${itemId}/purchase`;
 }
 
 export async function POST(request: Request) {
@@ -56,18 +88,61 @@ export async function POST(request: Request) {
   if (!email || !email.includes("@")) {
     return NextResponse.json({ error: "メールアドレスを入力してください。" }, { status: 400 });
   }
+  if (!phone || phone.replace(/\D/g, "").length < 10) {
+    return NextResponse.json({ error: "電話番号を入力してください（発送の連絡用）。" }, { status: 400 });
+  }
+  if (!address || address.length < 5) {
+    return NextResponse.json({ error: "ご住所を入力してください（発送先）。" }, { status: 400 });
+  }
 
-  const item = await getItem("antiques", itemId);
-  if (!item || !canPurchaseItem(item)) {
+  const resolved = await resolveCheckoutItem(itemId, body.category);
+  if (!resolved) {
     return NextResponse.json({ error: "この商品は現在購入できません。" }, { status: 404 });
   }
+
+  const { item, category } = resolved;
 
   if (!item.price || item.price <= 0) {
     return NextResponse.json({ error: "価格が設定されていないため、カード決済できません。" }, { status: 400 });
   }
 
+  const shipping = calculateShipping(address, item);
   const origin = new URL(request.url).origin;
   const stripe = getStripe();
+
+  const productLine = {
+    quantity: 1,
+    price_data: {
+      currency: "jpy" as const,
+      unit_amount: item.price,
+      product_data: {
+        name: item.title,
+        description: item.shippingIncluded
+          ? `${item.description?.slice(0, 160) ?? ""}（クリックポスト送料込み）`.slice(0, 200) || undefined
+          : item.description?.slice(0, 200) || undefined,
+        images: checkoutProductImageUrl(origin, item.images[0])
+          ? [checkoutProductImageUrl(origin, item.images[0])!]
+          : undefined,
+      },
+    },
+  };
+
+  const line_items = item.shippingIncluded
+    ? [productLine]
+    : [
+        productLine,
+        {
+          quantity: 1,
+          price_data: {
+            currency: "jpy" as const,
+            unit_amount: shipping.yen,
+            product_data: {
+              name: "送料",
+              description: `${shipping.label}（京都府発）`,
+            },
+          },
+        },
+      ];
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -75,32 +150,21 @@ export async function POST(request: Request) {
       locale: "ja",
       payment_method_types: ["card"],
       customer_email: email,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "jpy",
-            unit_amount: item.price,
-            product_data: {
-              name: item.title,
-              description: item.description?.slice(0, 200) || undefined,
-              images: checkoutProductImageUrl(origin, item.images[0])
-                ? [checkoutProductImageUrl(origin, item.images[0])!]
-                : undefined,
-            },
-          },
-        },
-      ],
-      success_url: `${origin}/antiques/${item.id}/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/antiques/${item.id}/purchase`,
+      line_items,
+      success_url: `${origin}${purchaseSuccessPath(category, item.id)}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}${purchaseCancelPath(category, item.id)}`,
       metadata: {
         itemId: item.id,
-        category: "antiques",
+        category,
         customerName: name,
         customerEmail: email,
         customerPhone: phone,
         customerAddress: address,
         customerMessage: message,
+        shippingYen: String(item.shippingIncluded ? 0 : shipping.yen),
+        shippingLabel: shipping.label,
+        shippingMethod: item.shippingMethod ?? "yupack",
+        shippingIncluded: item.shippingIncluded ? "true" : "false",
       },
     });
 

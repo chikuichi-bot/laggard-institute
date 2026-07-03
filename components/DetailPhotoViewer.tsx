@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import PhotoViewer from "@/components/PhotoViewer";
+import { assetUrl } from "@/lib/asset-path";
 import type { CatalogItem, ItemCategory } from "@/lib/types";
 import { buildViewerSlides, slideIndexForItem } from "@/lib/viewer-slides";
 
@@ -14,7 +15,7 @@ type DetailPhotoViewerProps = {
 function itemOnlySlides(item: CatalogItem, category: ItemCategory) {
   return item.images.map((imageSrc, imageIndex) => ({
     itemId: item.id,
-    imageSrc,
+    imageSrc: assetUrl(imageSrc),
     title: item.title,
     imageIndex,
     category,
@@ -59,7 +60,7 @@ export default function DetailPhotoViewer({ category, item, items }: DetailPhoto
               aria-label={`写真 ${index + 1} を大きく見る`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt={`${item.title} ${index + 1}`} />
+              <img src={assetUrl(src)} alt={`${item.title} ${index + 1}`} />
             </button>
           ))}
         </div>
@@ -89,7 +90,7 @@ export default function DetailPhotoViewer({ category, item, items }: DetailPhoto
             aria-label={`写真 ${index + 1} を大きく見る`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={`${item.title} ${index + 1}`} />
+            <img src={assetUrl(src)} alt={`${item.title} ${index + 1}`} />
           </button>
         ))}
       </div>

@@ -98,6 +98,7 @@ export async function POST(request: Request) {
     String(form.get("priceLabel") ?? ""),
   );
   const forSale = String(form.get("forSale") ?? "") === "true";
+  const kind = String(form.get("kind") ?? "").trim() || undefined;
 
   const item: CatalogItem = {
     id,
@@ -113,6 +114,7 @@ export async function POST(request: Request) {
           ...pricing,
           forSale,
           sold: false,
+          kind,
         }
       : {}),
   };
@@ -172,6 +174,8 @@ export async function PATCH(request: Request) {
     item.priceLabel = pricing.priceLabel;
     item.forSale = String(form.get("forSale") ?? "") === "true";
     item.sold = String(form.get("sold") ?? "") === "true";
+    const kind = String(form.get("kind") ?? "").trim();
+    item.kind = kind || undefined;
   }
 
   const removeImages = form.getAll("removeImages").map(String).filter(Boolean);
@@ -182,6 +186,25 @@ export async function PATCH(request: Request) {
       }
     }
     item.images = item.images.filter((url) => !removeImages.includes(url));
+  }
+
+  const imageOrderRaw = String(form.get("imageOrder") ?? "").trim();
+  if (imageOrderRaw) {
+    try {
+      const order = JSON.parse(imageOrderRaw) as unknown;
+      if (Array.isArray(order) && order.every((entry) => typeof entry === "string")) {
+        const requested = order as string[];
+        const current = new Set(item.images);
+        if (
+          requested.length === item.images.length &&
+          requested.every((url) => current.has(url))
+        ) {
+          item.images = requested;
+        }
+      }
+    } catch {
+      // ignore invalid imageOrder
+    }
   }
 
   const imageFiles = form

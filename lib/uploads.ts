@@ -1,13 +1,22 @@
-import { promises as fs } from "fs";
+import fs from "fs";
+import { promises as fsPromises } from "fs";
 import path from "path";
 
 export function publicUrlToDiskPath(publicUrl: string): string {
   return path.join(process.cwd(), "public", publicUrl.replace(/^\//, ""));
 }
 
+export function publicFileExists(publicUrl: string): boolean {
+  try {
+    return fs.existsSync(publicUrlToDiskPath(publicUrl));
+  } catch {
+    return false;
+  }
+}
+
 export async function deletePublicFile(publicUrl: string) {
   try {
-    await fs.unlink(publicUrlToDiskPath(publicUrl));
+    await fsPromises.unlink(publicUrlToDiskPath(publicUrl));
   } catch {
     // already removed
   }
@@ -16,7 +25,7 @@ export async function deletePublicFile(publicUrl: string) {
 export async function deleteItemUploadDir(category: string, id: string) {
   const uploadDir = path.join(process.cwd(), "public", "uploads", category, id);
   try {
-    await fs.rm(uploadDir, { recursive: true, force: true });
+    await fsPromises.rm(uploadDir, { recursive: true, force: true });
   } catch {
     // already removed
   }

@@ -1,12 +1,11 @@
-export const dynamic = "force-dynamic";
 
 import FramedCatalog from "@/components/FramedCatalog";
 import ItemGrid from "@/components/ItemGrid";
 import SiteShell from "@/components/SiteShell";
-import { readCatalog, sortByFoundOrder } from "@/lib/items";
+import { readCatalog, shuffleItems } from "@/lib/items";
 
 export default async function CityPage() {
-  const items = sortByFoundOrder(await readCatalog("city"));
+  const items = shuffleItems(await readCatalog("city"));
 
   return (
     <SiteShell tagline="街に落ちていた、名前のない断片。">

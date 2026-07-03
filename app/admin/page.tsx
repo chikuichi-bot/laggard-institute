@@ -26,12 +26,18 @@ const tasks = [
   },
   {
     href: "/admin/news",
-    label: "ニュースを編集",
-    desc: "トップのお知らせを書き換える",
+    label: "営業日を編集",
+    desc: "カレンダーの営業日を更新する",
+  },
+  {
+    href: "/admin/apps",
+    label: "アプリ動画を登録",
+    desc: "おみくじ文庫のデモ動画をアップロード",
   },
 ];
 
 const views = [
+  { href: "/news", label: "営業日" },
   { href: "/antiques", label: "古道具一覧" },
   { href: "/city", label: "街の一覧" },
   { href: "/sea", label: "海の一覧" },

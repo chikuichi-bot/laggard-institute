@@ -1,4 +1,3 @@
-export const dynamic = "force-dynamic";
 
 import FramedCatalog from "@/components/FramedCatalog";
 import ItemGrid from "@/components/ItemGrid";
@@ -11,7 +10,7 @@ export default async function AntiquesPage() {
   return (
     <SiteShell tagline="使われて、手を離れた道具たち。">
       <FramedCatalog>
-        <ItemGrid category="antiques" items={items} />
+        <ItemGrid category="antiques" items={items} showAntiqueLabels />
       </FramedCatalog>
     </SiteShell>
   );

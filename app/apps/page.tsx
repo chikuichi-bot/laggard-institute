@@ -1,4 +1,7 @@
+import AppVideo from "@/components/AppVideo";
 import SiteShell from "@/components/SiteShell";
+import { appVideoSrc } from "@/lib/app-media";
+import { assetUrl } from "@/lib/asset-path";
 import { apps } from "@/lib/sections";
 
 export default function AppsPage() {
@@ -8,7 +11,10 @@ export default function AppsPage() {
         <div className="apps-block horizontal-body">
           <p>これはラガード研究所が開発したアプリです。</p>
           <ul className="app-list">
-            {apps.map((app) => (
+            {apps.map((app) => {
+              const videoSrc = app.videoBase ? appVideoSrc(app.videoBase) : null;
+
+              return (
               <li key={app.name}>
                 <a
                   href={app.href}
@@ -20,7 +26,7 @@ export default function AppsPage() {
                   <span className="app-icon-wrap" aria-hidden="true">
                     {app.icon ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img className="app-icon" src={app.icon} alt="" />
+                      <img className="app-icon" src={assetUrl(app.icon)} alt="" />
                     ) : (
                       <span className="app-icon app-icon--placeholder" aria-hidden />
                     )}
@@ -30,8 +36,27 @@ export default function AppsPage() {
                     <div className="app-desc">{app.description}</div>
                   </div>
                 </a>
+                {videoSrc || app.poster ? (
+                  <div className="apps-video-wrap">
+                    {videoSrc ? (
+                      <AppVideo
+                        name={app.name}
+                        src={videoSrc}
+                        poster={app.poster ? assetUrl(app.poster) : undefined}
+                      />
+                    ) : app.poster ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        className="apps-video"
+                        src={assetUrl(app.poster)}
+                        alt={`${app.name}のデモ`}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
               </li>
-            ))}
+            );
+            })}
           </ul>
         </div>
       </article>

@@ -1,14 +1,14 @@
 import SiteShell from "@/components/SiteShell";
-import { GOOGLE_MAPS_EMBED_URL, INSTITUTE_ADDRESS } from "@/lib/constants";
+import { GOOGLE_MAPS_EMBED_URL, INSTITUTE_ADDRESS, INSTITUTE_NAME } from "@/lib/constants";
 
 export default function MapPage() {
   return (
-    <SiteShell tagline="京都・北白川。ラガード研究所。">
+    <SiteShell tagline={`京都・北白川。${INSTITUTE_NAME}。`}>
       <article className="content-card content-card--map">
         <div className="map-stage">
           <iframe
             className="map-frame"
-            title="ラガード研究所の地図"
+            title={`${INSTITUTE_NAME}の地図`}
             src={GOOGLE_MAPS_EMBED_URL}
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"

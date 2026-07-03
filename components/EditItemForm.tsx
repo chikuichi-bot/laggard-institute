@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PhotoPicker from "@/components/PhotoPicker";
+import SortableImageList from "@/components/SortableImageList";
 import { isPhotoOnlyCategory } from "@/lib/category";
 import { loadAdminSecret, saveAdminSecret } from "@/lib/admin-auth";
 import type { CatalogItem, ItemCategory } from "@/lib/types";
@@ -29,9 +30,11 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
   const [priceYen, setPriceYen] = useState(item.price ? String(item.price) : "");
   const [forSale, setForSale] = useState(item.forSale ?? false);
   const [sold, setSold] = useState(item.sold ?? false);
+  const [kind, setKind] = useState(item.kind ?? "");
   const [secret, setSecret] = useState("");
   const [rememberSecret, setRememberSecret] = useState(true);
   const [removeImages, setRemoveImages] = useState<string[]>([]);
+  const [imageOrder, setImageOrder] = useState<string[]>(item.images);
   const [newFiles, setNewFiles] = useState<FileList | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -40,7 +43,11 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
     setSecret(loadAdminSecret());
   }, []);
 
-  const keptImages = item.images.filter((url) => !removeImages.includes(url));
+  useEffect(() => {
+    setImageOrder(item.images.filter((url) => !removeImages.includes(url)));
+  }, [item.images, removeImages]);
+
+  const keptImages = imageOrder;
 
   async function removeImageNow(url: string) {
     const remaining = item.images.filter((entry) => entry !== url);
@@ -75,6 +82,9 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
     body.set("price", priceYen);
     body.set("forSale", forSale ? "true" : "false");
     body.set("sold", sold ? "true" : "false");
+    body.set("kind", kind);
+    const nextOrder = imageOrder.filter((entry) => entry !== url);
+    body.set("imageOrder", JSON.stringify(nextOrder));
     body.append("removeImages", url);
 
     try {
@@ -113,6 +123,8 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
     body.set("price", priceYen);
     body.set("forSale", forSale ? "true" : "false");
     body.set("sold", sold ? "true" : "false");
+    body.set("kind", kind);
+    body.set("imageOrder", JSON.stringify(imageOrder));
     removeImages.forEach((url) => body.append("removeImages", url));
     if (newFiles) {
       Array.from(newFiles).forEach((file) => body.append("images", file));
@@ -226,27 +238,14 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
             <div className="photo-picker">
               <span className="form-label">登録済みの写真</span>
               <p className="photo-picker-hint">
-                × を押すと、その場で掲載から削除します。記録ごと消すときは上の「削除」。
+                ドラッグして順番を変えられます（1枚目がメイン）。× で削除。「変更を保存」で反映。
               </p>
-              <div className="photo-picker-previews photo-picker-previews--existing">
-                {item.images
-                  .filter((url) => !removeImages.includes(url))
-                  .map((url) => (
-                    <div key={url} className="photo-existing-wrap">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" />
-                      <button
-                        type="button"
-                        className="photo-existing-remove"
-                        onClick={() => toggleRemoveImage(url)}
-                        disabled={status === "loading"}
-                        aria-label="写真を削除する"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-              </div>
+              <SortableImageList
+                images={imageOrder}
+                onReorder={setImageOrder}
+                onRemove={toggleRemoveImage}
+                disabled={status === "loading"}
+              />
             </div>
           ) : null}
 
@@ -304,6 +303,15 @@ export default function EditItemForm({ category, item }: EditItemFormProps) {
 
           {isAntique ? (
             <>
+              <label className="form-field">
+                <span>カテゴリー</span>
+                <input
+                  type="text"
+                  value={kind}
+                  onChange={(e) => setKind(e.target.value)}
+                  placeholder="茶碗"
+                />
+              </label>
               <label className="form-field form-field--row form-field--check">
                 <input
                   type="checkbox"

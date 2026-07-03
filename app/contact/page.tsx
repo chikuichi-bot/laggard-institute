@@ -1,8 +1,8 @@
 import SiteShell from "@/components/SiteShell";
-import { CONTACT_EMAIL } from "@/lib/constants";
+import { CONTACT_EMAIL, INSTITUTE_NAME } from "@/lib/constants";
 
 export default function ContactPage() {
-  const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("ラガード研究所へのお問い合わせ")}`;
+  const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`${INSTITUTE_NAME}へのお問い合わせ`)}`;
 
   return (
     <SiteShell tagline="お問い合わせ・展示・漂着物について。">
@@ -12,7 +12,7 @@ export default function ContactPage() {
           <a className="action-btn action-btn--primary contact-email" href={mailto}>
             {CONTACT_EMAIL}
           </a>
-          <p className="detail-meta-plain">ラガード研究所 / 淡嶋健仁</p>
+          <p className="detail-meta-plain">{INSTITUTE_NAME} / 淡嶋健仁</p>
         </div>
       </article>
     </SiteShell>

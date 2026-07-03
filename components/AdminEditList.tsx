@@ -92,9 +92,19 @@ export default function AdminEditList({ category, items }: AdminEditListProps) {
       <ul className="admin-item-list">
         {items.map((item) => (
           <li key={item.id} className="admin-item-list-entry">
-            <Link href={`/admin/edit/${category}/${item.id}`} className="admin-item-row">
-              <div className="admin-item-thumb-wrap">
-                {item.images[0] ? (
+            <Link
+              href={`/admin/edit/${category}/${item.id}`}
+              className={`admin-item-row${category === "antiques" && item.images.length > 1 ? " admin-item-row--multi-thumb" : ""}`}
+            >
+              <div
+                className={`admin-item-thumb-wrap${category === "antiques" ? " admin-item-thumb-wrap--multi" : ""}`}
+              >
+                {category === "antiques" && item.images.length > 0 ? (
+                  item.images.map((src) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={src} src={src} alt="" className="admin-item-thumb" />
+                  ))
+                ) : item.images[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.images[0]} alt="" className="admin-item-thumb" />
                 ) : (

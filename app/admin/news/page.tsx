@@ -1,18 +1,18 @@
-import AdminShell from "@/components/AdminShell";
-import NewsEditForm from "@/components/NewsEditForm";
-import { readNews } from "@/lib/news";
-
 export const dynamic = "force-dynamic";
 
-export default async function AdminNewsPage() {
-  const { items } = await readNews();
+import AdminShell from "@/components/AdminShell";
+import OpenDaysEditForm from "@/components/OpenDaysEditForm";
+import { readOpenDays } from "@/lib/open-days";
+
+export default async function AdminOpenDaysPage() {
+  const data = await readOpenDays();
 
   return (
     <AdminShell
-      title="ニュースを編集"
-      tagline="トップページに表示するお知らせを書き換えます。"
+      title="営業日"
+      tagline="カレンダーに表示する営業日を登録・削除します。"
     >
-      <NewsEditForm initialItems={items} />
+      <OpenDaysEditForm initialData={data} />
     </AdminShell>
   );
 }

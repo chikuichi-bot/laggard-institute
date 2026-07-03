@@ -1,5 +1,6 @@
 "use client";
 
+import { INSTITUTE_NAME } from "@/lib/constants";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navItems, type SectionId } from "@/lib/sections";
@@ -23,7 +24,7 @@ export default function SiteShell({ tagline, children }: SiteShellProps) {
     <div className="site">
       <header className="site-header">
         <Link href="/">
-          <h1>ラガード研究所</h1>
+          <h1>{INSTITUTE_NAME}</h1>
         </Link>
         <p className="tagline">
           {tagline ?? "古道具と、拾ったものと、"}

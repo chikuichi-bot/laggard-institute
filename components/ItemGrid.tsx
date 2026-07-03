@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import PhotoViewer from "@/components/PhotoViewer";
+import { assetUrl } from "@/lib/asset-path";
 import {
   catalogDisplayTitle,
   categoryBasePath,
@@ -16,9 +17,16 @@ type ItemGridProps = {
   category: ItemCategory;
   items: CatalogItem[];
   compact?: boolean;
+  /** 古道具一覧ページのみ：写真の下に品名・価格 */
+  showAntiqueLabels?: boolean;
 };
 
-export default function ItemGrid({ category, items, compact = false }: ItemGridProps) {
+export default function ItemGrid({
+  category,
+  items,
+  compact = false,
+  showAntiqueLabels = false,
+}: ItemGridProps) {
   const photoOnly = isPhotoOnlyCategory(category);
   const base = categoryBasePath(category);
   const visibleItems = photoOnly ? items.filter((item) => item.images[0]) : items;
@@ -40,12 +48,15 @@ export default function ItemGrid({ category, items, compact = false }: ItemGridP
 
   return (
     <>
-      <div className={`item-grid${compact ? " item-grid--compact" : ""}`}>
+      <div
+        className={`item-grid${compact ? " item-grid--compact" : ""}${category === "antiques" ? " item-grid--antiques" : ""}`}
+      >
         {visibleItems.map((item) => {
           const label = catalogDisplayTitle(item, category);
+          const isAntique = category === "antiques";
           const image = item.images[0] ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.images[0]} alt="" loading="lazy" decoding="async" />
+            <img src={assetUrl(item.images[0])} alt="" loading="lazy" decoding="async" />
           ) : (
             <div className="item-placeholder" aria-hidden>
               <span>{categoryLabel(category).slice(0, 2)}</span>
@@ -53,7 +64,7 @@ export default function ItemGrid({ category, items, compact = false }: ItemGridP
           );
 
           return (
-            <article key={item.id} className="item-card">
+            <article key={item.id} className={`item-card${isAntique ? " item-card--antique" : ""}`}>
               {photoOnly ? (
                 <button
                   type="button"
@@ -76,6 +87,18 @@ export default function ItemGrid({ category, items, compact = false }: ItemGridP
                   {image}
                 </Link>
               )}
+              {isAntique && showAntiqueLabels ? (
+                <div className="item-card-body">
+                  <Link href={`${base}/${item.id}`} className="item-card-title-link">
+                    <h2>{item.title}</h2>
+                  </Link>
+                  {item.sold ? (
+                    <p className="item-card-sold">売約済み</p>
+                  ) : item.priceLabel ? (
+                    <p className="item-card-price">{item.priceLabel}</p>
+                  ) : null}
+                </div>
+              ) : null}
             </article>
           );
         })}

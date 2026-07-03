@@ -16,7 +16,7 @@ export type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { id: "news", href: "/news", label: "ニュース" },
+  { id: "news", href: "/news", label: "営業日" },
   { id: "antiques", href: "/antiques", label: "古道具" },
   { id: "city", href: "/city", label: "街で見つけたモノ" },
   { id: "sea", href: "/sea", label: "海で見つけたモノ" },
@@ -26,13 +26,24 @@ export const navItems: NavItem[] = [
   { id: "contact", href: "/contact", label: "連絡" },
 ];
 
-export const apps = [
+export type AppEntry = {
+  name: string;
+  href: string;
+  icon?: string;
+  description: string;
+  videoBase?: string;
+  poster?: string;
+};
+
+export const apps: AppEntry[] = [
   {
     name: "おみくじ文庫",
     href: "https://apps.apple.com/jp/app/%E3%81%8A%E3%81%BF%E3%81%8F%E3%81%98%E6%96%87%E5%BA%AB/id6760742804",
     icon: "/icons/omikuji-bunko.png",
     description:
       "青空文庫のなかから、偶然の一節を引く小さな図書館。言葉の漂着物を、毎日ひとつ。",
+    videoBase: "omikuji-bunko",
+    poster: "/videos/omikuji-bunko-poster.jpg",
   },
   {
     name: "Literary Fragments",

@@ -70,5 +70,1063 @@
     ],
     "createdAt": "2026-06-24T23:05:00.000Z",
     "orientation": "portrait"
+  },
+  {
+    "id": "kyoto-u-yoshida-dorm-garden",
+    "title": "京大吉田寮の庭",
+    "description": "",
+    "location": "京大吉田寮の庭",
+    "foundAt": "2026-06",
+    "images": [
+      "/uploads/city/kyoto-u-yoshida-dorm-garden/1.png"
+    ],
+    "createdAt": "2026-06-29T08:30:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "kitaoji-dori",
+    "title": "北大路通",
+    "description": "",
+    "location": "北大路通",
+    "foundAt": "2026-06-29",
+    "images": [
+      "/uploads/city/kitaoji-dori/1.png"
+    ],
+    "createdAt": "2026-06-29T12:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-shopping-memo-scrap",
+    "title": "街・歩道",
+    "description": "",
+    "location": "街・歩道",
+    "foundAt": "2026-06-29",
+    "images": [
+      "/uploads/city/city-shopping-memo-scrap/1.png"
+    ],
+    "createdAt": "2026-06-29T13:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-park-cleaning-cart",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-park-cleaning-cart/1.png"
+    ],
+    "createdAt": "2026-06-24T14:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-note-kotomi",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-note-kotomi/1.png"
+    ],
+    "createdAt": "2026-06-24T15:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-bench-betting-ticket",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-bench-betting-ticket/1.png"
+    ],
+    "createdAt": "2026-06-24T15:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-ad-scrap-sunglasses",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-ad-scrap-sunglasses/1.png"
+    ],
+    "createdAt": "2026-06-24T16:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-shopping-list-folded",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-shopping-list-folded/1.png"
+    ],
+    "createdAt": "2026-06-24T17:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-shopping-list-scrap",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-shopping-list-scrap/1.png"
+    ],
+    "createdAt": "2026-06-24T17:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-note-quiz-section",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-note-quiz-section/1.png"
+    ],
+    "createdAt": "2026-06-24T18:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-note-riddles",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-note-riddles/1.png"
+    ],
+    "createdAt": "2026-06-24T18:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-wall-bicycle-scrap",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-wall-bicycle-scrap/1.png"
+    ],
+    "createdAt": "2026-06-24T19:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-sidewalk-furniture-row",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-sidewalk-furniture-row/1.png"
+    ],
+    "createdAt": "2026-06-24T19:01:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-broken-umbrella",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-broken-umbrella/1.png"
+    ],
+    "createdAt": "2026-06-24T20:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-bicycles-overgrown",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-bicycles-overgrown/1.png"
+    ],
+    "createdAt": "2026-06-24T22:30:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-broken-skateboard",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-broken-skateboard/1.png"
+    ],
+    "createdAt": "2026-06-24T23:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-hedge-drawing",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-hedge-drawing/1.png"
+    ],
+    "createdAt": "2026-06-24T23:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-tied-paperbacks",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-tied-paperbacks/1.png"
+    ],
+    "createdAt": "2026-06-25T00:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-umbrella-on-fence",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-umbrella-on-fence/1.png"
+    ],
+    "createdAt": "2026-06-25T01:30:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-rim-hangers-wall",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-rim-hangers-wall/1.png"
+    ],
+    "createdAt": "2026-06-25T02:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-laminated-found-objects",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-laminated-found-objects/1.png"
+    ],
+    "createdAt": "2026-06-25T03:30:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-pink-flower-paper",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-pink-flower-paper/1.png"
+    ],
+    "createdAt": "2026-06-25T04:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-scale-ruler-sica",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-scale-ruler-sica/1.png"
+    ],
+    "createdAt": "2026-06-25T04:01:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-origami-ladybug",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-origami-ladybug/1.png"
+    ],
+    "createdAt": "2026-06-25T04:02:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-origami-insects",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-origami-insects/1.png"
+    ],
+    "createdAt": "2026-06-25T04:03:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-bird-nest-cube",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-bird-nest-cube/1.png"
+    ],
+    "createdAt": "2026-06-25T04:04:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-bird-nest-plastic",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-bird-nest-plastic/1.png"
+    ],
+    "createdAt": "2026-06-25T04:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-bicycle-sticker-covered",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-bicycle-sticker-covered/1.png"
+    ],
+    "createdAt": "2026-06-25T05:30:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-strawberry-pavement",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-strawberry-pavement/1.png"
+    ],
+    "createdAt": "2026-06-25T06:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-worn-one-yen-coin",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-worn-one-yen-coin/1.png"
+    ],
+    "createdAt": "2026-06-25T06:31:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-calendar-shutter",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-calendar-shutter/1.png"
+    ],
+    "createdAt": "2026-06-25T06:32:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-rolled-paper-stick",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-rolled-paper-stick/1.png"
+    ],
+    "createdAt": "2026-06-25T07:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-shutter-sidewalk-scraps",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-shutter-sidewalk-scraps/1.png"
+    ],
+    "createdAt": "2026-06-25T09:30:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-torn-paper-tailor",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-torn-paper-tailor/1.png"
+    ],
+    "createdAt": "2026-06-25T09:31:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-shopping-list-takoyaki",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-shopping-list-takoyaki/1.png"
+    ],
+    "createdAt": "2026-06-25T13:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-red-fabric-ring",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-red-fabric-ring/1.png"
+    ],
+    "createdAt": "2026-06-25T15:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-yellow-propeller",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-yellow-propeller/1.png"
+    ],
+    "createdAt": "2026-06-25T15:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-pink-floppy-shell",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-pink-floppy-shell/1.png"
+    ],
+    "createdAt": "2026-06-25T15:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-notebook-paper-collage",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-notebook-paper-collage/1.png"
+    ],
+    "createdAt": "2026-06-25T19:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-asphalt-debris-pile",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-asphalt-debris-pile/1.png"
+    ],
+    "createdAt": "2026-06-25T19:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-zodiac-dial-pavement",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-zodiac-dial-pavement/1.png"
+    ],
+    "createdAt": "2026-06-25T20:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-notebook-cheese-wrapper",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-notebook-cheese-wrapper/1.png"
+    ],
+    "createdAt": "2026-06-25T20:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-plastic-drawing-charm",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-plastic-drawing-charm/1.png"
+    ],
+    "createdAt": "2026-06-25T22:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-brick-rope-fragments",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-brick-rope-fragments/1.png"
+    ],
+    "createdAt": "2026-06-25T22:30:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-ginkgo-boundary-marker",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-ginkgo-boundary-marker/1.png"
+    ],
+    "createdAt": "2026-06-26T01:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-gas-note-paper",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-gas-note-paper/1.png"
+    ],
+    "createdAt": "2026-06-26T03:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-weathered-math-notes",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-weathered-math-notes/1.png"
+    ],
+    "createdAt": "2026-06-26T03:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-tangled-earphone-cable",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-tangled-earphone-cable/1.png"
+    ],
+    "createdAt": "2026-06-26T03:02:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-graph-paper-fragments",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/city/city-graph-paper-fragments/1.png"
+    ],
+    "createdAt": "2026-06-26T07:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-circled-numbers-paper",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-circled-numbers-paper/1.png"],
+    "createdAt": "2026-06-26T08:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-barred-feather",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-barred-feather/1.png"],
+    "createdAt": "2026-06-26T08:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-look-chocolate-box",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-look-chocolate-box/1.png"],
+    "createdAt": "2026-06-26T08:02:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-pink-paper-airplane",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-pink-paper-airplane/1.png"],
+    "createdAt": "2026-06-26T08:03:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-pull-tabs-pitcher",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-pull-tabs-pitcher/1.png"],
+    "createdAt": "2026-06-26T09:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-open-book-fence",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-open-book-fence/1.png"],
+    "createdAt": "2026-06-29T16:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-crushed-gold-can",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-crushed-gold-can/1.png"],
+    "createdAt": "2026-06-29T19:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-crumpled-math-memo",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-crumpled-math-memo/1.png"],
+    "createdAt": "2026-07-03T00:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-paper-cord-collage",
+    "title": "街",
+    "description": "螺旋ノートのページに、しわのついた白い紙片と赤白の飾り紐をテープで貼ったコラージュ。",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-paper-cord-collage/1.png"],
+    "createdAt": "2026-07-03T02:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-kyoto-transit-directions",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-kyoto-transit-directions/1.png"],
+    "createdAt": "2026-07-03T04:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-bakery-founder-memo",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-bakery-founder-memo/1.png"],
+    "createdAt": "2026-07-03T04:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-shopping-list-asphalt",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-shopping-list-asphalt/1.png"],
+    "createdAt": "2026-07-03T04:02:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-keihan-route-memo",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-keihan-route-memo/1.png"],
+    "createdAt": "2026-07-03T04:03:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-flower-kanji-paper",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-flower-kanji-paper/1.png"],
+    "createdAt": "2026-07-03T04:04:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-avocado-kyoto-memo",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-avocado-kyoto-memo/1.png"],
+    "createdAt": "2026-07-03T04:05:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-grocery-shopping-list",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-grocery-shopping-list/1.png"],
+    "createdAt": "2026-07-03T04:06:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-music-artist-list",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-music-artist-list/1.png"],
+    "createdAt": "2026-07-03T04:07:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-elephant-sketch-paper",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-elephant-sketch-paper/1.png"],
+    "createdAt": "2026-07-03T04:08:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-cocktail-coaster-notes-1",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-cocktail-coaster-notes-1/1.png"],
+    "createdAt": "2026-07-03T08:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-cocktail-coaster-notes-2",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-cocktail-coaster-notes-2/1.png"],
+    "createdAt": "2026-07-03T08:01:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-electrical-y-connector",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-electrical-y-connector/1.png"],
+    "createdAt": "2026-07-03T03:31:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-backlit-wrapper-green-fragments",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-backlit-wrapper-green-fragments/1.png"],
+    "createdAt": "2026-07-03T08:02:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-flattened-white-textured-box",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-flattened-white-textured-box/1.png"],
+    "createdAt": "2026-07-03T08:03:00.000Z",
+    "orientation": "square"
+  },
+  {
+    "id": "city-clear-plastic-wrapper-pale-strips",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-clear-plastic-wrapper-pale-strips/1.png"],
+    "createdAt": "2026-07-03T08:04:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-hino-kuni-manju-box",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-hino-kuni-manju-box/1.png"],
+    "createdAt": "2026-07-03T08:05:00.000Z",
+    "orientation": "square"
+  },
+  {
+    "id": "city-asphalt-mono-sign-strip",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-asphalt-mono-sign-strip/1.png"],
+    "createdAt": "2026-07-03T08:06:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-corrugated-metal-math-scribbles",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-corrugated-metal-math-scribbles/1.png"],
+    "createdAt": "2026-07-03T08:07:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-bolt-cutters-notebook-nana-100yen",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-bolt-cutters-notebook-nana-100yen/1.png"],
+    "createdAt": "2026-07-03T08:08:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-street-stall-woven-mat-flatlay",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-street-stall-woven-mat-flatlay/1.png"],
+    "createdAt": "2026-07-03T08:09:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-weathered-book-asphalt",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-weathered-book-asphalt/1.png"],
+    "createdAt": "2026-07-03T12:46:00.000Z",
+    "orientation": "square"
+  },
+  {
+    "id": "city-weathered-power-cord-asphalt",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-weathered-power-cord-asphalt/1.png"],
+    "createdAt": "2026-07-03T12:51:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-pink-ribbon-strip-hand",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-pink-ribbon-strip-hand/1.png"],
+    "createdAt": "2026-07-03T12:52:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-sidewalk-stall-mat",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-sidewalk-stall-mat/1.png"],
+    "createdAt": "2026-07-03T12:53:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-poi-sute-kinshi-fragment",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-poi-sute-kinshi-fragment/1.png"],
+    "createdAt": "2026-07-03T05:40:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-handmade-red-mask",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-handmade-red-mask/1.png"],
+    "createdAt": "2026-07-03T07:15:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-white-drawstring-pavement",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-white-drawstring-pavement/1.png"],
+    "createdAt": "2026-07-03T07:16:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-translucent-plastic-sleeve",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-translucent-plastic-sleeve/1.png"],
+    "createdAt": "2026-07-03T07:17:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-nishinari-torii-stickers-wall",
+    "title": "西成",
+    "description": "",
+    "location": "西成",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-nishinari-torii-stickers-wall/1.png"],
+    "createdAt": "2026-07-03T06:00:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-nishinari-apple-gift-card-sleeves",
+    "title": "西成",
+    "description": "",
+    "location": "西成",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-nishinari-apple-gift-card-sleeves/1.png"],
+    "createdAt": "2026-07-03T06:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-nishinari-enka-street-performer",
+    "title": "西成",
+    "description": "",
+    "location": "西成",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-nishinari-enka-street-performer/1.png"],
+    "createdAt": "2026-07-03T06:02:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-nishinari-blue-bar-stool-lot",
+    "title": "西成",
+    "description": "",
+    "location": "西成",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-nishinari-blue-bar-stool-lot/1.png"],
+    "createdAt": "2026-07-03T06:03:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-nishinari-ukraine-support-bicycle",
+    "title": "西成",
+    "description": "",
+    "location": "西成",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-nishinari-ukraine-support-bicycle/1.png"],
+    "createdAt": "2026-07-03T06:04:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-football-play-notes-paper",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-football-play-notes-paper/1.png"],
+    "createdAt": "2026-07-03T10:00:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-weathered-cardboard-blue-tiles",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-weathered-cardboard-blue-tiles/1.png"],
+    "createdAt": "2026-07-03T10:01:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-torn-red-yellow-label-fragment",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-torn-red-yellow-label-fragment/1.png"],
+    "createdAt": "2026-07-03T10:03:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "city-orange-origami-crane-asphalt",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-orange-origami-crane-asphalt/1.png"],
+    "createdAt": "2026-07-03T10:30:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "city-zatsugami-paper-slip",
+    "title": "街",
+    "description": "",
+    "location": "街",
+    "foundAt": "2026-06-24",
+    "images": ["/uploads/city/city-zatsugami-paper-slip/1.png"],
+    "createdAt": "2026-07-03T10:46:00.000Z",
+    "orientation": "portrait"
   }
 ]
