@@ -2016,5 +2016,113 @@
     ],
     "createdAt": "2026-07-03T11:17:00.000Z",
     "orientation": "portrait"
+  },
+  {
+    "id": "sea-green-glass-globe-landmasses",
+    "title": "海",
+    "description": "",
+    "location": "海",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-green-glass-globe-landmasses/1.png"
+    ],
+    "createdAt": "2026-07-03T11:41:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-awaji-red-donut-sphere",
+    "title": "淡路島",
+    "description": "",
+    "location": "淡路島",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-awaji-red-donut-sphere/1.png"
+    ],
+    "createdAt": "2026-07-03T11:45:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "sea-awaji-yellow-plastic-ice-cream-cone",
+    "title": "淡路島",
+    "description": "",
+    "location": "淡路島",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-awaji-yellow-plastic-ice-cream-cone/1.png"
+    ],
+    "createdAt": "2026-07-03T11:46:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "sea-awaji-teal-painted-wood-fragment",
+    "title": "淡路島",
+    "description": "",
+    "location": "淡路島",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-awaji-teal-painted-wood-fragment/1.png"
+    ],
+    "createdAt": "2026-07-03T11:47:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "sea-awaji-white-plastic-grid-coin",
+    "title": "淡路島",
+    "description": "",
+    "location": "淡路島",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-awaji-white-plastic-grid-coin/1.png"
+    ],
+    "createdAt": "2026-07-03T11:48:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "sea-awaji-striped-stick-round-bead",
+    "title": "淡路島",
+    "description": "",
+    "location": "淡路島",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-awaji-striped-stick-round-bead/1.png"
+    ],
+    "createdAt": "2026-07-03T11:49:00.000Z",
+    "orientation": "landscape"
+  },
+  {
+    "id": "sea-awaji-white-sneaker-sole",
+    "title": "淡路島",
+    "description": "",
+    "location": "淡路島",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-awaji-white-sneaker-sole/1.png"
+    ],
+    "createdAt": "2026-07-03T11:50:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "sea-awaji-green-plastic-mesh",
+    "title": "淡路島",
+    "description": "",
+    "location": "淡路島",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-awaji-green-plastic-mesh/1.png"
+    ],
+    "createdAt": "2026-07-03T11:51:00.000Z",
+    "orientation": "portrait"
+  },
+  {
+    "id": "sea-awaji-yellow-marker-plastic-lid",
+    "title": "淡路島",
+    "description": "",
+    "location": "淡路島",
+    "foundAt": "2026-06-24",
+    "images": [
+      "/uploads/sea/sea-awaji-yellow-marker-plastic-lid/1.png"
+    ],
+    "createdAt": "2026-07-03T11:52:00.000Z",
+    "orientation": "landscape"
   }
 ]

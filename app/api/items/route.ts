@@ -7,6 +7,7 @@ import {
   orientationFromPublicUrl,
   readImageSize,
 } from "@/lib/image-meta";
+import { resizeForUpload } from "@/lib/image-resize";
 import { makeItemId, readCatalog, writeCatalog } from "@/lib/items";
 import { parsePriceFields } from "@/lib/price";
 import {
@@ -80,10 +81,10 @@ export async function POST(request: Request) {
   const images: string[] = [];
   let orientation: CatalogItem["orientation"];
   for (const [index, file] of imageFiles.entries()) {
-    const ext = path.extname(file.name) || ".jpg";
-    const filename = `${index + 1}${ext.toLowerCase()}`;
+    const raw = Buffer.from(await file.arrayBuffer());
+    const { buffer, ext } = await resizeForUpload(raw);
+    const filename = `${index + 1}${ext}`;
     const diskPath = path.join(uploadDir, filename);
-    const buffer = Buffer.from(await file.arrayBuffer());
     await fs.writeFile(diskPath, buffer);
     images.push(`/uploads/${category}/${id}/${filename}`);
     if (index === 0) {
@@ -216,11 +217,12 @@ export async function PATCH(request: Request) {
     await fs.mkdir(uploadDir, { recursive: true });
 
     for (const file of imageFiles) {
-      const filename = nextImageFilename(item.images, file.name);
-      const diskPath = path.join(uploadDir, filename);
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const raw = Buffer.from(await file.arrayBuffer());
+      const { buffer, ext } = await resizeForUpload(raw);
+      const baseName = nextImageFilename(item.images, `upload${ext}`);
+      const diskPath = path.join(uploadDir, baseName);
       await fs.writeFile(diskPath, buffer);
-      item.images.push(`/uploads/${category}/${id}/${filename}`);
+      item.images.push(`/uploads/${category}/${id}/${baseName}`);
     }
   }
 
