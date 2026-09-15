@@ -6,6 +6,7 @@ import PhotoViewer from "@/components/PhotoViewer";
 import { catalogDisplayTitle, categoryBasePath, categoryLabel } from "@/lib/category";
 import { assetUrl } from "@/lib/asset-path";
 import { pickHomePhotos, replaceHomePhotoSlot, type LatestEntry } from "@/lib/home-latest";
+import { isLolipopMinimal } from "@/lib/site-mode";
 
 type HomeLatestPhotoProps = {
   candidates: LatestEntry[];
@@ -116,11 +117,12 @@ export default function HomeLatestPhoto({ candidates }: HomeLatestPhotoProps) {
             const isAntique = entry.category === "antiques";
             const detailHref = `${categoryBasePath(entry.category)}/${entry.item.id}`;
             const imageSrc = assetUrl(entry.item.images[0]);
+            const useDetailLink = isAntique && !isLolipopMinimal;
 
             return (
               <article key={`home-col-${index}`} className="home-latest-column">
                 <div className="home-photo-stage">
-                  {isAntique ? (
+                  {useDetailLink ? (
                     <Link
                       href={detailHref}
                       className="home-latest-photo"
