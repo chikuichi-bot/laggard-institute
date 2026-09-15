@@ -1,3 +1,8 @@
+export type ClosedDayEntry = {
+  date: string;
+  reason: string;
+};
+
 export type OpenDaysData = {
   updatedAt: string;
   /** 営業時間の表示（例: 10:00–17:00） */
@@ -8,14 +13,45 @@ export type OpenDaysData = {
   weeklyWeekdays: number[];
   /** 臨時営業日（YYYY-MM-DD） */
   extraDays: string[];
-  /** 臨時休業日（YYYY-MM-DD） */
-  closedDays: string[];
+  /** 臨時休業日 */
+  closedDays: ClosedDayEntry[];
 };
 
 export const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
 
 export function sortOpenDays(days: string[]) {
   return [...days].sort();
+}
+
+export function sortClosedDays(days: ClosedDayEntry[]) {
+  return [...days].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function normalizeClosedDays(raw: unknown): ClosedDayEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  const entries: ClosedDayEntry[] = [];
+  for (const item of raw) {
+    if (typeof item === "string" && isValidDateKey(item)) {
+      entries.push({ date: item, reason: "" });
+      continue;
+    }
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    const date = String(record.date ?? "").trim();
+    if (!isValidDateKey(date)) continue;
+    entries.push({ date, reason: String(record.reason ?? "").trim() });
+  }
+
+  const byDate = new Map<string, ClosedDayEntry>();
+  for (const entry of entries) {
+    byDate.set(entry.date, entry);
+  }
+  return sortClosedDays([...byDate.values()]);
+}
+
+export function closedDayDateKeys(closedDays: ClosedDayEntry[]) {
+  return closedDays.map((entry) => entry.date);
 }
 
 export function isValidDateKey(value: string) {
@@ -49,7 +85,7 @@ export function isOpenDay(
   dateKey: string,
 ) {
   if (!isValidDateKey(dateKey)) return false;
-  if (data.closedDays.includes(dateKey)) return false;
+  if (closedDayDateKeys(data.closedDays).includes(dateKey)) return false;
   if (data.extraDays.includes(dateKey)) return true;
   const weekday = weekdayFromDateKey(dateKey);
   return weekday >= 0 && data.weeklyWeekdays.includes(weekday);
@@ -88,6 +124,23 @@ export function formatOpenDayLabel(dateKey: string) {
   if (!year || !month || !day) return dateKey;
   const weekday = WEEKDAY_LABELS[new Date(year, month - 1, day).getDay()];
   return `${month}月${day}日（${weekday}）`;
+}
+
+export function formatClosedDayLabel(entry: ClosedDayEntry) {
+  const label = formatOpenDayLabel(entry.date);
+  return entry.reason ? `${label} — ${entry.reason}` : label;
+}
+
+export function listUpcomingClosedDays(
+  data: Pick<OpenDaysData, "closedDays">,
+  fromDateKey: string,
+  limit = 6,
+) {
+  if (!isValidDateKey(fromDateKey)) return [];
+
+  return sortClosedDays(data.closedDays)
+    .filter((entry) => entry.date >= fromDateKey)
+    .slice(0, limit);
 }
 
 export function formatWeeklyWeekdaysLabel(weekdays: number[]) {

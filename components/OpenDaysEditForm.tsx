@@ -7,7 +7,9 @@ import type { OpenDaysData } from "@/lib/open-days-types";
 import {
   isValidDateKey,
   normalizeWeeklyWeekdays,
+  sortClosedDays,
   sortOpenDays,
+  type ClosedDayEntry,
   WEEKDAY_LABELS,
 } from "@/lib/open-days-types";
 
@@ -15,7 +17,71 @@ type OpenDaysEditFormProps = {
   initialData: OpenDaysData;
 };
 
-type DateListKind = "extraDays" | "closedDays";
+type DateListKind = "extraDays";
+
+function ClosedDayListEditor({
+  days,
+  newDay,
+  newReason,
+  onNewDayChange,
+  onNewReasonChange,
+  onAdd,
+  onRemove,
+}: {
+  days: ClosedDayEntry[];
+  newDay: string;
+  newReason: string;
+  onNewDayChange: (value: string) => void;
+  onNewReasonChange: (value: string) => void;
+  onAdd: () => void;
+  onRemove: (value: string) => void;
+}) {
+  return (
+    <article className="content-card content-card--flat admin-form-card">
+      <h2 className="admin-section-title">臨時休業日</h2>
+      <div className="open-days-edit-add">
+        <label className="form-field">
+          <span>日付を追加</span>
+          <input type="date" value={newDay} onChange={(e) => onNewDayChange(e.target.value)} />
+        </label>
+        <label className="form-field">
+          <span>理由</span>
+          <input
+            type="text"
+            value={newReason}
+            onChange={(e) => onNewReasonChange(e.target.value)}
+            placeholder="買い付け"
+          />
+        </label>
+        <button type="button" className="action-btn" onClick={onAdd}>
+          追加
+        </button>
+      </div>
+
+      {days.length === 0 ? (
+        <p className="form-message">臨時休業日はありません。</p>
+      ) : (
+        <ul className="open-days-edit-list">
+          {days.map((entry) => (
+            <li key={entry.date} className="open-days-edit-item">
+              <span>
+                {entry.date}
+                {entry.reason ? ` — ${entry.reason}` : ""}
+              </span>
+              <button
+                type="button"
+                className="action-btn action-btn--danger action-btn--small"
+                onClick={() => onRemove(entry.date)}
+              >
+                削除
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </article>
+  );
+}
 
 function todayDateInput() {
   const now = new Date();
@@ -85,13 +151,14 @@ export default function OpenDaysEditForm({ initialData }: OpenDaysEditFormProps)
   const [closedDays, setClosedDays] = useState(initialData.closedDays);
   const [newExtraDay, setNewExtraDay] = useState(todayDateInput());
   const [newClosedDay, setNewClosedDay] = useState(todayDateInput());
+  const [newClosedReason, setNewClosedReason] = useState("");
   const [secret, setSecret] = useState("");
   const [rememberSecret, setRememberSecret] = useState(true);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
 
   const sortedExtraDays = useMemo(() => sortOpenDays(extraDays), [extraDays]);
-  const sortedClosedDays = useMemo(() => sortOpenDays(closedDays), [closedDays]);
+  const sortedClosedDays = useMemo(() => sortClosedDays(closedDays), [closedDays]);
 
   useEffect(() => {
     setSecret(loadAdminSecret());
@@ -106,29 +173,44 @@ export default function OpenDaysEditForm({ initialData }: OpenDaysEditFormProps)
   }
 
   function addDate(kind: DateListKind) {
-    const value = (kind === "extraDays" ? newExtraDay : newClosedDay).trim();
+    const value = newExtraDay.trim();
     if (!isValidDateKey(value)) {
       setStatus("error");
       setMessage("日付は YYYY-MM-DD の形式で入力してください。");
       return;
     }
 
-    if (kind === "extraDays") {
-      setExtraDays((current) => sortOpenDays([...new Set([...current, value])]));
-    } else {
-      setClosedDays((current) => sortOpenDays([...new Set([...current, value])]));
+    setExtraDays((current) => sortOpenDays([...new Set([...current, value])]));
+    setStatus("idle");
+    setMessage("");
+  }
+
+  function addClosedDay() {
+    const value = newClosedDay.trim();
+    const reason = newClosedReason.trim();
+    if (!isValidDateKey(value)) {
+      setStatus("error");
+      setMessage("日付は YYYY-MM-DD の形式で入力してください。");
+      return;
     }
 
+    setClosedDays((current) =>
+      sortClosedDays([
+        ...current.filter((entry) => entry.date !== value),
+        { date: value, reason },
+      ]),
+    );
+    setNewClosedReason("");
     setStatus("idle");
     setMessage("");
   }
 
   function removeDate(kind: DateListKind, value: string) {
-    if (kind === "extraDays") {
-      setExtraDays((current) => current.filter((day) => day !== value));
-    } else {
-      setClosedDays((current) => current.filter((day) => day !== value));
-    }
+    setExtraDays((current) => current.filter((day) => day !== value));
+  }
+
+  function removeClosedDay(value: string) {
+    setClosedDays((current) => current.filter((entry) => entry.date !== value));
   }
 
   async function onSubmit(event: React.FormEvent) {
@@ -244,14 +326,14 @@ export default function OpenDaysEditForm({ initialData }: OpenDaysEditFormProps)
         emptyMessage="臨時営業日はありません。"
       />
 
-      <DateListEditor
-        title="臨時休業日"
+      <ClosedDayListEditor
         days={sortedClosedDays}
         newDay={newClosedDay}
+        newReason={newClosedReason}
         onNewDayChange={setNewClosedDay}
-        onAdd={() => addDate("closedDays")}
-        onRemove={(day) => removeDate("closedDays", day)}
-        emptyMessage="臨時休業日はありません。"
+        onNewReasonChange={setNewClosedReason}
+        onAdd={addClosedDay}
+        onRemove={removeClosedDay}
       />
 
       <label className="form-field">

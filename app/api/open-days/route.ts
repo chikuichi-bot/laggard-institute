@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   isValidDateKey,
+  normalizeClosedDays,
   normalizeWeeklyWeekdays,
   sortOpenDays,
 } from "@/lib/open-days-types";
@@ -24,6 +25,13 @@ function parseDateList(raw: unknown, label: string) {
   );
 }
 
+function parseClosedDays(raw: unknown) {
+  if (!Array.isArray(raw)) {
+    return NextResponse.json({ error: "臨時休業日の形式が不正です。" }, { status: 400 });
+  }
+  return normalizeClosedDays(raw);
+}
+
 function parseBody(raw: unknown) {
   if (!raw || typeof raw !== "object") {
     return NextResponse.json({ error: "リクエストの形式が不正です。" }, { status: 400 });
@@ -41,7 +49,7 @@ function parseBody(raw: unknown) {
   const extraDays = parseDateList(record.extraDays, "臨時営業日");
   if (extraDays instanceof NextResponse) return extraDays;
 
-  const closedDays = parseDateList(record.closedDays, "臨時休業日");
+  const closedDays = parseClosedDays(record.closedDays);
   if (closedDays instanceof NextResponse) return closedDays;
 
   return { hoursLabel, note, weeklyWeekdays, extraDays, closedDays };

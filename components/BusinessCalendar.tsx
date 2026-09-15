@@ -3,11 +3,14 @@
 import { useMemo, useState } from "react";
 import type { OpenDaysData } from "@/lib/open-days-types";
 import {
+  closedDayDateKeys,
   dateKeyFromParts,
   formatCalendarMonthLabel,
+  formatClosedDayLabel,
   formatOpenDayLabel,
   formatWeeklyWeekdaysLabel,
   isOpenDay,
+  listUpcomingClosedDays,
   listUpcomingOpenDays,
   WEEKDAY_LABELS,
 } from "@/lib/open-days-types";
@@ -61,6 +64,8 @@ export default function BusinessCalendar({
   const today = todayKey();
   const weeklyLabel = formatWeeklyWeekdaysLabel(weeklyWeekdays);
   const upcoming = listUpcomingOpenDays(schedule, today, 6);
+  const upcomingClosed = listUpcomingClosedDays(schedule, today, 6);
+  const closedDateSet = useMemo(() => new Set(closedDayDateKeys(closedDays)), [closedDays]);
 
   function shiftMonth(delta: number) {
     const next = new Date(viewYear, viewMonth + delta, 1);
@@ -115,14 +120,15 @@ export default function BusinessCalendar({
             }
 
             const open = isOpenDay(schedule, cell.dateKey);
+            const closed = closedDateSet.has(cell.dateKey);
             const isToday = cell.dateKey === today;
 
             return (
               <div
                 key={cell.dateKey}
-                className={`business-calendar-cell${open ? " business-calendar-cell--open" : ""}${isToday ? " business-calendar-cell--today" : ""}`}
+                className={`business-calendar-cell${open ? " business-calendar-cell--open" : ""}${closed ? " business-calendar-cell--closed" : ""}${isToday ? " business-calendar-cell--today" : ""}`}
                 role="gridcell"
-                aria-label={`${cell.day}日${open ? " 営業" : ""}`}
+                aria-label={`${cell.day}日${closed ? " お休み" : open ? " 営業" : ""}`}
               >
                 <span className="business-calendar-day">{cell.day}</span>
               </div>
@@ -133,8 +139,23 @@ export default function BusinessCalendar({
         <p className="business-calendar-legend">
           <span className="business-calendar-legend-mark" aria-hidden />
           営業日
+          <span className="business-calendar-legend-mark business-calendar-legend-mark--closed" aria-hidden />
+          お休み
         </p>
       </div>
+
+      {upcomingClosed.length > 0 ? (
+        <section className="business-calendar-upcoming" aria-labelledby="upcoming-closed-days">
+          <h3 id="upcoming-closed-days" className="business-calendar-upcoming-title">
+            お休みの日
+          </h3>
+          <ul className="business-calendar-upcoming-list business-calendar-upcoming-list--closed">
+            {upcomingClosed.map((entry) => (
+              <li key={entry.date}>{formatClosedDayLabel(entry)}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {upcoming.length > 0 ? (
         <section className="business-calendar-upcoming" aria-labelledby="upcoming-open-days">

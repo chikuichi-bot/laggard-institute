@@ -3,6 +3,7 @@ import path from "path";
 import type { OpenDaysData } from "./open-days-types";
 import {
   isValidDateKey,
+  normalizeClosedDays,
   normalizeWeeklyWeekdays,
   sortOpenDays,
 } from "./open-days-types";
@@ -10,11 +11,15 @@ import {
 export type { OpenDaysData } from "./open-days-types";
 export {
   formatCalendarMonthLabel,
+  formatClosedDayLabel,
   formatOpenDayLabel,
   formatWeeklyWeekdaysLabel,
   isOpenDay,
   isValidDateKey,
+  listUpcomingClosedDays,
   listUpcomingOpenDays,
+  normalizeClosedDays,
+  sortClosedDays,
   sortOpenDays,
   WEEKDAY_LABELS,
 } from "./open-days-types";
@@ -51,9 +56,7 @@ function migrateLegacyData(raw: Record<string, unknown>): OpenDaysData {
     extraDays: Array.isArray(raw.extraDays)
       ? normalizeDateList(raw.extraDays as string[])
       : legacyDays,
-    closedDays: Array.isArray(raw.closedDays)
-      ? normalizeDateList(raw.closedDays as string[])
-      : [],
+    closedDays: normalizeClosedDays(raw.closedDays),
   };
 }
 
@@ -73,7 +76,7 @@ export async function writeOpenDays(data: Omit<OpenDaysData, "updatedAt">) {
     note: data.note.trim(),
     weeklyWeekdays: normalizeWeeklyWeekdays(data.weeklyWeekdays),
     extraDays: normalizeDateList(data.extraDays),
-    closedDays: normalizeDateList(data.closedDays),
+    closedDays: normalizeClosedDays(data.closedDays),
     updatedAt: new Date().toISOString(),
   };
   await fs.writeFile(OPEN_DAYS_PATH, JSON.stringify(normalized, null, 2) + "\n", "utf8");
