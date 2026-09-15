@@ -8,7 +8,8 @@
     "build": "next build",
     "build:lolipop": "bash scripts/build-lolipop.sh",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "restore:lolipop-skip": "bash scripts/restore-lolipop-skip.sh"
   },
   "dependencies": {
     "next": "16.2.9",
