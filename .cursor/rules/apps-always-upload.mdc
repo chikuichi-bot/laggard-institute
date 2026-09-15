@@ -1,0 +1,49 @@
+# アプリページ · 常にアップロード可能にする
+
+淡島様: `/apps` を触ったら、**言われなくても** web アップロード用を用意する。
+
+## 正本コマンド
+
+```bash
+npm run upload:apps
+```
+
+- `lolipop-apps/` を作り直す
+- Finder で開く
+- 上げ先: `public_html/lagado2026/`（`apps/` · `_next/` · `icons/` · `favicon.ico`）
+- 公開URL: https://lagado.jp/lagado2026/apps/
+
+## いつ実行するか（確認待ちしない）
+
+次を直したら、返答の最後にパッケージを作り直して Finder を出す:
+
+- `app/apps/**`
+- `components/StoreBadges.tsx`
+- `lib/sections.ts` のアプリ一覧
+- `app/globals.css` の apps / store-badge / app-connect 周り
+- `public/icons/` のアプリアイコン
+
+ユーザーが「アップ」「アップロード」「サーバー」「公開」と言ったら即実行。
+
+## アプリアイコン品質ゲート（差し替え時）
+
+`public/icons/` を触ったら、`upload:apps` の前に確認:
+
+```bash
+npm run check:app-icons
+```
+
+チェック内容（自動）:
+- `*.bak-old` / `*.bak` が残っていないか
+- HEAD 比でバイト数が急減していないか（既定: 60%未満 → 失敗 · 過圧縮疑い）
+
+レビューチェックリスト（目視）:
+- [ ] クリームカード上で潰れて見えないか
+- [ ] `.bak-old` をコミット対象に入れない
+- [ ] 過圧縮なら差し戻しは**ユーザー確認後**（自動で画像を戻さない）
+
+## 注意
+
+- `_next` は必ず `apps` とセット
+- 古道具・街・海の uploads は触らない
+- `lolipop-apps/` は生成物（`.gitignore`）· コミットしない

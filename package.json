@@ -7,9 +7,10 @@
     "dev:keep": "bash scripts/dev-keep.sh",
     "build": "next build",
     "build:lolipop": "bash scripts/build-lolipop.sh",
+    "restore:lolipop-skip": "bash scripts/restore-lolipop-skip.sh",
+    "check:app-icons": "bash scripts/check-app-icons.sh",
     "start": "next start",
-    "lint": "eslint",
-    "restore:lolipop-skip": "bash scripts/restore-lolipop-skip.sh"
+    "lint": "eslint"
   },
   "dependencies": {
     "next": "16.2.9",
