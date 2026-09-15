@@ -1,63 +1,90 @@
-import AppVideo from "@/components/AppVideo";
 import SiteShell from "@/components/SiteShell";
-import { appVideoSrc } from "@/lib/app-media";
+import { StoreBadges } from "@/components/StoreBadges";
 import { assetUrl } from "@/lib/asset-path";
-import { apps } from "@/lib/sections";
+import {
+  apps,
+  commissionedApps,
+  formatAppPlatformLine,
+  formatAppReleasedAt,
+  sortAppsByReleasedAt,
+  type AppEntry,
+} from "@/lib/sections";
+
+function AppListItem({
+  app,
+  commissioned = false,
+}: {
+  app: AppEntry;
+  commissioned?: boolean;
+}) {
+  const platformLine = formatAppPlatformLine(app.editions);
+
+  return (
+    <li className="app-connect-item">
+      <div className="app-connect-row">
+        <span className="app-connect-icon-wrap" aria-hidden="true">
+          {app.icon ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="app-connect-icon" src={assetUrl(app.icon)} alt="" />
+          ) : (
+            <span className="app-connect-icon app-connect-icon--placeholder" />
+          )}
+        </span>
+        <div className="app-connect-copy">
+          <div className="app-connect-name">
+            {app.name}
+            {commissioned ? (
+              <span className="app-commissioned-tag">委託</span>
+            ) : null}
+          </div>
+          {platformLine ? (
+            <div className="app-connect-platforms">{platformLine}</div>
+          ) : null}
+          <p className="app-connect-desc">{app.description}</p>
+          <p className="app-connect-date">
+            制作日 {formatAppReleasedAt(app.releasedAt)}
+          </p>
+        </div>
+      </div>
+      {app.editions.length > 0 ? (
+        <div className="app-connect-actions">
+          <StoreBadges editions={app.editions} />
+        </div>
+      ) : null}
+    </li>
+  );
+}
 
 export default function AppsPage() {
+  const appsByDate = sortAppsByReleasedAt(apps);
+  const commissionedByDate = sortAppsByReleasedAt(commissionedApps);
+
   return (
-    <SiteShell tagline="言葉と遊ぶ、小さなアプリたち。">
+    <SiteShell tagline="Lagado がつくった、小さなアプリたち。">
       <article className="content-card content-card--apps">
         <div className="apps-block horizontal-body">
-          <p>これはラガード研究所が開発したアプリです。</p>
-          <ul className="app-list">
-            {apps.map((app) => {
-              const videoSrc = app.videoBase ? appVideoSrc(app.videoBase) : null;
-
-              return (
-              <li key={app.name}>
-                <a
-                  href={app.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="app-row"
-                  aria-label={`${app.name} — App Storeで開く`}
-                >
-                  <span className="app-icon-wrap" aria-hidden="true">
-                    {app.icon ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img className="app-icon" src={assetUrl(app.icon)} alt="" />
-                    ) : (
-                      <span className="app-icon app-icon--placeholder" aria-hidden />
-                    )}
-                  </span>
-                  <div className="app-copy">
-                    <div className="app-name">{app.name}</div>
-                    <div className="app-desc">{app.description}</div>
-                  </div>
-                </a>
-                {videoSrc || app.poster ? (
-                  <div className="apps-video-wrap">
-                    {videoSrc ? (
-                      <AppVideo
-                        name={app.name}
-                        src={videoSrc}
-                        poster={app.poster ? assetUrl(app.poster) : undefined}
-                      />
-                    ) : app.poster ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        className="apps-video"
-                        src={assetUrl(app.poster)}
-                        alt={`${app.name}のデモ`}
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-              </li>
-            );
-            })}
+          <p className="apps-lead">
+            これはラガード研究所（Lagado）が開発したアプリです。
+          </p>
+          <ul className="app-list app-list--connect">
+            {appsByDate.map((app) => (
+              <AppListItem key={app.name} app={app} />
+            ))}
           </ul>
+
+          <section className="apps-commissioned" aria-labelledby="apps-commissioned-title">
+            <h2 id="apps-commissioned-title" className="apps-commissioned-title">
+              委託制作
+            </h2>
+            <p className="apps-commissioned-note">
+              依頼を受けて制作したアプリです。上の自作アプリとは別枠です。
+            </p>
+            <ul className="app-list app-list--connect">
+              {commissionedByDate.map((app) => (
+                <AppListItem key={app.name} app={app} commissioned />
+              ))}
+            </ul>
+          </section>
         </div>
       </article>
     </SiteShell>

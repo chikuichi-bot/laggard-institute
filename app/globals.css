@@ -421,26 +421,328 @@ body:has(.content-card--home) {
   width: 100%;
 }
 
-.app-list li {
+.app-list--grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 1.2em;
+  align-items: stretch;
+}
+
+.app-list--connect {
+  list-style: none;
+  margin: 1.2em 0 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px 32px;
+  align-items: stretch;
+}
+
+@media (min-width: 720px) {
+  .app-list--grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-list--connect {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 980px) {
+  .app-list--grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-list--connect {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.app-connect-item {
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cfc0ab;
+  border-radius: 10px;
+  background: #fffef8;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-connect-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.app-connect-icon-wrap {
+  width: 88px;
+  height: 88px;
+  min-width: 88px;
+  min-height: 88px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #b1a79a;
+  box-shadow: 0 1px 2px rgba(43, 39, 34, 0.08);
+}
+
+.app-connect-icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.app-connect-icon--placeholder {
+  background: var(--border-color);
+}
+
+.app-connect-copy {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.app-connect-name {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  color: var(--text-main);
+}
+
+.app-connect-platforms {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-sub);
+  letter-spacing: 0.02em;
+}
+
+.app-connect-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-main);
+}
+
+.app-connect-date {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--text-sub);
+}
+
+.app-connect-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.app-list--connect .store-badges {
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.app-list--connect .store-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.app-list--connect .store-badge {
+  width: auto;
+  flex: 0 0 auto;
+  justify-content: flex-start;
+  height: 40px;
+  padding: 0 12px 0 10px;
+  box-sizing: border-box;
+}
+
+.app-list--connect .store-badge--web {
+  width: auto;
+  min-width: 0;
+}
+
+.app-list--connect .store-badge-name {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.app-list--connect .store-badge-kicker {
+  white-space: nowrap;
+}
+
+.app-list--connect .store-badge-mark {
+  width: 14px;
+  height: 18px;
+}
+
+.app-list--connect .store-badge-mark--play {
+  width: 16px;
+  height: 16px;
+}
+
+.app-list--connect .store-badge-mark--web {
+  width: 16px;
+  height: 16px;
+}
+
+.app-list a.store-badge--web {
+  color: #fff;
+}
+
+@media (max-width: 719px) {
+  .app-connect-icon-wrap {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    min-height: 64px;
+    border-radius: 14px;
+  }
+
+  .app-connect-name {
+    font-size: 16px;
+  }
+
+  .app-connect-platforms {
+    font-size: 12px;
+  }
+
+  .app-connect-desc {
+    font-size: 13px;
+  }
+
+  .app-list--connect .store-badges,
+  .app-list--connect .store-badges-row {
+    width: 100%;
+  }
+
+  .app-list--connect .store-badges-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-list--connect .store-badges-row:has(> :only-child) {
+    grid-template-columns: minmax(0, 200px);
+  }
+
+  .app-list--connect .store-badge {
+    width: 100%;
+    justify-content: center;
+    height: 38px;
+    gap: 6px;
+    padding: 0 8px 0 7px;
+  }
+
+  .app-list--connect .store-badge--web {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-list--connect .store-badge-kicker {
+    font-size: 7px;
+  }
+
+  .app-list--connect .store-badge-name {
+    font-size: 12px;
+  }
+
+  .content-card--apps {
+    padding: 20px 14px;
+  }
+
+  .app-list--connect > .app-connect-item {
+    padding: 14px;
+  }
+}
+
+.app-list > li {
   border-bottom: 1px dashed var(--border-color);
   padding: 18px 0;
 }
 
-.app-list li:first-child {
-  padding-top: 0;
+.app-list--connect > .app-connect-item {
+  border-bottom: 1px solid #cfc0ab;
+  padding: 16px;
+}
+
+.apps-lead {
+  margin: 0 0 1.2em;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  line-height: 1.8;
 }
 
 .app-list a {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
   color: inherit;
   text-decoration: none;
   cursor: pointer;
 }
 
+.app-list a.store-badge {
+  color: #fff;
+}
+
+.app-list a.store-badge--web {
+  color: #fff;
+}
+
 .app-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
   padding: 2px 0;
+}
+
+.app-cell-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-number {
+  width: 1.6em;
+  min-width: 1.6em;
+  flex-shrink: 0;
+  padding-top: 10px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--text-sub);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-cell-head .app-number {
+  padding-top: 0;
+  text-align: left;
+}
+
+.app-list--grid .app-name {
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  margin-bottom: 0;
+  line-height: 1.45;
 }
 
 .app-icon-wrap {
@@ -478,13 +780,156 @@ body:has(.content-card--home) {
 .app-list .app-name {
   font-size: 18px;
   letter-spacing: 0.08em;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .app-list .app-desc {
   font-size: 14px;
-  color: var(--text-sub);
+  color: var(--text-main);
   line-height: 1.8;
+  margin-bottom: 12px;
+}
+
+.app-commissioned-tag {
+  margin-left: 0.55em;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-sub);
+  vertical-align: middle;
+}
+
+.store-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0 0 8px;
+  width: 100%;
+}
+
+.store-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-list--grid .store-badge {
+  height: 36px;
+  padding: 0 10px 0 8px;
+}
+
+.app-list--grid .store-badge--web {
+  width: 100%;
+  justify-content: center;
+}
+
+.app-list--grid .store-badge-name {
+  font-size: 13px;
+}
+
+.app-list--grid .store-badge-mark {
+  width: 14px;
+  height: 18px;
+}
+
+.app-list--grid .store-badge-mark--play {
+  width: 16px;
+  height: 16px;
+}
+
+.app-list--grid .store-badge-mark--web {
+  width: 16px;
+  height: 16px;
+}
+
+.store-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px 0 10px;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  line-height: 1;
+  box-sizing: border-box;
+  border: 1px solid #111;
+  transition: opacity 0.15s ease;
+}
+
+.store-badge:hover {
+  opacity: 0.88;
+  color: #fff;
+}
+
+.store-badge--web {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.store-badge--web:hover {
+  color: #fff;
+  opacity: 0.88;
+}
+
+.store-badge-mark {
+  width: 16px;
+  height: 20px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.store-badge-mark--play {
+  width: 18px;
+  height: 18px;
+}
+
+.store-badge-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+}
+
+.store-badge-kicker {
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+
+.store-badge-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+
+.store-badge--web .store-badge-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.app-edition-date {
+  color: var(--text-sub);
+  font-size: 12px;
+  letter-spacing: 0.04em;
 }
 
 .map-frame {
@@ -679,6 +1124,13 @@ body:has(.content-card--home) {
   font-weight: 500;
 }
 
+.business-calendar-cell--closed {
+  background: rgba(120, 96, 72, 0.06);
+  color: var(--text-sub);
+  text-decoration: line-through;
+  text-decoration-color: rgba(120, 96, 72, 0.35);
+}
+
 .business-calendar-cell--today {
   box-shadow: inset 0 0 0 1px rgba(120, 96, 72, 0.45);
 }
@@ -692,7 +1144,8 @@ body:has(.content-card--home) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro",
     "Noto Serif JP", serif;
   font-size: 11px;
@@ -705,6 +1158,11 @@ body:has(.content-card--home) {
   height: 14px;
   border-radius: 999px;
   background: rgba(120, 96, 72, 0.16);
+}
+
+.business-calendar-legend-mark--closed {
+  background: rgba(120, 96, 72, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(120, 96, 72, 0.2);
 }
 
 .business-calendar-upcoming-title {
@@ -731,6 +1189,10 @@ body:has(.content-card--home) {
   font-size: 13px;
   letter-spacing: 0.06em;
   color: var(--text-sub);
+}
+
+.business-calendar-upcoming-list--closed {
+  color: var(--text-main);
 }
 
 .open-days-edit-add {
@@ -869,12 +1331,33 @@ body:has(.content-card--home) {
 
 .apps-block {
   width: 100%;
-  max-width: 560px;
+  max-width: 980px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
+}
+
+.apps-commissioned {
+  margin-top: 2.4em;
+  padding-top: 1.6em;
+  border-top: 1px solid var(--border-color);
+}
+
+.apps-commissioned-title {
+  margin: 0 0 0.4em;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--text-sub);
+}
+
+.apps-commissioned-note {
+  margin: 0 0 1em;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-sub);
 }
 
 .apps-video-wrap {
@@ -918,6 +1401,41 @@ body:has(.content-card--home) {
   justify-content: stretch;
   padding: 0;
   overflow: hidden;
+}
+
+.home-hero-stage {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  background: var(--card-bg);
+}
+
+.home-hero-stage--wide {
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+}
+
+.home-hero-photo {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.home-hero-stage--wide .home-hero-photo {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
 }
 
 .home-latest-duo {
@@ -1099,7 +1617,9 @@ body:has(.content-card--home) {
   min-width: 0;
   width: 100%;
   display: flex;
-  padding: 12px 8px 0;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 8px;
   background: var(--card-bg);
 }
 
@@ -2351,12 +2871,20 @@ body:has(.content-card--home) {
 
 @media (max-width: 899px) {
   .action-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+    justify-content: stretch;
+    align-items: stretch;
   }
 
   .action-btn {
-    padding: 8px 14px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 10px;
     font-size: 12px;
+    letter-spacing: 0.04em;
+    text-align: center;
   }
 }
 
