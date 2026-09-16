@@ -50,3 +50,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Basic auth (never commit)
+**/.htpasswd
+.lolipop-private-auth/
