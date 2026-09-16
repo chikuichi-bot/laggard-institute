@@ -4,12 +4,18 @@ import {
   checkoutProductImageUrl,
   type CheckoutCategory,
 } from "@/lib/checkout-session";
+import { BASE_PATH } from "@/lib/asset-path";
 import { getAmappolaProduct, canPurchaseAmappola, AMAPPOLA_PRODUCT_ID } from "@/lib/amappola";
 import { getStripe, isStripeCheckoutAvailable } from "@/lib/stripe";
 import { getItem } from "@/lib/items";
 import { canPurchaseItem } from "@/lib/purchase-mailto";
 import { calculateShipping } from "@/lib/shipping";
 import type { CatalogItem } from "@/lib/types";
+
+function withBasePath(path: string) {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${BASE_PATH}${normalized}`;
+}
 
 type CheckoutBody = {
   itemId?: string;
@@ -48,13 +54,13 @@ async function resolveCheckoutItem(
 }
 
 function purchaseSuccessPath(category: CheckoutCategory, itemId: string) {
-  if (category === "amappola") return `/amappola/purchase/success`;
-  return `/antiques/${itemId}/purchase/success`;
+  if (category === "amappola") return withBasePath("/amappola/purchase/success");
+  return withBasePath(`/antiques/${itemId}/purchase/success`);
 }
 
 function purchaseCancelPath(category: CheckoutCategory, itemId: string) {
-  if (category === "amappola") return `/amappola/purchase`;
-  return `/antiques/${itemId}/purchase`;
+  if (category === "amappola") return withBasePath("/amappola/purchase");
+  return withBasePath(`/antiques/${itemId}/purchase`);
 }
 
 export async function POST(request: Request) {

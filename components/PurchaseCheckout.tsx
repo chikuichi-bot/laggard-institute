@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { assetUrl } from "@/lib/asset-path";
+import { assetUrl, BASE_PATH } from "@/lib/asset-path";
 import { BANK_TRANSFER } from "@/lib/constants";
 import {
   paymentMethodOptions,
@@ -154,7 +154,7 @@ export default function PurchaseCheckout({
 
       setLoading(true);
       try {
-        const response = await fetch("/api/checkout", {
+        const response = await fetch(`${BASE_PATH}/api/checkout`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -182,7 +182,20 @@ export default function PurchaseCheckout({
       }
     }
 
-    window.location.href = buildPurchaseMailto(item, data);
+    const mailto = buildPurchaseMailto(item, data);
+    const successPath =
+      checkoutCategory === "amappola"
+        ? `${BASE_PATH}/amappola/purchase/success`
+        : `${BASE_PATH}/antiques/${item.id}/purchase/success`;
+
+    // メールアプリを開きつつ、完了面へ進む（静的ホストでもクライアント完結）
+    const mailLink = document.createElement("a");
+    mailLink.href = mailto;
+    mailLink.rel = "noopener";
+    document.body.appendChild(mailLink);
+    mailLink.click();
+    mailLink.remove();
+    window.location.assign(successPath);
   }
 
   const submitLabel =
