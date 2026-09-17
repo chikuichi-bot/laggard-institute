@@ -196,20 +196,6 @@ export const apps: AppEntry[] = [
     ],
   },
   {
-    name: "ついたらメモ",
-    icon: "/icons/tsuitara-memo.png",
-    description: "次の訪問先まで、忘れていい。着いたら、その場所のことだけ出ます。",
-    releasedAt: "2026-08-27",
-    editions: [
-      {
-        platform: "ios",
-        href: "https://apps.apple.com/jp/app/%E3%81%A4%E3%81%84%E3%81%9F%E3%82%89%E3%83%A1%E3%83%A2/id6804939168",
-        releasedAt: "2026-08-27",
-        version: "1.0.4",
-      },
-    ],
-  },
-  {
     name: "4S カメラ",
     icon: "/icons/4s-camera.png",
     description: "いまの iPhone では切れない補正を、切るためのカメラ。綺麗にするアプリではありません。",
@@ -227,6 +213,20 @@ export const apps: AppEntry[] = [
 
 /** 委託制作（自作アプリと分けて掲載） */
 export const commissionedApps: AppEntry[] = [
+  {
+    name: "ついたらメモ",
+    icon: "/icons/tsuitara-memo.png",
+    description: "次の訪問先まで、忘れていい。着いたら、その場所のことだけ出ます。",
+    releasedAt: "2026-08-27",
+    editions: [
+      {
+        platform: "ios",
+        href: "https://apps.apple.com/jp/app/%E3%81%A4%E3%81%84%E3%81%9F%E3%82%89%E3%83%A1%E3%83%A2/id6804939168",
+        releasedAt: "2026-08-27",
+        version: "1.0.4",
+      },
+    ],
+  },
   {
     name: "アボモンゲーム",
     icon: "/icons/abomon-game.png",
