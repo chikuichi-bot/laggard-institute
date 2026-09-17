@@ -139,7 +139,7 @@ export const apps: AppEntry[] = [
         platform: "ios",
         href: "https://apps.apple.com/jp/app/%E3%81%8A%E3%81%BF%E3%81%8F%E3%81%98%E6%96%87%E5%BA%AB/id6760742804",
         releasedAt: "2026-03-26",
-        version: "1.2.11",
+        version: "1.3",
       },
       {
         platform: "android",
@@ -191,7 +191,7 @@ export const apps: AppEntry[] = [
         platform: "ios",
         href: "https://apps.apple.com/jp/app/%E7%9B%B8%E5%AF%BE%E6%80%A7%E7%90%86%E8%AB%96%E8%A8%88/id6804165772",
         releasedAt: "2026-08-25",
-        version: "2.0",
+        version: "2.1",
       },
     ],
   },
