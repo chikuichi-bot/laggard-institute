@@ -124,6 +124,21 @@ export function primaryAppHref(editions: AppEdition[]): string | undefined {
 /** Lagado 自作（表示は制作日の新しい順） */
 export const apps: AppEntry[] = [
   {
+    name: "そらから",
+    icon: "/icons/sorakara.png",
+    description:
+      "空の散歩。ただ浮いて、街を上から眺めます。たまに、新しい発見があります。",
+    releasedAt: "2026-10-09",
+    editions: [
+      {
+        platform: "ios",
+        href: "https://apps.apple.com/jp/app/%E3%81%9D%E3%82%89%E3%81%8B%E3%82%89/id6819470015",
+        releasedAt: "2026-10-09",
+        version: "1.0",
+      },
+    ],
+  },
+  {
     name: "おみくじ文庫",
     icon: "/icons/omikuji-bunko.png",
     description:
