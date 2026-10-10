@@ -47,6 +47,15 @@ export type AppEdition = {
   version?: string;
 };
 
+export type AppFriendOffer = {
+  /** App Store Offer Code redeem など、無料枠の実URLのみ（推測禁止） */
+  url: string;
+  /** ボタン主文言。例: 友人 */
+  label?: string;
+  /** 短い副文言。例: 一年無料 */
+  detail?: string;
+};
+
 export type AppEntry = {
   name: string;
   icon?: string;
@@ -56,6 +65,11 @@ export type AppEntry = {
   editions: AppEdition[];
   videoBase?: string;
   poster?: string;
+  /**
+   * 友人向け無料枠があるときだけ設定。
+   * 無いアプリには付けない（ボタンも出さない）。
+   */
+  friendOffer?: AppFriendOffer;
 };
 
 export function appPlatformLabel(platform: AppPlatform): string {
@@ -137,6 +151,12 @@ export const apps: AppEntry[] = [
         version: "1.0",
       },
     ],
+    /** App Store Connect カスタムオファーコード SORAKARA1Y（2026-12-31 まで · 最大500） */
+    friendOffer: {
+      url: "https://apps.apple.com/redeem?ctx=offercodes&id=6819470015&code=SORAKARA1Y",
+      label: "友人",
+      detail: "一年無料",
+    },
   },
   {
     name: "おみくじ文庫",

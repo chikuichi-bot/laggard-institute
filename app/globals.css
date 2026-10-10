@@ -550,6 +550,40 @@ body:has(.content-card--home) {
   margin-top: auto;
 }
 
+.app-friend-offer {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid #cfc0ab;
+  border-radius: 8px;
+  background: #fffaf0;
+  color: var(--text-main);
+  text-decoration: none;
+  line-height: 1.2;
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.app-friend-offer:hover {
+  background: #fff6e4;
+  border-color: #b9a78f;
+  color: var(--text-main);
+}
+
+.app-friend-offer-label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.app-friend-offer-detail {
+  font-size: 12px;
+  color: var(--text-sub);
+  letter-spacing: 0.02em;
+}
+
 .app-list--connect .store-badges {
   margin: 0;
   width: 100%;
