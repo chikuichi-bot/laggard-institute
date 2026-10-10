@@ -182,6 +182,12 @@ export const apps: AppEntry[] = [
         releasedAt: "2026-04-30",
       },
     ],
+    /** App Store Connect カスタムオファーコード OMIKUJI1Y（2026-12-31 まで · 最大500） */
+    friendOffer: {
+      url: "https://apps.apple.com/redeem?ctx=offercodes&id=6760742804&code=OMIKUJI1Y",
+      label: "友人",
+      detail: "一年無料",
+    },
   },
   {
     name: "Fragments - 文学の断片",
