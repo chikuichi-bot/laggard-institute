@@ -139,7 +139,8 @@ export function primaryAppHref(editions: AppEdition[]): string | undefined {
 export const apps: AppEntry[] = [
   {
     name: "そらから",
-    icon: "/icons/sorakara.png",
+    /** ?v= は Cloudflare が旧グレーPNGをキャッシュしていたためのバスト（2026-10-11） */
+    icon: "/icons/sorakara.png?v=20261011",
     description:
       "空の散歩。ただ浮いて、街を上から眺めます。たまに、新しい発見があります。",
     releasedAt: "2026-10-09",
