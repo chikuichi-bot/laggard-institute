@@ -222,6 +222,15 @@ export const apps: AppEntry[] = [
         version: "1.3.2",
       },
     ],
+    /**
+     * IAP 買い切り「フル機能アンロック」の友人向けオファーコード FRIEND2026
+     * （オファー名 FRIEND_FREE_2026 · 期限 2026-10-31 · 最大500 · 非消耗型 ¥300 相当）
+     */
+    friendOffer: {
+      url: "https://apps.apple.com/redeem?ctx=offercodes&id=6794892342&code=FRIEND2026",
+      label: "友人",
+      detail: "買い切り無料",
+    },
   },
   {
     name: "相対性理論計",
