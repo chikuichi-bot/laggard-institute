@@ -1,4 +1,4 @@
-/** Lolipop 仮公開（営業日・地図・連絡のみ） */
+/** Lolipop 仮公開（営業日・地図・連絡のみ · 2026-07-03 `lagado/` 成果物と同型） */
 export const isLolipopMinimal =
   process.env.NEXT_PUBLIC_LOLIPOP_MINIMAL === "1";
 

@@ -1,4 +1,3 @@
-import HomeHeroImage from "@/components/HomeHeroImage";
 import HomeLatestPhoto from "@/components/HomeLatestPhoto";
 import SiteShell from "@/components/SiteShell";
 import { collectPhotoCandidates } from "@/lib/home-latest";
@@ -6,11 +5,15 @@ import { readCatalog } from "@/lib/items";
 import { isLolipopMinimal } from "@/lib/site-mode";
 
 export default async function HomePage() {
+  // 2026-07-03 仮公開成果物 `lagado/`（営業日・地図・連絡のみ）のトップ文言を継承
   if (isLolipopMinimal) {
     return (
       <SiteShell>
         <article className="content-card content-card--home">
-          <HomeHeroImage />
+          <div className="horizontal-body home-intro-minimal">
+            <p>京都・北白川の工房。</p>
+            <p>古道具と、街や海で拾ったものと、言葉の標本。</p>
+          </div>
         </article>
       </SiteShell>
     );
