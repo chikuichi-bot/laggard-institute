@@ -2,6 +2,7 @@
 
 import { INSTITUTE_NAME } from "@/lib/constants";
 import { HOME_HREF } from "@/lib/asset-path";
+import { isLolipopMinimal } from "@/lib/site-mode";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getNavItems, type SectionId } from "@/lib/sections";
@@ -34,7 +35,7 @@ export default function SiteShell({ tagline, children }: SiteShellProps) {
           </Link>
         )}
         <p className="tagline">
-          {tagline ?? "古道具と、拾ったものと、"}
+          {tagline ?? (isLolipopMinimal ? "営業日・地図・連絡。" : "古道具と、拾ったものと、")}
         </p>
       </header>
 

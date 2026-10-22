@@ -1,11 +1,18 @@
 import SiteShell from "@/components/SiteShell";
 import { CONTACT_EMAIL, INSTITUTE_NAME } from "@/lib/constants";
+import { isLolipopMinimal } from "@/lib/site-mode";
 
 export default function ContactPage() {
   const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`${INSTITUTE_NAME}へのお問い合わせ`)}`;
 
   return (
-    <SiteShell tagline="お問い合わせ・展示・漂着物について。">
+    <SiteShell
+      tagline={
+        isLolipopMinimal
+          ? "お問い合わせ。"
+          : "お問い合わせ・展示・漂着物について。"
+      }
+    >
       <article className="content-card content-card--contact">
         <div className="contact-block horizontal-body">
           <p>ご質問など、お気軽にどうぞ。</p>
