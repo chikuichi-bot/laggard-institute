@@ -140,11 +140,16 @@ export const apps: AppEntry[] = [
   {
     name: "今日の過去新聞",
     icon: "/icons/past-today.png",
-    description:
-      "今日の月日が、一件を差し出す。新聞の体で読む。（仮掲載 · App Store 未公開のためストアボタンなし）",
-    /** Connect 枠・iOS 殻時点（2026-10-28）。ストア公開後に editions を実URLで足す */
-    releasedAt: "2026-10-28",
-    editions: [],
+    description: "今日の月日が、一件を差し出す。新聞の体で読む。",
+    releasedAt: "2026-11-03",
+    editions: [
+      {
+        platform: "ios",
+        href: "https://apps.apple.com/jp/app/%E4%BB%8A%E6%97%A5%E3%81%AE%E9%81%8E%E5%8E%BB%E6%96%B0%E8%81%9E/id6828013368",
+        releasedAt: "2026-11-03",
+        version: "1.0",
+      },
+    ],
   },
   {
     name: "そらから",
