@@ -138,6 +138,15 @@ export function primaryAppHref(editions: AppEdition[]): string | undefined {
 /** Lagado 自作（表示は制作日の新しい順） */
 export const apps: AppEntry[] = [
   {
+    name: "今日の過去新聞",
+    icon: "/icons/past-today.png",
+    description:
+      "今日の月日が、一件を差し出す。新聞の体で読む。（仮掲載 · App Store 未公開のためストアボタンなし）",
+    /** Connect 枠・iOS 殻時点（2026-10-28）。ストア公開後に editions を実URLで足す */
+    releasedAt: "2026-10-28",
+    editions: [],
+  },
+  {
     name: "そらから",
     /** ?v= は Cloudflare が旧グレーPNGをキャッシュしていたためのバスト（2026-10-11） */
     icon: "/icons/sorakara.png?v=20261011",
