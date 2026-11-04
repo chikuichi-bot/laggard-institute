@@ -62,6 +62,11 @@ export type AppEntry = {
   description: string;
   /** 掲載順用。いちばん早い版の公開日 */
   releasedAt: string;
+  /**
+   * 最新更新日（YYYY-MM-DD）。
+   * App Store `currentVersionReleaseDate` など、ストア上の現行版リリース日。
+   */
+  updatedAt?: string;
   editions: AppEdition[];
   videoBase?: string;
   poster?: string;
@@ -142,6 +147,7 @@ export const apps: AppEntry[] = [
     icon: "/icons/past-today.png",
     description: "今日の月日が、一件を差し出す。新聞の体で読む。",
     releasedAt: "2026-11-03",
+    updatedAt: "2026-11-03",
     editions: [
       {
         platform: "ios",
@@ -158,6 +164,7 @@ export const apps: AppEntry[] = [
     description:
       "空の散歩。ただ浮いて、街を上から眺めます。たまに、新しい発見があります。",
     releasedAt: "2026-10-09",
+    updatedAt: "2026-11-03",
     editions: [
       {
         platform: "ios",
@@ -179,6 +186,7 @@ export const apps: AppEntry[] = [
     description:
       "青空文庫のなかから、偶然の一節を引く小さな図書館。言葉の漂着物を、毎日ひとつ。",
     releasedAt: "2026-03-03",
+    updatedAt: "2026-11-02",
     editions: [
       {
         platform: "web",
@@ -209,6 +217,7 @@ export const apps: AppEntry[] = [
     icon: "/icons/literary-fragments.png",
     description: "世界文学の断片を、気配とともに巡るアプリ。",
     releasedAt: "2026-04-10",
+    updatedAt: "2026-09-29",
     editions: [
       {
         platform: "ios",
@@ -228,6 +237,7 @@ export const apps: AppEntry[] = [
     icon: "/icons/wasure-memo.png",
     description: "思いついたらメモして、あとは忘れて大丈夫。お店の近くで、そっと知らせます。",
     releasedAt: "2026-08-02",
+    updatedAt: "2026-09-09",
     editions: [
       {
         platform: "ios",
@@ -251,6 +261,7 @@ export const apps: AppEntry[] = [
     icon: "/icons/wazukana-byo.png",
     description: "万歩計の代わりに、時間のずれを。式は本物。測りはざっくり。",
     releasedAt: "2026-08-25",
+    updatedAt: "2026-09-17",
     editions: [
       {
         platform: "ios",
@@ -265,6 +276,7 @@ export const apps: AppEntry[] = [
     icon: "/icons/4s-camera.png",
     description: "いまの iPhone では切れない補正を、切るためのカメラ。綺麗にするアプリではありません。",
     releasedAt: "2026-09-03",
+    updatedAt: "2026-10-07",
     editions: [
       {
         platform: "ios",
@@ -283,6 +295,7 @@ export const commissionedApps: AppEntry[] = [
     icon: "/icons/tsuitara-memo.png",
     description: "次の訪問先まで、忘れていい。着いたら、その場所のことだけ出ます。",
     releasedAt: "2026-08-27",
+    updatedAt: "2026-09-10",
     editions: [
       {
         platform: "ios",
@@ -297,6 +310,7 @@ export const commissionedApps: AppEntry[] = [
     icon: "/icons/abomon-game.png",
     description: "アボカドかモンキーか。ゆるくてふしぎな、タッチのゲーム。",
     releasedAt: "2026-07-20",
+    updatedAt: "2026-08-20",
     editions: [
       {
         platform: "ios",

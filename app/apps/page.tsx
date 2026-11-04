@@ -44,6 +44,11 @@ function AppListItem({
           <p className="app-connect-date">
             制作日 {formatAppReleasedAt(app.releasedAt)}
           </p>
+          {app.updatedAt ? (
+            <p className="app-connect-date">
+              最新更新日 {formatAppReleasedAt(app.updatedAt)}
+            </p>
+          ) : null}
         </div>
       </div>
       {app.editions.length > 0 || app.friendOffer ? (
