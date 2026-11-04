@@ -147,7 +147,7 @@ export const apps: AppEntry[] = [
         platform: "ios",
         href: "https://apps.apple.com/jp/app/%E4%BB%8A%E6%97%A5%E3%81%AE%E9%81%8E%E5%8E%BB%E6%96%B0%E8%81%9E/id6828013368",
         releasedAt: "2026-11-03",
-        version: "1.0",
+        version: "1.1",
       },
     ],
   },
@@ -163,7 +163,7 @@ export const apps: AppEntry[] = [
         platform: "ios",
         href: "https://apps.apple.com/jp/app/%E3%81%9D%E3%82%89%E3%81%8B%E3%82%89/id6819470015",
         releasedAt: "2026-10-09",
-        version: "1.6.1",
+        version: "1.6.2",
       },
     ],
     /** App Store Connect カスタムオファーコード SORAKARA1Y（2026-12-31 まで · 最大500） */
