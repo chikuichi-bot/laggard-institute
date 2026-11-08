@@ -1,8 +1,10 @@
 {
-  "updatedAt": "2026-10-21T12:00:00.000Z",
+  "updatedAt": "2026-11-08T07:00:00.000Z",
   "hoursLabel": "13:00–19:00",
   "note": "気になったものがあったらお気軽にご連絡してください。土曜日以外でも対応可能です。",
-  "weeklyWeekdays": [6],
+  "weeklyWeekdays": [
+    6
+  ],
   "extraDays": [],
   "closedDays": [
     {
@@ -23,6 +25,10 @@
     },
     {
       "date": "2026-10-24",
+      "reason": "お休み"
+    },
+    {
+      "date": "2026-12-26",
       "reason": "お休み"
     }
   ]
