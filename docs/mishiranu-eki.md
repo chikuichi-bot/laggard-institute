@@ -2,24 +2,29 @@
 
 > 降りた駅の、徒歩圏だけを、物語にする。
 
-Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab/mishiranu-eki`（公開URLは `https://lagado.jp/lagado2026/lab/mishiranu-eki/`）。
+Lagado Lab の企画メモ。**現行の機能・画面・API・データの正本は [仕様書](./mishiranu-eki-spec.md)**。
 
-## 確定方針（2026-11-09）
+触れるプロトタイプ:
+
+- Cursor App: https://mishiranu-eki.apps.grok.bot
+- 研究所: `/lab/mishiranu-eki`（lagado.jp 統合も想定）
+
+## 確定方針（2026-11-09 → 一部更新）
 
 | # | 論点 | 決定 |
 | --- | --- | --- |
 | 1 | 出荷 | **Web アプリ先行 → あとから iOS** |
-| 2 | データ | **編集キュレーション 20駅**（Places 自動は後段） |
-| 3 | 地図 | **OSM/CARTO の実地図**（暗いタイル）。必要なら後で Mapbox / Google に差替 |
-| 4 | AI | **コピー（タイトル・キャッチ・空白肯定）に使う**。ルート提案はしない |
-| 5 | 公開URL | **`/lagado2026/lab/mishiranu-eki/`**（このまま） |
-| 6 | `/apps` 掲載 | **しない** |
-| 7 | Cursor Apps | **やめる**（本サイト一本。`mishiranu-app/` は退役） |
-| 8 | ホスティング | **さくら**（旧 Lolipop から移行。手前は Cloudflare） |
+| 2 | データ | **編集キュレーション**（現状24駅。Places 自動は後段） |
+| 3 | 地図 | **OSM 実地図**。必要なら後で Mapbox / Google に差替 |
+| 4 | AI | **コピー生成＋編集外駅／遠方現在地の案内**。ナビ最適化はしない |
+| 5 | 公開URL | Lab パス `/lab/mishiranu-eki` ＋ Cursor App `mishiranu-eki` |
+| 6 | `/apps` 掲載 | **しない**（当面） |
+| 7 | Cursor Apps | **継続**（`mishiranu-app/` が公開パッケージ） |
+| 8 | ホスティング | Lab はさくら想定。アプリは Cursor Apps |
 
 ロードマップ一文:
 
-**編集20駅 → 実地図で感触 → コピーにAI → lagado.jp（さくら）へ統合 → 後から iOS**
+**編集駅の厚み → 文庫UIとコース体験 → セキュリティ／運用の硬化 → lagado.jp 統合 → 後から iOS**
 
 ## コアバリュー
 
