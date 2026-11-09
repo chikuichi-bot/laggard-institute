@@ -1136,6 +1136,21 @@ a.mishiranu-btn {
   animation: mk-rise 0.7s ease-out 0.08s both;
 }
 
+.mishiranu-diagram--code {
+  background: rgba(36, 48, 56, 0.035);
+  border: 1px dashed var(--mk-line);
+  border-radius: 6px;
+  padding: 0.75rem 0.65rem 0.7rem;
+}
+
+.mishiranu-diagram-code-label {
+  margin: 0 0 0.35rem 0.35rem;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: var(--mk-warm-deep);
+}
+
 .mishiranu-diagram-svg {
   display: block;
   width: 100%;
@@ -1144,6 +1159,10 @@ a.mishiranu-btn {
 }
 
 .mishiranu-diagram-svg--flow {
+  max-width: 24rem;
+}
+
+.mishiranu-diagram-svg--loop {
   max-width: 22rem;
 }
 
@@ -1151,34 +1170,47 @@ a.mishiranu-btn {
   max-width: 16rem;
 }
 
-.mishiranu-diagram-node {
+.mishiranu-diagram-box {
   fill: var(--mk-paper);
-  stroke: var(--mk-line);
-  stroke-width: 1.5;
+  stroke: var(--mk-ink);
+  stroke-width: 1.4;
 }
 
-.mishiranu-diagram-node--warm {
+.mishiranu-diagram-box--warm {
   fill: var(--mk-warm);
-  stroke: var(--mk-warm);
+  stroke: var(--mk-warm-deep);
 }
 
-.mishiranu-diagram-node-label {
+.mishiranu-diagram-box-label {
   fill: var(--mk-ink);
-  font-size: 11px;
-  font-family: var(--mk-sans);
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
   text-anchor: middle;
 }
 
-.mishiranu-diagram-node-label--on-warm {
+.mishiranu-diagram-box-label--on-warm {
   fill: #fff;
 }
 
-.mishiranu-diagram-arrow {
-  stroke: var(--mk-mist);
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.mishiranu-diagram-arrow,
+.mishiranu-diagram-arrow-line {
+  stroke: var(--mk-ink);
+  stroke-width: 1.6;
+  fill: none;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.mishiranu-diagram-marker {
+  fill: var(--mk-ink);
+}
+
+.mishiranu-diagram-loop-tag {
+  fill: var(--mk-fog);
+  font-size: 11px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
 }
 
 .mishiranu-diagram-ring {
