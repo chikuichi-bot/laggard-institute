@@ -19,6 +19,7 @@ import {
   STATIONS,
   TIME_OPTIONS,
   bikeRentalFor,
+  hoursFor,
   mealTierFor,
   mealTimesFor,
   pickSecret,
@@ -905,6 +906,11 @@ export default function MishiranuApp({
                   · 徒歩約 {activeSpot.walkMinutes} 分
                 </p>
                 <h3 className="mishiranu-spot-name">{activeSpot.name}</h3>
+                {hoursFor(activeSpot) ? (
+                  <p className="mishiranu-spot-hours">
+                    時間 {hoursFor(activeSpot)}
+                  </p>
+                ) : null}
                 <p className="mishiranu-spot-blurb">{activeSpot.blurb}</p>
               </div>
             ) : null}
@@ -951,6 +957,11 @@ export default function MishiranuApp({
               <div className="mishiranu-secret" aria-live="polite">
                 <p className="mishiranu-secret-label">SECRET DESTINATION</p>
                 <h3 className="mishiranu-spot-name">{secret.name}</h3>
+                {hoursFor(secret) ? (
+                  <p className="mishiranu-spot-hours">
+                    時間 {hoursFor(secret)}
+                  </p>
+                ) : null}
                 <p className="mishiranu-spot-blurb">{secret.blurb}</p>
                 <div className="mishiranu-actions">
                   <button
@@ -1004,6 +1015,7 @@ function GuideSpotButton({
         {timeTags && timeTags.length > 0
           ? ` · ${timeTags.map((t) => MEAL_TIME_LABEL[t]).join("・")}`
           : ""}
+        {hoursFor(item) ? ` · ${hoursFor(item)}` : ""}
       </span>
       <span className="mishiranu-guide-item-blurb">{item.blurb}</span>
     </button>

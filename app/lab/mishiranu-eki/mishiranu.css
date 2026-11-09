@@ -1108,6 +1108,13 @@ a.mishiranu-btn {
   letter-spacing: 0.05em;
 }
 
+.mishiranu-spot-hours {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--mk-warm-deep);
+}
+
 .mishiranu-spot-blurb {
   color: var(--mk-fog);
   line-height: 1.7;
