@@ -45,6 +45,7 @@ Lagado Lab の企画メモ。触れるプロトタイプは `/lab/mishiranu-eki`
 
 - 駅データ: `data/mishiranu-stations.ts`
 - コピー API: `POST /api/mishiranu/copy`（キーなしは編集文にフォールバック）
+- AI モデル: **Gemini 3.1 Flash-Lite**（`gemini-3.1-flash-lite`）— おみくじ文庫の AI 解説と同じ
 - 秘密情報: `GEMINI_API_KEY`（未設定でもプロトは動く）
 
 ## 次の作業候補

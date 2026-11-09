@@ -348,8 +348,8 @@ export default function MishiranuApp() {
 
             <p className="mishiranu-foot">
               方針: 編集20駅 → 抽象マップで温度固め → コピーにAI →
-              後から実地図とiOS。GEMINI_API_KEY があれば AI
-              コピー、なければ編集文が使われます。
+              後から実地図とiOS。GEMINI_API_KEY があれば Gemini 3.1
+              Flash-Lite でコピー、なければ編集文が使われます。
             </p>
           </section>
         ) : null}
