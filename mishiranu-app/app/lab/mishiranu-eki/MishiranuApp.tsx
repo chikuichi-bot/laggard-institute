@@ -1059,6 +1059,29 @@ export default function MishiranuApp({
                   ? " · Gemini 3.1 Flash-Lite"
                   : " · 編集コピー"}
             </p>
+
+            <StationMap
+              station={station}
+              spots={spots}
+              radiusKm={station.radiiKm[time.index]}
+              activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
+              onSelect={setActiveSpotId}
+            />
+
+            <ul className="mishiranu-legend">
+              {guideBoardKinds.map((kind) => (
+                <li key={kind}>
+                  <span
+                    className="mishiranu-legend-icon"
+                    style={{ color: GUIDE_COLOR[kind] }}
+                  >
+                    <GuideKindIcon kind={kind} />
+                  </span>
+                  {GUIDE_LABEL[kind]}
+                </li>
+              ))}
+            </ul>
+
             <div className="mishiranu-tour">
               <p className="mishiranu-guide-eyebrow">{station.name}駅 · 観光案内</p>
               <h2
@@ -1085,30 +1108,6 @@ export default function MishiranuApp({
                 </div>
               ) : null}
             </div>
-
-            {station.sightseeingNotes && station.sightseeingNotes.length > 0 ? (
-              <section
-                className="mishiranu-sight-notes"
-                aria-labelledby="sight-notes-title"
-              >
-                <p className="mishiranu-kicker">
-                  <IconBinoculars />
-                  SIGHTSEEING
-                </p>
-                <h3 id="sight-notes-title" className="mishiranu-sight-notes-title">
-                  <IconBinoculars />
-                  観光案内メモ
-                </h3>
-                <ol className="mishiranu-history-list">
-                  {station.sightseeingNotes.map((note) => (
-                    <li key={note.title}>
-                      <h4>{note.title}</h4>
-                      <p>{note.body}</p>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ) : null}
 
             {selectedCourse ? (
               <section
@@ -1175,52 +1174,15 @@ export default function MishiranuApp({
               </section>
             ) : null}
 
-            <section
-              className="mishiranu-bike-rental"
-              aria-labelledby="bike-rental-title"
-            >
-              <p className="mishiranu-kicker">
-                <IconBike />
-                MOBILITY
-              </p>
-              <h3 id="bike-rental-title" className="mishiranu-bike-rental-title">
-                <IconBike />
-                レンタサイクル
-              </h3>
-              <p
-                className={
-                  bikeRental.available
-                    ? "mishiranu-bike-rental-status mishiranu-bike-rental-status--yes"
-                    : "mishiranu-bike-rental-status"
-                }
-              >
-                {bikeRental.available
-                  ? "駅周辺で借りられます"
-                  : "いまは未確認／少なめ"}
-              </p>
-              <p className="mishiranu-bike-rental-summary">{bikeRental.summary}</p>
-              {bikeRental.places && bikeRental.places.length > 0 ? (
-                <ul className="mishiranu-bike-rental-places">
-                  {bikeRental.places.map((place) => (
-                    <li key={place.name}>
-                      <span className="mishiranu-bike-rental-place-name">
-                        {place.name}
-                      </span>
-                      {typeof place.walkMinutes === "number" ? (
-                        <span className="mishiranu-bike-rental-place-meta">
-                          徒歩約 {place.walkMinutes} 分
-                        </span>
-                      ) : null}
-                      {place.note ? (
-                        <span className="mishiranu-bike-rental-place-note">
-                          {place.note}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </section>
+            {station.mood === "empty" &&
+            (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (
+              <div className="mishiranu-empty">
+                {shownCopy.emptyHeadline ? (
+                  <h3>{shownCopy.emptyHeadline}</h3>
+                ) : null}
+                {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
+              </div>
+            ) : null}
 
             {areaParagraphs.length > 0 ||
             (station.historyNotes && station.historyNotes.length > 0) ? (
@@ -1254,37 +1216,29 @@ export default function MishiranuApp({
               </section>
             ) : null}
 
-            {station.mood === "empty" &&
-            (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (
-              <div className="mishiranu-empty">
-                {shownCopy.emptyHeadline ? (
-                  <h3>{shownCopy.emptyHeadline}</h3>
-                ) : null}
-                {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
-              </div>
+            {station.sightseeingNotes && station.sightseeingNotes.length > 0 ? (
+              <section
+                className="mishiranu-sight-notes"
+                aria-labelledby="sight-notes-title"
+              >
+                <p className="mishiranu-kicker">
+                  <IconBinoculars />
+                  SIGHTSEEING
+                </p>
+                <h3 id="sight-notes-title" className="mishiranu-sight-notes-title">
+                  <IconBinoculars />
+                  観光案内メモ
+                </h3>
+                <ol className="mishiranu-history-list">
+                  {station.sightseeingNotes.map((note) => (
+                    <li key={note.title}>
+                      <h4>{note.title}</h4>
+                      <p>{note.body}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
             ) : null}
-
-            <StationMap
-              station={station}
-              spots={spots}
-              radiusKm={station.radiiKm[time.index]}
-              activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
-              onSelect={setActiveSpotId}
-            />
-
-            <ul className="mishiranu-legend">
-              {guideBoardKinds.map((kind) => (
-                <li key={kind}>
-                  <span
-                    className="mishiranu-legend-icon"
-                    style={{ color: GUIDE_COLOR[kind] }}
-                  >
-                    <GuideKindIcon kind={kind} />
-                  </span>
-                  {GUIDE_LABEL[kind]}
-                </li>
-              ))}
-            </ul>
 
             <div className="mishiranu-guide-board">
               {guideBoardKinds.map((kind) => {
@@ -1381,6 +1335,53 @@ export default function MishiranuApp({
                 ) : null}
               </div>
             ) : null}
+
+            <section
+              className="mishiranu-bike-rental"
+              aria-labelledby="bike-rental-title"
+            >
+              <p className="mishiranu-kicker">
+                <IconBike />
+                MOBILITY
+              </p>
+              <h3 id="bike-rental-title" className="mishiranu-bike-rental-title">
+                <IconBike />
+                レンタサイクル
+              </h3>
+              <p
+                className={
+                  bikeRental.available
+                    ? "mishiranu-bike-rental-status mishiranu-bike-rental-status--yes"
+                    : "mishiranu-bike-rental-status"
+                }
+              >
+                {bikeRental.available
+                  ? "駅周辺で借りられます"
+                  : "いまは未確認／少なめ"}
+              </p>
+              <p className="mishiranu-bike-rental-summary">{bikeRental.summary}</p>
+              {bikeRental.places && bikeRental.places.length > 0 ? (
+                <ul className="mishiranu-bike-rental-places">
+                  {bikeRental.places.map((place) => (
+                    <li key={place.name}>
+                      <span className="mishiranu-bike-rental-place-name">
+                        {place.name}
+                      </span>
+                      {typeof place.walkMinutes === "number" ? (
+                        <span className="mishiranu-bike-rental-place-meta">
+                          徒歩約 {place.walkMinutes} 分
+                        </span>
+                      ) : null}
+                      {place.note ? (
+                        <span className="mishiranu-bike-rental-place-note">
+                          {place.note}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
 
             <div className="mishiranu-actions">
               <button
