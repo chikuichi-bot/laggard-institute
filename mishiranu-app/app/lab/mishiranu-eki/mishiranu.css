@@ -241,6 +241,18 @@ a.mishiranu-btn {
   animation: mk-rise 0.5s ease-out 0.08s both;
 }
 
+.mishiranu-icon {
+  width: 1.05em;
+  height: 1.05em;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: -0.15em;
+}
+
+.mishiranu-icon--inline {
+  margin-right: 0.35rem;
+}
+
 .mishiranu-chat-chip {
   appearance: none;
   border: 1px solid var(--mk-line);
@@ -254,7 +266,7 @@ a.mishiranu-btn {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
@@ -370,7 +382,9 @@ a.mishiranu-btn {
 }
 
 .mishiranu-course-card-index {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--mk-warm-deep);
   font-size: 0.78rem;
   letter-spacing: 0.08em;
@@ -404,6 +418,12 @@ a.mishiranu-btn {
   line-height: 1.55;
 }
 
+.mishiranu-course-card-stops li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .mishiranu-course-itinerary {
   margin: 0 0 1.5rem;
   padding: 1.1rem 1.15rem 1.2rem;
@@ -415,6 +435,9 @@ a.mishiranu-btn {
 .mishiranu-course-itinerary-title {
   margin: 0.15rem 0 0.35rem;
   font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .mishiranu-course-itinerary-meta,
@@ -488,6 +511,13 @@ a.mishiranu-btn {
   line-height: 1.45;
 }
 
+.mishiranu-course-stop-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
 .mishiranu-tour-nav {
   display: flex;
   align-items: center;
@@ -545,6 +575,14 @@ a.mishiranu-btn {
   text-transform: uppercase;
   color: var(--mk-warm-deep);
   margin: 0 0 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mishiranu-kicker .mishiranu-icon {
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 .mishiranu-h2 {
@@ -752,6 +790,9 @@ a.mishiranu-btn {
   letter-spacing: 0.06em;
   color: var(--mk-warm-deep);
   font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .mishiranu-walk-guide p {
@@ -774,6 +815,9 @@ a.mishiranu-btn {
   font-weight: 500;
   letter-spacing: 0.06em;
   margin: 0 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .mishiranu-bike-rental {
@@ -790,6 +834,9 @@ a.mishiranu-btn {
   font-weight: 500;
   letter-spacing: 0.06em;
   margin: 0 0 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .mishiranu-bike-rental-status {
@@ -862,6 +909,9 @@ a.mishiranu-btn {
   font-weight: 500;
   letter-spacing: 0.06em;
   margin: 0 0 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .mishiranu-area-about {
@@ -976,6 +1026,18 @@ a.mishiranu-btn {
   flex-shrink: 0;
 }
 
+.mishiranu-guide-kind-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mishiranu-guide-kind-icon .mishiranu-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 .mishiranu-guide-list {
   list-style: none;
   margin: 0;
@@ -1004,7 +1066,9 @@ a.mishiranu-btn {
 }
 
 .mishiranu-guide-item-name {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-family: var(--mk-display);
   letter-spacing: 0.04em;
   margin-bottom: 0.2rem;
@@ -1273,13 +1337,21 @@ a.mishiranu-btn {
   color: var(--mk-fog);
 }
 
-.mishiranu-legend span {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 0.4rem;
-  vertical-align: middle;
+.mishiranu-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mishiranu-legend-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mishiranu-legend-icon .mishiranu-icon {
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 .mishiranu-spot-panel {
@@ -1291,6 +1363,9 @@ a.mishiranu-btn {
 }
 
 .mishiranu-spot-genre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.75rem;
   letter-spacing: 0.12em;
   color: var(--mk-warm-deep);

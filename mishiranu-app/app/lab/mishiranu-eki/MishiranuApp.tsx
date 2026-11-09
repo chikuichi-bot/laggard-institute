@@ -36,6 +36,21 @@ import {
 } from "@/lib/mishiranu-courses";
 import { paragraphsFrom, withAreaDepth } from "@/lib/mishiranu-area-depth";
 import { findNearestStation } from "@/lib/mishiranu-geo";
+import {
+  CourseIcon,
+  DayPartIcon,
+  GuideKindIcon,
+  IconBinoculars,
+  IconBike,
+  IconClock,
+  IconHistory,
+  IconLocate,
+  IconSearch,
+  IconSpark,
+  IconTour,
+  IconWalk,
+  StayIcon,
+} from "./MishiranuIcons";
 import "./mishiranu.css";
 
 const StationMap = dynamic(() => import("./StationMap"), {
@@ -817,6 +832,7 @@ export default function MishiranuApp({
                   disabled={geoLoading || stationLoading}
                   onClick={() => void locateHere()}
                 >
+                  <IconLocate />
                   {geoLoading ? "現在地を確認中…" : "現在地で駅を探す"}
                 </button>
                 <button
@@ -824,6 +840,7 @@ export default function MishiranuApp({
                   className="mishiranu-chat-chip"
                   onClick={() => setShowStationSearch((v) => !v)}
                 >
+                  <IconSearch />
                   駅名で探す
                 </button>
                 {showStationSearch ? (
@@ -864,6 +881,7 @@ export default function MishiranuApp({
                           disabled={stationLoading}
                           onClick={() => void requestAiStation(query.trim())}
                         >
+                          <IconSpark />
                           {stationLoading
                             ? "案内をつくっています…"
                             : `「${query.trim().replace(/駅$/u, "")}」で案内をつくる`}
@@ -887,6 +905,7 @@ export default function MishiranuApp({
                     )
                   }
                 >
+                  <IconClock />
                   いまの時刻で
                 </button>
                 {DAY_PART_OPTIONS.map((opt) => (
@@ -897,6 +916,7 @@ export default function MishiranuApp({
                     onClick={() => chooseClock(opt.id)}
                     title={opt.hint}
                   >
+                    <DayPartIcon part={opt.id} />
                     {opt.label}
                   </button>
                 ))}
@@ -912,6 +932,7 @@ export default function MishiranuApp({
                     className="mishiranu-chat-chip"
                     onClick={() => chooseStay(t.id)}
                   >
+                    <StayIcon id={t.id} />
                     {t.label}
                   </button>
                 ))}
@@ -928,6 +949,7 @@ export default function MishiranuApp({
                     onClick={() => chooseCourse(course)}
                   >
                     <span className="mishiranu-course-card-index">
+                      <CourseIcon courseId={course.id} />
                       コース {index + 1}
                     </span>
                     <span className="mishiranu-course-card-title">
@@ -941,6 +963,12 @@ export default function MishiranuApp({
                     <ol className="mishiranu-course-card-stops">
                       {course.stops.map((stop) => (
                         <li key={stop.spotId}>
+                          <span
+                            className="mishiranu-guide-kind-icon"
+                            style={{ color: GUIDE_COLOR[stop.guide] }}
+                          >
+                            <GuideKindIcon kind={stop.guide} />
+                          </span>
                           {stop.clockLabel ? `${stop.clockLabel} ` : ""}
                           {stop.name}
                         </li>
@@ -1049,7 +1077,10 @@ export default function MishiranuApp({
               </p>
               {station.walkGuide ? (
                 <div className="mishiranu-walk-guide">
-                  <h3 className="mishiranu-walk-guide-title">歩き方の目安</h3>
+                  <h3 className="mishiranu-walk-guide-title">
+                    <IconWalk />
+                    歩き方の目安
+                  </h3>
                   <p>{station.walkGuide}</p>
                 </div>
               ) : null}
@@ -1060,8 +1091,12 @@ export default function MishiranuApp({
                 className="mishiranu-sight-notes"
                 aria-labelledby="sight-notes-title"
               >
-                <p className="mishiranu-kicker">SIGHTSEEING</p>
+                <p className="mishiranu-kicker">
+                  <IconBinoculars />
+                  SIGHTSEEING
+                </p>
                 <h3 id="sight-notes-title" className="mishiranu-sight-notes-title">
+                  <IconBinoculars />
                   観光案内メモ
                 </h3>
                 <ol className="mishiranu-history-list">
@@ -1080,11 +1115,15 @@ export default function MishiranuApp({
                 className="mishiranu-course-itinerary"
                 aria-labelledby="course-itinerary-title"
               >
-                <p className="mishiranu-kicker">COURSE</p>
+                <p className="mishiranu-kicker">
+                  <IconTour />
+                  COURSE
+                </p>
                 <h3
                   id="course-itinerary-title"
                   className="mishiranu-course-itinerary-title"
                 >
+                  <CourseIcon courseId={selectedCourse.id} />
                   {selectedCourse.title}
                 </h3>
                 <p className="mishiranu-course-itinerary-meta">
@@ -1116,6 +1155,12 @@ export default function MishiranuApp({
                             {stop.name}
                           </span>
                           <span className="mishiranu-course-stop-meta">
+                            <span
+                              className="mishiranu-guide-kind-icon"
+                              style={{ color: GUIDE_COLOR[stop.guide] }}
+                            >
+                              <GuideKindIcon kind={stop.guide} />
+                            </span>
                             {GUIDE_LABEL[stop.guide]} · 徒歩約 {stop.walkMinutes}{" "}
                             分 · 滞在目安 {stop.dwellMinutes} 分
                           </span>
@@ -1134,8 +1179,12 @@ export default function MishiranuApp({
               className="mishiranu-bike-rental"
               aria-labelledby="bike-rental-title"
             >
-              <p className="mishiranu-kicker">MOBILITY</p>
+              <p className="mishiranu-kicker">
+                <IconBike />
+                MOBILITY
+              </p>
               <h3 id="bike-rental-title" className="mishiranu-bike-rental-title">
+                <IconBike />
                 レンタサイクル
               </h3>
               <p
@@ -1179,8 +1228,12 @@ export default function MishiranuApp({
                 className="mishiranu-area-story"
                 aria-labelledby="area-story-title"
               >
-                <p className="mishiranu-kicker">AREA · HISTORY</p>
+                <p className="mishiranu-kicker">
+                  <IconHistory />
+                  AREA · HISTORY
+                </p>
                 <h3 id="area-story-title" className="mishiranu-area-story-title">
+                  <IconHistory />
                   このエリアのこと
                 </h3>
                 {areaParagraphs.map((para) => (
@@ -1222,7 +1275,12 @@ export default function MishiranuApp({
             <ul className="mishiranu-legend">
               {guideBoardKinds.map((kind) => (
                 <li key={kind}>
-                  <span style={{ background: GUIDE_COLOR[kind] }} />
+                  <span
+                    className="mishiranu-legend-icon"
+                    style={{ color: GUIDE_COLOR[kind] }}
+                  >
+                    <GuideKindIcon kind={kind} />
+                  </span>
                   {GUIDE_LABEL[kind]}
                 </li>
               ))}
@@ -1244,9 +1302,11 @@ export default function MishiranuApp({
                   >
                     <h3 id={`guide-${kind}`} className="mishiranu-guide-col-title">
                       <span
-                        className="mishiranu-guide-dot"
-                        style={{ background: GUIDE_COLOR[kind] }}
-                      />
+                        className="mishiranu-guide-kind-icon"
+                        style={{ color: GUIDE_COLOR[kind] }}
+                      >
+                        <GuideKindIcon kind={kind} />
+                      </span>
                       {GUIDE_LABEL[kind]}
                       {prioritized ? (
                         <span className="mishiranu-guide-priority">重点</span>
@@ -1267,6 +1327,12 @@ export default function MishiranuApp({
                               onClick={() => setActiveSpotId(item.id)}
                             >
                               <span className="mishiranu-guide-item-name">
+                                <span
+                                  className="mishiranu-guide-kind-icon"
+                                  style={{ color: GUIDE_COLOR[kind] }}
+                                >
+                                  <GuideKindIcon kind={kind} />
+                                </span>
                                 {item.name}
                               </span>
                               <span className="mishiranu-guide-item-meta">
@@ -1298,6 +1364,12 @@ export default function MishiranuApp({
             {activeSpot ? (
               <div className="mishiranu-spot-panel">
                 <p className="mishiranu-spot-genre">
+                  <span
+                    className="mishiranu-guide-kind-icon"
+                    style={{ color: GUIDE_COLOR[spotGuide(activeSpot)] }}
+                  >
+                    <GuideKindIcon kind={spotGuide(activeSpot)} />
+                  </span>
                   {GUIDE_LABEL[spotGuide(activeSpot)]} · 徒歩約{" "}
                   {activeSpot.walkMinutes} 分
                   {hoursFor(activeSpot) ? ` · ${hoursFor(activeSpot)}` : ""}
