@@ -44,6 +44,14 @@ export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
 };
 
 export function stationLatLng(station: StationSeed): { lat: number; lng: number } {
+  if (
+    typeof station.lat === "number" &&
+    typeof station.lng === "number" &&
+    Number.isFinite(station.lat) &&
+    Number.isFinite(station.lng)
+  ) {
+    return { lat: station.lat, lng: station.lng };
+  }
   return STATION_LL[station.id] ?? { lat: 35.0, lng: 135.0 };
 }
 
@@ -52,6 +60,14 @@ export function spotLatLng(
   station: StationSeed,
   spot: Spot,
 ): { lat: number; lng: number } {
+  if (
+    typeof spot.lat === "number" &&
+    typeof spot.lng === "number" &&
+    Number.isFinite(spot.lat) &&
+    Number.isFinite(spot.lng)
+  ) {
+    return { lat: spot.lat, lng: spot.lng };
+  }
   const precise = SPOT_LL[spot.id];
   if (precise) return precise;
   const center = stationLatLng(station);

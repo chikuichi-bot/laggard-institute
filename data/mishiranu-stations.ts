@@ -30,6 +30,9 @@ export type Spot = {
   y: number;
   walkMinutes: number;
   secretWorthy?: boolean;
+  /** Optional WGS84 (AI / precise pins) */
+  lat?: number;
+  lng?: number;
 };
 
 export type StationMood = "story" | "empty";
@@ -82,6 +85,11 @@ export type StationSeed = {
     body: string;
   };
   spots: Spot[];
+  /** Optional WGS84 station center (AI stations) */
+  lat?: number;
+  lng?: number;
+  /** seed = 編集データ / ai = Gemini 生成 */
+  source?: "seed" | "ai";
 };
 
 export function bikeRentalFor(station: StationSeed): BikeRentalInfo {

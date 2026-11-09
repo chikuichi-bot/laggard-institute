@@ -3,12 +3,17 @@ export type SpotGenre = "history" | "gourmet" | "nature" | "odd";
 /** 観光案内マップ用の見出し（必ず出す5種） */
 export type GuideKind = "meal" | "souvenir" | "sight" | "rest" | "tip";
 
+export type MealTier = "casual" | "upscale";
+export type MealTime = "morning" | "lunch" | "dinner";
+
 export type Spot = {
   id: string;
   name: string;
   genre: SpotGenre;
   /** 観光案内の分類。未指定なら genre から推定 */
   guide?: GuideKind;
+  mealTier?: MealTier;
+  mealTimes?: MealTime[];
   /** 営業・開館時間（わかるものだけ） */
   hours?: string;
   blurb: string;
@@ -17,6 +22,8 @@ export type Spot = {
   y: number;
   walkMinutes: number;
   secretWorthy?: boolean;
+  lat?: number;
+  lng?: number;
 };
 
 export type StationMood = "story" | "empty";
@@ -69,6 +76,9 @@ export type StationSeed = {
     body: string;
   };
   spots: Spot[];
+  lat?: number;
+  lng?: number;
+  source?: "seed" | "ai";
 };
 
 export function bikeRentalFor(station: StationSeed): BikeRentalInfo {

@@ -130,7 +130,7 @@ function nextMsgId(prefix: string) {
 }
 
 const OPENING_GUIDE =
-  `降りた駅の、徒歩圏だけを、物語にします。編集 ${STATIONS.length} 駅（各地）。地域や駅名で選ぶか、おまかせでも大丈夫です。`;
+  `降りた駅の、徒歩圏だけを、物語にします。編集 ${STATIONS.length} 駅にくわえ、駅名を入れれば Gemini 3.1 Flash-Lite が観光案内をつくります。`;
 
 export default function MishiranuApp({
   initialStep = "hero",
@@ -145,6 +145,8 @@ export default function MishiranuApp({
 
   const [step, setStep] = useState<Step>(initialStep);
   const [stationId, setStationId] = useState<string>(startStationId);
+  const [dynamicStation, setDynamicStation] = useState<StationSeed | null>(null);
+  const [stationLoading, setStationLoading] = useState(false);
   const [timeId, setTimeId] = useState<TimeOptionId>(initialTimeId);
   const [focusKinds, setFocusKinds] = useState<GuideKind[]>(() =>
     parseFocusList(initialFocus),
@@ -171,14 +173,16 @@ export default function MishiranuApp({
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const stationIdRef = useRef(stationId);
   const timeIdRef = useRef(timeId);
+  const dynamicStationRef = useRef<StationSeed | null>(null);
   const urlBootstrapped = useRef(false);
   stationIdRef.current = stationId;
   timeIdRef.current = timeId;
+  dynamicStationRef.current = dynamicStation;
 
-  const station = useMemo(
-    () => STATIONS.find((s) => s.id === stationId) ?? STATIONS[0],
-    [stationId],
-  );
+  const station = useMemo(() => {
+    if (dynamicStation && dynamicStation.id === stationId) return dynamicStation;
+    return STATIONS.find((s) => s.id === stationId) ?? STATIONS[0];
+  }, [stationId, dynamicStation]);
   const bikeRental = useMemo(() => bikeRentalFor(station), [station]);
 
   // Static host (lagado.jp) では searchParams がビルド時固定なので、URL をクライアントで読む
@@ -250,6 +254,11 @@ export default function MishiranuApp({
   async function loadCopy(nextStation: StationSeed, nextTimeId: TimeOptionId) {
     setCopyLoading(true);
     setCopy(seedTourCopy(nextStation));
+    // AI生成駅はすでにタイトル・キャッチを持つので再生成しない
+    if (nextStation.source === "ai" || nextStation.id.startsWith("ai-")) {
+      setCopyLoading(false);
+      return;
+    }
     try {
       const res = await fetch("/api/mishiranu/copy", {
         method: "POST",
@@ -309,9 +318,9 @@ export default function MishiranuApp({
     setStep("pick");
     if (reset) {
       setChatPhase("station");
-      setShowStationSearch(false);
       setQuery("");
       setDraft("");
+      setStationLoading(false);
       setMessages([
         {
           id: nextMsgId("guide"),
@@ -324,18 +333,75 @@ export default function MishiranuApp({
   }
 
   function chooseStation(next: StationSeed, spoken?: string) {
+    if (next.source === "ai" || next.id.startsWith("ai-")) {
+      setDynamicStation(next);
+    } else {
+      setDynamicStation(null);
+    }
     setStationId(next.id);
-    setShowStationSearch(false);
     setQuery("");
     setDraft("");
     setChatPhase("time");
+    const aiNote =
+      next.source === "ai"
+        ? " Gemini が徒歩圏の案内をつくりました。時間は目安なので、現地でも確認を。"
+        : "";
     pushMessages(
       { role: "you", text: spoken ?? `${next.name}駅です` },
       {
         role: "guide",
-        text: `${next.name}ですね。${next.prefecture}・${next.line}。今日はどれくらい寄り道できますか？`,
+        text: `${next.name}ですね。${next.prefecture}・${next.line}。${aiNote}今日はどれくらい寄り道できますか？`,
       },
     );
+  }
+
+  async function requestAiStation(rawName: string, spoken?: string) {
+    const name = rawName.trim();
+    if (!name || stationLoading) return;
+    setStationLoading(true);
+    pushMessages(
+      { role: "you", text: spoken ?? `${name}駅です` },
+      {
+        role: "guide",
+        text: `「${name.replace(/駅$/u, "")}」の徒歩圏を、Gemini 3.1 Flash-Lite で調べています…`,
+      },
+    );
+    setDraft("");
+    setQuery(name);
+    try {
+      const res = await fetch("/api/mishiranu/station", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = (await res.json()) as {
+        station?: StationSeed;
+        source?: "ai" | "seed";
+        error?: string;
+        message?: string;
+      };
+      if (!res.ok || !data.station) {
+        pushMessages({
+          role: "guide",
+          text:
+            data.message ||
+            "その名前では案内をつくれませんでした。別の駅名でもう一度どうぞ。",
+        });
+        return;
+      }
+      const next: StationSeed = {
+        ...data.station,
+        source: data.source ?? data.station.source ?? "ai",
+      };
+      chooseStation(next, spoken ?? `${next.name}駅です`);
+    } catch {
+      pushMessages({
+        role: "guide",
+        text: "案内の通信に失敗しました。通信状況をみて、もう一度どうぞ。",
+      });
+    } finally {
+      setStationLoading(false);
+    }
   }
 
   function chooseTime(nextId: TimeOptionId, spoken?: string) {
@@ -361,7 +427,11 @@ export default function MishiranuApp({
     setChatPhase("ready");
     const focusText = focusLabel(choice);
     const named =
-      STATIONS.find((s) => s.id === nextStationId)?.name ?? station.name;
+      (dynamicStationRef.current?.id === nextStationId
+        ? dynamicStationRef.current.name
+        : null) ??
+      STATIONS.find((s) => s.id === nextStationId)?.name ??
+      station.name;
     pushMessages(
       { role: "you", text: spoken ?? focusText },
       {
@@ -400,18 +470,11 @@ export default function MishiranuApp({
 
     if (chatPhase === "station") {
       const hit = matchStation(text);
-      if (!hit) {
-        pushMessages(
-          { role: "you", text },
-          {
-            role: "guide",
-            text: "その駅名は、いまの編集リストに見つかりませんでした。地域チップか駅名の一部でもう一度どうぞ。",
-          },
-        );
-        setDraft("");
+      if (hit) {
+        chooseStation(hit, text);
         return;
       }
-      chooseStation(hit, text);
+      void requestAiStation(text, text);
       return;
     }
 
@@ -542,12 +605,15 @@ export default function MishiranuApp({
 
         {step === "pick" ? (
           <section className="mishiranu-section mishiranu-chat" aria-labelledby="chat-title">
-            <p className="mishiranu-kicker">CONVERSATION · 編集 {STATIONS.length} 駅</p>
+            <p className="mishiranu-kicker">
+              CONVERSATION · 編集 {STATIONS.length} 駅 + 全国の駅名
+            </p>
             <h2 id="chat-title" className="mishiranu-h2">
               案内を、会話でつくる
             </h2>
             <p className="mishiranu-note">
-              駅 → 時間 → 重点。チップでも、下の入力欄でも答えられます。案内を開いても会話は残ります。
+              駅 → 時間 → 重点。リストにない駅名も入力すれば、Gemini 3.1 Flash-Lite
+              が徒歩圏の観光案内をつくります。
             </p>
             <FlowDiagram />
             <PolishLoopDiagram />
@@ -618,14 +684,19 @@ export default function MishiranuApp({
                       type="search"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="例: 尾道 / 中央本線 / 北海道"
+                      placeholder="例: 中書島 / 尾道 / 中央本線"
                       autoComplete="off"
+                      disabled={stationLoading}
                     />
                   </label>
                   <ul className="mishiranu-chat-station-list">
                     {filteredStations.map((s) => (
                       <li key={s.id}>
-                        <button type="button" onClick={() => chooseStation(s)}>
+                        <button
+                          type="button"
+                          onClick={() => chooseStation(s)}
+                          disabled={stationLoading}
+                        >
                           <span className="mishiranu-station-name">{s.name}</span>
                           <span className="mishiranu-station-meta">
                             {s.region} · {s.prefecture} · {s.line}
@@ -635,11 +706,33 @@ export default function MishiranuApp({
                       </li>
                     ))}
                   </ul>
-                  {filteredStations.length === 0 ? (
-                    <p className="mishiranu-note">該当する駅がありません。</p>
+                  {query.trim() &&
+                  filteredStations.length === 0 &&
+                  !matchStation(query) ? (
+                    <div className="mishiranu-ai-station-ask">
+                      <p className="mishiranu-note">
+                        編集リストにはありません。駅名として Gemini
+                        に観光案内を頼めます。
+                      </p>
+                      <button
+                        type="button"
+                        className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                        disabled={stationLoading}
+                        onClick={() => void requestAiStation(query.trim())}
+                      >
+                        {stationLoading
+                          ? "案内をつくっています…"
+                          : `「${query.trim().replace(/駅$/u, "")}」で案内をつくる`}
+                      </button>
+                    </div>
+                  ) : filteredStations.length > 0 ? (
+                    <p className="mishiranu-note">
+                      {filteredStations.length}{" "}
+                      駅 — リスト外の駅名は下の入力か、ここへ打って案内できます。
+                    </p>
                   ) : (
                     <p className="mishiranu-note">
-                      {filteredStations.length} 駅 — どれでも同じ案内の型で歩けます。
+                      駅名を入れるか、地域チップで絞ってください。
                     </p>
                   )}
                 </div>
@@ -698,16 +791,21 @@ export default function MishiranuApp({
                     type="text"
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder={composerPlaceholder}
+                    placeholder={
+                      chatPhase === "station"
+                        ? "例: 中書島 / 出町柳（どの駅名でも可）"
+                        : composerPlaceholder
+                    }
                     autoComplete="off"
+                    disabled={stationLoading}
                   />
                 </label>
                 <button
                   type="submit"
                   className="mishiranu-btn mishiranu-btn--primary"
-                  disabled={!draft.trim()}
+                  disabled={!draft.trim() || stationLoading}
                 >
-                  送る
+                  {stationLoading ? "作成中" : "送る"}
                 </button>
               </form>
             )}
@@ -761,7 +859,10 @@ export default function MishiranuApp({
                   : " · 編集コピー"}
             </p>
             <div className="mishiranu-tour">
-              <p className="mishiranu-guide-eyebrow">{station.name}駅 · 観光案内</p>
+              <p className="mishiranu-guide-eyebrow">
+                {station.name}駅 · 観光案内
+                {station.source === "ai" ? " · Gemini" : ""}
+              </p>
               <h2
                 id="tour-title"
                 className={`mishiranu-tour-title${copyLoading ? " mishiranu-tour-title--loading" : ""}`}
@@ -1014,8 +1115,8 @@ export default function MishiranuApp({
 
             <p className="mishiranu-foot">
               地図は OpenStreetMap。出町柳ピンは実座標寄り。
-              GEMINI_API_KEY があれば Gemini 3.1 Flash-Lite、なければ編集文です。
-              ご飯は庶民的／高級と朝・昼・夜で分けています。
+              編集駅は用意の文、リスト外の駅名は Gemini 3.1 Flash-Lite（要
+              GEMINI_API_KEY）。ご飯は庶民的／高級と朝・昼・夜、時間はわかる範囲で表示。
             </p>
           </section>
         ) : null}
