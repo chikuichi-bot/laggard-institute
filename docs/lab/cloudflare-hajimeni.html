@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cloudflare 入門 — Lagado</title>
+  <meta name="description" content="初心者向け。Cloudflareでできることと、lagado.jpでの使い分け。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #102018;
+      --fog: #d9ece4;
+      --mist: #a8c9bc;
+      --sea: #1e5c4a;
+      --sea-deep: #0b2e26;
+      --glow: #e8a45a;
+      --paper: #eef6f2;
+      --muted: #4a6a5e;
+      --line: rgba(16, 32, 24, 0.12);
+      --max: 68rem;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "IBM Plex Sans JP", system-ui, sans-serif;
+      font-size: 1.05rem;
+      line-height: 1.75;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--sea); text-underline-offset: 0.18em; }
+    a:hover { color: var(--glow); }
+
+    /* —— Hero —— */
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      display: grid;
+      align-items: end;
+      padding: clamp(1.5rem, 4vw, 3rem);
+      color: var(--fog);
+      isolation: isolate;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(120% 80% at 80% 10%, rgba(232, 164, 90, 0.28), transparent 55%),
+        radial-gradient(90% 70% at 10% 90%, rgba(30, 92, 74, 0.55), transparent 50%),
+        linear-gradient(165deg, #061612 0%, #0f3329 42%, #163f34 72%, #0a221c 100%);
+      animation: tide 18s ease-in-out infinite alternate;
+    }
+    .hero-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(217, 236, 228, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(217, 236, 228, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, black 40%, transparent 95%);
+      opacity: 0.5;
+    }
+    @keyframes tide {
+      from { filter: saturate(1) brightness(1); transform: scale(1); }
+      to { filter: saturate(1.08) brightness(1.05); transform: scale(1.03); }
+    }
+    .hero-inner {
+      width: min(100%, 42rem);
+      padding-bottom: clamp(2rem, 8vh, 5rem);
+      animation: rise 1.1s ease both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(1.2rem); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .brand {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: clamp(3rem, 10vw, 5.5rem);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      margin: 0 0 1rem;
+    }
+    .brand span {
+      display: block;
+      font-size: 0.32em;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 0.6rem;
+      font-family: "IBM Plex Sans JP", sans-serif;
+      font-weight: 500;
+    }
+    .lede {
+      margin: 0 0 1.75rem;
+      font-size: clamp(1.05rem, 2.4vw, 1.25rem);
+      max-width: 28rem;
+      color: rgba(217, 236, 228, 0.88);
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.85rem 1.35rem;
+      border-radius: 999px;
+      background: var(--glow);
+      color: #1a1208;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      box-shadow: 0 10px 30px rgba(232, 164, 90, 0.25);
+    }
+    .cta:hover {
+      color: #1a1208;
+      transform: translateY(-2px);
+      box-shadow: 0 14px 36px rgba(232, 164, 90, 0.35);
+    }
+    .cta-ghost {
+      background: transparent;
+      color: var(--fog);
+      border: 1px solid rgba(217, 236, 228, 0.35);
+      box-shadow: none;
+    }
+    .cta-ghost:hover {
+      color: var(--fog);
+      border-color: var(--fog);
+      box-shadow: none;
+    }
+
+    /* —— Sections —— */
+    main { padding-bottom: 5rem; }
+    section {
+      width: min(100% - 2rem, var(--max));
+      margin: 0 auto;
+      padding: clamp(3.5rem, 9vw, 6rem) 0;
+      border-bottom: 1px solid var(--line);
+      opacity: 0;
+      transform: translateY(1rem);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    section.in { opacity: 1; transform: none; }
+    section:last-of-type { border-bottom: 0; }
+
+    .eyebrow {
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--sea);
+      font-weight: 600;
+      margin: 0 0 0.75rem;
+    }
+    h2 {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 1.15;
+      margin: 0 0 1rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+    }
+    .support {
+      margin: 0 0 2rem;
+      max-width: 36rem;
+      color: var(--muted);
+    }
+
+    .analogy {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px) {
+      .analogy { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    }
+    .analogy figure {
+      margin: 0;
+      padding: 1.5rem 1.4rem;
+      background: linear-gradient(145deg, #fff, #e7f3ed);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+    }
+    .analogy h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .analogy p { margin: 0; color: var(--muted); font-size: 0.98rem; }
+
+    .ability-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0;
+    }
+    .ability-list li {
+      display: grid;
+      grid-template-columns: 3rem 1fr;
+      gap: 1rem;
+      padding: 1.35rem 0;
+      border-top: 1px solid var(--line);
+      align-items: start;
+    }
+    .ability-list li:last-child { border-bottom: 1px solid var(--line); }
+    .num {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 1.6rem;
+      color: var(--sea);
+      line-height: 1;
+      padding-top: 0.15rem;
+    }
+    .ability-list strong {
+      display: block;
+      font-size: 1.08rem;
+      margin-bottom: 0.25rem;
+    }
+    .ability-list span { color: var(--muted); font-size: 0.98rem; }
+
+    .split {
+      display: grid;
+      gap: 1rem;
+    }
+    @media (min-width: 800px) {
+      .split { grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    }
+    .pane {
+      padding: 1.6rem 1.5rem;
+      border-radius: 1.1rem;
+      min-height: 12rem;
+    }
+    .pane-cf {
+      background: linear-gradient(160deg, #0d2a22, #1a4a3a);
+      color: var(--fog);
+    }
+    .pane-sakura {
+      background: linear-gradient(160deg, #fff8f0, #ffe8d4);
+      color: #3a2412;
+      border: 1px solid rgba(58, 36, 18, 0.1);
+    }
+    .pane h3 {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 1.65rem;
+      margin: 0 0 0.75rem;
+      font-weight: 400;
+    }
+    .pane ul {
+      margin: 0;
+      padding-left: 1.1rem;
+      font-size: 0.98rem;
+    }
+    .pane li { margin: 0.35rem 0; }
+    .pane .note {
+      margin-top: 1rem;
+      font-size: 0.88rem;
+      opacity: 0.8;
+    }
+
+    .terms {
+      display: grid;
+      gap: 1rem;
+    }
+    .term {
+      padding-bottom: 1rem;
+      border-bottom: 1px dashed var(--line);
+    }
+    .term dt {
+      font-weight: 600;
+      margin: 0 0 0.25rem;
+    }
+    .term dd {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .skip {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 1.4rem 1.5rem;
+    }
+    .skip ul { margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--muted); }
+
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .steps li {
+      counter-increment: step;
+      position: relative;
+      padding: 1.1rem 0 1.1rem 3.2rem;
+      border-top: 1px solid var(--line);
+    }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 1.15rem;
+      width: 2.1rem;
+      height: 2.1rem;
+      border-radius: 999px;
+      background: var(--sea-deep);
+      color: var(--fog);
+      display: grid;
+      place-items: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .steps strong { display: block; margin-bottom: 0.2rem; }
+
+    footer {
+      width: min(100% - 2rem, var(--max));
+      margin: 0 auto 3rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <h1 class="brand"><span>Beginner map</span>Cloudflare</h1>
+      <p class="lede">ホームページを世界に届ける「玄関と道路」。初心者でも、できることだけ掴めば十分です。</p>
+      <div class="cta-row">
+        <a class="cta" href="#can">何ができる？</a>
+        <a class="cta cta-ghost" href="#lagado">lagado.jp での分け方</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="what" data-reveal>
+      <p class="eyebrow">まず一言</p>
+      <h2>サーバーそのもの、ではない</h2>
+      <p class="support">Cloudflare は「サイトを置く箱」というより、<strong>世界中の近道・受付・看板</strong>に近いサービス群です。箱（さくら・ロリポップ）と組み合わせて使います。</p>
+      <div class="analogy">
+        <figure>
+          <h3>たとえ：お店</h3>
+          <p>さくら／ロリポップ＝倉庫と厨房。<br />Cloudflare＝看板・案内・混雑時の誘導。</p>
+        </figure>
+        <figure>
+          <h3>たとえ：郵便</h3>
+          <p>ドメイン＝住所。<br />Cloudflare＝郵便局の仕分けと配達ルート最適化。</p>
+        </figure>
+      </div>
+    </section>
+
+    <section id="can" data-reveal>
+      <p class="eyebrow">できること</p>
+      <h2>初心者が触るなら、この5つ</h2>
+      <p class="support">全部覚える必要はありません。lagado.jp では上から3つが中心です。</p>
+      <ol class="ability-list">
+        <li>
+          <span class="num" aria-hidden="true">01</span>
+          <div>
+            <strong>DNS（住所の管理）</strong>
+            <span>「lagado.jp を開いたらどこへ行くか」を決めます。引っ越しのスイッチになります。</span>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">02</span>
+          <div>
+            <strong>Pages（静的サイト公開）</strong>
+            <span>HTML やビルドした研究所サイトを、無料〜安価に世界公開。PHP は置けません。</span>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">03</span>
+          <div>
+            <strong>経路の振り分け（Rules / Workers）</strong>
+            <span>同じ lagado.jp のまま、「研究所は Pages」「おみくじはさくら」と道を分けられます。</span>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">04</span>
+          <div>
+            <strong>R2（大きなファイル置き場）</strong>
+            <span>動画など重いものを安く置く倉庫。PHP の代わりにはなりません。</span>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">05</span>
+          <div>
+            <strong>CDN・セキュリティ（おまけで付く安心）</strong>
+            <span>速く届ける・変なアクセスを減らす。今の lagado.jp にも Cloudflare の看板は既に掛かっています。</span>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="lagado" data-reveal>
+      <p class="eyebrow">あなたの計画</p>
+      <h2>メインは Cloudflare、DB と PHP はさくら</h2>
+      <p class="support">この分け方は可能です。アプリの URL（おみくじ／Fragments）を変えなくて済むように、パスで振り分けるのが安全です。</p>
+      <div class="split">
+        <div class="pane pane-cf">
+          <h3>Cloudflare</h3>
+          <ul>
+            <li>研究所のホームページ（静的）</li>
+            <li>ドメイン DNS</li>
+            <li>必要なら動画を R2</li>
+            <li>「この道はさくらへ」の振り分け</li>
+          </ul>
+          <p class="note">できないこと：おみくじ／Fragments の PHP と sqlite をそのまま動かす</p>
+        </div>
+        <div class="pane pane-sakura">
+          <h3>さくら</h3>
+          <ul>
+            <li><code>/omikuji_bunko/</code> の PHP と DB</li>
+            <li><code>/fragments/</code> の PHP と parts DB</li>
+            <li>プライバシー用 PHP（必要なら）</li>
+          </ul>
+          <p class="note">ライトで足りやすい。SSH／cron は日常にはほぼ不要</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="words" data-reveal>
+      <p class="eyebrow">用語メモ</p>
+      <h2>画面で見る言葉</h2>
+      <p class="support">ダッシュボードで迷いやすい言葉だけ。</p>
+      <dl class="terms">
+        <div class="term"><dt>Pages</dt><dd>静的サイトを置く場所。研究所向き。</dd></div>
+        <div class="term"><dt>Workers</dt><dd>小さなプログラム。URL の振り分けなどに使う。</dd></div>
+        <div class="term"><dt>R2</dt><dd>ファイル倉庫。動画・大きな画像向き。</dd></div>
+        <div class="term"><dt>DNS / ネームサーバ</dt><dd>住所録。ここを Cloudflare にすると振り分けが楽。</dd></div>
+        <div class="term"><dt>プロキシ（オレンジ雲）</dt><dd>Cloudflare 経由で届けるスイッチ。ON が一般的。</dd></div>
+      </dl>
+    </section>
+
+    <section id="later" data-reveal>
+      <p class="eyebrow">今は見送ってよい</p>
+      <h2>最初に触らなくていいもの</h2>
+      <div class="skip">
+        <ul>
+          <li>Images / Stream（専用の画像・動画製品）</li>
+          <li>Zero Trust / WARP（会社向けリモート）</li>
+          <li>AI・Vectorize など最新枠</li>
+          <li>複雑な課金プランの最適化</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="next" data-reveal>
+      <p class="eyebrow">次の一歩</p>
+      <h2>この順で進むと迷いにくい</h2>
+      <ol class="steps">
+        <li>
+          <strong>さくらを契約して PHP＋DB を載せる</strong>
+          仮のアドレスで、おみくじ／Fragments が動くことを確認。
+        </li>
+        <li>
+          <strong>Pages に研究所を載せる</strong>
+          今の静的ビルド（lolipop 出力相当）を置く。
+        </li>
+        <li>
+          <strong>lagado.jp の道を分ける</strong>
+          研究所 → Pages、おみくじ／Fragments → さくら。
+        </li>
+        <li>
+          <strong>安定したらロリポップを降りる</strong>
+          急ぎで解約しない。切り替えて数日見てから。
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    Lagado 用の覚え書きページ · ローカル lab · 2026-11-08<br />
+    ファイル: <code>docs/lab/cloudflare-hajimeni.html</code>
+  </footer>
+
+  <script>
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) e.target.classList.add("in");
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
+    );
+    document.querySelectorAll("[data-reveal]").forEach((el) => io.observe(el));
+  </script>
+</body>
+</html>
