@@ -35,11 +35,13 @@ export default function MishiranuApp() {
   const [stationId, setStationId] = useState<string>(STATIONS[0].id);
   const [timeId, setTimeId] = useState<TimeOptionId>("1h");
   const [regionFilter, setRegionFilter] = useState<string>("すべて");
+  const [query, setQuery] = useState("");
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [secret, setSecret] = useState<Spot | null>(null);
   const [secretOpen, setSecretOpen] = useState(false);
   const [copy, setCopy] = useState<TourCopy | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
+  const [shareNote, setShareNote] = useState<string | null>(null);
 
   const station = useMemo(
     () => STATIONS.find((s) => s.id === stationId) ?? STATIONS[0],
@@ -47,9 +49,18 @@ export default function MishiranuApp() {
   );
 
   const filteredStations = useMemo(() => {
-    if (regionFilter === "すべて") return STATIONS;
-    return STATIONS.filter((s) => s.region === regionFilter);
-  }, [regionFilter]);
+    const q = query.trim();
+    return STATIONS.filter((s) => {
+      if (regionFilter !== "すべて" && s.region !== regionFilter) return false;
+      if (!q) return true;
+      return (
+        s.name.includes(q) ||
+        s.prefecture.includes(q) ||
+        s.line.includes(q) ||
+        s.tourTitle.includes(q)
+      );
+    });
+  }, [regionFilter, query]);
 
   const time = TIME_OPTIONS.find((t) => t.id === timeId) ?? TIME_OPTIONS[0];
   const spots = useMemo(
@@ -90,6 +101,7 @@ export default function MishiranuApp() {
     setActiveSpotId(null);
     setSecret(null);
     setSecretOpen(false);
+    setShareNote(null);
     setStep("tour");
     await loadCopy(chosen, timeId);
   }
@@ -99,6 +111,29 @@ export default function MishiranuApp() {
     setSecret(next ?? null);
     setSecretOpen(true);
     if (next) setActiveSpotId(next.id);
+  }
+
+  async function shareTour() {
+    const lines = [
+      `【見知らぬ駅】${station.name}`,
+      shownCopy.tourTitle,
+      shownCopy.catchCopy,
+      `${time.label} · 徒歩圏 約 ${station.radiiKm[time.index]} km`,
+    ];
+    if (secret) {
+      lines.push(`シークレット: ${secret.name}`);
+    }
+    const text = lines.join("\n");
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        setShareNote("物語テキストをコピーしました");
+        return;
+      }
+    } catch {
+      // fall through
+    }
+    setShareNote(text);
   }
 
   return (
@@ -140,9 +175,20 @@ export default function MishiranuApp() {
               どこに降りましたか
             </h2>
             <p className="mishiranu-note">
-              いまは編集キュレーションの駅だけ。抽象マップで温度を固めています。実地図（Mapbox /
-              Google）と iOS は後段です。
+              いまは編集キュレーションの駅だけ。抽象マップで温度を固めています。実地図と
+              iOS は後段です。
             </p>
+
+            <label className="mishiranu-search">
+              <span className="mishiranu-search-label">駅名・路線で探す</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="例: 尾道 / 山陰 / 北海道"
+                autoComplete="off"
+              />
+            </label>
 
             <div className="mishiranu-region-row" role="group" aria-label="地方で絞る">
               <button
@@ -183,6 +229,9 @@ export default function MishiranuApp() {
                 </li>
               ))}
             </ul>
+            {filteredStations.length === 0 ? (
+              <p className="mishiranu-note">該当する駅がありません。</p>
+            ) : null}
 
             <div className="mishiranu-section" style={{ paddingTop: "2rem" }}>
               <p className="mishiranu-kicker">STEP 2</p>
@@ -203,6 +252,7 @@ export default function MishiranuApp() {
                 <button
                   type="button"
                   className="mishiranu-btn mishiranu-btn--primary"
+                  disabled={filteredStations.length === 0}
                   onClick={() => void beginTour()}
                 >
                   物語をつくる
@@ -226,7 +276,7 @@ export default function MishiranuApp() {
               {copyLoading
                 ? " · コピー生成中"
                 : shownCopy.source === "ai"
-                  ? " · AIコピー"
+                  ? " · Gemini 3.1 Flash-Lite"
                   : " · 編集コピー"}
             </p>
             <div className="mishiranu-tour">
@@ -254,15 +304,18 @@ export default function MishiranuApp() {
             ) : null}
 
             <div
-              className="mishiranu-map"
+              className={`mishiranu-map${station.mood === "empty" ? " mishiranu-map--empty" : ""}`}
               role="img"
               aria-label={`${station.name}駅周辺の抽象マップ`}
             >
+              <div className="mishiranu-map-rails" aria-hidden="true" />
+              <div className="mishiranu-map-mist" aria-hidden="true" />
               <div
                 className="mishiranu-map-ring"
                 style={{ ["--ring-size" as string]: ringSize }}
               />
               <div className="mishiranu-map-station" title={`${station.name}駅`} />
+              <span className="mishiranu-map-station-label">{station.name}</span>
               {spots.map((spot, i) => (
                 <button
                   key={spot.id}
@@ -323,11 +376,32 @@ export default function MishiranuApp() {
               <button
                 type="button"
                 className="mishiranu-btn"
+                disabled={copyLoading}
+                onClick={() => void loadCopy(station, timeId)}
+              >
+                コピーを引き直す
+              </button>
+              <button
+                type="button"
+                className="mishiranu-btn"
+                onClick={() => void shareTour()}
+              >
+                物語をコピー
+              </button>
+              <button
+                type="button"
+                className="mishiranu-btn mishiranu-btn--ghost"
                 onClick={() => setStep("pick")}
               >
                 駅・時間を変える
               </button>
             </div>
+
+            {shareNote ? (
+              <p className="mishiranu-share-note" aria-live="polite">
+                {shareNote}
+              </p>
+            ) : null}
 
             {secretOpen && secret ? (
               <div className="mishiranu-secret" aria-live="polite">
@@ -348,8 +422,8 @@ export default function MishiranuApp() {
 
             <p className="mishiranu-foot">
               方針: 編集20駅 → 抽象マップで温度固め → コピーにAI →
-              後から実地図とiOS。GEMINI_API_KEY があれば Gemini 3.1
-              Flash-Lite でコピー、なければ編集文が使われます。
+              後から実地図とiOS。公開環境に GEMINI_API_KEY があれば Gemini 3.1
+              Flash-Lite、なければ編集文です。
             </p>
           </section>
         ) : null}
