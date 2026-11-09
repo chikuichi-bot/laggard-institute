@@ -376,6 +376,20 @@ a.mishiranu-btn {
   background: #121820;
 }
 
+.mishiranu-leaflet .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.95) saturate(0.55);
+}
+
+.mishiranu-leaflet .leaflet-control-attribution {
+  background: rgba(18, 24, 32, 0.72) !important;
+  color: #8fa0b2 !important;
+  max-width: 70%;
+}
+
+.mishiranu-leaflet .leaflet-control-attribution a {
+  color: #d4a574 !important;
+}
+
 .mishiranu-leaflet-pin {
   background: transparent !important;
   border: none !important;
