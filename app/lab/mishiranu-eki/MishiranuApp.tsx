@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   GENRE_LABEL,
+  REGIONS,
   STATIONS,
   TIME_OPTIONS,
   pickSecret,
@@ -12,24 +13,43 @@ import {
   type StationSeed,
   type TimeOptionId,
 } from "@/data/mishiranu-stations";
+import type { TourCopy } from "@/lib/mishiranu-copy";
 import "./mishiranu.css";
 
 type Step = "hero" | "pick" | "tour";
 
 const GENRE_ORDER: SpotGenre[] = ["history", "gourmet", "nature", "odd"];
 
+function seedTourCopy(station: StationSeed): TourCopy {
+  return {
+    tourTitle: station.tourTitle,
+    catchCopy: station.catchCopy,
+    emptyHeadline: station.emptyCopy?.headline,
+    emptyBody: station.emptyCopy?.body,
+    source: "seed",
+  };
+}
+
 export default function MishiranuApp() {
   const [step, setStep] = useState<Step>("hero");
   const [stationId, setStationId] = useState<string>(STATIONS[0].id);
   const [timeId, setTimeId] = useState<TimeOptionId>("1h");
+  const [regionFilter, setRegionFilter] = useState<string>("すべて");
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [secret, setSecret] = useState<Spot | null>(null);
   const [secretOpen, setSecretOpen] = useState(false);
+  const [copy, setCopy] = useState<TourCopy | null>(null);
+  const [copyLoading, setCopyLoading] = useState(false);
 
   const station = useMemo(
     () => STATIONS.find((s) => s.id === stationId) ?? STATIONS[0],
     [stationId],
   );
+
+  const filteredStations = useMemo(() => {
+    if (regionFilter === "すべて") return STATIONS;
+    return STATIONS.filter((s) => s.region === regionFilter);
+  }, [regionFilter]);
 
   const time = TIME_OPTIONS.find((t) => t.id === timeId) ?? TIME_OPTIONS[0];
   const spots = useMemo(
@@ -38,14 +58,40 @@ export default function MishiranuApp() {
   );
   const activeSpot = spots.find((s) => s.id === activeSpotId) ?? spots[0];
   const ringSize = `${28 + time.index * 18}%`;
+  const shownCopy = copy ?? seedTourCopy(station);
 
-  function beginTour(nextStation?: StationSeed) {
+  async function loadCopy(nextStation: StationSeed, nextTimeId: TimeOptionId) {
+    setCopyLoading(true);
+    setCopy(seedTourCopy(nextStation));
+    try {
+      const res = await fetch("/api/mishiranu/copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stationId: nextStation.id,
+          timeId: nextTimeId,
+        }),
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as TourCopy;
+      if (data.tourTitle && data.catchCopy) {
+        setCopy(data);
+      }
+    } catch {
+      // keep seed fallback
+    } finally {
+      setCopyLoading(false);
+    }
+  }
+
+  async function beginTour(nextStation?: StationSeed) {
     const chosen = nextStation ?? station;
     setStationId(chosen.id);
     setActiveSpotId(null);
     setSecret(null);
     setSecretOpen(false);
     setStep("tour");
+    await loadCopy(chosen, timeId);
   }
 
   function drawSecret() {
@@ -76,7 +122,10 @@ export default function MishiranuApp() {
               <button
                 type="button"
                 className="mishiranu-btn"
-                onClick={() => beginTour(STATIONS[0])}
+                onClick={() => {
+                  const kobu = STATIONS.find((s) => s.id === "kobuchizawa");
+                  if (kobu) void beginTour(kobu);
+                }}
               >
                 小淵沢ですぐ見る
               </button>
@@ -86,15 +135,39 @@ export default function MishiranuApp() {
 
         {step === "pick" ? (
           <section className="mishiranu-section" aria-labelledby="pick-title">
-            <p className="mishiranu-kicker">STEP 1</p>
+            <p className="mishiranu-kicker">STEP 1 · 編集 {STATIONS.length} 駅</p>
             <h2 id="pick-title" className="mishiranu-h2">
               どこに降りましたか
             </h2>
             <p className="mishiranu-note">
-              プロトタイプはサンプル駅のみ。本番では駅名入力と現在地取得がここに入ります。
+              いまは編集キュレーションの駅だけ。抽象マップで温度を固めています。実地図（Mapbox /
+              Google）と iOS は後段です。
             </p>
+
+            <div className="mishiranu-region-row" role="group" aria-label="地方で絞る">
+              <button
+                type="button"
+                aria-pressed={regionFilter === "すべて"}
+                onClick={() => setRegionFilter("すべて")}
+              >
+                すべて
+              </button>
+              {REGIONS.filter((region) =>
+                STATIONS.some((s) => s.region === region),
+              ).map((region) => (
+                <button
+                  key={region}
+                  type="button"
+                  aria-pressed={regionFilter === region}
+                  onClick={() => setRegionFilter(region)}
+                >
+                  {region}
+                </button>
+              ))}
+            </div>
+
             <ul className="mishiranu-station-list">
-              {STATIONS.map((s) => (
+              {filteredStations.map((s) => (
                 <li key={s.id}>
                   <button
                     type="button"
@@ -130,7 +203,7 @@ export default function MishiranuApp() {
                 <button
                   type="button"
                   className="mishiranu-btn mishiranu-btn--primary"
-                  onClick={() => beginTour()}
+                  onClick={() => void beginTour()}
                 >
                   物語をつくる
                 </button>
@@ -150,22 +223,33 @@ export default function MishiranuApp() {
           <section className="mishiranu-section" aria-labelledby="tour-title">
             <p className="mishiranu-kicker">
               {station.prefecture} · {station.line} · {time.label}
+              {copyLoading
+                ? " · コピー生成中"
+                : shownCopy.source === "ai"
+                  ? " · AIコピー"
+                  : " · 編集コピー"}
             </p>
             <div className="mishiranu-tour">
-              <h2 id="tour-title" className="mishiranu-tour-title">
-                {station.tourTitle}
+              <h2
+                id="tour-title"
+                className={`mishiranu-tour-title${copyLoading ? " mishiranu-tour-title--loading" : ""}`}
+              >
+                {shownCopy.tourTitle}
               </h2>
-              <p className="mishiranu-tour-catch">{station.catchCopy}</p>
+              <p className="mishiranu-tour-catch">{shownCopy.catchCopy}</p>
               <p className="mishiranu-radius">
                 徒歩圏 約 {station.radiiKm[time.index]} km · ピン {spots.length}{" "}
                 件
               </p>
             </div>
 
-            {station.mood === "empty" && station.emptyCopy ? (
+            {station.mood === "empty" &&
+            (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (
               <div className="mishiranu-empty">
-                <h3>{station.emptyCopy.headline}</h3>
-                <p>{station.emptyCopy.body}</p>
+                {shownCopy.emptyHeadline ? (
+                  <h3>{shownCopy.emptyHeadline}</h3>
+                ) : null}
+                {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
               </div>
             ) : null}
 
@@ -263,7 +347,9 @@ export default function MishiranuApp() {
             ) : null}
 
             <p className="mishiranu-foot">
-              Phase 0 プロトタイプ — 駅データは編集モック。地図は抽象表現です。企画の感触確認用。
+              方針: 編集20駅 → 抽象マップで温度固め → コピーにAI →
+              後から実地図とiOS。GEMINI_API_KEY があれば AI
+              コピー、なければ編集文が使われます。
             </p>
           </section>
         ) : null}

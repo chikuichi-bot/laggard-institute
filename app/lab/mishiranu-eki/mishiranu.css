@@ -176,12 +176,44 @@
   max-width: 34em;
 }
 
+.mishiranu-region-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 1.1rem;
+}
+
+.mishiranu-region-row button {
+  appearance: none;
+  border: 1px solid var(--mk-line);
+  background: transparent;
+  color: var(--mk-fog);
+  font-family: inherit;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+
+.mishiranu-region-row button[aria-pressed="true"] {
+  border-color: var(--mk-warm);
+  color: var(--mk-warm);
+  background: var(--mk-warm-soft);
+}
+
 .mishiranu-station-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   gap: 0.65rem;
+  max-height: min(52vh, 28rem);
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.mishiranu-tour-title--loading {
+  opacity: 0.72;
 }
 
 .mishiranu-station-list button {
