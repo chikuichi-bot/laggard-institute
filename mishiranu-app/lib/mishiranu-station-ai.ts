@@ -71,13 +71,16 @@ const STATION_SCHEMA_BLOCK = [
   '  "mood": "story|empty",',
   '  "lat": 駅の緯度(number),',
   '  "lng": 駅の経度(number),',
-  '  "stationIntro": "2文以内の駅紹介",',
-  '  "areaAbout": "いまの界隈の様子 1〜2文",',
+  '  "stationIntro": "3〜5文の駅紹介（観光案内の導入）",',
+  '  "areaAbout": "いまの界隈の様子。2段落（空行区切り）で厚めに",',
+  '  "walkGuide": "徒歩圏の回り方を3〜5文",',
   '  "tourTitle": "28字以内",',
   '  "catchCopy": "40字以内",',
   '  "emptyHeadline": "emptyのときだけ20字以内",',
   '  "emptyBody": "emptyのときだけ80字以内",',
   '  "bikeRental": { "available": boolean, "summary": "一文" },',
+  '  "historyNotes": [{ "title": "短い見出し", "body": "2〜4文の歴史メモ" }]（3〜5件）,',
+  '  "sightseeingNotes": [{ "title": "短い見出し", "body": "観光の見どころ・回り方メモ" }]（2〜4件）,',
   '  "spots": [',
   "    {",
   '      "name": "場所名",',
@@ -87,6 +90,7 @@ const STATION_SCHEMA_BLOCK = [
   '      "mealTimes": ["morning|lunch|dinner"]（mealのみ・1つ以上）,',
   '      "hours": "何時から何時まで。例 10:00〜18:00（火曜定休）。屋外は終日（屋外）",',
   '      "blurb": "1〜2文",',
+  '      "detail": "補足の見どころ・注意を1〜2文（任意）",',
   '      "walkMinutes": 1〜40の整数,',
   '      "lat": 緯度,',
   '      "lng": 経度,',
@@ -102,6 +106,7 @@ const STATION_SCHEMA_BLOCK = [
   "- hours はわかる範囲で具体的な開始〜終了。不明なら「要確認（目安 …）」と書く。",
   "- 駅から徒歩圏のみ。有名すぎる遠方スポットは避ける。",
   "- lat/lng はおおよその実座標でよい。",
+  "- areaAbout / historyNotes / sightseeingNotes / walkGuide は情報量を多めに。薄い一言で終わらせない。",
 ].join("\n");
 
 function buildStationPrompt(rawName: string): string {
@@ -155,6 +160,7 @@ function parseSpot(raw: unknown, index: number): Spot | null {
     guide,
     hours: asString(o.hours) || undefined,
     blurb,
+    detail: asString(o.detail) || undefined,
     x,
     y,
     walkMinutes,
@@ -234,6 +240,33 @@ export function parseAiStationPayload(
   const lat = asNumber(parsed.lat, 35.0);
   const lng = asNumber(parsed.lng, 135.0);
 
+  const historyNotes = Array.isArray(parsed.historyNotes)
+    ? parsed.historyNotes
+        .map((n) => {
+          if (!n || typeof n !== "object") return null;
+          const o = n as Record<string, unknown>;
+          const title = asString(o.title);
+          const body = asString(o.body);
+          if (!title || !body) return null;
+          return { title, body };
+        })
+        .filter((n): n is { title: string; body: string } => !!n)
+        .slice(0, 6)
+    : undefined;
+  const sightseeingNotes = Array.isArray(parsed.sightseeingNotes)
+    ? parsed.sightseeingNotes
+        .map((n) => {
+          if (!n || typeof n !== "object") return null;
+          const o = n as Record<string, unknown>;
+          const title = asString(o.title);
+          const body = asString(o.body);
+          if (!title || !body) return null;
+          return { title, body };
+        })
+        .filter((n): n is { title: string; body: string } => !!n)
+        .slice(0, 5)
+    : undefined;
+
   const station: StationSeed = {
     id: slugifyStationName(name),
     name,
@@ -244,6 +277,12 @@ export function parseAiStationPayload(
     radiiKm: [1.0, 2.2, 3.0],
     stationIntro: asString(parsed.stationIntro) || undefined,
     areaAbout: asString(parsed.areaAbout) || undefined,
+    walkGuide: asString(parsed.walkGuide) || undefined,
+    historyNotes: historyNotes && historyNotes.length > 0 ? historyNotes : undefined,
+    sightseeingNotes:
+      sightseeingNotes && sightseeingNotes.length > 0
+        ? sightseeingNotes
+        : undefined,
     bikeRental: parseBike(parsed.bikeRental),
     tourTitle:
       asString(parsed.tourTitle).slice(0, 28) ||

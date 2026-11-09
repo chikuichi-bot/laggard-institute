@@ -15,6 +15,7 @@ import {
   STATIONS,
   TIME_OPTIONS,
   bikeRentalFor,
+  hoursFor,
   pickSecret,
   spotGuide,
   spotsForTime,
@@ -33,6 +34,7 @@ import {
   type DayPart,
   type WalkCourse,
 } from "@/lib/mishiranu-courses";
+import { paragraphsFrom, withAreaDepth } from "@/lib/mishiranu-area-depth";
 import { findNearestStation } from "@/lib/mishiranu-geo";
 import "./mishiranu.css";
 
@@ -162,10 +164,17 @@ export default function MishiranuApp({
   dynamicStationRef.current = dynamicStation;
 
   const station = useMemo(() => {
-    if (dynamicStation && dynamicStation.id === stationId) return dynamicStation;
-    return STATIONS.find((s) => s.id === stationId) ?? STATIONS[0];
+    const raw =
+      dynamicStation && dynamicStation.id === stationId
+        ? dynamicStation
+        : (STATIONS.find((s) => s.id === stationId) ?? STATIONS[0]);
+    return withAreaDepth(raw);
   }, [stationId, dynamicStation]);
   const bikeRental = useMemo(() => bikeRentalFor(station), [station]);
+  const areaParagraphs = useMemo(
+    () => paragraphsFrom(station.areaAbout),
+    [station.areaAbout],
+  );
 
   // Static host (lagado.jp) では searchParams がビルド時固定なので、URL をクライアントで読む
   useEffect(() => {
@@ -1038,7 +1047,33 @@ export default function MishiranuApp({
                 徒歩圏 約 {station.radiiKm[time.index]} km · 案内ピン{" "}
                 {spots.length} 件
               </p>
+              {station.walkGuide ? (
+                <div className="mishiranu-walk-guide">
+                  <h3 className="mishiranu-walk-guide-title">歩き方の目安</h3>
+                  <p>{station.walkGuide}</p>
+                </div>
+              ) : null}
             </div>
+
+            {station.sightseeingNotes && station.sightseeingNotes.length > 0 ? (
+              <section
+                className="mishiranu-sight-notes"
+                aria-labelledby="sight-notes-title"
+              >
+                <p className="mishiranu-kicker">SIGHTSEEING</p>
+                <h3 id="sight-notes-title" className="mishiranu-sight-notes-title">
+                  観光案内メモ
+                </h3>
+                <ol className="mishiranu-history-list">
+                  {station.sightseeingNotes.map((note) => (
+                    <li key={note.title}>
+                      <h4>{note.title}</h4>
+                      <p>{note.body}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
 
             {selectedCourse ? (
               <section
@@ -1138,7 +1173,7 @@ export default function MishiranuApp({
               ) : null}
             </section>
 
-            {station.areaAbout ||
+            {areaParagraphs.length > 0 ||
             (station.historyNotes && station.historyNotes.length > 0) ? (
               <section
                 className="mishiranu-area-story"
@@ -1148,9 +1183,11 @@ export default function MishiranuApp({
                 <h3 id="area-story-title" className="mishiranu-area-story-title">
                   このエリアのこと
                 </h3>
-                {station.areaAbout ? (
-                  <p className="mishiranu-area-about">{station.areaAbout}</p>
-                ) : null}
+                {areaParagraphs.map((para) => (
+                  <p key={para.slice(0, 24)} className="mishiranu-area-about">
+                    {para}
+                  </p>
+                ))}
                 {station.historyNotes && station.historyNotes.length > 0 ? (
                   <ol className="mishiranu-history-list">
                     {station.historyNotes.map((note) => (
@@ -1234,10 +1271,16 @@ export default function MishiranuApp({
                               </span>
                               <span className="mishiranu-guide-item-meta">
                                 徒歩約 {item.walkMinutes} 分
+                                {hoursFor(item) ? ` · ${hoursFor(item)}` : ""}
                               </span>
                               <span className="mishiranu-guide-item-blurb">
                                 {item.blurb}
                               </span>
+                              {item.detail ? (
+                                <span className="mishiranu-guide-item-detail">
+                                  {item.detail}
+                                </span>
+                              ) : null}
                             </button>
                           </li>
                         ))}
@@ -1257,9 +1300,13 @@ export default function MishiranuApp({
                 <p className="mishiranu-spot-genre">
                   {GUIDE_LABEL[spotGuide(activeSpot)]} · 徒歩約{" "}
                   {activeSpot.walkMinutes} 分
+                  {hoursFor(activeSpot) ? ` · ${hoursFor(activeSpot)}` : ""}
                 </p>
                 <h3 className="mishiranu-spot-name">{activeSpot.name}</h3>
                 <p className="mishiranu-spot-blurb">{activeSpot.blurb}</p>
+                {activeSpot.detail ? (
+                  <p className="mishiranu-spot-detail">{activeSpot.detail}</p>
+                ) : null}
               </div>
             ) : null}
 

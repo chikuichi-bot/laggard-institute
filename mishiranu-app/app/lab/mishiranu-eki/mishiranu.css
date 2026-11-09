@@ -729,15 +729,51 @@ a.mishiranu-btn {
 
 .mishiranu-station-intro {
   color: var(--mk-ink);
-  line-height: 1.8;
+  line-height: 1.85;
   margin: 0 0 0.9rem;
-  font-size: 0.98rem;
+  font-size: 1rem;
 }
 
 .mishiranu-radius {
   font-size: 0.85rem;
   color: var(--mk-warm-deep);
   letter-spacing: 0.04em;
+}
+
+.mishiranu-walk-guide {
+  margin-top: 1rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid var(--mk-line);
+}
+
+.mishiranu-walk-guide-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.06em;
+  color: var(--mk-warm-deep);
+  font-weight: 650;
+}
+
+.mishiranu-walk-guide p {
+  margin: 0;
+  line-height: 1.8;
+  color: var(--mk-ink);
+}
+
+.mishiranu-sight-notes {
+  margin: 0 0 1.5rem;
+  padding: 1.25rem 1.2rem 1.15rem;
+  border: 1px solid var(--mk-line);
+  border-radius: calc(var(--mk-radius) + 4px);
+  background: var(--mk-paper);
+}
+
+.mishiranu-sight-notes-title {
+  font-family: var(--mk-display);
+  font-size: clamp(1.15rem, 3.6vw, 1.35rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.75rem;
 }
 
 .mishiranu-bike-rental {
@@ -829,9 +865,27 @@ a.mishiranu-btn {
 }
 
 .mishiranu-area-about {
-  margin: 0 0 1.15rem;
-  line-height: 1.8;
+  margin: 0 0 1rem;
+  line-height: 1.9;
   color: var(--mk-ink);
+  font-size: 0.98rem;
+}
+
+.mishiranu-area-about:last-of-type {
+  margin-bottom: 1.15rem;
+}
+
+.mishiranu-guide-item-detail,
+.mishiranu-spot-detail {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--mk-fog);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.mishiranu-spot-detail {
+  margin: 0.55rem 0 0;
 }
 
 .mishiranu-history-list {

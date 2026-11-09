@@ -25,6 +25,8 @@ export type Spot = {
    */
   hours?: string;
   blurb: string;
+  /** 詳細メモ（観光案内パネル向け・任意） */
+  detail?: string;
   /** 0–1 relative map position */
   x: number;
   y: number;
@@ -72,10 +74,14 @@ export type StationSeed = {
   radiiKm: [number, number, number];
   /** 駅の簡単な説明（観光案内） */
   stationIntro?: string;
-  /** エリアのいまの様子 */
+  /** エリアのいまの様子（複数段落は空行区切り） */
   areaAbout?: string;
+  /** 徒歩圏の歩き方・回り方 */
+  walkGuide?: string;
   /** 過去の歴史メモ */
   historyNotes?: AreaHistoryNote[];
+  /** 観光の見どころメモ（案内向け） */
+  sightseeingNotes?: AreaHistoryNote[];
   /** レンタサイクルの有無（未設定時は未確認として表示） */
   bikeRental?: BikeRentalInfo;
   tourTitle: string;
@@ -243,6 +249,8 @@ export const STATIONS: StationSeed[] = [
         hours: "終日（屋外）",
         blurb:
           "賀茂川と高野川が合う三角。治水と信仰が交わる地形の見所で、水音だけで土地の骨格がわかる。",
+        detail:
+          "三角の先端で二つの川の音を聞き分けると、この土地の地図が一気に立体になります。夕暮れは光が長く、朝は水音がはっきりします。",
         x: 0.42,
         y: 0.38,
         walkMinutes: 5,
@@ -256,6 +264,8 @@ export const STATIONS: StationSeed[] = [
         hours: "店による（おおよそ 9:00〜18:00 前後）",
         blurb:
           "駅前の短いアーケード。市の名残をひきずる近所の商店街で、夕方に影が少し長くなる。",
+        detail:
+          "観光の目的地というより生活の導線。買う・食べる・通り過ぎるが同じ道幅で起きるので、ゆっくり往復すると町の呼吸がわかります。",
         x: 0.55,
         y: 0.52,
         walkMinutes: 3,
@@ -503,6 +513,8 @@ export const STATIONS: StationSeed[] = [
         hours: "境内自由（社務所はおおよそ 9:00〜17:00）",
         blurb:
           "駅からすぐの古社。芳しい水の伝説と、石灯籠の並ぶ参道が伏見らしい静けさをつくる。",
+        detail:
+          "伏見の「水」の話の入口。参道をゆっくり往復するだけでも、駅前の乗り換え感が薄れます。社務所時間外でも境内は歩けることが多いです。",
         x: 0.48,
         y: 0.42,
         walkMinutes: 5,
@@ -518,6 +530,8 @@ export const STATIONS: StationSeed[] = [
         hours: "水路は終日（屋外）。十石舟は季節運航・要確認",
         blurb:
           "伏見の水路へ続く水面。舟が止まっていても、石岸と柳の影だけで界隈の骨格がわかる。",
+        detail:
+          "舟に乗らなくても、岸の石積みと水面の幅を見ると水運の町だった距離感が残ります。柳の影の向きで時間帯もわかりやすいです。",
         x: 0.38,
         y: 0.58,
         walkMinutes: 12,
