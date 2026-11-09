@@ -291,15 +291,15 @@ export const STATIONS: StationSeed[] = [
       },
       {
         id: "demachi-5",
-        name: "カフェ・サラサ王城",
-        genre: "gourmet",
+        name: "出町座",
+        genre: "history",
         guide: "rest",
-        hours: "11:30〜23:30（月曜は 18:00〜、要確認）",
+        hours: "9:30〜22:00（週により前後・不定休）",
         blurb:
-          "旧・小学校を改修したカフェ。トーストと珈琲で足を休める、静かな昼下がり向き。",
-        x: 0.28,
-        y: 0.62,
-        walkMinutes: 12,
+          "枡形の映画×書店×カフェ。席に座って珈琲を置けば、商店街の足音がちょうどいい距離になる。",
+        x: 0.52,
+        y: 0.54,
+        walkMinutes: 4,
       },
       {
         id: "demachi-5b",
