@@ -9,6 +9,8 @@ export type Spot = {
   genre: SpotGenre;
   /** 観光案内の分類。未指定なら genre から推定 */
   guide?: GuideKind;
+  /** 営業・開館時間（わかるものだけ） */
+  hours?: string;
   blurb: string;
   /** 0–1 relative map position */
   x: number;
