@@ -24,6 +24,16 @@ import {
   type TimeOptionId,
 } from "@/data/mishiranu-stations";
 import type { TourCopy } from "@/lib/mishiranu-copy";
+import {
+  DAY_PART_OPTIONS,
+  buildCoursesForStation,
+  dayPartFromHour,
+  dayPartLabel,
+  matchDayPart,
+  type DayPart,
+  type WalkCourse,
+} from "@/lib/mishiranu-courses";
+import { findNearestStation } from "@/lib/mishiranu-geo";
 import "./mishiranu.css";
 
 const StationMap = dynamic(() => import("./StationMap"), {
@@ -36,15 +46,13 @@ const StationMap = dynamic(() => import("./StationMap"), {
 });
 
 type Step = "hero" | "pick" | "tour";
-type ChatPhase = "station" | "time" | "focus" | "ready";
+type ChatPhase = "station" | "clock" | "stay" | "course" | "ready";
 
 type ChatMsg = {
   id: string;
   role: "guide" | "you";
   text: string;
 };
-
-type FocusChoice = GuideKind | "all";
 
 function seedTourCopy(station: StationSeed): TourCopy {
   return {
@@ -54,11 +62,6 @@ function seedTourCopy(station: StationSeed): TourCopy {
     emptyBody: station.emptyCopy?.body,
     source: "seed",
   };
-}
-
-function focusLabel(focus: FocusChoice): string {
-  if (focus === "all") return "おまかせ（全部）";
-  return GUIDE_LABEL[focus];
 }
 
 function parseFocusList(raw: string[] | undefined): GuideKind[] {
@@ -91,17 +94,6 @@ function matchTime(text: string): TimeOptionId | undefined {
   return hit?.id;
 }
 
-function matchFocus(text: string): FocusChoice | undefined {
-  const t = text.trim();
-  if (/おまかせ|全部|なんでも|どれでも|全体/.test(t)) return "all";
-  if (/ご飯|ごはん|食事|ランチ|食べる|グルメ|飯/.test(t)) return "meal";
-  if (/土産|みやげ|お土産|手土産/.test(t)) return "souvenir";
-  if (/見所|みどころ|景色|観光|名所|歴史|昔|由来/.test(t)) return "sight";
-  if (/休む|休憩|やすむ|カフェ休み|一休み|ベンチ/.test(t)) return "rest";
-  if (/寄り道|よみち|暇つぶし|ひまつぶし/.test(t)) return "tip";
-  return undefined;
-}
-
 type Props = {
   initialStep?: Step;
   initialStationId?: string;
@@ -116,7 +108,7 @@ function nextMsgId(prefix: string) {
 }
 
 const OPENING_GUIDE =
-  "降りた駅の、徒歩圏だけを、物語にします。編集リストでも、どの駅名を入れても大丈夫です。リスト外は Gemini 3.1 Flash-Lite が案内をつくります。";
+  "知らない駅に到着しましたね。まず現在地から最寄りの駅名を探すか、駅名を教えてください。見つかったら、いま何時か・どのくらい滞在するかを聞いて、3つのコースを組み立てます。";
 
 export default function MishiranuApp({
   initialStep = "hero",
@@ -148,6 +140,12 @@ export default function MishiranuApp({
       text: OPENING_GUIDE,
     },
   ]);
+  const [dayPart, setDayPart] = useState<DayPart>(() =>
+    dayPartFromHour(new Date().getHours()),
+  );
+  const [courses, setCourses] = useState<WalkCourse[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<WalkCourse | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [secret, setSecret] = useState<Spot | null>(null);
   const [secretOpen, setSecretOpen] = useState(false);
@@ -210,11 +208,22 @@ export default function MishiranuApp({
   }, [query]);
 
   const time = TIME_OPTIONS.find((t) => t.id === timeId) ?? TIME_OPTIONS[0];
-  // ご飯・お土産・観光・休むところ・寄り道は常に全部出す（重点は並びだけ）
-  const spots = useMemo(
-    () => spotsForTime(station, time.index),
-    [station, time.index],
-  );
+  // ご飯・お土産・観光・休むところ・寄り道は常に全部出す（コース選択時は立ち寄り順を優先）
+  const spots = useMemo(() => {
+    const base = spotsForTime(station, time.index);
+    if (!selectedCourse || selectedCourse.stops.length === 0) return base;
+    const byId = new Map(base.map((s) => [s.id, s]));
+    const ordered: Spot[] = [];
+    for (const stop of selectedCourse.stops) {
+      const hit = byId.get(stop.spotId);
+      if (hit) {
+        ordered.push(hit);
+        byId.delete(stop.spotId);
+      }
+    }
+    for (const rest of byId.values()) ordered.push(rest);
+    return ordered;
+  }, [station, time.index, selectedCourse]);
   const activeSpot =
     spots.find((s) => s.id === activeSpotId) ??
     (activeSpotId ? null : spots[0] ?? null);
@@ -293,7 +302,11 @@ export default function MishiranuApp({
       setChatPhase("station");
       setShowStationSearch(false);
       setStationLoading(false);
+      setGeoLoading(false);
       setDynamicStation(null);
+      setCourses([]);
+      setSelectedCourse(null);
+      setDayPart(dayPartFromHour(new Date().getHours()));
       setQuery("");
       setDraft("");
       setMessages([
@@ -321,12 +334,14 @@ export default function MishiranuApp({
     setShowStationSearch(false);
     setQuery("");
     setDraft("");
-    setChatPhase("time");
+    setCourses([]);
+    setSelectedCourse(null);
+    setChatPhase("clock");
     const aiNote =
       next.source === "ai"
-        ? " Gemini が徒歩圏の案内をつくりました。時間は目安なので、現地でも確認を。"
+        ? " Gemini が徒歩圏の下地をつくりました。時間は目安なので、現地でも確認を。"
         : "";
-    const guideText = `${next.name}ですね。${next.prefecture}・${next.line}。${aiNote}今日はどれくらい寄り道できますか？`;
+    const guideText = `${next.name}ですね。${next.prefecture}・${next.line}。${aiNote}いま何時ごろですか？ 時刻に合わせてコースを組み立てます。`;
     if (opts?.omitYou) {
       pushMessages({ role: "guide", text: guideText });
     } else {
@@ -335,6 +350,168 @@ export default function MishiranuApp({
         { role: "guide", text: guideText },
       );
     }
+  }
+
+  async function locateHere() {
+    if (geoLoading || stationLoading) return;
+    if (!navigator.geolocation) {
+      pushMessages({
+        role: "guide",
+        text: "この端末では現在地が使えません。駅名を入力するか、「駅名で探す」から選んでください。",
+      });
+      return;
+    }
+    setGeoLoading(true);
+    pushMessages(
+      { role: "you", text: "現在地から駅を探す" },
+      {
+        role: "guide",
+        text: "いまの位置から、いちばん近い駅名を調べています…",
+      },
+    );
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 30_000,
+        });
+      });
+      const { latitude: lat, longitude: lng } = position.coords;
+      const local = findNearestStation(lat, lng, STATIONS);
+      if (local && local.km <= 3.5) {
+        chooseStation(
+          local.station,
+          `現在地（${local.station.name}・約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）`,
+          { omitYou: true },
+        );
+        return;
+      }
+
+      const res = await fetch("/api/mishiranu/nearby", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ lat, lng }),
+      });
+      const raw = await res.text();
+      let data: {
+        station?: StationSeed;
+        source?: "ai" | "seed";
+        km?: number;
+        error?: string;
+        message?: string;
+        note?: string;
+      } = {};
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : {};
+      } catch {
+        pushMessages({
+          role: "guide",
+          text: stationLookupErrorMessage(res.status, {}, raw),
+        });
+        return;
+      }
+      if (!res.ok || !data.station) {
+        pushMessages({
+          role: "guide",
+          text: stationLookupErrorMessage(res.status, data, raw),
+        });
+        return;
+      }
+      const next: StationSeed = {
+        ...data.station,
+        source: data.source ?? data.station.source ?? "ai",
+      };
+      const dist =
+        typeof data.km === "number"
+          ? data.km < 1
+            ? `約${Math.round(data.km * 1000)}m`
+            : `約${data.km.toFixed(1)}km`
+          : "";
+      chooseStation(
+        next,
+        `現在地（${next.name}${dist ? `・${dist}` : ""}）`,
+        { omitYou: true },
+      );
+      if (data.note) {
+        pushMessages({ role: "guide", text: data.note });
+      }
+    } catch (err) {
+      const denied =
+        err instanceof GeolocationPositionError &&
+        err.code === err.PERMISSION_DENIED;
+      pushMessages({
+        role: "guide",
+        text: denied
+          ? "位置情報の許可が必要です。許可するか、駅名を入力してください。"
+          : "現在地を取得できませんでした。駅名を入力するか、もう一度どうぞ。",
+      });
+    } finally {
+      setGeoLoading(false);
+    }
+  }
+
+  function chooseClock(next: DayPart, spoken?: string) {
+    setDayPart(next);
+    setDraft("");
+    setChatPhase("stay");
+    pushMessages(
+      { role: "you", text: spoken ?? `${dayPartLabel(next)}ごろ` },
+      {
+        role: "guide",
+        text: `${dayPartLabel(next)}ですね。どのくらい滞在する予定ですか？`,
+      },
+    );
+  }
+
+  function chooseStay(nextId: TimeOptionId, spoken?: string) {
+    const t = TIME_OPTIONS.find((opt) => opt.id === nextId) ?? TIME_OPTIONS[0];
+    setTimeId(t.id);
+    setDraft("");
+    const current =
+      dynamicStationRef.current?.id === stationIdRef.current
+        ? dynamicStationRef.current
+        : (STATIONS.find((s) => s.id === stationIdRef.current) ?? station);
+    const built = buildCoursesForStation(current, t.id, dayPart);
+    setCourses(built);
+    setSelectedCourse(null);
+    setChatPhase("course");
+    pushMessages(
+      { role: "you", text: spoken ?? `${t.label}くらい` },
+      {
+        role: "guide",
+        text:
+          built.length > 0
+            ? `${dayPartLabel(dayPart)}・${t.label}向けに、${built.length}つのコースを用意しました。どれにしますか？`
+            : "この条件ではコースを組めませんでした。滞在時間を変えてみてください。",
+      },
+    );
+  }
+
+  function chooseCourse(course: WalkCourse, spoken?: string) {
+    const nextStationId = stationIdRef.current;
+    const nextTimeId = timeIdRef.current;
+    setSelectedCourse(course);
+    setFocusKinds([]);
+    setDraft("");
+    setChatPhase("ready");
+    const named =
+      (dynamicStationRef.current?.id === nextStationId
+        ? dynamicStationRef.current.name
+        : null) ??
+      STATIONS.find((s) => s.id === nextStationId)?.name ??
+      station.name;
+    pushMessages(
+      { role: "you", text: spoken ?? course.title },
+      {
+        role: "guide",
+        text: `「${course.title}」で、${named}の案内を開きます。立ち寄りは${course.stopCount}か所、だいたい${course.totalMinutes}分の想定です。`,
+      },
+    );
+    window.setTimeout(() => {
+      goTour(nextStationId, nextTimeId, []);
+    }, 450);
   }
 
   function stationLookupErrorMessage(
@@ -421,49 +598,6 @@ export default function MishiranuApp({
     }
   }
 
-  function chooseTime(nextId: TimeOptionId, spoken?: string) {
-    const t = TIME_OPTIONS.find((opt) => opt.id === nextId) ?? TIME_OPTIONS[0];
-    setTimeId(t.id);
-    setDraft("");
-    setChatPhase("focus");
-    pushMessages(
-      { role: "you", text: spoken ?? `${t.label}くらい` },
-      {
-        role: "guide",
-        text: "わかりました。案内ではご飯・お土産・観光・休むところ・寄り道を必ず出します。とくに多めに見たいものはありますか？ なければおまかせでどうぞ。",
-      },
-    );
-  }
-
-  function chooseFocus(choice: FocusChoice, spoken?: string) {
-    const kinds = choice === "all" ? [] : [choice];
-    const nextStationId = stationIdRef.current;
-    const nextTimeId = timeIdRef.current;
-    setFocusKinds(kinds);
-    setDraft("");
-    setChatPhase("ready");
-    const focusText = focusLabel(choice);
-    const named =
-      (dynamicStationRef.current?.id === nextStationId
-        ? dynamicStationRef.current.name
-        : null) ??
-      STATIONS.find((s) => s.id === nextStationId)?.name ??
-      station.name;
-    pushMessages(
-      { role: "you", text: spoken ?? focusText },
-      {
-        role: "guide",
-        text:
-          choice === "all"
-            ? `では、${named}の徒歩圏で5つの案内を開きます。会話はこのまま残しておきますね。`
-            : `では、${named}の徒歩圏を開きます。5つは全部出しつつ、「${focusText}」を先に見やすくします。`,
-      },
-    );
-    window.setTimeout(() => {
-      goTour(nextStationId, nextTimeId, kinds);
-    }, 500);
-  }
-
   function goTour(
     nextStationId: string,
     nextTimeId: TimeOptionId = timeIdRef.current,
@@ -495,37 +629,56 @@ export default function MishiranuApp({
       return;
     }
 
-    if (chatPhase === "time") {
+    if (chatPhase === "clock") {
+      const hit = matchDayPart(text);
+      if (!hit) {
+        pushMessages(
+          { role: "you", text },
+          {
+            role: "guide",
+            text: "いまの時間帯は「朝」「昼まえ」「昼すぎ」「夕方」「夜」、または「14時」のように教えてください。",
+          },
+        );
+        setDraft("");
+        return;
+      }
+      chooseClock(hit, text);
+      return;
+    }
+
+    if (chatPhase === "stay") {
       const hit = matchTime(text);
       if (!hit) {
         pushMessages(
           { role: "you", text },
           {
             role: "guide",
-            text: "時間は「1時間」「3時間」「半日」のどれかで教えてください。",
+            text: "滞在は「1時間」「3時間」「半日」のどれかで教えてください。",
           },
         );
         setDraft("");
         return;
       }
-      chooseTime(hit, text);
+      chooseStay(hit, text);
       return;
     }
 
-    if (chatPhase === "focus") {
-      const hit = matchFocus(text);
+    if (chatPhase === "course") {
+      const hit = courses.find(
+        (c) => text.includes(c.title) || c.title.includes(text),
+      );
       if (!hit) {
         pushMessages(
           { role: "you", text },
           {
             role: "guide",
-            text: "重点は「ご飯」「お土産」「観光」「休むところ」「寄り道」、または「おまかせ」でお願いします。5つはどれを選んでも全部出ます。",
+            text: "下の3つのコースから選ぶか、コース名を入力してください。",
           },
         );
         setDraft("");
         return;
       }
-      chooseFocus(hit, text);
+      chooseCourse(hit, text);
     }
   }
 
@@ -572,12 +725,14 @@ export default function MishiranuApp({
 
   const composerPlaceholder =
     chatPhase === "station"
-      ? "例: 出町柳にいます"
-      : chatPhase === "time"
-        ? "例: 3時間くらい"
-        : chatPhase === "focus"
-          ? "例: 休むところ多めで / おまかせ"
-          : "";
+      ? "例: 中書島にいます"
+      : chatPhase === "clock"
+        ? "例: いま14時ごろ / 夕方"
+        : chatPhase === "stay"
+          ? "例: 3時間くらい"
+          : chatPhase === "course"
+            ? "例: ゆる歩きコース"
+            : "";
 
   return (
     <div className="mishiranu">
@@ -596,7 +751,7 @@ export default function MishiranuApp({
                   className="mishiranu-btn mishiranu-btn--primary"
                   onClick={() => goChat(true)}
                 >
-                  会話ではじめる
+                  知らない駅に到着
                 </button>
                 <button
                   type="button"
@@ -608,9 +763,9 @@ export default function MishiranuApp({
               </div>
               <p className="mishiranu-fallback-links">
                 押せないとき:{" "}
-                <a href="?view=tour&station=demachiyanagi&time=1h">出町柳の物語へ</a>
+                <a href="?view=pick">到着の会話へ</a>
                 {" · "}
-                <a href="?view=pick">会話へ</a>
+                <a href="?view=tour&station=demachiyanagi&time=1h">出町柳の物語へ</a>
               </p>
             </div>
           </section>
@@ -618,12 +773,12 @@ export default function MishiranuApp({
 
         {step === "pick" ? (
           <section className="mishiranu-section mishiranu-chat" aria-labelledby="chat-title">
-            <p className="mishiranu-kicker">CONVERSATION · 編集 {STATIONS.length} 駅</p>
+            <p className="mishiranu-kicker">ARRIVAL · 編集 {STATIONS.length} 駅</p>
             <h2 id="chat-title" className="mishiranu-h2">
-              案内を、会話でつくる
+              知らない駅から、コースをつくる
             </h2>
             <p className="mishiranu-note">
-              駅 → 時間 → 重点。チップでも、下の入力欄でも答えられます。案内を開いても会話は残ります。
+              現在地で駅を探す → いまの時刻 → 滞在時間 → 3コース。チップでも入力欄でも進められます。
             </p>
 
             <div className="mishiranu-chat-thread" role="log" aria-live="polite">
@@ -650,15 +805,10 @@ export default function MishiranuApp({
                 <button
                   type="button"
                   className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                  onClick={() =>
-                    chooseStation(
-                      STATIONS.find((s) => s.id === "demachiyanagi") ??
-                        STATIONS[0],
-                      "出町柳にいます",
-                    )
-                  }
+                  disabled={geoLoading || stationLoading}
+                  onClick={() => void locateHere()}
                 >
-                  出町柳にいます
+                  {geoLoading ? "現在地を確認中…" : "現在地で駅を探す"}
                 </button>
                 <button
                   type="button"
@@ -716,14 +866,42 @@ export default function MishiranuApp({
               </div>
             ) : null}
 
-            {chatPhase === "time" ? (
-              <div className="mishiranu-chat-replies" aria-label="時間の答え">
+            {chatPhase === "clock" ? (
+              <div className="mishiranu-chat-replies" aria-label="いまの時間帯">
+                <button
+                  type="button"
+                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                  onClick={() =>
+                    chooseClock(
+                      dayPartFromHour(new Date().getHours()),
+                      "いまの時刻で",
+                    )
+                  }
+                >
+                  いまの時刻で
+                </button>
+                {DAY_PART_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className="mishiranu-chat-chip"
+                    onClick={() => chooseClock(opt.id)}
+                    title={opt.hint}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {chatPhase === "stay" ? (
+              <div className="mishiranu-chat-replies" aria-label="滞在時間">
                 {TIME_OPTIONS.map((t) => (
                   <button
                     key={t.id}
                     type="button"
                     className="mishiranu-chat-chip"
-                    onClick={() => chooseTime(t.id)}
+                    onClick={() => chooseStay(t.id)}
                   >
                     {t.label}
                   </button>
@@ -731,28 +909,34 @@ export default function MishiranuApp({
               </div>
             ) : null}
 
-            {chatPhase === "focus" ? (
-              <div className="mishiranu-chat-replies" aria-label="重点の答え">
-                <button
-                  type="button"
-                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                  onClick={() => chooseFocus("all")}
-                >
-                  おまかせ
-                </button>
-                {GUIDE_ORDER.map((kind) => (
+            {chatPhase === "course" ? (
+              <div className="mishiranu-course-picks" aria-label="コースの候補">
+                {courses.map((course, index) => (
                   <button
-                    key={kind}
+                    key={course.id}
                     type="button"
-                    className="mishiranu-chat-chip"
-                    onClick={() => chooseFocus(kind)}
+                    className="mishiranu-course-card"
+                    onClick={() => chooseCourse(course)}
                   >
-                    <span
-                      className="mishiranu-guide-dot"
-                      style={{ background: GUIDE_COLOR[kind] }}
-                      aria-hidden
-                    />
-                    {GUIDE_LABEL[kind]}
+                    <span className="mishiranu-course-card-index">
+                      コース {index + 1}
+                    </span>
+                    <span className="mishiranu-course-card-title">
+                      {course.title}
+                    </span>
+                    <span className="mishiranu-course-card-sub">
+                      {course.subtitle} · 約{course.totalMinutes}分 ·{" "}
+                      {course.stopCount}か所
+                    </span>
+                    <span className="mishiranu-course-card-vibe">{course.vibe}</span>
+                    <ol className="mishiranu-course-card-stops">
+                      {course.stops.map((stop) => (
+                        <li key={stop.spotId}>
+                          {stop.clockLabel ? `${stop.clockLabel} ` : ""}
+                          {stop.name}
+                        </li>
+                      ))}
+                    </ol>
                   </button>
                 ))}
               </div>
@@ -829,10 +1013,9 @@ export default function MishiranuApp({
             ) : null}
 
             <p className="mishiranu-kicker">
-              {station.prefecture} · {station.line} · {time.label}
-              {focusKinds.length > 0
-                ? ` · ${focusKinds.map((k) => GUIDE_LABEL[k]).join("・")}`
-                : ""}
+              {station.prefecture} · {station.line} · {dayPartLabel(dayPart)} ·{" "}
+              {time.label}
+              {selectedCourse ? ` · ${selectedCourse.title}` : ""}
               {copyLoading
                 ? " · コピー生成中"
                 : shownCopy.source === "ai"
@@ -856,6 +1039,61 @@ export default function MishiranuApp({
                 {spots.length} 件
               </p>
             </div>
+
+            {selectedCourse ? (
+              <section
+                className="mishiranu-course-itinerary"
+                aria-labelledby="course-itinerary-title"
+              >
+                <p className="mishiranu-kicker">COURSE</p>
+                <h3
+                  id="course-itinerary-title"
+                  className="mishiranu-course-itinerary-title"
+                >
+                  {selectedCourse.title}
+                </h3>
+                <p className="mishiranu-course-itinerary-meta">
+                  {selectedCourse.subtitle} · {dayPartLabel(dayPart)}スタート · 約
+                  {selectedCourse.totalMinutes}分 · {selectedCourse.stopCount}
+                  か所
+                </p>
+                <p className="mishiranu-course-itinerary-vibe">
+                  {selectedCourse.vibe}
+                </p>
+                <ol className="mishiranu-course-itinerary-list">
+                  {selectedCourse.stops.map((stop, index) => (
+                    <li key={stop.spotId}>
+                      <button
+                        type="button"
+                        className={
+                          activeSpotId === stop.spotId
+                            ? "mishiranu-course-stop mishiranu-course-stop--active"
+                            : "mishiranu-course-stop"
+                        }
+                        onClick={() => setActiveSpotId(stop.spotId)}
+                      >
+                        <span className="mishiranu-course-stop-index">
+                          {index + 1}
+                        </span>
+                        <span className="mishiranu-course-stop-body">
+                          <span className="mishiranu-course-stop-name">
+                            {stop.clockLabel ? `${stop.clockLabel} · ` : ""}
+                            {stop.name}
+                          </span>
+                          <span className="mishiranu-course-stop-meta">
+                            {GUIDE_LABEL[stop.guide]} · 徒歩約 {stop.walkMinutes}{" "}
+                            分 · 滞在目安 {stop.dwellMinutes} 分
+                          </span>
+                          <span className="mishiranu-course-stop-blurb">
+                            {stop.blurb}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
 
             <section
               className="mishiranu-bike-rental"

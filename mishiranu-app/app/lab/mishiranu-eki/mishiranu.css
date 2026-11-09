@@ -344,6 +344,150 @@ a.mishiranu-btn {
   white-space: nowrap;
 }
 
+.mishiranu-course-picks {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0 0 1.1rem;
+}
+
+.mishiranu-course-card {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-radius);
+  background: var(--mk-paper);
+  padding: 1rem 1.05rem 1.05rem;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.mishiranu-course-card:hover {
+  border-color: var(--mk-warm-deep);
+  transform: translateY(-1px);
+}
+
+.mishiranu-course-card-index {
+  display: block;
+  color: var(--mk-warm-deep);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.35rem;
+}
+
+.mishiranu-course-card-title {
+  display: block;
+  font-size: 1.12rem;
+  font-weight: 650;
+  margin-bottom: 0.25rem;
+}
+
+.mishiranu-course-card-sub,
+.mishiranu-course-card-vibe {
+  display: block;
+  color: var(--mk-fog);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.mishiranu-course-card-vibe {
+  margin-top: 0.2rem;
+}
+
+.mishiranu-course-card-stops {
+  margin: 0.7rem 0 0;
+  padding-left: 1.15rem;
+  color: var(--mk-ink);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.mishiranu-course-itinerary {
+  margin: 0 0 1.5rem;
+  padding: 1.1rem 1.15rem 1.2rem;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-radius);
+  background: color-mix(in srgb, var(--mk-paper) 92%, var(--mk-sky) 8%);
+}
+
+.mishiranu-course-itinerary-title {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 1.25rem;
+}
+
+.mishiranu-course-itinerary-meta,
+.mishiranu-course-itinerary-vibe {
+  margin: 0;
+  color: var(--mk-fog);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.mishiranu-course-itinerary-vibe {
+  margin-top: 0.25rem;
+}
+
+.mishiranu-course-itinerary-list {
+  list-style: none;
+  margin: 0.95rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mishiranu-course-stop {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: calc(var(--mk-radius) - 2px);
+  background: var(--mk-paper);
+  padding: 0.7rem 0.75rem;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.mishiranu-course-stop--active,
+.mishiranu-course-stop:hover {
+  border-color: color-mix(in srgb, var(--mk-warm-deep) 55%, var(--mk-line));
+}
+
+.mishiranu-course-stop-index {
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--mk-warm-deep);
+  color: #fff;
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+}
+
+.mishiranu-course-stop-body {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.mishiranu-course-stop-name {
+  font-weight: 650;
+}
+
+.mishiranu-course-stop-meta,
+.mishiranu-course-stop-blurb {
+  color: var(--mk-fog);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .mishiranu-tour-nav {
   display: flex;
   align-items: center;

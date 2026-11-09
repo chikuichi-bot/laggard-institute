@@ -3,6 +3,7 @@ import type { Spot, StationSeed } from "@/data/mishiranu-stations";
 /** WGS84 station centers for the curated set */
 export const STATION_LL: Record<string, { lat: number; lng: number }> = {
   demachiyanagi: { lat: 35.0292, lng: 135.772 },
+  chushojima: { lat: 34.9267, lng: 135.7594 },
   biei: { lat: 43.5884, lng: 142.466 },
   kanita: { lat: 41.037, lng: 140.643 },
   ashio: { lat: 36.633, lng: 139.442 },
@@ -24,6 +25,46 @@ export const STATION_LL: Record<string, { lat: number; lng: number }> = {
   tsukazaki: { lat: 35.263, lng: 140.148 },
   tamatsukuri: { lat: 35.421, lng: 132.896 },
 };
+
+const EARTH_KM = 6371;
+
+export function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+export type NearestStationHit = {
+  station: StationSeed;
+  km: number;
+};
+
+/** Nearest curated station to a WGS84 point. */
+export function findNearestStation(
+  lat: number,
+  lng: number,
+  stations: StationSeed[],
+): NearestStationHit | null {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || stations.length === 0) {
+    return null;
+  }
+  const here = { lat, lng };
+  let best: NearestStationHit | null = null;
+  for (const station of stations) {
+    const km = haversineKm(here, stationLatLng(station));
+    if (!best || km < best.km) best = { station, km };
+  }
+  return best;
+}
 
 /** Precise pins for 出町柳 (feel-test home station) */
 export const SPOT_LL: Record<string, { lat: number; lng: number }> = {

@@ -61,6 +61,49 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
+const STATION_SCHEMA_BLOCK = [
+  "スキーマ:",
+  "{",
+  '  "name": "駅名（駅を付けない）",',
+  '  "line": "路線名",',
+  '  "prefecture": "都道府県（都府県を含む短い表記可）",',
+  '  "region": "北海道|東北|関東|中部|近畿|中国|四国|九州",',
+  '  "mood": "story|empty",',
+  '  "lat": 駅の緯度(number),',
+  '  "lng": 駅の経度(number),',
+  '  "stationIntro": "2文以内の駅紹介",',
+  '  "areaAbout": "いまの界隈の様子 1〜2文",',
+  '  "tourTitle": "28字以内",',
+  '  "catchCopy": "40字以内",',
+  '  "emptyHeadline": "emptyのときだけ20字以内",',
+  '  "emptyBody": "emptyのときだけ80字以内",',
+  '  "bikeRental": { "available": boolean, "summary": "一文" },',
+  '  "spots": [',
+  "    {",
+  '      "name": "場所名",',
+  '      "genre": "history|gourmet|nature|odd",',
+  '      "guide": "meal|souvenir|sight|rest|tip",',
+  '      "mealTier": "casual|upscale（mealのみ）",',
+  '      "mealTimes": ["morning|lunch|dinner"]（mealのみ・1つ以上）,',
+  '      "hours": "何時から何時まで。例 10:00〜18:00（火曜定休）。屋外は終日（屋外）",',
+  '      "blurb": "1〜2文",',
+  '      "walkMinutes": 1〜40の整数,',
+  '      "lat": 緯度,',
+  '      "lng": 経度,',
+  '      "secretWorthy": boolean',
+  "    }",
+  "  ]",
+  "}",
+  "",
+  "制約:",
+  "- 日本の実在の鉄道駅でなければ { \"error\": \"not_a_station\", \"message\": \"理由\" } を返す。",
+  "- spots は 6〜10件。story のとき guide の meal/souvenir/sight/rest/tip をそれぞれ1件以上。",
+  "- empty（本当に何も薄い駅）は meal/souvenir を無理に作らず、sight/rest/tip 中心。",
+  "- hours はわかる範囲で具体的な開始〜終了。不明なら「要確認（目安 …）」と書く。",
+  "- 駅から徒歩圏のみ。有名すぎる遠方スポットは避ける。",
+  "- lat/lng はおおよその実座標でよい。",
+].join("\n");
+
 function buildStationPrompt(rawName: string): string {
   const name = rawName.replace(/駅$/u, "").trim() || rawName.trim();
   return [
@@ -71,46 +114,21 @@ function buildStationPrompt(rawName: string): string {
     "",
     `入力された駅名: ${name}`,
     "",
-    "スキーマ:",
-    "{",
-    '  "name": "駅名（駅を付けない）",',
-    '  "line": "路線名",',
-    '  "prefecture": "都道府県（都府県を含む短い表記可）",',
-    '  "region": "北海道|東北|関東|中部|近畿|中国|四国|九州",',
-    '  "mood": "story|empty",',
-    '  "lat": 駅の緯度(number),',
-    '  "lng": 駅の経度(number),',
-    '  "stationIntro": "2文以内の駅紹介",',
-    '  "areaAbout": "いまの界隈の様子 1〜2文",',
-    '  "tourTitle": "28字以内",',
-    '  "catchCopy": "40字以内",',
-    '  "emptyHeadline": "emptyのときだけ20字以内",',
-    '  "emptyBody": "emptyのときだけ80字以内",',
-    '  "bikeRental": { "available": boolean, "summary": "一文" },',
-    '  "spots": [',
-    "    {",
-    '      "name": "場所名",',
-    '      "genre": "history|gourmet|nature|odd",',
-    '      "guide": "meal|souvenir|sight|rest|tip",',
-    '      "mealTier": "casual|upscale（mealのみ）",',
-    '      "mealTimes": ["morning|lunch|dinner"]（mealのみ・1つ以上）,',
-    '      "hours": "何時から何時まで。例 10:00〜18:00（火曜定休）。屋外は終日（屋外）",',
-    '      "blurb": "1〜2文",',
-    '      "walkMinutes": 1〜40の整数,',
-    '      "lat": 緯度,',
-    '      "lng": 経度,',
-    '      "secretWorthy": boolean',
-    "    }",
-    "  ]",
-    "}",
+    STATION_SCHEMA_BLOCK,
+  ].join("\n");
+}
+
+function buildNearbyPrompt(lat: number, lng: number): string {
+  return [
+    "あなたは日本の駅の徒歩圏を案内する編集者です。",
+    "Google検索の結果を優先し、実在する駅・店・名所だけを使ってください。",
+    "観光ガイドの煽りやランキング口調は禁止。Lagadoらしい静かで詩的な日本語。",
+    "出力は JSON オブジェクトのみ（前後の説明文なし）。",
     "",
-    "制約:",
-    "- 日本の実在の鉄道駅でなければ { \"error\": \"not_a_station\", \"message\": \"理由\" } を返す。",
-    "- spots は 6〜10件。story のとき guide の meal/souvenir/sight/rest/tip をそれぞれ1件以上。",
-    "- empty（本当に何も薄い駅）は meal/souvenir を無理に作らず、sight/rest/tip 中心。",
-    "- hours はわかる範囲で具体的な開始〜終了。不明なら「要確認（目安 …）」と書く。",
-    "- 駅から徒歩圏のみ。有名すぎる遠方スポットは避ける。",
-    "- lat/lng はおおよその実座標でよい。",
+    `現在地の緯度経度: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    "この地点から最も近い実在の鉄道駅（新幹線停車駅より、最寄りの在来線・私鉄駅を優先）を特定し、その駅名で徒歩圏案内を返す。",
+    "",
+    STATION_SCHEMA_BLOCK,
   ].join("\n");
 }
 
@@ -334,11 +352,11 @@ function stationFromGeminiText(
  * Prefer a fast JSON-only call (fits published-app budgets).
  * Fall back once to Google Search grounding if the fast path is empty/malformed.
  */
-export async function generateStationGuideWithGemini(
-  rawName: string,
+async function generateFromPrompt(
+  prompt: string,
+  fallbackName: string,
   apiKey: string,
 ): Promise<AiStationResult | { error: string; message: string }> {
-  const prompt = buildStationPrompt(rawName);
   const contents = [{ role: "user", parts: [{ text: prompt }] }];
 
   const fast = await callGeminiGenerate(
@@ -355,7 +373,7 @@ export async function generateStationGuideWithGemini(
   );
 
   if (fast.ok) {
-    const parsed = stationFromGeminiText(fast.text, rawName);
+    const parsed = stationFromGeminiText(fast.text, fallbackName);
     if (!("error" in parsed) || parsed.error === "not_a_station") {
       return parsed;
     }
@@ -378,8 +396,27 @@ export async function generateStationGuideWithGemini(
   );
 
   if (!grounded.ok) {
-    if (fast.ok) return stationFromGeminiText(fast.text, rawName);
+    if (fast.ok) return stationFromGeminiText(fast.text, fallbackName);
     return { error: grounded.error, message: grounded.message };
   }
-  return stationFromGeminiText(grounded.text, rawName);
+  return stationFromGeminiText(grounded.text, fallbackName);
+}
+
+export async function generateStationGuideWithGemini(
+  rawName: string,
+  apiKey: string,
+): Promise<AiStationResult | { error: string; message: string }> {
+  return generateFromPrompt(buildStationPrompt(rawName), rawName, apiKey);
+}
+
+export async function generateNearbyStationWithGemini(
+  lat: number,
+  lng: number,
+  apiKey: string,
+): Promise<AiStationResult | { error: string; message: string }> {
+  return generateFromPrompt(
+    buildNearbyPrompt(lat, lng),
+    `現在地(${lat.toFixed(3)},${lng.toFixed(3)})`,
+    apiKey,
+  );
 }
