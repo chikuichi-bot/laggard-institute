@@ -155,6 +155,7 @@ export default function MishiranuApp({
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const stationIdRef = useRef(stationId);
   const timeIdRef = useRef(timeId);
+  const urlBootstrapped = useRef(false);
   stationIdRef.current = stationId;
   timeIdRef.current = timeId;
 
@@ -163,6 +164,33 @@ export default function MishiranuApp({
     [stationId],
   );
   const bikeRental = useMemo(() => bikeRentalFor(station), [station]);
+
+  // Static host (lagado.jp) では searchParams がビルド時固定なので、URL をクライアントで読む
+  useEffect(() => {
+    if (urlBootstrapped.current) return;
+    urlBootstrapped.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get("view");
+    const stationParam = params.get("station");
+    const timeParam = params.get("time");
+    const focusParam = params.get("focus");
+    if (view === "hero" || view === "pick" || view === "tour") {
+      setStep(view);
+    }
+    if (stationParam && STATIONS.some((s) => s.id === stationParam)) {
+      setStationId(stationParam);
+    }
+    if (timeParam === "1h" || timeParam === "3h" || timeParam === "half") {
+      setTimeId(timeParam);
+    }
+    if (focusParam) {
+      setFocusKinds(
+        parseFocusList(
+          focusParam.split(",").map((f) => f.trim()).filter(Boolean),
+        ),
+      );
+    }
+  }, []);
 
   const filteredStations = useMemo(() => {
     const q = query.trim();

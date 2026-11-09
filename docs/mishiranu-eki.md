@@ -2,7 +2,7 @@
 
 > 降りた駅の、徒歩圏だけを、物語にする。
 
-Lagado Lab の企画メモ。触れるプロトタイプは `/lab/mishiranu-eki`。
+Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab/mishiranu-eki`（lagado.jp 公開時は `/lagado2026/lab/mishiranu-eki/`）。
 
 ## 確定方針（2026-11-09）
 
@@ -43,11 +43,13 @@ Lagado Lab の企画メモ。触れるプロトタイプは `/lab/mishiranu-eki`
 
 ## 技術メモ
 
+- 本サイト統合: `app/lab/mishiranu-eki/`（lagado.jp の静的公開対象）
 - 駅データ: `data/mishiranu-stations.ts`（先頭は体感用の **出町柳**）
-- 公開用ミニアプリ: `mishiranu-app/`
-- コピー API: `POST /api/mishiranu/copy`（キーなしは編集文にフォールバック）
+- 試作用ミニアプリ（Cursor Apps）: `mishiranu-app/` — 本サイトへ寄せたあと残すかは要相談
+- コピー API: `POST /api/mishiranu/copy`（Lolipop 静的では未配信。キーなし／失敗時は編集文）
 - AI モデル: **Gemini 3.1 Flash-Lite**（`gemini-3.1-flash-lite`）— おみくじ文庫の AI 解説と同じ
 - 秘密情報: `GEMINI_API_KEY`（未設定でもプロトは動く）
+- 必須案内: ご飯 / お土産 / 観光 / 休むところ / 寄り道 / レンタサイクル
 
 ## プロトでできた温度固め
 
