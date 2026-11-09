@@ -61,9 +61,16 @@ Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab
 - 抽象マップに線路・霧・駅名ラベル、「何もない」用の薄い空
 - 駅名検索、コピー引き直し、物語テキストのコピー
 
+## さくら向けビルド確認（2026-11-09）
+
+- コマンド: `npm run build:lolipop:minimal`（本番と同型のミニマル静的）
+- 出力: `lolipop/index.html` + `lolipop/lagado2026/lab/mishiranu-eki/`
+- 公開予定URL: `https://lagado.jp/lagado2026/lab/mishiranu-eki/`
+- 注意: ページは `searchParams` をサーバーで読まない（クライアントで URL を読む）。これで静的 export が通る
+
 ## 次の作業候補
 
-1. さくらへの静的アップロード手順を確定し、見知らぬ駅を公開パスへ載せる
+1. `lolipop/` をさくらの `public_html/` へ上げる
 2. リポジトリから `mishiranu-app/` を削除する
 3. 編集20駅の文面を実地・写真メモで更新
 4. Web が安定したら iOS
