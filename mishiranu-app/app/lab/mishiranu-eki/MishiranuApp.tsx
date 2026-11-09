@@ -1109,6 +1109,72 @@ export default function MishiranuApp({
               ) : null}
             </div>
 
+            {station.mood === "empty" &&
+            (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (
+              <div className="mishiranu-empty">
+                {shownCopy.emptyHeadline ? (
+                  <h3>{shownCopy.emptyHeadline}</h3>
+                ) : null}
+                {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
+              </div>
+            ) : null}
+
+            {areaParagraphs.length > 0 ||
+            (station.historyNotes && station.historyNotes.length > 0) ? (
+              <section
+                className="mishiranu-area-story"
+                aria-labelledby="area-story-title"
+              >
+                <p className="mishiranu-kicker">
+                  <IconHistory />
+                  AREA · HISTORY
+                </p>
+                <h3 id="area-story-title" className="mishiranu-area-story-title">
+                  <IconHistory />
+                  このエリアのこと・歴史
+                </h3>
+                {areaParagraphs.map((para) => (
+                  <p key={para.slice(0, 24)} className="mishiranu-area-about">
+                    {para}
+                  </p>
+                ))}
+                {station.historyNotes && station.historyNotes.length > 0 ? (
+                  <ol className="mishiranu-history-list">
+                    {station.historyNotes.map((note) => (
+                      <li key={note.title}>
+                        <h4>{note.title}</h4>
+                        <p>{note.body}</p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+              </section>
+            ) : null}
+
+            {station.sightseeingNotes && station.sightseeingNotes.length > 0 ? (
+              <section
+                className="mishiranu-sight-notes"
+                aria-labelledby="sight-notes-title"
+              >
+                <p className="mishiranu-kicker">
+                  <IconBinoculars />
+                  SIGHTSEEING
+                </p>
+                <h3 id="sight-notes-title" className="mishiranu-sight-notes-title">
+                  <IconBinoculars />
+                  観光案内メモ
+                </h3>
+                <ol className="mishiranu-history-list">
+                  {station.sightseeingNotes.map((note) => (
+                    <li key={note.title}>
+                      <h4>{note.title}</h4>
+                      <p>{note.body}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
+
             {selectedCourse ? (
               <section
                 className="mishiranu-course-itinerary"
@@ -1168,72 +1234,6 @@ export default function MishiranuApp({
                           </span>
                         </span>
                       </button>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ) : null}
-
-            {station.mood === "empty" &&
-            (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (
-              <div className="mishiranu-empty">
-                {shownCopy.emptyHeadline ? (
-                  <h3>{shownCopy.emptyHeadline}</h3>
-                ) : null}
-                {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
-              </div>
-            ) : null}
-
-            {areaParagraphs.length > 0 ||
-            (station.historyNotes && station.historyNotes.length > 0) ? (
-              <section
-                className="mishiranu-area-story"
-                aria-labelledby="area-story-title"
-              >
-                <p className="mishiranu-kicker">
-                  <IconHistory />
-                  AREA · HISTORY
-                </p>
-                <h3 id="area-story-title" className="mishiranu-area-story-title">
-                  <IconHistory />
-                  このエリアのこと
-                </h3>
-                {areaParagraphs.map((para) => (
-                  <p key={para.slice(0, 24)} className="mishiranu-area-about">
-                    {para}
-                  </p>
-                ))}
-                {station.historyNotes && station.historyNotes.length > 0 ? (
-                  <ol className="mishiranu-history-list">
-                    {station.historyNotes.map((note) => (
-                      <li key={note.title}>
-                        <h4>{note.title}</h4>
-                        <p>{note.body}</p>
-                      </li>
-                    ))}
-                  </ol>
-                ) : null}
-              </section>
-            ) : null}
-
-            {station.sightseeingNotes && station.sightseeingNotes.length > 0 ? (
-              <section
-                className="mishiranu-sight-notes"
-                aria-labelledby="sight-notes-title"
-              >
-                <p className="mishiranu-kicker">
-                  <IconBinoculars />
-                  SIGHTSEEING
-                </p>
-                <h3 id="sight-notes-title" className="mishiranu-sight-notes-title">
-                  <IconBinoculars />
-                  観光案内メモ
-                </h3>
-                <ol className="mishiranu-history-list">
-                  {station.sightseeingNotes.map((note) => (
-                    <li key={note.title}>
-                      <h4>{note.title}</h4>
-                      <p>{note.body}</p>
                     </li>
                   ))}
                 </ol>
