@@ -14,6 +14,7 @@ import {
   GUIDE_ORDER,
   STATIONS,
   TIME_OPTIONS,
+  bikeRentalFor,
   pickSecret,
   spotGuide,
   spotsForTime,
@@ -161,6 +162,7 @@ export default function MishiranuApp({
     () => STATIONS.find((s) => s.id === stationId) ?? STATIONS[0],
     [stationId],
   );
+  const bikeRental = useMemo(() => bikeRentalFor(station), [station]);
 
   const filteredStations = useMemo(() => {
     const q = query.trim();
@@ -695,6 +697,49 @@ export default function MishiranuApp({
                 {spots.length} 件
               </p>
             </div>
+
+            <section
+              className="mishiranu-bike-rental"
+              aria-labelledby="bike-rental-title"
+            >
+              <p className="mishiranu-kicker">MOBILITY</p>
+              <h3 id="bike-rental-title" className="mishiranu-bike-rental-title">
+                レンタサイクル
+              </h3>
+              <p
+                className={
+                  bikeRental.available
+                    ? "mishiranu-bike-rental-status mishiranu-bike-rental-status--yes"
+                    : "mishiranu-bike-rental-status"
+                }
+              >
+                {bikeRental.available
+                  ? "駅周辺で借りられます"
+                  : "いまは未確認／少なめ"}
+              </p>
+              <p className="mishiranu-bike-rental-summary">{bikeRental.summary}</p>
+              {bikeRental.places && bikeRental.places.length > 0 ? (
+                <ul className="mishiranu-bike-rental-places">
+                  {bikeRental.places.map((place) => (
+                    <li key={place.name}>
+                      <span className="mishiranu-bike-rental-place-name">
+                        {place.name}
+                      </span>
+                      {typeof place.walkMinutes === "number" ? (
+                        <span className="mishiranu-bike-rental-place-meta">
+                          徒歩約 {place.walkMinutes} 分
+                        </span>
+                      ) : null}
+                      {place.note ? (
+                        <span className="mishiranu-bike-rental-place-note">
+                          {place.note}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
 
             {station.areaAbout ||
             (station.historyNotes && station.historyNotes.length > 0) ? (

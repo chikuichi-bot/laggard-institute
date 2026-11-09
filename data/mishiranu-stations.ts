@@ -24,6 +24,25 @@ export type AreaHistoryNote = {
   body: string;
 };
 
+export type BikeRentalPlace = {
+  name: string;
+  note?: string;
+  walkMinutes?: number;
+};
+
+/** 駅周辺のレンタサイクル（案内に必ず出す） */
+export type BikeRentalInfo = {
+  available: boolean;
+  summary: string;
+  places?: BikeRentalPlace[];
+};
+
+export const BIKE_RENTAL_UNKNOWN: BikeRentalInfo = {
+  available: false,
+  summary:
+    "この駅周辺のレンタサイクルは、まだ編集確認中です。現地の観光案内所や駅掲示もあわせて見てください。",
+};
+
 export type StationSeed = {
   id: string;
   name: string;
@@ -39,6 +58,8 @@ export type StationSeed = {
   areaAbout?: string;
   /** 過去の歴史メモ */
   historyNotes?: AreaHistoryNote[];
+  /** レンタサイクルの有無（未設定時は未確認として表示） */
+  bikeRental?: BikeRentalInfo;
   tourTitle: string;
   catchCopy: string;
   emptyCopy?: {
@@ -47,6 +68,10 @@ export type StationSeed = {
   };
   spots: Spot[];
 };
+
+export function bikeRentalFor(station: StationSeed): BikeRentalInfo {
+  return station.bikeRental ?? BIKE_RENTAL_UNKNOWN;
+}
 
 export const GENRE_LABEL: Record<SpotGenre, string> = {
   history: "歴史・文化",
@@ -113,6 +138,23 @@ export const STATIONS: StationSeed[] = [
       "京阪と叡電が乗り換わる、鴨川デルタのたもと。枡形商店街ですぐ甘いものが買え、川の音まで徒歩数分。観光の起点にも、日常の寄り道にもなる駅です。",
     areaAbout:
       "賀茂川と高野川が合流する三角の土地が、この界隈の骨格です。御所の北側にひらけた「出町」は、古くから人の往来と市の気配がつづく場所で、いまも学生・近所・旅人が同じ商店街を歩く距離感が残っています。",
+    bikeRental: {
+      available: true,
+      summary:
+        "駅周辺で借りられます。枡形〜河原町今出川に民間のレンタサイクルがあり、京都市内のシェアサイクルポートも徒歩圏です。下鴨や川端まわりを広く見るときに便利です。",
+      places: [
+        {
+          name: "枡形・駅前のレンタサイクル店",
+          walkMinutes: 3,
+          note: "観光向けの半日〜1日貸出が多い",
+        },
+        {
+          name: "河原町今出川あたりのシェアサイクル",
+          walkMinutes: 12,
+          note: "短時間・乗り捨て向き。アプリ登録が必要なことが多い",
+        },
+      ],
+    },
     historyNotes: [
       {
         title: "「出町」の名",
@@ -280,6 +322,17 @@ export const STATIONS: StationSeed[] = [
         x: 0.56,
         y: 0.56,
         walkMinutes: 5,
+      },
+      {
+        id: "demachi-11",
+        name: "駅前のレンタサイクル",
+        genre: "odd",
+        guide: "tip",
+        blurb:
+          "枡形すぐの貸自転車。川と下鴨をひと続きで見るときの足になる寄り道。",
+        x: 0.54,
+        y: 0.53,
+        walkMinutes: 3,
       },
     ],
   },

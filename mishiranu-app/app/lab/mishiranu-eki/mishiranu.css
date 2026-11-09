@@ -564,6 +564,78 @@ a.mishiranu-btn {
   letter-spacing: 0.04em;
 }
 
+.mishiranu-bike-rental {
+  margin: 0 0 1.35rem;
+  padding: 1.25rem 1.2rem 1.15rem;
+  border: 1px solid var(--mk-line);
+  border-radius: calc(var(--mk-radius) + 4px);
+  background: var(--mk-paper);
+}
+
+.mishiranu-bike-rental-title {
+  font-family: var(--mk-display);
+  font-size: clamp(1.15rem, 3.6vw, 1.35rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.55rem;
+}
+
+.mishiranu-bike-rental-status {
+  display: inline-block;
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  color: var(--mk-fog);
+  border: 1px solid var(--mk-line);
+  border-radius: 6px;
+  padding: 0.28rem 0.55rem;
+}
+
+.mishiranu-bike-rental-status--yes {
+  color: var(--mk-warm-deep);
+  border-color: rgba(255, 106, 61, 0.4);
+  background: var(--mk-warm-soft);
+}
+
+.mishiranu-bike-rental-summary {
+  margin: 0;
+  line-height: 1.75;
+  color: var(--mk-ink);
+}
+
+.mishiranu-bike-rental-places {
+  list-style: none;
+  margin: 0.95rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mishiranu-bike-rental-places li {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-radius);
+}
+
+.mishiranu-bike-rental-place-name {
+  font-family: var(--mk-display);
+  letter-spacing: 0.04em;
+}
+
+.mishiranu-bike-rental-place-meta {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--mk-warm-deep);
+}
+
+.mishiranu-bike-rental-place-note {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--mk-fog);
+}
+
 .mishiranu-area-story {
   margin: 0 0 1.75rem;
   padding: 1.35rem 1.25rem 1.2rem;
