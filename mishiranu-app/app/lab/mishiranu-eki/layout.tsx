@@ -16,9 +16,14 @@ const sans = Zen_Kaku_Gothic_New({
 });
 
 export const metadata: Metadata = {
-  title: "見知らぬ駅 — Lagado Lab",
+  title: "見知らぬ駅",
   description:
     "降りた駅の、徒歩圏だけを、物語にする。思いがけない寄り道のプロトタイプ。",
+  appleWebApp: {
+    capable: true,
+    title: "見知らぬ駅",
+    statusBarStyle: "default",
+  },
 };
 
 export default function MishiranuLayout({
@@ -27,6 +32,8 @@ export default function MishiranuLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${display.variable} ${sans.variable}`}>{children}</div>
+    <div className={`mishiranu-root ${display.variable} ${sans.variable}`}>
+      {children}
+    </div>
   );
 }

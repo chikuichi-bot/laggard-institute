@@ -54,6 +54,12 @@ export default function StationMap({
       zoomControl: false,
       attributionControl: true,
       scrollWheelZoom: false,
+      dragging: true,
+      touchZoom: true,
+      doubleClickZoom: true,
+      boxZoom: false,
+      keyboard: false,
+      tapTolerance: 28,
     }).setView([center.lat, center.lng], 15);
 
     L.control.zoom({ position: "topright" }).addTo(map);
@@ -68,12 +74,15 @@ export default function StationMap({
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
-    const ro = new ResizeObserver(() => {
-      map.invalidateSize();
-    });
+    const invalidate = () => map.invalidateSize({ pan: false });
+    const ro = new ResizeObserver(invalidate);
     ro.observe(containerRef.current);
+    // iOS Safari often lays out after first paint; refresh map size twice.
+    requestAnimationFrame(invalidate);
+    const late = window.setTimeout(invalidate, 350);
 
     return () => {
+      window.clearTimeout(late);
       ro.disconnect();
       map.remove();
       mapRef.current = null;
@@ -96,21 +105,23 @@ export default function StationMap({
 
     L.circle([center.lat, center.lng], {
       radius: radiusKm * 1000,
-      color: "#ff6a3d",
+      color: "#b5493a",
       weight: 1.5,
       dashArray: "4 6",
-      fillColor: "#ff6a3d",
+      fillColor: "#b5493a",
       fillOpacity: 0.06,
     }).addTo(layer);
 
+    const stationLabel = document.createElement("span");
+    stationLabel.textContent = station.name;
     L.circleMarker([center.lat, center.lng], {
       radius: 7,
       color: "#ffffff",
       weight: 2,
-      fillColor: "#ff6a3d",
+      fillColor: "#b5493a",
       fillOpacity: 1,
     })
-      .bindTooltip(station.name, {
+      .bindTooltip(stationLabel, {
         permanent: true,
         direction: "bottom",
         offset: [0, 8],

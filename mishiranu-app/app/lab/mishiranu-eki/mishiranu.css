@@ -25,7 +25,11 @@
   color: var(--mk-ink);
   background: var(--mk-canvas);
   font-family: var(--mk-display);
-  overflow-x: hidden;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .mishiranu *,
@@ -34,10 +38,17 @@
   box-sizing: border-box;
 }
 
+.mishiranu-root {
+  min-height: 100%;
+}
+
 .mishiranu-shell {
   width: min(760px, 100%);
   margin: 0 auto;
-  padding: 0 1.35rem 4rem;
+  padding: 0 max(1.35rem, env(safe-area-inset-right))
+    calc(4rem + env(safe-area-inset-bottom))
+    max(1.35rem, env(safe-area-inset-left));
+  padding-top: env(safe-area-inset-top);
 }
 
 .mishiranu-hero {
@@ -1473,9 +1484,74 @@ a.mishiranu-btn {
 
   .mishiranu-btn {
     width: 100%;
+    min-height: 48px;
   }
 
   .mishiranu-cta-row {
     flex-direction: column;
+  }
+
+  .mishiranu-shell {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .mishiranu-hero {
+    justify-content: flex-end;
+    padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+  }
+
+  .mishiranu-chat-chip {
+    min-height: 48px;
+    padding: 0.85rem 1rem;
+  }
+
+  .mishiranu-map--live {
+    aspect-ratio: 1 / 1.05;
+    max-height: min(62vh, 420px);
+  }
+
+  .mishiranu-leaflet {
+    min-height: 260px;
+  }
+
+  .mishiranu-leaflet .leaflet-control-zoom a {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 18px !important;
+  }
+
+  .mishiranu-chat-composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-bottom: 0.75rem;
+    padding: 0.65rem 0 calc(0.35rem + env(safe-area-inset-bottom));
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--mk-canvas) 0%, transparent) 0%,
+      var(--mk-canvas) 28%
+    );
+  }
+
+  .mishiranu-search input {
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .mishiranu-guide-item,
+  .mishiranu-course-stop {
+    min-height: 48px;
+  }
+
+  .mishiranu-actions {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@supports (padding: max(0px)) {
+  .mishiranu-shell {
+    padding-bottom: max(4rem, calc(2.5rem + env(safe-area-inset-bottom)));
   }
 }
