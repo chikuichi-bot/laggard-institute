@@ -2,7 +2,7 @@
 
 > 降りた駅の、徒歩圏だけを、物語にする。
 
-Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab/mishiranu-eki`（lagado.jp 公開時は `/lagado2026/lab/mishiranu-eki/`）。
+Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab/mishiranu-eki`（公開URLは `https://lagado.jp/lagado2026/lab/mishiranu-eki/`）。
 
 ## 確定方針（2026-11-09）
 
@@ -12,10 +12,14 @@ Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab
 | 2 | データ | **編集キュレーション 20駅**（Places 自動は後段） |
 | 3 | 地図 | **OSM/CARTO の実地図**（暗いタイル）。必要なら後で Mapbox / Google に差替 |
 | 4 | AI | **コピー（タイトル・キャッチ・空白肯定）に使う**。ルート提案はしない |
+| 5 | 公開URL | **`/lagado2026/lab/mishiranu-eki/`**（このまま） |
+| 6 | `/apps` 掲載 | **しない** |
+| 7 | Cursor Apps | **やめる**（本サイト一本。`mishiranu-app/` は退役） |
+| 8 | ホスティング | **さくら**（旧 Lolipop から移行。手前は Cloudflare） |
 
 ロードマップ一文:
 
-**編集20駅 → 抽象マップで温度固め → コピーにAI → 後から実地図とiOS**
+**編集20駅 → 実地図で感触 → コピーにAI → lagado.jp（さくら）へ統合 → 後から iOS**
 
 ## コアバリュー
 
@@ -45,11 +49,12 @@ Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab
 
 - 本サイト統合: `app/lab/mishiranu-eki/`（lagado.jp の静的公開対象）
 - 駅データ: `data/mishiranu-stations.ts`（先頭は体感用の **出町柳**）
-- 試作用ミニアプリ（Cursor Apps）: `mishiranu-app/` — 本サイトへ寄せたあと残すかは要相談
-- コピー API: `POST /api/mishiranu/copy`（Lolipop 静的では未配信。キーなし／失敗時は編集文）
+- Cursor Apps 試作 `mishiranu-app/` と `https://mishiranu-eki.apps.grok.bot` は退役予定（Publish Settings で非公開）
+- コピー API: `POST /api/mishiranu/copy`（静的公開では未配信。キーなし／失敗時は編集文）
 - AI モデル: **Gemini 3.1 Flash-Lite**（`gemini-3.1-flash-lite`）— おみくじ文庫の AI 解説と同じ
 - 秘密情報: `GEMINI_API_KEY`（未設定でもプロトは動く）
 - 必須案内: ご飯 / お土産 / 観光 / 休むところ / 寄り道 / レンタサイクル
+- 現状の公開形: Cloudflare 前面 + オリジンはさくら。パスは従来どおり `/lagado2026/...`（Basic 認証つき）
 
 ## プロトでできた温度固め
 
@@ -58,7 +63,7 @@ Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab
 
 ## 次の作業候補
 
-1. 公開環境で Gemini 3.1 Flash-Lite の文の温度を見る
-2. 編集20駅の文面を実地・写真メモで更新
-3. 感触が固まったら Mapbox / Google 実地図へ差し替え設計
+1. さくらへの静的アップロード手順を確定し、見知らぬ駅を公開パスへ載せる
+2. リポジトリから `mishiranu-app/` を削除する
+3. 編集20駅の文面を実地・写真メモで更新
 4. Web が安定したら iOS
