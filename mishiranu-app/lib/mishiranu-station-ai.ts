@@ -71,16 +71,16 @@ const STATION_SCHEMA_BLOCK = [
   '  "mood": "story|empty",',
   '  "lat": 駅の緯度(number),',
   '  "lng": 駅の経度(number),',
-  '  "stationIntro": "3〜5文の駅紹介（観光案内の導入）",',
-  '  "areaAbout": "いまの界隈の様子。2段落（空行区切り）で厚めに",',
-  '  "walkGuide": "徒歩圏の回り方を3〜5文",',
+  '  "stationIntro": "観光案内の導入。必ず4〜6文・合計160字以上。地名の由来・交通・雰囲気を含める",',
+  '  "areaAbout": "界隈の説明。必ず空行区切りの2段落。各段落3文以上・合計280字以上。歴史といまの様子を混ぜる",',
+  '  "walkGuide": "徒歩圏の回り方。必ず4〜6文・120字以上",',
   '  "tourTitle": "28字以内",',
   '  "catchCopy": "40字以内",',
   '  "emptyHeadline": "emptyのときだけ20字以内",',
   '  "emptyBody": "emptyのときだけ80字以内",',
-  '  "bikeRental": { "available": boolean, "summary": "一文" },',
-  '  "historyNotes": [{ "title": "短い見出し", "body": "2〜4文の歴史メモ" }]（3〜5件）,',
-  '  "sightseeingNotes": [{ "title": "短い見出し", "body": "観光の見どころ・回り方メモ" }]（2〜4件）,',
+  '  "bikeRental": { "available": boolean, "summary": "2〜3文で貸出場所・使い方の目安" },',
+  '  "historyNotes": [{ "title": "短い見出し", "body": "歴史メモ。各3〜5文・80字以上" }]（必ず4〜6件。地名由来・産業/信仰・交通・災害や町の変遷など具体的に）,',
+  '  "sightseeingNotes": [{ "title": "短い見出し", "body": "観光メモ。各2〜4文" }]（必ず3〜4件。まず見る/時間があるとき/食べる休む）,',
   '  "spots": [',
   "    {",
   '      "name": "場所名",',
@@ -89,8 +89,8 @@ const STATION_SCHEMA_BLOCK = [
   '      "mealTier": "casual|upscale（mealのみ）",',
   '      "mealTimes": ["morning|lunch|dinner"]（mealのみ・1つ以上）,',
   '      "hours": "何時から何時まで。例 10:00〜18:00（火曜定休）。屋外は終日（屋外）",',
-  '      "blurb": "1〜2文",',
-  '      "detail": "補足の見どころ・注意を1〜2文（任意）",',
+  '      "blurb": "2文",',
+  '      "detail": "歴史や見方の補足を2文",',
   '      "walkMinutes": 1〜40の整数,',
   '      "lat": 緯度,',
   '      "lng": 経度,',
@@ -102,11 +102,12 @@ const STATION_SCHEMA_BLOCK = [
   "制約:",
   "- 日本の実在の鉄道駅でなければ { \"error\": \"not_a_station\", \"message\": \"理由\" } を返す。",
   "- spots は 6〜10件。story のとき guide の meal/souvenir/sight/rest/tip をそれぞれ1件以上。",
-  "- empty（本当に何も薄い駅）は meal/souvenir を無理に作らず、sight/rest/tip 中心。",
+  "- empty（本当に何も薄い駅）でも areaAbout と historyNotes は厚く書く（余白の歴史も含めてよい）。",
   "- hours はわかる範囲で具体的な開始〜終了。不明なら「要確認（目安 …）」と書く。",
   "- 駅から徒歩圏のみ。有名すぎる遠方スポットは避ける。",
   "- lat/lng はおおよその実座標でよい。",
-  "- areaAbout / historyNotes / sightseeingNotes / walkGuide は情報量を多めに。薄い一言で終わらせない。",
+  "- いちばん重要: stationIntro / areaAbout / historyNotes を短くしない。読者が歴史を知れる分量にする。",
+  "- 禁止: 1文だけの areaAbout、2件以下の historyNotes、抽象語だけの紹介。",
 ].join("\n");
 
 function buildStationPrompt(rawName: string): string {
@@ -240,32 +241,8 @@ export function parseAiStationPayload(
   const lat = asNumber(parsed.lat, 35.0);
   const lng = asNumber(parsed.lng, 135.0);
 
-  const historyNotes = Array.isArray(parsed.historyNotes)
-    ? parsed.historyNotes
-        .map((n) => {
-          if (!n || typeof n !== "object") return null;
-          const o = n as Record<string, unknown>;
-          const title = asString(o.title);
-          const body = asString(o.body);
-          if (!title || !body) return null;
-          return { title, body };
-        })
-        .filter((n): n is { title: string; body: string } => !!n)
-        .slice(0, 6)
-    : undefined;
-  const sightseeingNotes = Array.isArray(parsed.sightseeingNotes)
-    ? parsed.sightseeingNotes
-        .map((n) => {
-          if (!n || typeof n !== "object") return null;
-          const o = n as Record<string, unknown>;
-          const title = asString(o.title);
-          const body = asString(o.body);
-          if (!title || !body) return null;
-          return { title, body };
-        })
-        .filter((n): n is { title: string; body: string } => !!n)
-        .slice(0, 5)
-    : undefined;
+  const historyNotes = parseNoteList(parsed.historyNotes, 6);
+  const sightseeingNotes = parseNoteList(parsed.sightseeingNotes, 5);
 
   const station: StationSeed = {
     id: slugifyStationName(name),
@@ -313,8 +290,145 @@ type GeminiCallResult =
   | { ok: true; text: string }
   | { ok: false; error: string; message: string };
 
-const GEMINI_FAST_MS = 18_000;
-const GEMINI_GROUNDED_MS = 28_000;
+const GEMINI_FAST_MS = 22_000;
+const GEMINI_GROUNDED_MS = 32_000;
+const GEMINI_EXPAND_MS = 18_000;
+
+function isNarrativeThin(station: StationSeed): boolean {
+  const intro = (station.stationIntro ?? "").length;
+  const about = (station.areaAbout ?? "").length;
+  const walk = (station.walkGuide ?? "").length;
+  const notes = station.historyNotes ?? [];
+  const histChars = notes.reduce((n, h) => n + h.body.length, 0);
+  const sight = station.sightseeingNotes ?? [];
+  return (
+    intro < 140 ||
+    about < 220 ||
+    walk < 80 ||
+    notes.length < 3 ||
+    histChars < 360 ||
+    sight.length < 2
+  );
+}
+
+function parseNoteList(
+  raw: unknown,
+  limit: number,
+): Array<{ title: string; body: string }> | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const notes = raw
+    .map((n) => {
+      if (!n || typeof n !== "object") return null;
+      const o = n as Record<string, unknown>;
+      const title = asString(o.title);
+      const body = asString(o.body);
+      if (!title || !body) return null;
+      return { title, body };
+    })
+    .filter((n): n is { title: string; body: string } => !!n)
+    .slice(0, limit);
+  return notes.length > 0 ? notes : undefined;
+}
+
+function buildNarrativeExpandPrompt(station: StationSeed): string {
+  return [
+    "あなたは日本の駅の徒歩圏を案内する編集者です。",
+    "実在の歴史・地名由来・産業・信仰・交通の変遷を優先し、薄い紹介文を厚く書き直してください。",
+    "観光ガイドの煽りやランキング口調は禁止。Lagadoらしい静かで詩的な日本語。",
+    "出力は JSON オブジェクトのみ。",
+    "",
+    `駅名: ${station.name}`,
+    `路線: ${station.line}`,
+    `都道府県: ${station.prefecture}`,
+    `既存の短い紹介: ${station.stationIntro ?? "(なし)"}`,
+    `既存の短いエリア文: ${station.areaAbout ?? "(なし)"}`,
+    "",
+    "スキーマ:",
+    "{",
+    '  "stationIntro": "4〜6文・160字以上",',
+    '  "areaAbout": "空行区切り2段落・合計280字以上。歴史と現在",',
+    '  "walkGuide": "4〜6文・120字以上",',
+    '  "bikeRentalSummary": "2〜3文",',
+    '  "historyNotes": [{ "title": "...", "body": "3〜5文" }]（4〜6件）,',
+    '  "sightseeingNotes": [{ "title": "...", "body": "2〜4文" }]（3〜4件）',
+    "}",
+    "",
+    "短い一文で終わらせないこと。読者が歴史を知れる分量にする。",
+  ].join("\n");
+}
+
+async function expandStationNarrative(
+  station: StationSeed,
+  apiKey: string,
+): Promise<StationSeed> {
+  if (!isNarrativeThin(station)) return station;
+
+  const expanded = await callGeminiGenerate(
+    apiKey,
+    {
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: buildNarrativeExpandPrompt(station) }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 2400,
+        responseMimeType: "application/json",
+      },
+    },
+    GEMINI_EXPAND_MS,
+  );
+  if (!expanded.ok) return station;
+
+  const parsed = extractJsonObject(expanded.text);
+  if (!parsed) return station;
+
+  const historyNotes =
+    parseNoteList(parsed.historyNotes, 6) ?? station.historyNotes;
+  const sightseeingNotes =
+    parseNoteList(parsed.sightseeingNotes, 5) ?? station.sightseeingNotes;
+  const stationIntro = asString(parsed.stationIntro) || station.stationIntro;
+  const areaAbout = asString(parsed.areaAbout) || station.areaAbout;
+  const walkGuide = asString(parsed.walkGuide) || station.walkGuide;
+  const bikeSummary = asString(parsed.bikeRentalSummary);
+
+  return {
+    ...station,
+    stationIntro:
+      (stationIntro?.length ?? 0) >= (station.stationIntro?.length ?? 0)
+        ? stationIntro
+        : station.stationIntro,
+    areaAbout:
+      (areaAbout?.length ?? 0) >= (station.areaAbout?.length ?? 0)
+        ? areaAbout
+        : station.areaAbout,
+    walkGuide:
+      (walkGuide?.length ?? 0) >= (station.walkGuide?.length ?? 0)
+        ? walkGuide
+        : station.walkGuide,
+    historyNotes:
+      (historyNotes?.length ?? 0) >= (station.historyNotes?.length ?? 0)
+        ? historyNotes
+        : station.historyNotes,
+    sightseeingNotes:
+      (sightseeingNotes?.length ?? 0) >= (station.sightseeingNotes?.length ?? 0)
+        ? sightseeingNotes
+        : station.sightseeingNotes,
+    bikeRental: station.bikeRental
+      ? {
+          ...station.bikeRental,
+          summary:
+            bikeSummary.length > station.bikeRental.summary.length
+              ? bikeSummary
+              : station.bikeRental.summary,
+        }
+      : bikeSummary
+        ? { available: true, summary: bikeSummary }
+        : station.bikeRental,
+  };
+}
 
 async function callGeminiGenerate(
   apiKey: string,
@@ -391,6 +505,15 @@ function stationFromGeminiText(
  * Prefer a fast JSON-only call (fits published-app budgets).
  * Fall back once to Google Search grounding if the fast path is empty/malformed.
  */
+async function finalizeAiStation(
+  result: AiStationResult | { error: string; message: string },
+  apiKey: string,
+): Promise<AiStationResult | { error: string; message: string }> {
+  if ("error" in result) return result;
+  const station = await expandStationNarrative(result.station, apiKey);
+  return { station, source: "ai" };
+}
+
 async function generateFromPrompt(
   prompt: string,
   fallbackName: string,
@@ -404,7 +527,7 @@ async function generateFromPrompt(
       contents,
       generationConfig: {
         temperature: 0.45,
-        maxOutputTokens: 2800,
+        maxOutputTokens: 4500,
         responseMimeType: "application/json",
       },
     },
@@ -413,9 +536,10 @@ async function generateFromPrompt(
 
   if (fast.ok) {
     const parsed = stationFromGeminiText(fast.text, fallbackName);
-    if (!("error" in parsed) || parsed.error === "not_a_station") {
-      return parsed;
+    if (!("error" in parsed)) {
+      return finalizeAiStation(parsed, apiKey);
     }
+    if (parsed.error === "not_a_station") return parsed;
   } else if (fast.error === "gemini_http") {
     // Auth / quota issues won't improve with a second call.
     return { error: fast.error, message: fast.message };
@@ -428,17 +552,25 @@ async function generateFromPrompt(
       tools: [{ google_search: {} }],
       generationConfig: {
         temperature: 0.5,
-        maxOutputTokens: 3200,
+        maxOutputTokens: 4500,
       },
     },
     GEMINI_GROUNDED_MS,
   );
 
   if (!grounded.ok) {
-    if (fast.ok) return stationFromGeminiText(fast.text, fallbackName);
+    if (fast.ok) {
+      return finalizeAiStation(
+        stationFromGeminiText(fast.text, fallbackName),
+        apiKey,
+      );
+    }
     return { error: grounded.error, message: grounded.message };
   }
-  return stationFromGeminiText(grounded.text, fallbackName);
+  return finalizeAiStation(
+    stationFromGeminiText(grounded.text, fallbackName),
+    apiKey,
+  );
 }
 
 export async function generateStationGuideWithGemini(

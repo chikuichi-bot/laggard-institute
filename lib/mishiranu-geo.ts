@@ -4,6 +4,8 @@ import type { Spot, StationSeed } from "@/data/mishiranu-stations";
 export const STATION_LL: Record<string, { lat: number; lng: number }> = {
   demachiyanagi: { lat: 35.0292, lng: 135.772 },
   chushojima: { lat: 34.9267, lng: 135.7594 },
+  "iwashimizu-hachimangu": { lat: 34.8796, lng: 135.6998 },
+  oyamazaki: { lat: 34.8917, lng: 135.6794 },
   biei: { lat: 43.5884, lng: 142.466 },
   kanita: { lat: 41.037, lng: 140.643 },
   ashio: { lat: 36.633, lng: 139.442 },
