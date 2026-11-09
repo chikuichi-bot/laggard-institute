@@ -35,6 +35,7 @@ export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
   "demachi-5": { lat: 35.02355, lng: 135.76285 }, // カフェ・サラサ王城
   "demachi-5b": { lat: 35.0289, lng: 135.7804 }, // 進々堂 百万遍
   "demachi-5c": { lat: 35.0284, lng: 135.77035 }, // 枡形の揚げもの
+  "demachi-10": { lat: 35.0304, lng: 135.77105 }, // 鴨川デルタの川端（休む）
   "demachi-6": { lat: 35.03205, lng: 135.77045 }, // 下鴨並木入口
   "demachi-9": { lat: 35.0389, lng: 135.7728 }, // 下鴨神社・糺の森
   "demachi-7": { lat: 35.02705, lng: 135.76855 }, // 河原町今出川

@@ -96,6 +96,7 @@ function matchFocus(text: string): FocusChoice | undefined {
   if (/ご飯|ごはん|食事|ランチ|食べる|グルメ|飯/.test(t)) return "meal";
   if (/土産|みやげ|お土産|手土産/.test(t)) return "souvenir";
   if (/見所|みどころ|景色|観光|名所|歴史|昔|由来/.test(t)) return "sight";
+  if (/休む|休憩|やすむ|カフェ休み|一休み|ベンチ/.test(t)) return "rest";
   if (/寄り道|よみち|暇つぶし|ひまつぶし/.test(t)) return "tip";
   return undefined;
 }
@@ -175,11 +176,11 @@ export default function MishiranuApp({
   }, [query]);
 
   const time = TIME_OPTIONS.find((t) => t.id === timeId) ?? TIME_OPTIONS[0];
-  const spots = useMemo(() => {
-    const within = spotsForTime(station, time.index);
-    if (focusKinds.length === 0) return within;
-    return within.filter((s) => focusKinds.includes(spotGuide(s)));
-  }, [station, time.index, focusKinds]);
+  // ご飯・お土産・観光・休むところ・寄り道は常に全部出す（重点は並びだけ）
+  const spots = useMemo(
+    () => spotsForTime(station, time.index),
+    [station, time.index],
+  );
   const activeSpot =
     spots.find((s) => s.id === activeSpotId) ??
     (activeSpotId ? null : spots[0] ?? null);
@@ -290,7 +291,7 @@ export default function MishiranuApp({
       { role: "you", text: spoken ?? `${t.label}くらい` },
       {
         role: "guide",
-        text: "わかりました。案内では、何を多めに集めましょうか？ ご飯、お土産、見所、寄り道、またはおまかせでどうぞ。",
+        text: "わかりました。案内ではご飯・お土産・観光・休むところ・寄り道を必ず出します。とくに多めに見たいものはありますか？ なければおまかせでどうぞ。",
       },
     );
   }
@@ -309,7 +310,10 @@ export default function MishiranuApp({
       { role: "you", text: spoken ?? focusText },
       {
         role: "guide",
-        text: `では、${named}の徒歩圏で「${focusText}」を開きます。会話はこのまま残しておきますね。`,
+        text:
+          choice === "all"
+            ? `では、${named}の徒歩圏で5つの案内を開きます。会話はこのまま残しておきますね。`
+            : `では、${named}の徒歩圏を開きます。5つは全部出しつつ、「${focusText}」を先に見やすくします。`,
       },
     );
     window.setTimeout(() => {
@@ -379,7 +383,7 @@ export default function MishiranuApp({
           { role: "you", text },
           {
             role: "guide",
-            text: "重点は「ご飯」「お土産」「見所」「寄り道」、または「おまかせ」でお願いします。",
+            text: "重点は「ご飯」「お土産」「観光」「休むところ」「寄り道」、または「おまかせ」でお願いします。5つはどれを選んでも全部出ます。",
           },
         );
         setDraft("");
@@ -424,7 +428,10 @@ export default function MishiranuApp({
 
   const guideBoardKinds =
     focusKinds.length > 0
-      ? GUIDE_ORDER.filter((k) => focusKinds.includes(k))
+      ? [
+          ...focusKinds,
+          ...GUIDE_ORDER.filter((k) => !focusKinds.includes(k)),
+        ]
       : GUIDE_ORDER;
 
   const composerPlaceholder =
@@ -433,7 +440,7 @@ export default function MishiranuApp({
       : chatPhase === "time"
         ? "例: 3時間くらい"
         : chatPhase === "focus"
-          ? "例: ご飯多めで"
+          ? "例: 休むところ多めで / おまかせ"
           : "";
 
   return (
@@ -745,11 +752,15 @@ export default function MishiranuApp({
             <div className="mishiranu-guide-board">
               {guideBoardKinds.map((kind) => {
                 const items = spots.filter((s) => spotGuide(s) === kind);
-                if (items.length === 0) return null;
+                const prioritized = focusKinds.includes(kind);
                 return (
                   <section
                     key={kind}
-                    className="mishiranu-guide-col"
+                    className={
+                      prioritized
+                        ? "mishiranu-guide-col mishiranu-guide-col--priority"
+                        : "mishiranu-guide-col"
+                    }
                     aria-labelledby={`guide-${kind}`}
                   >
                     <h3 id={`guide-${kind}`} className="mishiranu-guide-col-title">
@@ -758,33 +769,42 @@ export default function MishiranuApp({
                         style={{ background: GUIDE_COLOR[kind] }}
                       />
                       {GUIDE_LABEL[kind]}
+                      {prioritized ? (
+                        <span className="mishiranu-guide-priority">重点</span>
+                      ) : null}
                     </h3>
-                    <ul className="mishiranu-guide-list">
-                      {items.map((item) => (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            className={
-                              activeSpotId === item.id
-                                ? "mishiranu-guide-item mishiranu-guide-item--active"
-                                : "mishiranu-guide-item"
-                            }
-                            aria-pressed={activeSpotId === item.id}
-                            onClick={() => setActiveSpotId(item.id)}
-                          >
-                            <span className="mishiranu-guide-item-name">
-                              {item.name}
-                            </span>
-                            <span className="mishiranu-guide-item-meta">
-                              徒歩約 {item.walkMinutes} 分
-                            </span>
-                            <span className="mishiranu-guide-item-blurb">
-                              {item.blurb}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                    {items.length > 0 ? (
+                      <ul className="mishiranu-guide-list">
+                        {items.map((item) => (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              className={
+                                activeSpotId === item.id
+                                  ? "mishiranu-guide-item mishiranu-guide-item--active"
+                                  : "mishiranu-guide-item"
+                              }
+                              aria-pressed={activeSpotId === item.id}
+                              onClick={() => setActiveSpotId(item.id)}
+                            >
+                              <span className="mishiranu-guide-item-name">
+                                {item.name}
+                              </span>
+                              <span className="mishiranu-guide-item-meta">
+                                徒歩約 {item.walkMinutes} 分
+                              </span>
+                              <span className="mishiranu-guide-item-blurb">
+                                {item.blurb}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mishiranu-guide-empty">
+                        この徒歩圏・時間ではまだ少なめです。時間を延ばすと増えることがあります。
+                      </p>
+                    )}
                   </section>
                 );
               })}

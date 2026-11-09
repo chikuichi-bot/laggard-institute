@@ -1,7 +1,7 @@
 export type SpotGenre = "history" | "gourmet" | "nature" | "odd";
 
-/** 観光案内マップ用の見出し */
-export type GuideKind = "meal" | "souvenir" | "sight" | "tip";
+/** 観光案内マップ用の見出し（必ず出す5種） */
+export type GuideKind = "meal" | "souvenir" | "sight" | "rest" | "tip";
 
 export type Spot = {
   id: string;
@@ -58,7 +58,8 @@ export const GENRE_LABEL: Record<SpotGenre, string> = {
 export const GUIDE_LABEL: Record<GuideKind, string> = {
   meal: "ご飯",
   souvenir: "お土産",
-  sight: "見所",
+  sight: "観光",
+  rest: "休むところ",
   tip: "寄り道",
 };
 
@@ -66,10 +67,17 @@ export const GUIDE_COLOR: Record<GuideKind, string> = {
   meal: "#ff6a3d",
   souvenir: "#d08aa8",
   sight: "#4f8f7a",
+  rest: "#c4a35a",
   tip: "#7eb8c9",
 };
 
-export const GUIDE_ORDER: GuideKind[] = ["meal", "souvenir", "sight", "tip"];
+export const GUIDE_ORDER: GuideKind[] = [
+  "meal",
+  "souvenir",
+  "sight",
+  "rest",
+  "tip",
+];
 
 export function spotGuide(spot: Spot): GuideKind {
   if (spot.guide) return spot.guide;
@@ -189,9 +197,9 @@ export const STATIONS: StationSeed[] = [
         id: "demachi-5",
         name: "カフェ・サラサ王城",
         genre: "gourmet",
-        guide: "meal",
+        guide: "rest",
         blurb:
-          "旧・小学校を改修したカフェ。トースト定食やカレー、珈琲で昼を伸ばせる。",
+          "旧・小学校を改修したカフェ。トーストと珈琲で足を休める、静かな昼下がり向き。",
         x: 0.28,
         y: 0.62,
         walkMinutes: 12,
@@ -217,6 +225,17 @@ export const STATIONS: StationSeed[] = [
         x: 0.53,
         y: 0.54,
         walkMinutes: 4,
+      },
+      {
+        id: "demachi-10",
+        name: "鴨川デルタの川端",
+        genre: "nature",
+        guide: "rest",
+        blurb:
+          "三角の川べりで靴をぬがなくても一休みできる。水音が休憩のタイマーになる。",
+        x: 0.44,
+        y: 0.4,
+        walkMinutes: 5,
       },
       {
         id: "demachi-6",
