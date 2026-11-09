@@ -24,6 +24,7 @@ import {
   type TimeOptionId,
 } from "@/data/mishiranu-stations";
 import type { TourCopy } from "@/lib/mishiranu-copy";
+import { FlowDiagram, RadiusDiagram } from "./MishiranuDiagrams";
 import "./mishiranu.css";
 
 const StationMap = dynamic(() => import("./StationMap"), {
@@ -519,6 +520,7 @@ export default function MishiranuApp({
             <p className="mishiranu-note">
               駅 → 時間 → 重点。チップでも、下の入力欄でも答えられます。案内を開いても会話は残ります。
             </p>
+            <FlowDiagram />
 
             <div className="mishiranu-chat-thread" role="log" aria-live="polite">
               {messages.map((msg) => (
@@ -804,6 +806,11 @@ export default function MishiranuApp({
                 {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
               </div>
             ) : null}
+
+            <RadiusDiagram
+              stationName={station.name}
+              radiusKm={station.radiiKm[time.index]}
+            />
 
             <StationMap
               station={station}

@@ -1128,6 +1128,111 @@ a.mishiranu-btn {
   max-width: 28em;
 }
 
+.mishiranu-diagram {
+  margin: 0 0 1.5rem;
+  padding: 0.85rem 0.5rem 0.65rem;
+  border-top: 1px solid var(--mk-line);
+  border-bottom: 1px solid var(--mk-line);
+  animation: mk-rise 0.7s ease-out 0.08s both;
+}
+
+.mishiranu-diagram-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.mishiranu-diagram-svg--flow {
+  max-width: 22rem;
+}
+
+.mishiranu-diagram-svg--radius {
+  max-width: 16rem;
+}
+
+.mishiranu-diagram-node {
+  fill: var(--mk-paper);
+  stroke: var(--mk-line);
+  stroke-width: 1.5;
+}
+
+.mishiranu-diagram-node--warm {
+  fill: var(--mk-warm);
+  stroke: var(--mk-warm);
+}
+
+.mishiranu-diagram-node-label {
+  fill: var(--mk-ink);
+  font-size: 11px;
+  font-family: var(--mk-sans);
+  letter-spacing: 0.08em;
+  text-anchor: middle;
+}
+
+.mishiranu-diagram-node-label--on-warm {
+  fill: #fff;
+}
+
+.mishiranu-diagram-arrow {
+  stroke: var(--mk-mist);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mishiranu-diagram-ring {
+  fill: rgba(126, 184, 201, 0.1);
+  stroke: rgba(126, 184, 201, 0.45);
+  stroke-width: 1.25;
+  stroke-dasharray: 4 3;
+  transform-origin: 140px 88px;
+  animation: mk-diagram-pulse 5.5s ease-in-out infinite;
+}
+
+.mishiranu-diagram-ring--outer {
+  fill: rgba(255, 106, 61, 0.04);
+  stroke: rgba(255, 106, 61, 0.28);
+  animation-delay: 0.6s;
+}
+
+@keyframes mk-diagram-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.mishiranu-diagram-station {
+  fill: var(--mk-warm);
+}
+
+.mishiranu-diagram-station-label {
+  fill: var(--mk-ink);
+  font-size: 11px;
+  font-family: var(--mk-display);
+  letter-spacing: 0.06em;
+  text-anchor: middle;
+}
+
+.mishiranu-diagram-km {
+  fill: var(--mk-fog);
+  font-size: 10px;
+  font-family: var(--mk-sans);
+  letter-spacing: 0.04em;
+}
+
+.mishiranu-diagram-cap {
+  margin: 0.35rem 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--mk-fog);
+  line-height: 1.5;
+}
+
 .mishiranu-foot {
   margin-top: 2.5rem;
   padding-top: 1rem;
