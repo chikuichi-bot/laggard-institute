@@ -4,8 +4,11 @@ import {
   seedCopy,
   type TourCopy,
 } from "@/lib/mishiranu-copy";
+import { allowViewerRequest } from "@/lib/mishiranu-rate-limit";
+import { requireIdentity } from "../../../../cursor/identity";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type Body = {
   stationId?: string;
@@ -14,42 +17,36 @@ type Body = {
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 20;
-const hits = new Map<string, number[]>();
 
-function clientKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() || "unknown";
-  return request.headers.get("x-real-ip") || "unknown";
-}
-
-function allowRequest(key: string): boolean {
-  const now = Date.now();
-  const prev = hits.get(key) ?? [];
-  const recent = prev.filter((t) => now - t < RATE_WINDOW_MS);
-  if (recent.length >= RATE_MAX) {
-    hits.set(key, recent);
-    return false;
-  }
-  recent.push(now);
-  hits.set(key, recent);
-  return true;
-}
+const NO_STORE = { "cache-control": "private, no-store" };
 
 export async function POST(request: Request) {
-  if (!allowRequest(clientKey(request))) {
-    return Response.json({ error: "rate_limited" }, { status: 429 });
+  const identity = await requireIdentity(request);
+  if (identity instanceof Response) return identity;
+
+  if (!allowViewerRequest(`copy:${identity.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
+    return Response.json(
+      { error: "rate_limited" },
+      { status: 429, headers: NO_STORE },
+    );
   }
 
   let body: Body;
   try {
     body = (await request.json()) as Body;
   } catch {
-    return Response.json({ error: "invalid_json" }, { status: 400 });
+    return Response.json(
+      { error: "invalid_json" },
+      { status: 400, headers: NO_STORE },
+    );
   }
 
   const station = body.stationId ? getStation(body.stationId) : undefined;
   if (!station) {
-    return Response.json({ error: "unknown_station" }, { status: 404 });
+    return Response.json(
+      { error: "unknown_station" },
+      { status: 404, headers: NO_STORE },
+    );
   }
 
   const time =
@@ -59,7 +56,7 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
-    return Response.json(fallback);
+    return Response.json(fallback, { headers: NO_STORE });
   }
 
   try {
@@ -69,8 +66,8 @@ export async function POST(request: Request) {
       time.label,
       apiKey,
     );
-    return Response.json(ai ?? fallback);
+    return Response.json(ai ?? fallback, { headers: NO_STORE });
   } catch {
-    return Response.json(fallback);
+    return Response.json(fallback, { headers: NO_STORE });
   }
 }
