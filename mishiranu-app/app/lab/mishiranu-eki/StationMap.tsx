@@ -25,8 +25,8 @@ function pinIcon(color: string, active: boolean) {
     className: "mishiranu-leaflet-pin",
     html: `<span style="
       display:block;width:${size}px;height:${size}px;border-radius:50%;
-      background:${color};border:2px solid #1a2430;
-      box-shadow:0 0 0 ${active ? 3 : 0}px rgba(232,238,244,0.85);
+      background:${color};border:2px solid #ffffff;
+      box-shadow:0 0 0 ${active ? 3 : 1}px ${active ? "rgba(255,106,61,0.55)" : "rgba(36,48,56,0.18)"};
     "></span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -96,18 +96,18 @@ export default function StationMap({
 
     L.circle([center.lat, center.lng], {
       radius: radiusKm * 1000,
-      color: "#d4a574",
-      weight: 1,
+      color: "#ff6a3d",
+      weight: 1.5,
       dashArray: "4 6",
-      fillColor: "#d4a574",
-      fillOpacity: 0.08,
+      fillColor: "#ff6a3d",
+      fillOpacity: 0.06,
     }).addTo(layer);
 
     L.circleMarker([center.lat, center.lng], {
       radius: 7,
-      color: "#1a2430",
+      color: "#ffffff",
       weight: 2,
-      fillColor: "#e8eef4",
+      fillColor: "#ff6a3d",
       fillOpacity: 1,
     })
       .bindTooltip(station.name, {

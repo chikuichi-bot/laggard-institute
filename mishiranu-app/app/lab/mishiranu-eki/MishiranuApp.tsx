@@ -617,7 +617,7 @@ export default function MishiranuApp({
             ) : null}
 
             <p className="mishiranu-foot">
-              地図は OpenStreetMap（夕暮れ調）。出町柳ピンは実座標寄り。
+              地図は OpenStreetMap。出町柳ピンは実座標寄り。
               GEMINI_API_KEY があれば Gemini 3.1 Flash-Lite、なければ編集文です。
             </p>
           </section>
