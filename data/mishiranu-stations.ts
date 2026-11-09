@@ -1,9 +1,14 @@
 export type SpotGenre = "history" | "gourmet" | "nature" | "odd";
 
+/** 観光案内マップ用の見出し */
+export type GuideKind = "meal" | "souvenir" | "sight" | "tip";
+
 export type Spot = {
   id: string;
   name: string;
   genre: SpotGenre;
+  /** 観光案内の分類。未指定なら genre から推定 */
+  guide?: GuideKind;
   blurb: string;
   /** 0–1 relative map position */
   x: number;
@@ -23,6 +28,8 @@ export type StationSeed = {
   mood: StationMood;
   /** radius km for 1h / 3h / half-day */
   radiiKm: [number, number, number];
+  /** 駅の簡単な説明（観光案内） */
+  stationIntro?: string;
   tourTitle: string;
   catchCopy: string;
   emptyCopy?: {
@@ -38,6 +45,35 @@ export const GENRE_LABEL: Record<SpotGenre, string> = {
   nature: "自然・公園",
   odd: "ちょっと変わった",
 };
+
+export const GUIDE_LABEL: Record<GuideKind, string> = {
+  meal: "ご飯",
+  souvenir: "お土産",
+  sight: "見所",
+  tip: "寄り道",
+};
+
+export const GUIDE_COLOR: Record<GuideKind, string> = {
+  meal: "#d4a574",
+  souvenir: "#c49bb0",
+  sight: "#7f9e86",
+  tip: "#9bb7c9",
+};
+
+export const GUIDE_ORDER: GuideKind[] = ["meal", "souvenir", "sight", "tip"];
+
+export function spotGuide(spot: Spot): GuideKind {
+  if (spot.guide) return spot.guide;
+  switch (spot.genre) {
+    case "gourmet":
+      return "meal";
+    case "nature":
+    case "history":
+      return "sight";
+    default:
+      return "tip";
+  }
+}
 
 export const TIME_OPTIONS = [
   { id: "1h", label: "1時間", index: 0 as const },
@@ -56,6 +92,8 @@ export const STATIONS: StationSeed[] = [
     region: "近畿",
     mood: "story",
     radiiKm: [1.0, 2.2, 3.0],
+    stationIntro:
+      "京阪と叡電が乗り換わる、鴨川デルタのたもと。枡形商店街ですぐ甘いものが買え、川の音まで徒歩数分。観光の起点にも、日常の寄り道にもなる駅です。",
     tourTitle: "鴨川の三角と、枡形の甘い匂いをたどる",
     catchCopy: "日常の駅前が、寄り道の入口になっている。",
     spots: [
@@ -63,7 +101,8 @@ export const STATIONS: StationSeed[] = [
         id: "demachi-1",
         name: "鴨川デルタ",
         genre: "nature",
-        blurb: "賀茂川と高野川が合う場所。靴を脱がなくても、水音だけで足りる。",
+        guide: "sight",
+        blurb: "賀茂川と高野川が合う三角。見所の定番で、靴を脱がなくても水音だけで足りる。",
         x: 0.42,
         y: 0.38,
         walkMinutes: 5,
@@ -73,26 +112,39 @@ export const STATIONS: StationSeed[] = [
         id: "demachi-2",
         name: "出町枡形商店街",
         genre: "history",
-        blurb: "アーケードの影が、夕方になると少し長くなる。",
+        guide: "sight",
+        blurb: "駅前の短い商店街。アーケードの影が、夕方になると少し長くなる。",
         x: 0.55,
         y: 0.52,
         walkMinutes: 3,
       },
       {
         id: "demachi-3",
-        name: "出町ふたば",
+        name: "出町ふたば（食べる）",
         genre: "gourmet",
-        blurb: "並ぶ理由は観光だけじゃない。地元の朝の、甘い用事。",
+        guide: "meal",
+        blurb: "名物の豆餅・よもぎ餅。行列でも、駅前ですぐ戻れる距離感。",
         x: 0.58,
         y: 0.48,
         walkMinutes: 4,
         secretWorthy: true,
       },
       {
+        id: "demachi-3b",
+        name: "出町ふたば（持ち帰り）",
+        genre: "gourmet",
+        guide: "souvenir",
+        blurb: "旅のお土産にもなる豆餅。冷めても味が残る、駅前の手土産。",
+        x: 0.59,
+        y: 0.5,
+        walkMinutes: 4,
+      },
+      {
         id: "demachi-4",
         name: "叡山電鉄のホーム端",
         genre: "odd",
-        blurb: "京阪と叡電が隣り合う接続。発車の気配が二種類ある。",
+        guide: "tip",
+        blurb: "京阪と叡電が隣り合う接続。発車の気配が二種類ある、駅の寄り道。",
         x: 0.5,
         y: 0.55,
         walkMinutes: 1,
@@ -101,16 +153,28 @@ export const STATIONS: StationSeed[] = [
         id: "demachi-5",
         name: "川端通りの小さな喫茶",
         genre: "gourmet",
-        blurb: "窓の外は自転車の流れ。カップは動かない。",
+        guide: "meal",
+        blurb: "トーストと珈琲で一休み。窓の外は自転車の流れ。",
         x: 0.62,
         y: 0.6,
         walkMinutes: 8,
       },
       {
+        id: "demachi-5b",
+        name: "枡形の小さな定食屋",
+        genre: "gourmet",
+        guide: "meal",
+        blurb: "日替わり定食で腹ごしらえ。観光向けより、近所の昼の文法。",
+        x: 0.53,
+        y: 0.54,
+        walkMinutes: 4,
+      },
+      {
         id: "demachi-6",
         name: "下鴨神社へ向かう並木の入口",
         genre: "nature",
-        blurb: "参道まではまだ先でも、木陰の始まりはここから。",
+        guide: "sight",
+        blurb: "参道まではまだ先でも、木陰の始まりはここから。見所への助走。",
         x: 0.35,
         y: 0.28,
         walkMinutes: 12,
@@ -119,10 +183,21 @@ export const STATIONS: StationSeed[] = [
         id: "demachi-7",
         name: "河原町今出川あたりの角",
         genre: "odd",
+        guide: "tip",
         blurb: "用事のない角が、いちばん写真になることがある。",
         x: 0.7,
         y: 0.65,
         walkMinutes: 14,
+      },
+      {
+        id: "demachi-8",
+        name: "枡形の紙もの・雑貨",
+        genre: "history",
+        guide: "souvenir",
+        blurb: "小さな店で見つける便箋や京都らしい紙もの。軽くて持ち帰れるお土産。",
+        x: 0.56,
+        y: 0.56,
+        walkMinutes: 5,
       },
     ],
   },

@@ -29,11 +29,14 @@ export const STATION_LL: Record<string, { lat: number; lng: number }> = {
 export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
   "demachi-1": { lat: 35.03055, lng: 135.77115 }, // 鴨川デルタ
   "demachi-2": { lat: 35.02855, lng: 135.77025 }, // 枡形商店街
-  "demachi-3": { lat: 35.02885, lng: 135.77055 }, // ふたば
+  "demachi-3": { lat: 35.02885, lng: 135.77055 }, // ふたば（食べる）
+  "demachi-3b": { lat: 35.0289, lng: 135.77065 }, // ふたば（持ち帰り）
   "demachi-4": { lat: 35.02935, lng: 135.77225 }, // 叡電ホーム
   "demachi-5": { lat: 35.02755, lng: 135.77155 }, // 川端の喫茶
+  "demachi-5b": { lat: 35.0284, lng: 135.7704 }, // 枡形の定食屋
   "demachi-6": { lat: 35.03205, lng: 135.77045 }, // 下鴨並木入口
   "demachi-7": { lat: 35.02705, lng: 135.76855 }, // 河原町今出川
+  "demachi-8": { lat: 35.0287, lng: 135.77015 }, // 紙もの雑貨
 };
 
 export function stationLatLng(station: StationSeed): { lat: number; lng: number } {

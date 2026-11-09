@@ -351,16 +351,108 @@ a.mishiranu-btn {
   animation: mk-rise 0.7s ease-out both;
 }
 
+.mishiranu-guide-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: var(--mk-warm);
+  margin: 0 0 0.55rem;
+}
+
 .mishiranu-tour-catch {
   color: var(--mk-fog);
   line-height: 1.7;
   margin: 0 0 0.85rem;
 }
 
+.mishiranu-station-intro {
+  color: var(--mk-paper);
+  line-height: 1.75;
+  margin: 0 0 0.9rem;
+  font-size: 0.95rem;
+  opacity: 0.92;
+}
+
 .mishiranu-radius {
   font-size: 0.85rem;
   color: var(--mk-warm);
   letter-spacing: 0.04em;
+}
+
+.mishiranu-guide-board {
+  display: grid;
+  gap: 1.35rem;
+  margin: 0 0 1.5rem;
+}
+
+@media (min-width: 720px) {
+  .mishiranu-guide-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mishiranu-guide-col-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--mk-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.65rem;
+  font-weight: 500;
+}
+
+.mishiranu-guide-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mishiranu-guide-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.mishiranu-guide-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--mk-line);
+  background: transparent;
+  color: inherit;
+  padding: 0.75rem 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.mishiranu-guide-item:hover,
+.mishiranu-guide-item--active {
+  border-color: var(--mk-warm);
+  background: var(--mk-warm-soft);
+}
+
+.mishiranu-guide-item-name {
+  display: block;
+  font-family: var(--mk-display);
+  letter-spacing: 0.04em;
+  margin-bottom: 0.2rem;
+}
+
+.mishiranu-guide-item-meta {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--mk-warm);
+  margin-bottom: 0.35rem;
+}
+
+.mishiranu-guide-item-blurb {
+  display: block;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--mk-fog);
 }
 
 .mishiranu-map--live {

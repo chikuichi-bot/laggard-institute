@@ -3,15 +3,13 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { Spot, StationSeed } from "@/data/mishiranu-stations";
+import {
+  GUIDE_COLOR,
+  spotGuide,
+  type Spot,
+  type StationSeed,
+} from "@/data/mishiranu-stations";
 import { spotLatLng, stationLatLng } from "@/lib/mishiranu-geo";
-
-const GENRE_COLOR: Record<Spot["genre"], string> = {
-  history: "#9bb7c9",
-  gourmet: "#d4a574",
-  nature: "#7f9e86",
-  odd: "#c49bb0",
-};
 
 type Props = {
   station: StationSeed;
@@ -123,7 +121,7 @@ export default function StationMap({
     for (const spot of spots) {
       const { lat, lng } = spotLatLng(station, spot);
       const marker = L.marker([lat, lng], {
-        icon: pinIcon(GENRE_COLOR[spot.genre], spot.id === activeSpotId),
+        icon: pinIcon(GUIDE_COLOR[spotGuide(spot)], spot.id === activeSpotId),
         title: spot.name,
       });
       marker.on("click", () => onSelectRef.current(spot.id));

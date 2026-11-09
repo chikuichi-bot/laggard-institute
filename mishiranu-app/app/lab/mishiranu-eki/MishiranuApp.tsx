@@ -3,14 +3,16 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import {
-  GENRE_LABEL,
+  GUIDE_COLOR,
+  GUIDE_LABEL,
+  GUIDE_ORDER,
   REGIONS,
   STATIONS,
   TIME_OPTIONS,
   pickSecret,
+  spotGuide,
   spotsForTime,
   type Spot,
-  type SpotGenre,
   type StationSeed,
   type TimeOptionId,
 } from "@/data/mishiranu-stations";
@@ -27,8 +29,6 @@ const StationMap = dynamic(() => import("./StationMap"), {
 });
 
 type Step = "hero" | "pick" | "tour";
-
-const GENRE_ORDER: SpotGenre[] = ["history", "gourmet", "nature", "odd"];
 
 function seedTourCopy(station: StationSeed): TourCopy {
   return {
@@ -305,6 +305,7 @@ export default function MishiranuApp({
                   : " · 編集コピー"}
             </p>
             <div className="mishiranu-tour">
+              <p className="mishiranu-guide-eyebrow">{station.name}駅 · 観光案内</p>
               <h2
                 id="tour-title"
                 className={`mishiranu-tour-title${copyLoading ? " mishiranu-tour-title--loading" : ""}`}
@@ -312,9 +313,12 @@ export default function MishiranuApp({
                 {shownCopy.tourTitle}
               </h2>
               <p className="mishiranu-tour-catch">{shownCopy.catchCopy}</p>
+              {station.stationIntro ? (
+                <p className="mishiranu-station-intro">{station.stationIntro}</p>
+              ) : null}
               <p className="mishiranu-radius">
-                徒歩圏 約 {station.radiiKm[time.index]} km · ピン {spots.length}{" "}
-                件
+                徒歩圏 約 {station.radiiKm[time.index]} km · 案内ピン{" "}
+                {spots.length} 件
               </p>
             </div>
 
@@ -337,29 +341,65 @@ export default function MishiranuApp({
             />
 
             <ul className="mishiranu-legend">
-              {GENRE_ORDER.map((genre) => (
-                <li key={genre}>
-                  <span
-                    style={{
-                      background:
-                        genre === "history"
-                          ? "#9bb7c9"
-                          : genre === "gourmet"
-                            ? "#d4a574"
-                            : genre === "nature"
-                              ? "#7f9e86"
-                              : "#c49bb0",
-                    }}
-                  />
-                  {GENRE_LABEL[genre]}
+              {GUIDE_ORDER.map((kind) => (
+                <li key={kind}>
+                  <span style={{ background: GUIDE_COLOR[kind] }} />
+                  {GUIDE_LABEL[kind]}
                 </li>
               ))}
             </ul>
 
+            <div className="mishiranu-guide-board">
+              {GUIDE_ORDER.map((kind) => {
+                const items = spots.filter((s) => spotGuide(s) === kind);
+                if (items.length === 0) return null;
+                return (
+                  <section
+                    key={kind}
+                    className="mishiranu-guide-col"
+                    aria-labelledby={`guide-${kind}`}
+                  >
+                    <h3 id={`guide-${kind}`} className="mishiranu-guide-col-title">
+                      <span
+                        className="mishiranu-guide-dot"
+                        style={{ background: GUIDE_COLOR[kind] }}
+                      />
+                      {GUIDE_LABEL[kind]}
+                    </h3>
+                    <ul className="mishiranu-guide-list">
+                      {items.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className={
+                              activeSpot?.id === item.id
+                                ? "mishiranu-guide-item mishiranu-guide-item--active"
+                                : "mishiranu-guide-item"
+                            }
+                            onClick={() => setActiveSpotId(item.id)}
+                          >
+                            <span className="mishiranu-guide-item-name">
+                              {item.name}
+                            </span>
+                            <span className="mishiranu-guide-item-meta">
+                              徒歩約 {item.walkMinutes} 分
+                            </span>
+                            <span className="mishiranu-guide-item-blurb">
+                              {item.blurb}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
+
             {activeSpot ? (
               <div className="mishiranu-spot-panel">
                 <p className="mishiranu-spot-genre">
-                  {GENRE_LABEL[activeSpot.genre]} · 徒歩約{" "}
+                  {GUIDE_LABEL[spotGuide(activeSpot)]} · 徒歩約{" "}
                   {activeSpot.walkMinutes} 分
                 </p>
                 <h3 className="mishiranu-spot-name">{activeSpot.name}</h3>
