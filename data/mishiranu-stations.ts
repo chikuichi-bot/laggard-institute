@@ -118,11 +118,11 @@ export const GUIDE_LABEL: Record<GuideKind, string> = {
 };
 
 export const GUIDE_COLOR: Record<GuideKind, string> = {
-  meal: "#ff6a3d",
-  souvenir: "#d08aa8",
-  sight: "#4f8f7a",
-  rest: "#c4a35a",
-  tip: "#7eb8c9",
+  meal: "#b5493a",
+  souvenir: "#9a7a8c",
+  sight: "#5f7d6a",
+  rest: "#c5a059",
+  tip: "#6b8cca",
 };
 
 export const GUIDE_ORDER: GuideKind[] = [
