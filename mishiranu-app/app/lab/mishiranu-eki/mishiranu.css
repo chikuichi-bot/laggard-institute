@@ -564,6 +564,57 @@ a.mishiranu-btn {
   letter-spacing: 0.04em;
 }
 
+.mishiranu-area-story {
+  margin: 0 0 1.75rem;
+  padding: 1.35rem 1.25rem 1.2rem;
+  border: 1px solid var(--mk-line);
+  border-radius: calc(var(--mk-radius) + 4px);
+  background: var(--mk-paper);
+}
+
+.mishiranu-area-story-title {
+  font-family: var(--mk-display);
+  font-size: clamp(1.2rem, 3.8vw, 1.45rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.85rem;
+}
+
+.mishiranu-area-about {
+  margin: 0 0 1.15rem;
+  line-height: 1.8;
+  color: var(--mk-ink);
+}
+
+.mishiranu-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.95rem;
+}
+
+.mishiranu-history-list li {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--mk-line);
+}
+
+.mishiranu-history-list h4 {
+  margin: 0 0 0.35rem;
+  font-family: var(--mk-display);
+  font-size: 1.02rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--mk-warm-deep);
+}
+
+.mishiranu-history-list p {
+  margin: 0;
+  line-height: 1.75;
+  color: var(--mk-fog);
+  font-size: 0.94rem;
+}
+
 .mishiranu-guide-board {
   display: grid;
   gap: 1.45rem;

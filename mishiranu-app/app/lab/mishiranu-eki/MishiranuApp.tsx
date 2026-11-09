@@ -95,7 +95,7 @@ function matchFocus(text: string): FocusChoice | undefined {
   if (/おまかせ|全部|なんでも|どれでも|全体/.test(t)) return "all";
   if (/ご飯|ごはん|食事|ランチ|食べる|グルメ|飯/.test(t)) return "meal";
   if (/土産|みやげ|お土産|手土産/.test(t)) return "souvenir";
-  if (/見所|みどころ|景色|観光|名所/.test(t)) return "sight";
+  if (/見所|みどころ|景色|観光|名所|歴史|昔|由来/.test(t)) return "sight";
   if (/寄り道|よみち|暇つぶし|ひまつぶし/.test(t)) return "tip";
   return undefined;
 }
@@ -688,6 +688,32 @@ export default function MishiranuApp({
                 {spots.length} 件
               </p>
             </div>
+
+            {station.areaAbout ||
+            (station.historyNotes && station.historyNotes.length > 0) ? (
+              <section
+                className="mishiranu-area-story"
+                aria-labelledby="area-story-title"
+              >
+                <p className="mishiranu-kicker">AREA · HISTORY</p>
+                <h3 id="area-story-title" className="mishiranu-area-story-title">
+                  このエリアのこと
+                </h3>
+                {station.areaAbout ? (
+                  <p className="mishiranu-area-about">{station.areaAbout}</p>
+                ) : null}
+                {station.historyNotes && station.historyNotes.length > 0 ? (
+                  <ol className="mishiranu-history-list">
+                    {station.historyNotes.map((note) => (
+                      <li key={note.title}>
+                        <h4>{note.title}</h4>
+                        <p>{note.body}</p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+              </section>
+            ) : null}
 
             {station.mood === "empty" &&
             (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (

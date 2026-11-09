@@ -19,6 +19,11 @@ export type Spot = {
 
 export type StationMood = "story" | "empty";
 
+export type AreaHistoryNote = {
+  title: string;
+  body: string;
+};
+
 export type StationSeed = {
   id: string;
   name: string;
@@ -30,6 +35,10 @@ export type StationSeed = {
   radiiKm: [number, number, number];
   /** 駅の簡単な説明（観光案内） */
   stationIntro?: string;
+  /** エリアのいまの様子 */
+  areaAbout?: string;
+  /** 過去の歴史メモ */
+  historyNotes?: AreaHistoryNote[];
   tourTitle: string;
   catchCopy: string;
   emptyCopy?: {
@@ -94,6 +103,30 @@ export const STATIONS: StationSeed[] = [
     radiiKm: [1.0, 2.2, 3.0],
     stationIntro:
       "京阪と叡電が乗り換わる、鴨川デルタのたもと。枡形商店街ですぐ甘いものが買え、川の音まで徒歩数分。観光の起点にも、日常の寄り道にもなる駅です。",
+    areaAbout:
+      "賀茂川と高野川が合流する三角の土地が、この界隈の骨格です。御所の北側にひらけた「出町」は、古くから人の往来と市の気配がつづく場所で、いまも学生・近所・旅人が同じ商店街を歩く距離感が残っています。",
+    historyNotes: [
+      {
+        title: "「出町」の名",
+        body:
+          "京の都の外縁に「出た町」としてひらけた地名です。御所の北側、今出川あたりから先の町場を指し、市や人の出入りの場として長く使われてきました。",
+      },
+      {
+        title: "鴨川デルタと二つの川",
+        body:
+          "西側を賀茂川、東側を高野川が流れ、三角州のような地形をつくります。川筋は治水と信仰の両方に関わり、下鴨神社の森へと続く景色の入口にもなっています。",
+      },
+      {
+        title: "下鴨と糺の森",
+        body:
+          "北方の下鴨神社と糺の森は、古くからこの土地の聖域です。世界遺産「古都京都の文化財」の一部で、参道の木立は駅からでも気配を感じられます。",
+      },
+      {
+        title: "鉄道の結節点へ",
+        body:
+          "叡山電鉄の終点として山へ、京阪本線で都心・大阪方面へ。地下の京阪と地上の叡電が隣り合ういまの姿は、近代以降に重ねられた交通の層です。",
+      },
+    ],
     tourTitle: "鴨川の三角と、枡形の甘い匂いをたどる",
     catchCopy: "日常の駅前が、寄り道の入口になっている。",
     spots: [
@@ -102,7 +135,8 @@ export const STATIONS: StationSeed[] = [
         name: "鴨川デルタ",
         genre: "nature",
         guide: "sight",
-        blurb: "賀茂川と高野川が合う三角。見所の定番で、靴を脱がなくても水音だけで足りる。",
+        blurb:
+          "賀茂川と高野川が合う三角。治水と信仰が交わる地形の見所で、水音だけで土地の骨格がわかる。",
         x: 0.42,
         y: 0.38,
         walkMinutes: 5,
@@ -113,7 +147,8 @@ export const STATIONS: StationSeed[] = [
         name: "出町枡形商店街",
         genre: "history",
         guide: "sight",
-        blurb: "駅前の短い商店街。アーケードの影が、夕方になると少し長くなる。",
+        blurb:
+          "駅前の短いアーケード。市の名残をひきずる近所の商店街で、夕方に影が少し長くなる。",
         x: 0.55,
         y: 0.52,
         walkMinutes: 3,
@@ -188,17 +223,31 @@ export const STATIONS: StationSeed[] = [
         name: "下鴨神社へ向かう並木の入口",
         genre: "nature",
         guide: "sight",
-        blurb: "参道まではまだ先でも、木陰の始まりはここから。見所への助走。",
+        blurb:
+          "糺の森へ続く木陰の始まり。参道の手前でも、聖域へ向かう気配が足元から変わる。",
         x: 0.35,
         y: 0.28,
         walkMinutes: 12,
+      },
+      {
+        id: "demachi-9",
+        name: "下鴨神社・糺の森",
+        genre: "history",
+        guide: "sight",
+        blurb:
+          "賀茂御祖神社。原生林に近い森と社殿が残る古社で、このエリアの歴史の芯です。",
+        x: 0.32,
+        y: 0.18,
+        walkMinutes: 18,
+        secretWorthy: true,
       },
       {
         id: "demachi-7",
         name: "河原町今出川あたりの角",
         genre: "odd",
         guide: "tip",
-        blurb: "用事のない角が、いちばん写真になることがある。",
+        blurb:
+          "御所の北東角に近い交差。出町の「都の外縁」だった距離感が、いまの街路にも残る。",
         x: 0.7,
         y: 0.65,
         walkMinutes: 14,
