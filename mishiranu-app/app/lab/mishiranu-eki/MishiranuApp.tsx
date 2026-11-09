@@ -1,17 +1,17 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   GUIDE_COLOR,
   GUIDE_LABEL,
   GUIDE_ORDER,
-  REGIONS,
   STATIONS,
   TIME_OPTIONS,
   pickSecret,
   spotGuide,
   spotsForTime,
+  type GuideKind,
   type Spot,
   type StationSeed,
   type TimeOptionId,
@@ -29,6 +29,15 @@ const StationMap = dynamic(() => import("./StationMap"), {
 });
 
 type Step = "hero" | "pick" | "tour";
+type ChatPhase = "station" | "time" | "focus" | "ready";
+
+type ChatMsg = {
+  id: string;
+  role: "guide" | "you";
+  text: string;
+};
+
+type FocusChoice = GuideKind | "all";
 
 function seedTourCopy(station: StationSeed): TourCopy {
   return {
@@ -40,33 +49,64 @@ function seedTourCopy(station: StationSeed): TourCopy {
   };
 }
 
+function focusLabel(focus: FocusChoice): string {
+  if (focus === "all") return "おまかせ（全部）";
+  return GUIDE_LABEL[focus];
+}
+
+function parseFocusList(raw: string[] | undefined): GuideKind[] {
+  if (!raw || raw.length === 0) return [];
+  const allowed = new Set<GuideKind>(GUIDE_ORDER);
+  return raw.filter((f): f is GuideKind => allowed.has(f as GuideKind));
+}
+
 type Props = {
   initialStep?: Step;
   initialStationId?: string;
   initialTimeId?: TimeOptionId;
+  initialFocus?: string[];
 };
+
+let chatSeq = 0;
+function nextMsgId(prefix: string) {
+  chatSeq += 1;
+  return `${prefix}-${chatSeq}`;
+}
 
 export default function MishiranuApp({
   initialStep = "hero",
   initialStationId,
   initialTimeId = "1h",
+  initialFocus,
 }: Props) {
   const startStationId =
     initialStationId && STATIONS.some((s) => s.id === initialStationId)
       ? initialStationId
       : STATIONS[0].id;
 
-  const [step, setStep] = useState<Step>(initialStep);
+  const [step] = useState<Step>(initialStep);
   const [stationId, setStationId] = useState<string>(startStationId);
   const [timeId, setTimeId] = useState<TimeOptionId>(initialTimeId);
-  const [regionFilter, setRegionFilter] = useState<string>("すべて");
+  const [focusKinds, setFocusKinds] = useState<GuideKind[]>(() =>
+    parseFocusList(initialFocus),
+  );
   const [query, setQuery] = useState("");
+  const [showStationSearch, setShowStationSearch] = useState(false);
+  const [chatPhase, setChatPhase] = useState<ChatPhase>("station");
+  const [messages, setMessages] = useState<ChatMsg[]>(() => [
+    {
+      id: "g-open",
+      role: "guide",
+      text: "降りた駅の、徒歩圏だけを、物語にします。いま、どの駅にいますか？",
+    },
+  ]);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [secret, setSecret] = useState<Spot | null>(null);
   const [secretOpen, setSecretOpen] = useState(false);
   const [copy, setCopy] = useState<TourCopy | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const station = useMemo(
     () => STATIONS.find((s) => s.id === stationId) ?? STATIONS[0],
@@ -76,7 +116,6 @@ export default function MishiranuApp({
   const filteredStations = useMemo(() => {
     const q = query.trim();
     return STATIONS.filter((s) => {
-      if (regionFilter !== "すべて" && s.region !== regionFilter) return false;
       if (!q) return true;
       return (
         s.name.includes(q) ||
@@ -84,18 +123,24 @@ export default function MishiranuApp({
         s.line.includes(q) ||
         s.tourTitle.includes(q)
       );
-    });
-  }, [regionFilter, query]);
+    }).slice(0, 8);
+  }, [query]);
 
   const time = TIME_OPTIONS.find((t) => t.id === timeId) ?? TIME_OPTIONS[0];
-  const spots = useMemo(
-    () => spotsForTime(station, time.index),
-    [station, time.index],
-  );
+  const spots = useMemo(() => {
+    const within = spotsForTime(station, time.index);
+    if (focusKinds.length === 0) return within;
+    return within.filter((s) => focusKinds.includes(spotGuide(s)));
+  }, [station, time.index, focusKinds]);
   const activeSpot =
     spots.find((s) => s.id === activeSpotId) ??
     (activeSpotId ? null : spots[0] ?? null);
   const shownCopy = copy ?? seedTourCopy(station);
+
+  useEffect(() => {
+    if (step !== "pick") return;
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, showStationSearch, chatPhase, step]);
 
   async function loadCopy(nextStation: StationSeed, nextTimeId: TimeOptionId) {
     setCopyLoading(true);
@@ -127,12 +172,70 @@ export default function MishiranuApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when entering tour via URL/state
   }, [step, stationId, timeId]);
 
-  function goTour(nextStationId: string, nextTimeId: TimeOptionId = timeId) {
+  function pushMessages(...next: Omit<ChatMsg, "id">[]) {
+    setMessages((prev) => [
+      ...prev,
+      ...next.map((m) => ({ ...m, id: nextMsgId(m.role) })),
+    ]);
+  }
+
+  function chooseStation(next: StationSeed, spoken?: string) {
+    setStationId(next.id);
+    setShowStationSearch(false);
+    setQuery("");
+    setChatPhase("time");
+    pushMessages(
+      { role: "you", text: spoken ?? `${next.name}駅です` },
+      {
+        role: "guide",
+        text: `${next.name}ですね。${next.prefecture}・${next.line}。今日はどれくらい寄り道できますか？`,
+      },
+    );
+  }
+
+  function chooseTime(nextId: TimeOptionId) {
+    const t = TIME_OPTIONS.find((opt) => opt.id === nextId) ?? TIME_OPTIONS[0];
+    setTimeId(t.id);
+    setChatPhase("focus");
+    pushMessages(
+      { role: "you", text: `${t.label}くらい` },
+      {
+        role: "guide",
+        text: "わかりました。案内では、何を多めに集めましょうか？",
+      },
+    );
+  }
+
+  function chooseFocus(choice: FocusChoice) {
+    const kinds = choice === "all" ? [] : [choice];
+    setFocusKinds(kinds);
+    setChatPhase("ready");
+    const focusText = focusLabel(choice);
+    pushMessages(
+      { role: "you", text: focusText },
+      {
+        role: "guide",
+        text: `では、${station.name}の徒歩圏で「${focusText}」を開きます。`,
+      },
+    );
+    window.setTimeout(() => {
+      goTour(stationId, timeId, kinds);
+    }, 650);
+  }
+
+  function goTour(
+    nextStationId: string,
+    nextTimeId: TimeOptionId = timeId,
+    kinds: GuideKind[] = focusKinds,
+  ) {
     const params = new URLSearchParams({
       view: "tour",
       station: nextStationId,
       time: nextTimeId,
     });
+    if (kinds.length > 0) {
+      params.set("focus", kinds.join(","));
+    }
     window.location.assign(`?${params.toString()}`);
   }
 
@@ -150,6 +253,9 @@ export default function MishiranuApp({
       shownCopy.catchCopy,
       `${time.label} · 徒歩圏 約 ${station.radiiKm[time.index]} km`,
     ];
+    if (focusKinds.length > 0) {
+      lines.push(`案内の重点: ${focusKinds.map((k) => GUIDE_LABEL[k]).join("・")}`);
+    }
     if (secret) {
       lines.push(`シークレット: ${secret.name}`);
     }
@@ -165,6 +271,11 @@ export default function MishiranuApp({
     }
     setShareNote(text);
   }
+
+  const guideBoardKinds =
+    focusKinds.length > 0
+      ? GUIDE_ORDER.filter((k) => focusKinds.includes(k))
+      : GUIDE_ORDER;
 
   return (
     <div className="mishiranu">
@@ -182,7 +293,7 @@ export default function MishiranuApp({
                   className="mishiranu-btn mishiranu-btn--primary"
                   href="?view=pick"
                 >
-                  この駅で始める
+                  会話ではじめる
                 </a>
                 <a
                   className="mishiranu-btn"
@@ -200,98 +311,139 @@ export default function MishiranuApp({
         ) : null}
 
         {step === "pick" ? (
-          <section className="mishiranu-section" aria-labelledby="pick-title">
-            <p className="mishiranu-kicker">STEP 1 · 編集 {STATIONS.length} 駅</p>
-            <h2 id="pick-title" className="mishiranu-h2">
-              どこに降りましたか
+          <section className="mishiranu-section mishiranu-chat" aria-labelledby="chat-title">
+            <p className="mishiranu-kicker">CONVERSATION · 編集 {STATIONS.length} 駅</p>
+            <h2 id="chat-title" className="mishiranu-h2">
+              案内を、会話でつくる
             </h2>
             <p className="mishiranu-note">
-              いまは編集キュレーションの駅だけ。抽象マップで温度を固めています。実地図と
-              iOS は後段です。
+              駅 → 時間 → 重点の順に答えれば、観光案内マップが開きます。
             </p>
 
-            <label className="mishiranu-search">
-              <span className="mishiranu-search-label">駅名・路線で探す</span>
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="例: 出町柳 / 叡山 / 京都"
-                autoComplete="off"
-              />
-            </label>
-
-            <div className="mishiranu-region-row" role="group" aria-label="地方で絞る">
-              <button
-                type="button"
-                aria-pressed={regionFilter === "すべて"}
-                onClick={() => setRegionFilter("すべて")}
-              >
-                すべて
-              </button>
-              {REGIONS.filter((region) =>
-                STATIONS.some((s) => s.region === region),
-              ).map((region) => (
-                <button
-                  key={region}
-                  type="button"
-                  aria-pressed={regionFilter === region}
-                  onClick={() => setRegionFilter(region)}
+            <div className="mishiranu-chat-thread" role="log" aria-live="polite">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={
+                    msg.role === "guide"
+                      ? "mishiranu-chat-bubble mishiranu-chat-bubble--guide"
+                      : "mishiranu-chat-bubble mishiranu-chat-bubble--you"
+                  }
                 >
-                  {region}
-                </button>
+                  <span className="mishiranu-chat-role">
+                    {msg.role === "guide" ? "案内" : "あなた"}
+                  </span>
+                  <p>{msg.text}</p>
+                </div>
               ))}
+              <div ref={chatEndRef} />
             </div>
 
-            <ul className="mishiranu-station-list">
-              {filteredStations.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    aria-pressed={stationId === s.id}
-                    onClick={() => setStationId(s.id)}
-                  >
-                    <span className="mishiranu-station-name">{s.name}</span>
-                    <span className="mishiranu-station-meta">
-                      {s.prefecture} · {s.line}
-                      {s.mood === "empty" ? " · 何もないを楽しむ" : ""}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {filteredStations.length === 0 ? (
-              <p className="mishiranu-note">該当する駅がありません。</p>
+            {chatPhase === "station" ? (
+              <div className="mishiranu-chat-replies" aria-label="駅の答え">
+                <button
+                  type="button"
+                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                  onClick={() =>
+                    chooseStation(
+                      STATIONS.find((s) => s.id === "demachiyanagi") ??
+                        STATIONS[0],
+                      "出町柳にいます",
+                    )
+                  }
+                >
+                  出町柳にいます
+                </button>
+                <button
+                  type="button"
+                  className="mishiranu-chat-chip"
+                  onClick={() => setShowStationSearch((v) => !v)}
+                >
+                  駅名で探す
+                </button>
+                {showStationSearch ? (
+                  <div className="mishiranu-chat-search">
+                    <label className="mishiranu-search">
+                      <span className="mishiranu-search-label">駅名・路線</span>
+                      <input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="例: 出町柳 / 叡山 / 京都"
+                        autoComplete="off"
+                        autoFocus
+                      />
+                    </label>
+                    <ul className="mishiranu-chat-station-list">
+                      {filteredStations.map((s) => (
+                        <li key={s.id}>
+                          <button type="button" onClick={() => chooseStation(s)}>
+                            <span className="mishiranu-station-name">{s.name}</span>
+                            <span className="mishiranu-station-meta">
+                              {s.prefecture} · {s.line}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    {filteredStations.length === 0 ? (
+                      <p className="mishiranu-note">該当する駅がありません。</p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             ) : null}
 
-            <div className="mishiranu-section" style={{ paddingTop: "2rem" }}>
-              <p className="mishiranu-kicker">STEP 2</p>
-              <h2 className="mishiranu-h2">どれくらいいられますか</h2>
-              <div className="mishiranu-time-row" role="group" aria-label="滞在時間">
+            {chatPhase === "time" ? (
+              <div className="mishiranu-chat-replies" aria-label="時間の答え">
                 {TIME_OPTIONS.map((t) => (
                   <button
                     key={t.id}
                     type="button"
-                    aria-pressed={timeId === t.id}
-                    onClick={() => setTimeId(t.id)}
+                    className="mishiranu-chat-chip"
+                    onClick={() => chooseTime(t.id)}
                   >
                     {t.label}
                   </button>
                 ))}
               </div>
-              <div className="mishiranu-actions">
+            ) : null}
+
+            {chatPhase === "focus" ? (
+              <div className="mishiranu-chat-replies" aria-label="重点の答え">
                 <button
                   type="button"
-                  className="mishiranu-btn mishiranu-btn--primary"
-                  disabled={filteredStations.length === 0}
-                  onClick={() => goTour(stationId, timeId)}
+                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                  onClick={() => chooseFocus("all")}
                 >
-                  物語をつくる
+                  おまかせ
                 </button>
-                <a className="mishiranu-btn mishiranu-btn--ghost" href="?view=hero">
-                  戻る
-                </a>
+                {GUIDE_ORDER.map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    className="mishiranu-chat-chip"
+                    onClick={() => chooseFocus(kind)}
+                  >
+                    <span
+                      className="mishiranu-guide-dot"
+                      style={{ background: GUIDE_COLOR[kind] }}
+                      aria-hidden
+                    />
+                    {GUIDE_LABEL[kind]}
+                  </button>
+                ))}
               </div>
+            ) : null}
+
+            {chatPhase === "ready" ? (
+              <p className="mishiranu-chat-opening">案内を開いています…</p>
+            ) : null}
+
+            <div className="mishiranu-actions">
+              <a className="mishiranu-btn mishiranu-btn--ghost" href="?view=hero">
+                はじめに戻る
+              </a>
             </div>
           </section>
         ) : null}
@@ -300,6 +452,9 @@ export default function MishiranuApp({
           <section className="mishiranu-section" aria-labelledby="tour-title">
             <p className="mishiranu-kicker">
               {station.prefecture} · {station.line} · {time.label}
+              {focusKinds.length > 0
+                ? ` · ${focusKinds.map((k) => GUIDE_LABEL[k]).join("・")}`
+                : ""}
               {copyLoading
                 ? " · コピー生成中"
                 : shownCopy.source === "ai"
@@ -343,7 +498,7 @@ export default function MishiranuApp({
             />
 
             <ul className="mishiranu-legend">
-              {GUIDE_ORDER.map((kind) => (
+              {guideBoardKinds.map((kind) => (
                 <li key={kind}>
                   <span style={{ background: GUIDE_COLOR[kind] }} />
                   {GUIDE_LABEL[kind]}
@@ -352,7 +507,7 @@ export default function MishiranuApp({
             </ul>
 
             <div className="mishiranu-guide-board">
-              {GUIDE_ORDER.map((kind) => {
+              {guideBoardKinds.map((kind) => {
                 const items = spots.filter((s) => spotGuide(s) === kind);
                 if (items.length === 0) return null;
                 return (
@@ -434,7 +589,7 @@ export default function MishiranuApp({
                 物語をコピー
               </button>
               <a className="mishiranu-btn mishiranu-btn--ghost" href="?view=pick">
-                駅・時間を変える
+                会話をやり直す
               </a>
             </div>
 

@@ -183,6 +183,130 @@ a.mishiranu-btn {
   animation: mk-rise 0.55s ease-out both;
 }
 
+.mishiranu-chat-thread {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0 0 1.25rem;
+  min-height: 12rem;
+}
+
+.mishiranu-chat-bubble {
+  max-width: min(34rem, 92%);
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--mk-line);
+  animation: mk-rise 0.45s ease-out both;
+}
+
+.mishiranu-chat-bubble--guide {
+  justify-self: start;
+  background: rgba(232, 238, 244, 0.04);
+}
+
+.mishiranu-chat-bubble--you {
+  justify-self: end;
+  border-color: rgba(212, 165, 116, 0.45);
+  background: var(--mk-warm-soft);
+}
+
+.mishiranu-chat-role {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  color: var(--mk-warm);
+  margin-bottom: 0.35rem;
+}
+
+.mishiranu-chat-bubble p {
+  margin: 0;
+  line-height: 1.65;
+  font-size: 0.98rem;
+}
+
+.mishiranu-chat-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 0 0 1.5rem;
+  animation: mk-rise 0.5s ease-out 0.08s both;
+}
+
+.mishiranu-chat-chip {
+  appearance: none;
+  border: 1px solid var(--mk-line);
+  background: transparent;
+  color: var(--mk-paper);
+  font-family: inherit;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.mishiranu-chat-chip:hover,
+.mishiranu-chat-chip:focus-visible {
+  border-color: var(--mk-warm);
+  color: var(--mk-warm);
+  outline: none;
+}
+
+.mishiranu-chat-chip--primary {
+  background: var(--mk-warm);
+  border-color: var(--mk-warm);
+  color: var(--mk-ink);
+}
+
+.mishiranu-chat-chip--primary:hover,
+.mishiranu-chat-chip--primary:focus-visible {
+  background: #e0b688;
+  border-color: #e0b688;
+  color: var(--mk-ink);
+}
+
+.mishiranu-chat-search {
+  flex-basis: 100%;
+  margin-top: 0.35rem;
+}
+
+.mishiranu-chat-station-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  max-height: min(40vh, 18rem);
+  overflow: auto;
+}
+
+.mishiranu-chat-station-list button {
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: 1px solid var(--mk-line);
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  padding: 0.7rem 0.85rem;
+  cursor: pointer;
+}
+
+.mishiranu-chat-station-list button:hover,
+.mishiranu-chat-station-list button:focus-visible {
+  border-color: var(--mk-warm);
+  outline: none;
+}
+
+.mishiranu-chat-opening {
+  color: var(--mk-warm);
+  letter-spacing: 0.08em;
+  font-size: 0.9rem;
+  margin: 0 0 1.25rem;
+  animation: mk-rise 0.4s ease-out both;
+}
+
 .mishiranu-kicker {
   font-size: 0.75rem;
   letter-spacing: 0.18em;
