@@ -68,9 +68,21 @@ Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab
 - 公開予定URL: `https://lagado.jp/lagado2026/lab/mishiranu-eki/`
 - 注意: ページは `searchParams` をサーバーで読まない（クライアントで URL を読む）。これで静的 export が通る
 
+## さくらへ上げる（手元 FTP / ファイルマネージャ）
+
+この Cloud Agent からはさくら FTP に入れない（認証情報が未接続）。手元で:
+
+1. `npm run build:lolipop:minimal`（済みなら `lolipop/` を使う）
+2. `lolipop/` の中身を `public_html/` へ上書き  
+   - `index.html` → `public_html/index.html`  
+   - `lagado2026/` → `public_html/lagado2026/`（`_next` と `lab/mishiranu-eki` は必ずセット）
+3. 確認: `https://lagado.jp/lagado2026/lab/mishiranu-eki/`（Basic 認証あり）
+
+次回からエージェントに上げさせたい場合は、Cursor Secrets に FTP 用の名前だけ用意してもらう（値はチャットに貼らない）。
+
 ## 次の作業候補
 
-1. `lolipop/` をさくらの `public_html/` へ上げる
+1. 手元でさくらへ上げて公開確認する
 2. リポジトリから `mishiranu-app/` を削除する
 3. 編集20駅の文面を実地・写真メモで更新
 4. Web が安定したら iOS
