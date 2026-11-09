@@ -320,6 +320,49 @@ a.mishiranu-btn {
   animation: mk-rise 0.4s ease-out both;
 }
 
+.mishiranu-chat-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: end;
+  margin: 0 0 1.5rem;
+}
+
+.mishiranu-chat-composer .mishiranu-search {
+  margin: 0;
+}
+
+.mishiranu-chat-composer .mishiranu-btn {
+  height: 3.05rem;
+  white-space: nowrap;
+}
+
+.mishiranu-chat-summary {
+  margin: 0 0 1.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-radius);
+  background: var(--mk-paper);
+}
+
+.mishiranu-chat-summary summary {
+  cursor: pointer;
+  color: var(--mk-warm-deep);
+  letter-spacing: 0.06em;
+  font-size: 0.9rem;
+}
+
+.mishiranu-chat-thread--compact {
+  margin: 0.85rem 0 0;
+  min-height: 0;
+}
+
+@media (max-width: 480px) {
+  .mishiranu-chat-composer {
+    grid-template-columns: 1fr;
+  }
+}
+
 .mishiranu-kicker {
   font-size: 0.75rem;
   letter-spacing: 0.18em;
