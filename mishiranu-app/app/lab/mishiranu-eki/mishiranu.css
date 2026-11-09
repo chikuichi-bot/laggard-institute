@@ -344,6 +344,31 @@ a.mishiranu-btn {
   white-space: nowrap;
 }
 
+.mishiranu-tour-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0 0 1rem;
+}
+
+.mishiranu-tour-back {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--mk-warm-deep);
+  font: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 0.35rem 0;
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+.mishiranu-tour-back:hover {
+  color: var(--mk-ink);
+}
+
 .mishiranu-chat-summary {
   margin: 0 0 1.35rem;
   padding: 0.85rem 1rem;

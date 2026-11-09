@@ -318,9 +318,10 @@ export default function MishiranuApp({
     setStep("pick");
     if (reset) {
       setChatPhase("station");
+      setStationLoading(false);
+      setDynamicStation(null);
       setQuery("");
       setDraft("");
-      setStationLoading(false);
       setMessages([
         {
           id: nextMsgId("guide"),
@@ -865,6 +866,15 @@ export default function MishiranuApp({
 
         {step === "tour" ? (
           <section className="mishiranu-section" aria-labelledby="tour-title">
+            <div className="mishiranu-tour-nav">
+              <button
+                type="button"
+                className="mishiranu-tour-back"
+                onClick={() => goChat(true)}
+              >
+                ← 駅を探し直す
+              </button>
+            </div>
             {messages.length > 1 ? (
               <details className="mishiranu-chat-summary">
                 <summary>これまでの会話</summary>
@@ -1122,7 +1132,7 @@ export default function MishiranuApp({
                 className="mishiranu-btn mishiranu-btn--ghost"
                 onClick={() => goChat(true)}
               >
-                会話をやり直す
+                駅を探し直す
               </button>
             </div>
 
