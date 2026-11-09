@@ -92,7 +92,9 @@ export default function MishiranuApp({
     () => spotsForTime(station, time.index),
     [station, time.index],
   );
-  const activeSpot = spots.find((s) => s.id === activeSpotId) ?? spots[0];
+  const activeSpot =
+    spots.find((s) => s.id === activeSpotId) ??
+    (activeSpotId ? null : spots[0] ?? null);
   const shownCopy = copy ?? seedTourCopy(station);
 
   async function loadCopy(nextStation: StationSeed, nextTimeId: TimeOptionId) {
@@ -336,7 +338,7 @@ export default function MishiranuApp({
               station={station}
               spots={spots}
               radiusKm={station.radiiKm[time.index]}
-              activeSpotId={activeSpot?.id ?? null}
+              activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
               onSelect={setActiveSpotId}
             />
 
@@ -372,10 +374,11 @@ export default function MishiranuApp({
                           <button
                             type="button"
                             className={
-                              activeSpot?.id === item.id
+                              activeSpotId === item.id
                                 ? "mishiranu-guide-item mishiranu-guide-item--active"
                                 : "mishiranu-guide-item"
                             }
+                            aria-pressed={activeSpotId === item.id}
                             onClick={() => setActiveSpotId(item.id)}
                           >
                             <span className="mishiranu-guide-item-name">
