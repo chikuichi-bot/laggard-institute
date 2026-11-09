@@ -51,6 +51,7 @@ Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab
 - 駅データ: `data/mishiranu-stations.ts`（**21駅**編集。先頭は出町柳）
 - 任意の駅名: `POST /api/mishiranu/station` → Gemini 3.1 Flash-Lite（Google検索グラウンディング）で徒歩圏案内を生成
 - Cursor Apps 試作 `mishiranu-app/` と `https://mishiranu-eki.apps.grok.bot` は退役予定（Publish Settings で非公開）
+- `apps.grok.bot` で「Too many requests / Slow down…」と出るのは **Cursor Apps 側のアクセス制限**（アプリ本体のバグではない）。触るときはローカル `localhost:3010` か本サイトへ
 - コピー API: `POST /api/mishiranu/copy`（静的公開では未配信。キーなし／失敗時は編集文）
 - AI モデル: **Gemini 3.1 Flash-Lite**（`gemini-3.1-flash-lite`）— おみくじ文庫の AI 解説と同じ
 - 秘密情報: `GEMINI_API_KEY`（未設定でもプロトは動く）
