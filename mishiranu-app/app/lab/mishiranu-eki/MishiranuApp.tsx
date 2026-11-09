@@ -158,11 +158,11 @@ export default function MishiranuApp() {
                 type="button"
                 className="mishiranu-btn"
                 onClick={() => {
-                  const kobu = STATIONS.find((s) => s.id === "kobuchizawa");
-                  if (kobu) void beginTour(kobu);
+                  const home = STATIONS.find((s) => s.id === "demachiyanagi");
+                  if (home) void beginTour(home);
                 }}
               >
-                小淵沢ですぐ見る
+                出町柳ですぐ見る
               </button>
             </div>
           </section>
