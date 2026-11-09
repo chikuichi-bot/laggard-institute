@@ -252,49 +252,72 @@ export function parseAiStationPayload(
   return station;
 }
 
-export async function generateStationGuideWithGemini(
-  rawName: string,
+type GeminiCallResult =
+  | { ok: true; text: string }
+  | { ok: false; error: string; message: string };
+
+const GEMINI_FAST_MS = 18_000;
+const GEMINI_GROUNDED_MS = 28_000;
+
+async function callGeminiGenerate(
   apiKey: string,
-): Promise<AiStationResult | { error: string; message: string }> {
-  const prompt = buildStationPrompt(rawName);
-
-  const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      tools: [{ google_search: {} }],
-      generationConfig: {
-        temperature: 0.6,
-        maxOutputTokens: 4096,
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    return {
-      error: "gemini_http",
-      message: `Gemini への接続に失敗しました（${res.status}）。${detail.slice(0, 120)}`,
+  body: Record<string, unknown>,
+  timeoutMs: number,
+): Promise<GeminiCallResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      return {
+        ok: false,
+        error: "gemini_http",
+        message: `Gemini への接続に失敗しました（${res.status}）。${detail.slice(0, 120)}`,
+      };
+    }
+    const data = (await res.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+      }>;
     };
-  }
-
-  const data = (await res.json()) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-    }>;
-  };
-  const text = data.candidates?.[0]?.content?.parts
-    ?.map((p) => p.text ?? "")
-    .join("")
-    .trim();
-  if (!text) {
+    const text = data.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text ?? "")
+      .join("")
+      .trim();
+    if (!text) {
+      return {
+        ok: false,
+        error: "empty_response",
+        message: "Gemini から案内が返りませんでした。もう一度どうぞ。",
+      };
+    }
+    return { ok: true, text };
+  } catch (err) {
+    const aborted =
+      err instanceof Error &&
+      (err.name === "AbortError" || /aborted/i.test(err.message));
     return {
-      error: "empty_response",
-      message: "Gemini から案内が返りませんでした。もう一度どうぞ。",
+      ok: false,
+      error: aborted ? "timeout" : "network",
+      message: aborted
+        ? "案内の生成が時間切れになりました。もう一度どうぞ。"
+        : "Gemini への通信に失敗しました。もう一度どうぞ。",
     };
+  } finally {
+    clearTimeout(timer);
   }
+}
 
+function stationFromGeminiText(
+  text: string,
+  rawName: string,
+): AiStationResult | { error: string; message: string } {
   const parsed = extractJsonObject(text);
   if (!parsed) {
     return {
@@ -302,8 +325,61 @@ export async function generateStationGuideWithGemini(
       message: "案内の形式を読めませんでした。もう一度どうぞ。",
     };
   }
-
   const stationOrErr = parseAiStationPayload(parsed, rawName);
   if ("error" in stationOrErr) return stationOrErr;
   return { station: stationOrErr, source: "ai" };
+}
+
+/**
+ * Prefer a fast JSON-only call (fits published-app budgets).
+ * Fall back once to Google Search grounding if the fast path is empty/malformed.
+ */
+export async function generateStationGuideWithGemini(
+  rawName: string,
+  apiKey: string,
+): Promise<AiStationResult | { error: string; message: string }> {
+  const prompt = buildStationPrompt(rawName);
+  const contents = [{ role: "user", parts: [{ text: prompt }] }];
+
+  const fast = await callGeminiGenerate(
+    apiKey,
+    {
+      contents,
+      generationConfig: {
+        temperature: 0.45,
+        maxOutputTokens: 2800,
+        responseMimeType: "application/json",
+      },
+    },
+    GEMINI_FAST_MS,
+  );
+
+  if (fast.ok) {
+    const parsed = stationFromGeminiText(fast.text, rawName);
+    if (!("error" in parsed) || parsed.error === "not_a_station") {
+      return parsed;
+    }
+  } else if (fast.error === "gemini_http") {
+    // Auth / quota issues won't improve with a second call.
+    return { error: fast.error, message: fast.message };
+  }
+
+  const grounded = await callGeminiGenerate(
+    apiKey,
+    {
+      contents,
+      tools: [{ google_search: {} }],
+      generationConfig: {
+        temperature: 0.5,
+        maxOutputTokens: 3200,
+      },
+    },
+    GEMINI_GROUNDED_MS,
+  );
+
+  if (!grounded.ok) {
+    if (fast.ok) return stationFromGeminiText(fast.text, rawName);
+    return { error: grounded.error, message: grounded.message };
+  }
+  return stationFromGeminiText(grounded.text, rawName);
 }

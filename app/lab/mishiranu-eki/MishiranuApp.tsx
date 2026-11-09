@@ -332,7 +332,11 @@ export default function MishiranuApp({
     syncUrl("pick", stationIdRef.current, timeIdRef.current, focusKinds);
   }
 
-  function chooseStation(next: StationSeed, spoken?: string) {
+  function chooseStation(
+    next: StationSeed,
+    spoken?: string,
+    opts?: { omitYou?: boolean },
+  ) {
     if (next.source === "ai" || next.id.startsWith("ai-")) {
       setDynamicStation(next);
     } else {
@@ -346,13 +350,40 @@ export default function MishiranuApp({
       next.source === "ai"
         ? " Gemini が徒歩圏の案内をつくりました。時間は目安なので、現地でも確認を。"
         : "";
-    pushMessages(
-      { role: "you", text: spoken ?? `${next.name}駅です` },
-      {
-        role: "guide",
-        text: `${next.name}ですね。${next.prefecture}・${next.line}。${aiNote}今日はどれくらい寄り道できますか？`,
-      },
-    );
+    const guideText = `${next.name}ですね。${next.prefecture}・${next.line}。${aiNote}今日はどれくらい寄り道できますか？`;
+    if (opts?.omitYou) {
+      pushMessages({ role: "guide", text: guideText });
+    } else {
+      pushMessages(
+        { role: "you", text: spoken ?? `${next.name}駅です` },
+        { role: "guide", text: guideText },
+      );
+    }
+  }
+
+  function stationLookupErrorMessage(
+    status: number,
+    data: { error?: string; message?: string; reason?: string },
+    raw: string,
+  ): string {
+    if (data.message) return data.message;
+    if (
+      data.error === "sign_in_required" ||
+      data.error === "unauthorized" ||
+      data.reason === "missing_header"
+    ) {
+      return "サインインが必要です。ページを再読み込みしてから、もう一度どうぞ。";
+    }
+    if (
+      data.error === "rate_limited" ||
+      /too many requests/i.test(raw)
+    ) {
+      return "いま混み合っています。少し待ってから、もう一度どうぞ。";
+    }
+    if (!raw.trim() || status >= 502) {
+      return "案内の応答が途切れました。もう一度どうぞ。";
+    }
+    return "その名前では案内をつくれませんでした。別の駅名でもう一度どうぞ。";
   }
 
   async function requestAiStation(rawName: string, spoken?: string) {
@@ -372,20 +403,30 @@ export default function MishiranuApp({
       const res = await fetch("/api/mishiranu/station", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ name }),
       });
-      const data = (await res.json()) as {
+      const raw = await res.text();
+      let data: {
         station?: StationSeed;
         source?: "ai" | "seed";
         error?: string;
         message?: string;
-      };
+        reason?: string;
+      } = {};
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : {};
+      } catch {
+        pushMessages({
+          role: "guide",
+          text: stationLookupErrorMessage(res.status, {}, raw),
+        });
+        return;
+      }
       if (!res.ok || !data.station) {
         pushMessages({
           role: "guide",
-          text:
-            data.message ||
-            "その名前では案内をつくれませんでした。別の駅名でもう一度どうぞ。",
+          text: stationLookupErrorMessage(res.status, data, raw),
         });
         return;
       }
@@ -393,7 +434,7 @@ export default function MishiranuApp({
         ...data.station,
         source: data.source ?? data.station.source ?? "ai",
       };
-      chooseStation(next, spoken ?? `${next.name}駅です`);
+      chooseStation(next, spoken, { omitYou: true });
     } catch {
       pushMessages({
         role: "guide",

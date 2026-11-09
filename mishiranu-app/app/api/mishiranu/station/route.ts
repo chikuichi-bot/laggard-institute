@@ -5,6 +5,8 @@ import { requireIdentity } from "../../../../cursor/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** Hosted apps may cut long Gemini+Search calls; keep headroom for the fast path + one retry. */
+export const maxDuration = 60;
 
 type Body = {
   name?: string;
@@ -32,7 +34,10 @@ export async function POST(request: Request) {
 
   if (!allowViewerRequest(`station:${identity.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
     return Response.json(
-      { error: "rate_limited" },
+      {
+        error: "rate_limited",
+        message: "いま混み合っています。少し待ってから、もう一度どうぞ。",
+      },
       { status: 429, headers: NO_STORE },
     );
   }

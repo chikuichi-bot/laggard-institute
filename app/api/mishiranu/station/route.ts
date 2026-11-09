@@ -2,6 +2,7 @@ import { STATIONS } from "@/data/mishiranu-stations";
 import { generateStationGuideWithGemini } from "@/lib/mishiranu-station-ai";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type Body = {
   name?: string;
