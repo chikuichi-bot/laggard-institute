@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import {
   GENRE_LABEL,
@@ -15,6 +16,15 @@ import {
 } from "@/data/mishiranu-stations";
 import type { TourCopy } from "@/lib/mishiranu-copy";
 import "./mishiranu.css";
+
+const StationMap = dynamic(() => import("./StationMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="mishiranu-map mishiranu-map--live" aria-hidden="true">
+      <div className="mishiranu-leaflet" />
+    </div>
+  ),
+});
 
 type Step = "hero" | "pick" | "tour";
 
@@ -83,7 +93,6 @@ export default function MishiranuApp({
     [station, time.index],
   );
   const activeSpot = spots.find((s) => s.id === activeSpotId) ?? spots[0];
-  const ringSize = `${28 + time.index * 18}%`;
   const shownCopy = copy ?? seedTourCopy(station);
 
   async function loadCopy(nextStation: StationSeed, nextTimeId: TimeOptionId) {
@@ -319,36 +328,13 @@ export default function MishiranuApp({
               </div>
             ) : null}
 
-            <div
-              className={`mishiranu-map${station.mood === "empty" ? " mishiranu-map--empty" : ""}`}
-              role="img"
-              aria-label={`${station.name}駅周辺の抽象マップ`}
-            >
-              <div className="mishiranu-map-rails" aria-hidden="true" />
-              <div className="mishiranu-map-mist" aria-hidden="true" />
-              <div
-                className="mishiranu-map-ring"
-                style={{ ["--ring-size" as string]: ringSize }}
-              />
-              <div className="mishiranu-map-station" title={`${station.name}駅`} />
-              <span className="mishiranu-map-station-label">{station.name}</span>
-              {spots.map((spot, i) => (
-                <button
-                  key={spot.id}
-                  type="button"
-                  className="mishiranu-pin"
-                  data-genre={spot.genre}
-                  style={{
-                    left: `${spot.x * 100}%`,
-                    top: `${spot.y * 100}%`,
-                    animationDelay: `${0.08 * i}s`,
-                  }}
-                  aria-label={spot.name}
-                  aria-pressed={activeSpot?.id === spot.id}
-                  onClick={() => setActiveSpotId(spot.id)}
-                />
-              ))}
-            </div>
+            <StationMap
+              station={station}
+              spots={spots}
+              radiusKm={station.radiiKm[time.index]}
+              activeSpotId={activeSpot?.id ?? null}
+              onSelect={setActiveSpotId}
+            />
 
             <ul className="mishiranu-legend">
               {GENRE_ORDER.map((genre) => (
@@ -433,8 +419,8 @@ export default function MishiranuApp({
             ) : null}
 
             <p className="mishiranu-foot">
-              出町柳など編集駅で感触確認中。公開環境に GEMINI_API_KEY があれば
-              Gemini 3.1 Flash-Lite、なければ編集文です。
+              地図は OpenStreetMap / CARTO（暗いタイル）。出町柳ピンは実座標寄り。
+              GEMINI_API_KEY があれば Gemini 3.1 Flash-Lite、なければ編集文です。
             </p>
           </section>
         ) : null}
