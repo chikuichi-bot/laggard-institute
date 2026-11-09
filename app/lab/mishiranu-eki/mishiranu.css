@@ -278,6 +278,20 @@ a.mishiranu-btn {
   color: #fff;
 }
 
+.mishiranu-chat-chip--active {
+  border-color: var(--mk-warm);
+  color: var(--mk-warm-deep);
+  background: var(--mk-warm-soft);
+}
+
+.mishiranu-region-chips {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.15rem 0 0.25rem;
+}
+
 .mishiranu-chat-search {
   flex-basis: 100%;
   margin-top: 0.35rem;
@@ -289,7 +303,7 @@ a.mishiranu-btn {
   padding: 0;
   display: grid;
   gap: 0.5rem;
-  max-height: min(40vh, 18rem);
+  max-height: min(52vh, 26rem);
   overflow: auto;
 }
 

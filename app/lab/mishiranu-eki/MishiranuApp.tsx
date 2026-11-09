@@ -16,6 +16,7 @@ import {
   MEAL_TIER_ORDER,
   MEAL_TIME_LABEL,
   MEAL_TIME_ORDER,
+  REGIONS,
   STATIONS,
   TIME_OPTIONS,
   bikeRentalFor,
@@ -129,7 +130,7 @@ function nextMsgId(prefix: string) {
 }
 
 const OPENING_GUIDE =
-  "降りた駅の、徒歩圏だけを、物語にします。いま、どの駅にいますか？ ボタンでも、そのまま入力でも大丈夫です。";
+  `降りた駅の、徒歩圏だけを、物語にします。編集 ${STATIONS.length} 駅（各地）。地域や駅名で選ぶか、おまかせでも大丈夫です。`;
 
 export default function MishiranuApp({
   initialStep = "hero",
@@ -150,7 +151,9 @@ export default function MishiranuApp({
   );
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
-  const [showStationSearch, setShowStationSearch] = useState(false);
+  const [regionFilter, setRegionFilter] = useState<(typeof REGIONS)[number] | "all">(
+    "all",
+  );
   const [chatPhase, setChatPhase] = useState<ChatPhase>("station");
   const [messages, setMessages] = useState<ChatMsg[]>(() => [
     {
@@ -208,6 +211,7 @@ export default function MishiranuApp({
   const filteredStations = useMemo(() => {
     const q = query.trim();
     return STATIONS.filter((s) => {
+      if (regionFilter !== "all" && s.region !== regionFilter) return false;
       if (!q) return true;
       return (
         s.name.includes(q) ||
@@ -215,8 +219,17 @@ export default function MishiranuApp({
         s.line.includes(q) ||
         s.tourTitle.includes(q)
       );
-    }).slice(0, 8);
-  }, [query]);
+    });
+  }, [query, regionFilter]);
+
+  const regionCounts = useMemo(() => {
+    const counts = Object.fromEntries(REGIONS.map((r) => [r, 0])) as Record<
+      (typeof REGIONS)[number],
+      number
+    >;
+    for (const s of STATIONS) counts[s.region] += 1;
+    return counts;
+  }, []);
 
   const time = TIME_OPTIONS.find((t) => t.id === timeId) ?? TIME_OPTIONS[0];
   // ご飯・お土産・観光・休むところ・寄り道は常に全部出す（重点は並びだけ）
@@ -232,7 +245,7 @@ export default function MishiranuApp({
   useEffect(() => {
     if (step !== "pick") return;
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, showStationSearch, chatPhase, step, draft]);
+  }, [messages, chatPhase, step, draft, regionFilter, query]);
 
   async function loadCopy(nextStation: StationSeed, nextTimeId: TimeOptionId) {
     setCopyLoading(true);
@@ -392,7 +405,7 @@ export default function MishiranuApp({
           { role: "you", text },
           {
             role: "guide",
-            text: "その駅名は、いまの編集リストに見つかりませんでした。出町柳や駅名の一部でもう一度どうぞ。",
+            text: "その駅名は、いまの編集リストに見つかりませんでした。地域チップか駅名の一部でもう一度どうぞ。",
           },
         );
         setDraft("");
@@ -503,21 +516,25 @@ export default function MishiranuApp({
                   className="mishiranu-btn mishiranu-btn--primary"
                   onClick={() => goChat(true)}
                 >
-                  会話ではじめる
+                  駅を選んではじめる
                 </button>
                 <button
                   type="button"
                   className="mishiranu-btn"
-                  onClick={() => goTour("demachiyanagi", "1h", [])}
+                  onClick={() => {
+                    const pool = STATIONS;
+                    const pick = pool[Math.floor(Math.random() * pool.length)]!;
+                    goTour(pick.id, "1h", []);
+                  }}
                 >
-                  出町柳ですぐ見る
+                  おまかせの駅ですぐ見る
                 </button>
               </div>
               <p className="mishiranu-fallback-links">
                 押せないとき:{" "}
-                <a href="?view=tour&station=demachiyanagi&time=1h">出町柳の物語へ</a>
+                <a href="?view=pick">駅を選ぶ会話へ</a>
                 {" · "}
-                <a href="?view=pick">会話へ</a>
+                <a href="?view=tour&station=demachiyanagi&time=1h">出町柳の例</a>
               </p>
             </div>
           </section>
@@ -559,53 +576,73 @@ export default function MishiranuApp({
                 <button
                   type="button"
                   className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                  onClick={() =>
-                    chooseStation(
-                      STATIONS.find((s) => s.id === "demachiyanagi") ??
-                        STATIONS[0],
-                      "出町柳にいます",
-                    )
-                  }
+                  onClick={() => {
+                    const pick =
+                      STATIONS[Math.floor(Math.random() * STATIONS.length)]!;
+                    chooseStation(pick, `${pick.name}にいます（おまかせ）`);
+                  }}
                 >
-                  出町柳にいます
+                  おまかせの駅
                 </button>
-                <button
-                  type="button"
-                  className="mishiranu-chat-chip"
-                  onClick={() => setShowStationSearch((v) => !v)}
-                >
-                  駅名で探す
-                </button>
-                {showStationSearch ? (
-                  <div className="mishiranu-chat-search">
-                    <label className="mishiranu-search">
-                      <span className="mishiranu-search-label">駅名・路線</span>
-                      <input
-                        type="search"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="例: 出町柳 / 叡山 / 京都"
-                        autoComplete="off"
-                        autoFocus
-                      />
-                    </label>
-                    <ul className="mishiranu-chat-station-list">
-                      {filteredStations.map((s) => (
-                        <li key={s.id}>
-                          <button type="button" onClick={() => chooseStation(s)}>
-                            <span className="mishiranu-station-name">{s.name}</span>
-                            <span className="mishiranu-station-meta">
-                              {s.prefecture} · {s.line}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                    {filteredStations.length === 0 ? (
-                      <p className="mishiranu-note">該当する駅がありません。</p>
-                    ) : null}
-                  </div>
-                ) : null}
+                <div className="mishiranu-region-chips" aria-label="地域で絞る">
+                  <button
+                    type="button"
+                    className={
+                      regionFilter === "all"
+                        ? "mishiranu-chat-chip mishiranu-chat-chip--active"
+                        : "mishiranu-chat-chip"
+                    }
+                    onClick={() => setRegionFilter("all")}
+                  >
+                    全国 · {STATIONS.length}
+                  </button>
+                  {REGIONS.filter((r) => regionCounts[r] > 0).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={
+                        regionFilter === r
+                          ? "mishiranu-chat-chip mishiranu-chat-chip--active"
+                          : "mishiranu-chat-chip"
+                      }
+                      onClick={() => setRegionFilter(r)}
+                    >
+                      {r} · {regionCounts[r]}
+                    </button>
+                  ))}
+                </div>
+                <div className="mishiranu-chat-search">
+                  <label className="mishiranu-search">
+                    <span className="mishiranu-search-label">駅名・路線・県</span>
+                    <input
+                      type="search"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="例: 尾道 / 中央本線 / 北海道"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <ul className="mishiranu-chat-station-list">
+                    {filteredStations.map((s) => (
+                      <li key={s.id}>
+                        <button type="button" onClick={() => chooseStation(s)}>
+                          <span className="mishiranu-station-name">{s.name}</span>
+                          <span className="mishiranu-station-meta">
+                            {s.region} · {s.prefecture} · {s.line}
+                            {s.mood === "empty" ? " · 余白" : ""}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {filteredStations.length === 0 ? (
+                    <p className="mishiranu-note">該当する駅がありません。</p>
+                  ) : (
+                    <p className="mishiranu-note">
+                      {filteredStations.length} 駅 — どれでも同じ案内の型で歩けます。
+                    </p>
+                  )}
+                </div>
               </div>
             ) : null}
 

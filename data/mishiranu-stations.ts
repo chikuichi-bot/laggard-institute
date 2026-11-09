@@ -454,6 +454,13 @@ export const STATIONS: StationSeed[] = [
     region: "北海道",
     mood: "empty",
     radiiKm: [1.5, 2.8, 3.5],
+    stationIntro:
+      "富良野線の小さな駅。観光地リストより、風と空の広さが先に来る場所です。",
+    bikeRental: {
+      available: false,
+      summary:
+        "駅周辺のレンタサイクルは季節・天候で変わります。観光案内や宿に確認を。",
+    },
     tourTitle: "見渡す限りの余白を、歩く",
     catchCopy: "観光地リストは空欄のまま、風景だけが厚い。",
     emptyCopy: {
@@ -482,7 +489,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.38,
         walkMinutes: 9,
       },
-    ],
+    
+      {
+        id: "biei-r",
+        name: "ホーム脇のベンチ",
+        genre: "nature",
+        guide: "rest",
+        hours: "列車運行時間内",
+        blurb:
+          "荷物を下ろして、風だけ数える。予定のない駅の、いちばん素直な休み方。",
+        x: 0.48,
+        y: 0.55,
+        walkMinutes: 1,
+      },
+      {
+        id: "biei-t",
+        name: "駅名標の影",
+        genre: "odd",
+        guide: "tip",
+        hours: "終日（屋外）",
+        blurb:
+          "写真より、影の長さを見る。時刻表より正確に、いまの光を教えてくれる。",
+        x: 0.55,
+        y: 0.48,
+        walkMinutes: 1,
+      },
+],
   },
   {
     id: "kanita",
@@ -492,6 +524,13 @@ export const STATIONS: StationSeed[] = [
     region: "東北",
     mood: "story",
     radiiKm: [1.0, 2.0, 2.8],
+    stationIntro:
+      "津軽線の港町側。フェリーと風が、町の時計代わりになっています。",
+    bikeRental: {
+      available: false,
+      summary:
+        "港まわりは徒歩が基本。自転車貸出は案内所・宿で要確認です。",
+    },
     tourTitle: "海峡の手前で、風と定食を待つ",
     catchCopy: "フェリーの気配だけが、町の時計になっている。",
     spots: [
@@ -529,7 +568,44 @@ export const STATIONS: StationSeed[] = [
         y: 0.36,
         walkMinutes: 15,
       },
-    ],
+    
+      {
+        id: "kanita-s",
+        name: "港の干物屋の袋",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜17:00）",
+        blurb:
+          "匂いの強い土産ほど、旅の記憶が長い。袋のまま荷物に忍ばせる。",
+        x: 0.7,
+        y: 0.5,
+        walkMinutes: 14,
+      },
+      {
+        id: "kanita-r",
+        name: "待合の長いす",
+        genre: "history",
+        guide: "rest",
+        hours: "列車運行時間内（駅構内）",
+        blurb:
+          "発車まで、風音を聞く席。港町の休憩は、ここで足りることが多い。",
+        x: 0.5,
+        y: 0.52,
+        walkMinutes: 1,
+      },
+      {
+        id: "kanita-t",
+        name: "踏切の待ち時間",
+        genre: "odd",
+        guide: "tip",
+        hours: "終日（屋外）",
+        blurb:
+          "遮断機が上がるまでが、短い寄り道。海峡の手前の、小さな余白。",
+        x: 0.4,
+        y: 0.48,
+        walkMinutes: 4,
+      },
+],
   },
   {
     id: "ashio",
@@ -539,6 +615,13 @@ export const STATIONS: StationSeed[] = [
     region: "関東",
     mood: "story",
     radiiKm: [1.1, 2.2, 3.0],
+    stationIntro:
+      "わたらせ渓谷の谷あい。銅山の記憶が、駅の空気にまだ残っています。",
+    bikeRental: {
+      available: false,
+      summary:
+        "谷沿いは徒歩・鉄道が主。レンタサイクルは近隣観光地で要確認です。",
+    },
     tourTitle: "銅山の影をたどる、谷あいの半日",
     catchCopy: "山の中腹に、産業の記憶が静かに残っている。",
     spots: [
@@ -573,7 +656,46 @@ export const STATIONS: StationSeed[] = [
         walkMinutes: 14,
         secretWorthy: true,
       },
-    ],
+    
+      {
+        id: "ashio-m",
+        name: "駅前の食堂の定食",
+        genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch"],
+        hours: "店による（おおよそ 11:00〜14:00）",
+        blurb:
+          "味噌汁の湯気が、谷の湿り気と混ざる。鉱山町の昼は、これで十分。",
+        x: 0.55,
+        y: 0.48,
+        walkMinutes: 5,
+      },
+      {
+        id: "ashio-s",
+        name: "鉱山切手・記念の紙",
+        genre: "history",
+        guide: "souvenir",
+        hours: "施設による（おおよそ 9:00〜16:00）",
+        blurb:
+          "軽い紙ものが、いちばん持ち帰れる産業遺産。",
+        x: 0.62,
+        y: 0.55,
+        walkMinutes: 12,
+      },
+      {
+        id: "ashio-r",
+        name: "渓流の見える橋のたもと",
+        genre: "nature",
+        guide: "rest",
+        hours: "終日（屋外）",
+        blurb:
+          "水音が会話をひとつ減らす場所。靴のまま、足を止めるだけでいい。",
+        x: 0.3,
+        y: 0.42,
+        walkMinutes: 10,
+      },
+],
   },
   {
     id: "sawara",
@@ -583,6 +705,13 @@ export const STATIONS: StationSeed[] = [
     region: "関東",
     mood: "story",
     radiiKm: [1.2, 2.4, 3.2],
+    stationIntro:
+      "成田線の水郷の町。小野川と蔵造りの通りが、歩く速さに合わせて息をします。",
+    bikeRental: {
+      available: false,
+      summary:
+        "町歩き向けのレンタサイクルが案内所まわりにあることがあります。要確認。",
+    },
     tourTitle: "小野川沿いの蔵と、甘い香りを巡る",
     catchCopy: "水郷の町は、歩く速さに合わせて息をする。",
     spots: [
@@ -630,7 +759,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.55,
         walkMinutes: 9,
       },
-    ],
+    
+      {
+        id: "sawara-s",
+        name: "川沿いの醤油スイーツ缶",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "店による（おおよそ 10:00〜17:00）",
+        blurb:
+          "甘い香りの缶は、手土産にも自分用にもなる水郷の軽い荷物。",
+        x: 0.58,
+        y: 0.42,
+        walkMinutes: 11,
+      },
+      {
+        id: "sawara-r",
+        name: "小野川の縁台",
+        genre: "nature",
+        guide: "rest",
+        hours: "終日（屋外）",
+        blurb:
+          "舟の影が横切るのを待つ席。商店街のあいだの、静かな一休み。",
+        x: 0.5,
+        y: 0.4,
+        walkMinutes: 10,
+      },
+],
   },
   {
     id: "manazuru",
@@ -640,6 +794,13 @@ export const STATIONS: StationSeed[] = [
     region: "関東",
     mood: "story",
     radiiKm: [1.0, 2.0, 3.0],
+    stationIntro:
+      "東海道線の岬の入口。石材と潮の匂いが、駅前からすでに始まっています。",
+    bikeRental: {
+      available: false,
+      summary:
+        "坂と港まわりは徒歩向き。シェアサイクルは近隣駅で要確認です。",
+    },
     tourTitle: "岬の坂道と石材の匂いをたどる半日",
     catchCopy: "海が見えなくても、町はすでに潮の匂いがする。",
     spots: [
@@ -687,7 +848,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.28,
         walkMinutes: 11,
       },
-    ],
+    
+      {
+        id: "manazuru-s",
+        name: "石の小さな文鎮",
+        genre: "odd",
+        guide: "souvenir",
+        hours: "店による（おおよそ 10:00〜17:00）",
+        blurb:
+          "真鶴の石の感触だけ持ち帰れる。重いのに、旅の荷物としてちょうどいい。",
+        x: 0.52,
+        y: 0.5,
+        walkMinutes: 5,
+      },
+      {
+        id: "manazuru-r",
+        name: "雑木公園のベンチ",
+        genre: "nature",
+        guide: "rest",
+        hours: "終日（公園）",
+        blurb:
+          "電車の音が遠い席。海が見えなくても、潮の匂いが休憩になる。",
+        x: 0.3,
+        y: 0.44,
+        walkMinutes: 10,
+      },
+],
   },
   {
     id: "hamakanaya",
@@ -697,6 +883,13 @@ export const STATIONS: StationSeed[] = [
     region: "関東",
     mood: "story",
     radiiKm: [1.1, 2.3, 3.1],
+    stationIntro:
+      "内房線、鋸山のふもと。山と港の矢印が、同じ案内板に同居しています。",
+    bikeRental: {
+      available: false,
+      summary:
+        "港・登山口まわりは徒歩が主。自転車は観光案内で要確認です。",
+    },
     tourTitle: "鋸山のふもとで、海風と団子を分ける",
     catchCopy: "山を見上げるか、海を見るか。駅はどちらも手放さない。",
     spots: [
@@ -734,7 +927,44 @@ export const STATIONS: StationSeed[] = [
         y: 0.45,
         walkMinutes: 14,
       },
-    ],
+    
+      {
+        id: "hamakanaya-s",
+        name: "港の塩気のお菓子",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜17:00）",
+        blurb:
+          "袋のまま持てる、海風の味。帰りの車窓用の土産。",
+        x: 0.62,
+        y: 0.58,
+        walkMinutes: 8,
+      },
+      {
+        id: "hamakanaya-r",
+        name: "案内板の影",
+        genre: "history",
+        guide: "rest",
+        hours: "終日（屋外）",
+        blurb:
+          "登山と港、どちらを選ぶか迷う時間が、すでに休み。",
+        x: 0.5,
+        y: 0.5,
+        walkMinutes: 2,
+      },
+      {
+        id: "hamakanaya-t",
+        name: "フェリー乗り場の風",
+        genre: "odd",
+        guide: "tip",
+        hours: "運航時間内（屋外）",
+        blurb:
+          "乗らなくても、発着の気配だけで町のリズムがわかる。",
+        x: 0.72,
+        y: 0.55,
+        walkMinutes: 10,
+      },
+],
   },
   {
     id: "nagatoro",
@@ -744,6 +974,13 @@ export const STATIONS: StationSeed[] = [
     region: "関東",
     mood: "story",
     radiiKm: [1.2, 2.5, 3.2],
+    stationIntro:
+      "秩父鉄道の渓谷入口。岩畳の手前で、茶屋と川音が先に出迎えます。",
+    bikeRental: {
+      available: false,
+      summary:
+        "駅前に観光向けレンタサイクルがある季節があります。川沿い散策向き。",
+    },
     tourTitle: "岩畳の手前で、茶屋と川音を拾う",
     catchCopy: "観光の入口に立つだけで、すでに渓谷の一部。",
     spots: [
@@ -781,7 +1018,44 @@ export const STATIONS: StationSeed[] = [
         y: 0.35,
         walkMinutes: 12,
       },
-    ],
+    
+      {
+        id: "nagatoro-s",
+        name: "川霧の羊羹",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜17:00）",
+        blurb:
+          "冷たい川の記憶を、紙箱に入れて持ち帰れる。",
+        x: 0.55,
+        y: 0.48,
+        walkMinutes: 6,
+      },
+      {
+        id: "nagatoro-r",
+        name: "土手の腰かけ石",
+        genre: "nature",
+        guide: "rest",
+        hours: "終日（屋外）",
+        blurb:
+          "岩畳まで行かなくても、川は十分に語る。ここで一度、足を下ろす。",
+        x: 0.38,
+        y: 0.38,
+        walkMinutes: 12,
+      },
+      {
+        id: "nagatoro-t",
+        name: "のれんのあいだ",
+        genre: "odd",
+        guide: "tip",
+        hours: "店による（おおよそ 9:00〜18:00）",
+        blurb:
+          "商店街の影の間隔が、昔の歩幅を覚えている。",
+        x: 0.48,
+        y: 0.5,
+        walkMinutes: 4,
+      },
+],
   },
   {
     id: "katsunuma",
@@ -791,6 +1065,13 @@ export const STATIONS: StationSeed[] = [
     region: "中部",
     mood: "story",
     radiiKm: [1.3, 2.6, 3.3],
+    stationIntro:
+      "中央本線の葡萄郷。線路の向こうに、季節の甘さが見える駅です。",
+    bikeRental: {
+      available: false,
+      summary:
+        "畑道の散策向けにレンタサイクルがあることがあります。季節要確認。",
+    },
     tourTitle: "葡萄棚のあいだを、駅からゆるく歩く",
     catchCopy: "線路の向こうに、季節の甘さが見える。",
     spots: [
@@ -828,7 +1109,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.62,
         walkMinutes: 11,
       },
-    ],
+    
+      {
+        id: "katsunuma-s",
+        name: "小さな瓶の葡萄ジュース",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "店による（おおよそ 10:00〜17:00）",
+        blurb:
+          "試飲のあと、軽い瓶をひとつ。棚のあいだの土産。",
+        x: 0.58,
+        y: 0.5,
+        walkMinutes: 12,
+      },
+      {
+        id: "katsunuma-r",
+        name: "葡萄棚の木陰",
+        genre: "nature",
+        guide: "rest",
+        hours: "終日（屋外・季節による）",
+        blurb:
+          "葉の隙間の風が、休憩のタイマー。暑い日ほど効く。",
+        x: 0.42,
+        y: 0.42,
+        walkMinutes: 8,
+      },
+],
   },
   {
     id: "kobuchizawa",
@@ -838,6 +1144,13 @@ export const STATIONS: StationSeed[] = [
     region: "中部",
     mood: "story",
     radiiKm: [1.2, 2.4, 3.2],
+    stationIntro:
+      "中央本線の高原の結節。乗り換えの合間に、山の匂いだけ持ち帰れます。",
+    bikeRental: {
+      available: false,
+      summary:
+        "高原散策向けのレンタサイクルが駅周辺にあることがあります。要確認。",
+    },
     tourTitle: "高原の風と自家焙煎を巡る、レトロ駅前散歩",
     catchCopy: "乗り換えの合間に、山の匂いだけ持ち帰れる駅。",
     spots: [
@@ -895,7 +1208,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.7,
         walkMinutes: 18,
       },
-    ],
+    
+      {
+        id: "kobuchizawa-s",
+        name: "駅前の高原みやげ袋",
+        genre: "history",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜18:00）",
+        blurb:
+          "軽い袋菓子やシール。乗り換え時間でも買い足せる土産。",
+        x: 0.55,
+        y: 0.5,
+        walkMinutes: 3,
+      },
+      {
+        id: "kobuchizawa-r",
+        name: "待合の窓際",
+        genre: "history",
+        guide: "rest",
+        hours: "列車運行時間内（駅構内）",
+        blurb:
+          "木の椅子と掲示板。発車までの余白が、いちばん高原らしい。",
+        x: 0.48,
+        y: 0.52,
+        walkMinutes: 1,
+      },
+],
   },
   {
     id: "obasute",
@@ -905,6 +1243,13 @@ export const STATIONS: StationSeed[] = [
     region: "中部",
     mood: "empty",
     radiiKm: [1.0, 2.0, 2.8],
+    stationIntro:
+      "篠ノ井線の棚田の駅。夜景で有名でも、昼間の余白はまだ静かです。",
+    bikeRental: {
+      available: false,
+      summary:
+        "急勾配のため徒歩が基本。自転車は近隣観光拠点で要確認です。",
+    },
     tourTitle: "棚田の光だけを、駅で受け取る",
     catchCopy: "夜景で有名でも、昼間の余白はまだ知られていない。",
     emptyCopy: {
@@ -933,7 +1278,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.58,
         walkMinutes: 8,
       },
-    ],
+    
+      {
+        id: "obasute-r",
+        name: "ホーム端の腰かけ",
+        genre: "nature",
+        guide: "rest",
+        hours: "列車運行時間内（ホーム）",
+        blurb:
+          "棚田の光を、座ったまま受け取る。観光写真より先に、余白がある。",
+        x: 0.52,
+        y: 0.46,
+        walkMinutes: 1,
+      },
+      {
+        id: "obasute-t",
+        name: "駅名標と勾配",
+        genre: "odd",
+        guide: "tip",
+        hours: "終日（屋外）",
+        blurb:
+          "名前を読むより、足元の傾きを感じる。姨捨はそこで始まる。",
+        x: 0.48,
+        y: 0.5,
+        walkMinutes: 1,
+      },
+],
   },
   {
     id: "shimosuwa",
@@ -943,6 +1313,13 @@ export const STATIONS: StationSeed[] = [
     region: "中部",
     mood: "story",
     radiiKm: [1.1, 2.3, 3.0],
+    stationIntro:
+      "中央本線の温泉と中山道の町。敷石の感触が、すでに湯治の入口です。",
+    bikeRental: {
+      available: false,
+      summary:
+        "温泉街は徒歩向き。レンタサイクルは観光案内所で要確認です。",
+    },
     tourTitle: "温泉街の路地と、湖風のあいだ",
     catchCopy: "中山道の名残が、足元の敷石に残っている。",
     spots: [
@@ -980,7 +1357,44 @@ export const STATIONS: StationSeed[] = [
         y: 0.65,
         walkMinutes: 16,
       },
-    ],
+    
+      {
+        id: "shimosuwa-s",
+        name: "温泉まんじゅうの箱",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜18:00）",
+        blurb:
+          "湯気の町の定番手土産。冷めても旅の匂いが残る。",
+        x: 0.55,
+        y: 0.45,
+        walkMinutes: 8,
+      },
+      {
+        id: "shimosuwa-r",
+        name: "足湯のふち",
+        genre: "odd",
+        guide: "rest",
+        hours: "施設による（おおよそ 9:00〜21:00）",
+        blurb:
+          "靴を脱いだ瞬間、予定がひとつ減る。湖風の手前の休み。",
+        x: 0.5,
+        y: 0.48,
+        walkMinutes: 9,
+      },
+      {
+        id: "shimosuwa-t",
+        name: "湯けむりの角",
+        genre: "history",
+        guide: "tip",
+        hours: "終日（町並み）",
+        blurb:
+          "湯気の向きで道順がわかる。中山道の名残が足元に残る。",
+        x: 0.46,
+        y: 0.52,
+        walkMinutes: 7,
+      },
+],
   },
   {
     id: "yui",
@@ -990,6 +1404,13 @@ export const STATIONS: StationSeed[] = [
     region: "中部",
     mood: "story",
     radiiKm: [1.0, 2.1, 2.9],
+    stationIntro:
+      "東海道本線の桜えびの町。海と山に挟まれた狭さが、かえって濃いです。",
+    bikeRental: {
+      available: false,
+      summary:
+        "宿場町は徒歩向き。海岸寄りは風が強い日あり。",
+    },
     tourTitle: "桜えびの町で、海と山のあいだを歩く",
     catchCopy: "東海道の狭さが、かえって町を濃くする。",
     spots: [
@@ -1027,7 +1448,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.62,
         walkMinutes: 12,
       },
-    ],
+    
+      {
+        id: "yui-s",
+        name: "桜えびの小袋",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜17:00）",
+        blurb:
+          "香ばしさを、袋のまま持ち帰る。東海道の狭い町の土産。",
+        x: 0.6,
+        y: 0.44,
+        walkMinutes: 8,
+      },
+      {
+        id: "yui-r",
+        name: "宿場の縁側っぽい影",
+        genre: "history",
+        guide: "rest",
+        hours: "終日（屋外）",
+        blurb:
+          "道幅が狭くて、影が休憩になる。馬と人の距離を今も測る場所。",
+        x: 0.45,
+        y: 0.5,
+        walkMinutes: 5,
+      },
+],
   },
   {
     id: "nebukawa",
@@ -1037,6 +1483,13 @@ export const STATIONS: StationSeed[] = [
     region: "関東",
     mood: "empty",
     radiiKm: [0.9, 1.8, 2.5],
+    stationIntro:
+      "東海道線の崖と海のあいだ。用事のない駅が、いちばん海に近いことがあります。",
+    bikeRental: {
+      available: false,
+      summary:
+        "急傾斜のため徒歩のみ想定。自転車向きではありません。",
+    },
     tourTitle: "崖と海のあいだの、短い余白",
     catchCopy: "乗り換えも用事もない駅が、いちばん海に近い。",
     emptyCopy: {
@@ -1065,7 +1518,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.58,
         walkMinutes: 6,
       },
-    ],
+    
+      {
+        id: "nebukawa-r",
+        name: "海側ホームの腰",
+        genre: "nature",
+        guide: "rest",
+        hours: "列車運行時間内（ホーム）",
+        blurb:
+          "柵の向こうの青を、座って見る。観光リストは短くていい。",
+        x: 0.55,
+        y: 0.45,
+        walkMinutes: 1,
+      },
+      {
+        id: "nebukawa-s",
+        name: "駅の入場券の記憶",
+        genre: "odd",
+        guide: "souvenir",
+        hours: "窓口・券売による",
+        blurb:
+          "買うものがない日の土産は、駅名そのもの。紙片でも十分。",
+        x: 0.5,
+        y: 0.5,
+        walkMinutes: 1,
+      },
+],
   },
   {
     id: "amarube",
@@ -1075,6 +1553,13 @@ export const STATIONS: StationSeed[] = [
     region: "近畿",
     mood: "story",
     radiiKm: [1.0, 2.2, 3.0],
+    stationIntro:
+      "山陰本線、鉄橋の見える駅。橋を見るために降りても、町の静けさまで連れていかれます。",
+    bikeRental: {
+      available: false,
+      summary:
+        "丘と海風の徒歩圏。レンタサイクルは近隣で要確認です。",
+    },
     tourTitle: "鉄橋の影と、日本海の風を分ける",
     catchCopy: "橋を見るために降りても、町の静けさまで連れていかれる。",
     spots: [
@@ -1112,7 +1597,44 @@ export const STATIONS: StationSeed[] = [
         y: 0.35,
         walkMinutes: 10,
       },
-    ],
+    
+      {
+        id: "amarube-s",
+        name: "橋のポストカード",
+        genre: "history",
+        guide: "souvenir",
+        hours: "店による（おおよそ 10:00〜17:00）",
+        blurb:
+          "新しい橋と古い脚が、同じ絵葉書に並ぶ。軽い土産。",
+        x: 0.5,
+        y: 0.5,
+        walkMinutes: 5,
+      },
+      {
+        id: "amarube-r",
+        name: "丘の風よけ",
+        genre: "nature",
+        guide: "rest",
+        hours: "終日（屋外）",
+        blurb:
+          "帽子を押さえる動作が、観光になる場所。座れる石があれば十分。",
+        x: 0.45,
+        y: 0.38,
+        walkMinutes: 12,
+      },
+      {
+        id: "amarube-t",
+        name: "駅前の短い坂",
+        genre: "odd",
+        guide: "tip",
+        hours: "終日（屋外）",
+        blurb:
+          "橋の話が聞こえるまで、三歩で足りる寄り道。",
+        x: 0.55,
+        y: 0.52,
+        walkMinutes: 2,
+      },
+],
   },
   {
     id: "onomichi",
@@ -1122,6 +1644,13 @@ export const STATIONS: StationSeed[] = [
     region: "中国",
     mood: "story",
     radiiKm: [1.1, 2.2, 3.0],
+    stationIntro:
+      "山陽本線の坂の町。上るほどに町が薄くなり、海が近づきます。",
+    bikeRental: {
+      available: false,
+      summary:
+        "坂が多いため徒歩向き。平地の商店街〜港はレンタサイクル向きな日もあります。",
+    },
     tourTitle: "坂と猫と、古い映画館の気配",
     catchCopy: "上るほどに町が薄くなり、海が近づく。",
     spots: [
@@ -1179,7 +1708,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.6,
         walkMinutes: 20,
       },
-    ],
+    
+      {
+        id: "onomichi-s",
+        name: "猫の小さな雑貨",
+        genre: "odd",
+        guide: "souvenir",
+        hours: "店による（おおよそ 10:00〜18:00）",
+        blurb:
+          "町の住民（猫）を模した軽い土産。坂の途中で見つかる。",
+        x: 0.55,
+        y: 0.6,
+        walkMinutes: 9,
+      },
+      {
+        id: "onomichi-r",
+        name: "寺の石段の踊り場",
+        genre: "history",
+        guide: "rest",
+        hours: "終日（境内は日中が安心）",
+        blurb:
+          "息を整える場所として寺がある。海を見下ろす前の一休み。",
+        x: 0.34,
+        y: 0.32,
+        walkMinutes: 16,
+      },
+],
   },
   {
     id: "misumi",
@@ -1189,6 +1743,13 @@ export const STATIONS: StationSeed[] = [
     region: "九州",
     mood: "story",
     radiiKm: [1.2, 2.4, 3.1],
+    stationIntro:
+      "三角線の終点。明治の港町が、線路の終わる場所から始まります。",
+    bikeRental: {
+      available: false,
+      summary:
+        "港町は平坦で自転車向きな区間あり。貸出は観光案内で要確認。",
+    },
     tourTitle: "明治の港町を、終点の駅から歩く",
     catchCopy: "線路が終わる場所で、町の物語が始まる。",
     spots: [
@@ -1226,7 +1787,44 @@ export const STATIONS: StationSeed[] = [
         y: 0.38,
         walkMinutes: 15,
       },
-    ],
+    
+      {
+        id: "misumi-s",
+        name: "煉瓦色の小さな土産",
+        genre: "history",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜17:00）",
+        blurb:
+          "港の記憶を、軽い紙や菓子で持ち帰る。",
+        x: 0.52,
+        y: 0.48,
+        walkMinutes: 9,
+      },
+      {
+        id: "misumi-r",
+        name: "突堤の腰かけ",
+        genre: "nature",
+        guide: "rest",
+        hours: "終日（屋外）",
+        blurb:
+          "天草への海が、ここで一度止まる。風除けになって座る。",
+        x: 0.7,
+        y: 0.4,
+        walkMinutes: 15,
+      },
+      {
+        id: "misumi-t",
+        name: "終点の車止め",
+        genre: "odd",
+        guide: "tip",
+        hours: "終日（屋外）",
+        blurb:
+          "線路が終わる感触だけ見に来る寄り道。",
+        x: 0.48,
+        y: 0.52,
+        walkMinutes: 2,
+      },
+],
   },
   {
     id: "usuki",
@@ -1236,6 +1834,13 @@ export const STATIONS: StationSeed[] = [
     region: "九州",
     mood: "story",
     radiiKm: [1.1, 2.3, 3.0],
+    stationIntro:
+      "日豊本線の石仏と城下の町。フグで有名でも、路地の方が長く残ります。",
+    bikeRental: {
+      available: false,
+      summary:
+        "城下町歩き向けのレンタサイクルがあることがあります。要確認。",
+    },
     tourTitle: "石仏の町の、城下の静けさを拾う",
     catchCopy: "フグで有名でも、路地の方が長く残る。",
     spots: [
@@ -1273,7 +1878,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.62,
         walkMinutes: 14,
       },
-    ],
+    
+      {
+        id: "usuki-s",
+        name: "石仏の小さな守り",
+        genre: "history",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜17:00）",
+        blurb:
+          "重い歴史を、軽い守り札で持ち帰る。",
+        x: 0.5,
+        y: 0.45,
+        walkMinutes: 11,
+      },
+      {
+        id: "usuki-r",
+        name: "白い壁の影",
+        genre: "history",
+        guide: "rest",
+        hours: "終日（町並み）",
+        blurb:
+          "二王座の壁が、歩く速度を落とさせる。その影が休憩席。",
+        x: 0.45,
+        y: 0.48,
+        walkMinutes: 12,
+      },
+],
   },
   {
     id: "hitoyoshi",
@@ -1283,6 +1913,13 @@ export const STATIONS: StationSeed[] = [
     region: "九州",
     mood: "story",
     radiiKm: [1.2, 2.4, 3.2],
+    stationIntro:
+      "肥薩線の球磨川の町。復興の途中でも、川は変わらず中心にいます。",
+    bikeRental: {
+      available: false,
+      summary:
+        "川沿い散策向けのレンタサイクルがあることがあります。観光案内で確認を。",
+    },
     tourTitle: "球磨川の音と、温泉町の湯気をたどる",
     catchCopy: "復興の途中でも、川は変わらず町の中心。",
     spots: [
@@ -1300,6 +1937,7 @@ export const STATIONS: StationSeed[] = [
         id: "hitoyoshi-2",
         name: "川辺のベンチ",
         genre: "nature",
+        guide: "rest",
         hours: "終日（屋外）",
         blurb: "急がなくていい景色が、ここに座っている。",
         x: 0.35,
@@ -1320,7 +1958,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.58,
         walkMinutes: 12,
       },
-    ],
+    
+      {
+        id: "hitoyoshi-s",
+        name: "焼酎の小さな瓶",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜17:00）",
+        blurb:
+          "香りだけでも訪問になる蔵の町。軽い瓶は手土産向き。",
+        x: 0.62,
+        y: 0.55,
+        walkMinutes: 12,
+      },
+      {
+        id: "hitoyoshi-t",
+        name: "湯けむりの入口",
+        genre: "history",
+        guide: "tip",
+        hours: "終日（町並み）",
+        blurb:
+          "湯気の向きが道標。温泉街への最初の一歩。",
+        x: 0.5,
+        y: 0.5,
+        walkMinutes: 5,
+      },
+],
   },
   {
     id: "tsukazaki",
@@ -1330,6 +1993,13 @@ export const STATIONS: StationSeed[] = [
     region: "関東",
     mood: "empty",
     radiiKm: [0.8, 1.6, 2.2],
+    stationIntro:
+      "小湊鐵道の山あい。ワンマンの扉が閉まると、世界が一段階静かになります。",
+    bikeRental: {
+      available: false,
+      summary:
+        "山道のため徒歩想定。自転車向きではありません。",
+    },
     tourTitle: "誰もいないホームで、山の気配だけ受け取る",
     catchCopy: "ワンマンの扉が閉まると、世界が一段階静かになる。",
     emptyCopy: {
@@ -1358,7 +2028,32 @@ export const STATIONS: StationSeed[] = [
         y: 0.6,
         walkMinutes: 7,
       },
-    ],
+    
+      {
+        id: "tsukazaki-r",
+        name: "無人ホームの縁",
+        genre: "nature",
+        guide: "rest",
+        hours: "列車運行時間内（ホーム）",
+        blurb:
+          "虫の声が発車メロディの代わり。座って、山の気配だけ受け取る。",
+        x: 0.5,
+        y: 0.48,
+        walkMinutes: 1,
+      },
+      {
+        id: "tsukazaki-t",
+        name: "踏切の向こう一分",
+        genre: "odd",
+        guide: "tip",
+        hours: "終日（屋外）",
+        blurb:
+          "道は続いているが、用事はここで足りる。",
+        x: 0.4,
+        y: 0.58,
+        walkMinutes: 7,
+      },
+],
   },
   {
     id: "tamatsukuri",
@@ -1368,6 +2063,13 @@ export const STATIONS: StationSeed[] = [
     region: "中国",
     mood: "story",
     radiiKm: [1.0, 2.1, 2.9],
+    stationIntro:
+      "山陰本線の神話の湯の町。玉造の名は大きく、路地はちょうどいい大きさです。",
+    bikeRental: {
+      available: false,
+      summary:
+        "温泉街は徒歩向き。平坦部のレンタサイクルは案内所で要確認。",
+    },
     tourTitle: "神話の湯の町を、駅からゆるく一周",
     catchCopy: "玉造の名は大きく、路地はちょうどいい大きさ。",
     spots: [
@@ -1402,7 +2104,46 @@ export const STATIONS: StationSeed[] = [
         y: 0.62,
         walkMinutes: 12,
       },
-    ],
+    
+      {
+        id: "tamatsukuri-m",
+        name: "湯上がりの甘味",
+        genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch"],
+        hours: "店による（おおよそ 10:00〜17:00）",
+        blurb:
+          "足湯のあと、甘いものを一口。湯治の町の昼。",
+        x: 0.55,
+        y: 0.45,
+        walkMinutes: 9,
+      },
+      {
+        id: "tamatsukuri-s",
+        name: "勾玉の小さな守り",
+        genre: "history",
+        guide: "souvenir",
+        hours: "店による（おおよそ 9:00〜18:00）",
+        blurb:
+          "神話の町の軽い土産。紙袋に入る大きさ。",
+        x: 0.5,
+        y: 0.52,
+        walkMinutes: 8,
+      },
+      {
+        id: "tamatsukuri-r",
+        name: "川沿いの足湯",
+        genre: "odd",
+        guide: "rest",
+        hours: "施設による（おおよそ 9:00〜21:00・要確認）",
+        blurb:
+          "靴を脱いだ瞬間、旅の予定がひとつ減る。",
+        x: 0.6,
+        y: 0.4,
+        walkMinutes: 10,
+      },
+],
   },
 ];
 

@@ -48,7 +48,7 @@ Lagado Lab の企画メモ。触れるプロトタイプは本サイトの `/lab
 ## 技術メモ
 
 - 本サイト統合: `app/lab/mishiranu-eki/`（lagado.jp の静的公開対象）
-- 駅データ: `data/mishiranu-stations.ts`（先頭は体感用の **出町柳**）
+- 駅データ: `data/mishiranu-stations.ts`（**21駅**。先頭は体感用の出町柳。物語駅は案内5種＋レンタサイクル要約を揃える）
 - Cursor Apps 試作 `mishiranu-app/` と `https://mishiranu-eki.apps.grok.bot` は退役予定（Publish Settings で非公開）
 - コピー API: `POST /api/mishiranu/copy`（静的公開では未配信。キーなし／失敗時は編集文）
 - AI モデル: **Gemini 3.1 Flash-Lite**（`gemini-3.1-flash-lite`）— おみくじ文庫の AI 解説と同じ
