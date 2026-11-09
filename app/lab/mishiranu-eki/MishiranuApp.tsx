@@ -12,13 +12,20 @@ import {
   GUIDE_COLOR,
   GUIDE_LABEL,
   GUIDE_ORDER,
+  MEAL_TIER_LABEL,
+  MEAL_TIER_ORDER,
+  MEAL_TIME_LABEL,
+  MEAL_TIME_ORDER,
   STATIONS,
   TIME_OPTIONS,
   bikeRentalFor,
+  mealTierFor,
+  mealTimesFor,
   pickSecret,
   spotGuide,
   spotsForTime,
   type GuideKind,
+  type MealTime,
   type Spot,
   type StationSeed,
   type TimeOptionId,
@@ -858,30 +865,21 @@ export default function MishiranuApp({
                         <span className="mishiranu-guide-priority">重点</span>
                       ) : null}
                     </h3>
-                    {items.length > 0 ? (
+                    {kind === "meal" ? (
+                      <MealGuideSections
+                        items={items}
+                        activeSpotId={activeSpotId}
+                        onSelect={setActiveSpotId}
+                      />
+                    ) : items.length > 0 ? (
                       <ul className="mishiranu-guide-list">
                         {items.map((item) => (
                           <li key={item.id}>
-                            <button
-                              type="button"
-                              className={
-                                activeSpotId === item.id
-                                  ? "mishiranu-guide-item mishiranu-guide-item--active"
-                                  : "mishiranu-guide-item"
-                              }
-                              aria-pressed={activeSpotId === item.id}
-                              onClick={() => setActiveSpotId(item.id)}
-                            >
-                              <span className="mishiranu-guide-item-name">
-                                {item.name}
-                              </span>
-                              <span className="mishiranu-guide-item-meta">
-                                徒歩約 {item.walkMinutes} 分
-                              </span>
-                              <span className="mishiranu-guide-item-blurb">
-                                {item.blurb}
-                              </span>
-                            </button>
+                            <GuideSpotButton
+                              item={item}
+                              active={activeSpotId === item.id}
+                              onSelect={setActiveSpotId}
+                            />
                           </li>
                         ))}
                       </ul>
@@ -898,8 +896,13 @@ export default function MishiranuApp({
             {activeSpot ? (
               <div className="mishiranu-spot-panel">
                 <p className="mishiranu-spot-genre">
-                  {GUIDE_LABEL[spotGuide(activeSpot)]} · 徒歩約{" "}
-                  {activeSpot.walkMinutes} 分
+                  {GUIDE_LABEL[spotGuide(activeSpot)]}
+                  {spotGuide(activeSpot) === "meal"
+                    ? ` · ${MEAL_TIER_LABEL[mealTierFor(activeSpot)]} · ${mealTimesFor(activeSpot)
+                        .map((t) => MEAL_TIME_LABEL[t])
+                        .join("・")}`
+                    : ""}{" "}
+                  · 徒歩約 {activeSpot.walkMinutes} 分
                 </p>
                 <h3 className="mishiranu-spot-name">{activeSpot.name}</h3>
                 <p className="mishiranu-spot-blurb">{activeSpot.blurb}</p>
@@ -964,10 +967,104 @@ export default function MishiranuApp({
             <p className="mishiranu-foot">
               地図は OpenStreetMap。出町柳ピンは実座標寄り。
               GEMINI_API_KEY があれば Gemini 3.1 Flash-Lite、なければ編集文です。
+              ご飯は庶民的／高級と朝・昼・夜で分けています。
             </p>
           </section>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function GuideSpotButton({
+  item,
+  active,
+  onSelect,
+  timeTags,
+}: {
+  item: Spot;
+  active: boolean;
+  onSelect: (id: string) => void;
+  timeTags?: MealTime[];
+}) {
+  return (
+    <button
+      type="button"
+      className={
+        active
+          ? "mishiranu-guide-item mishiranu-guide-item--active"
+          : "mishiranu-guide-item"
+      }
+      aria-pressed={active}
+      onClick={() => onSelect(item.id)}
+    >
+      <span className="mishiranu-guide-item-name">{item.name}</span>
+      <span className="mishiranu-guide-item-meta">
+        徒歩約 {item.walkMinutes} 分
+        {timeTags && timeTags.length > 0
+          ? ` · ${timeTags.map((t) => MEAL_TIME_LABEL[t]).join("・")}`
+          : ""}
+      </span>
+      <span className="mishiranu-guide-item-blurb">{item.blurb}</span>
+    </button>
+  );
+}
+
+function MealGuideSections({
+  items,
+  activeSpotId,
+  onSelect,
+}: {
+  items: Spot[];
+  activeSpotId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <p className="mishiranu-guide-empty">
+        この徒歩圏・時間ではまだ少なめです。時間を延ばすと増えることがあります。
+      </p>
+    );
+  }
+
+  return (
+    <div className="mishiranu-meal-split">
+      {MEAL_TIER_ORDER.map((tier) => {
+        const tierItems = items.filter((s) => mealTierFor(s) === tier);
+        if (tierItems.length === 0) return null;
+        return (
+          <div key={tier} className="mishiranu-meal-tier">
+            <h4 className="mishiranu-meal-tier-title">
+              {MEAL_TIER_LABEL[tier]}
+            </h4>
+            {MEAL_TIME_ORDER.map((time) => {
+              const timeItems = tierItems.filter((s) =>
+                mealTimesFor(s).includes(time),
+              );
+              if (timeItems.length === 0) return null;
+              return (
+                <div key={time} className="mishiranu-meal-time">
+                  <p className="mishiranu-meal-time-label">
+                    {MEAL_TIME_LABEL[time]}
+                  </p>
+                  <ul className="mishiranu-guide-list">
+                    {timeItems.map((item) => (
+                      <li key={`${tier}-${time}-${item.id}`}>
+                        <GuideSpotButton
+                          item={item}
+                          active={activeSpotId === item.id}
+                          onSelect={onSelect}
+                          timeTags={mealTimesFor(item)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }

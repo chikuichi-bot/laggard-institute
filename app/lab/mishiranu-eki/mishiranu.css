@@ -788,6 +788,40 @@ a.mishiranu-btn {
   margin-bottom: 0.35rem;
 }
 
+.mishiranu-meal-split {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.mishiranu-meal-tier-title {
+  margin: 0 0 0.55rem;
+  font-family: var(--mk-display);
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--mk-ink);
+}
+
+.mishiranu-meal-time {
+  margin: 0 0 0.85rem;
+}
+
+.mishiranu-meal-time:last-child {
+  margin-bottom: 0;
+}
+
+.mishiranu-meal-time-label {
+  display: inline-block;
+  margin: 0 0 0.45rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--mk-line);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--mk-warm-deep);
+  background: var(--mk-warm-soft);
+}
+
 .mishiranu-guide-item-blurb {
   display: block;
   font-size: 0.88rem;

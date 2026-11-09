@@ -3,12 +3,22 @@ export type SpotGenre = "history" | "gourmet" | "nature" | "odd";
 /** 観光案内マップ用の見出し（必ず出す5種） */
 export type GuideKind = "meal" | "souvenir" | "sight" | "rest" | "tip";
 
+/** ご飯の価格帯 */
+export type MealTier = "casual" | "upscale";
+
+/** ご飯の時間帯（複数可） */
+export type MealTime = "morning" | "lunch" | "dinner";
+
 export type Spot = {
   id: string;
   name: string;
   genre: SpotGenre;
   /** 観光案内の分類。未指定なら genre から推定 */
   guide?: GuideKind;
+  /** ご飯向け: 庶民的 / 高級（guide=meal のとき） */
+  mealTier?: MealTier;
+  /** ご飯向け: 朝 / 昼 / 夜（guide=meal のとき） */
+  mealTimes?: MealTime[];
   blurb: string;
   /** 0–1 relative map position */
   x: number;
@@ -117,6 +127,32 @@ export function spotGuide(spot: Spot): GuideKind {
   }
 }
 
+export const MEAL_TIER_LABEL: Record<MealTier, string> = {
+  casual: "庶民的",
+  upscale: "高級",
+};
+
+export const MEAL_TIER_ORDER: MealTier[] = ["casual", "upscale"];
+
+export const MEAL_TIME_LABEL: Record<MealTime, string> = {
+  morning: "朝",
+  lunch: "昼",
+  dinner: "夜",
+};
+
+export const MEAL_TIME_ORDER: MealTime[] = ["morning", "lunch", "dinner"];
+
+/** ご飯スポットの価格帯（未設定は庶民的） */
+export function mealTierFor(spot: Spot): MealTier {
+  return spot.mealTier ?? "casual";
+}
+
+/** ご飯スポットの時間帯（未設定は昼） */
+export function mealTimesFor(spot: Spot): MealTime[] {
+  if (spot.mealTimes && spot.mealTimes.length > 0) return spot.mealTimes;
+  return ["lunch"];
+}
+
 export const TIME_OPTIONS = [
   { id: "1h", label: "1時間", index: 0 as const },
   { id: "3h", label: "3時間", index: 1 as const },
@@ -208,6 +244,8 @@ export const STATIONS: StationSeed[] = [
         name: "出町ふたば",
         genre: "gourmet",
         guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["morning", "lunch"],
         blurb:
           "豆餅（きな粉）とよもぎ餅が看板。袋のまま鴨川デルタへ歩くのが定番の食べ方。",
         x: 0.58,
@@ -251,6 +289,8 @@ export const STATIONS: StationSeed[] = [
         name: "進々堂 百万遍店",
         genre: "gourmet",
         guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["morning", "lunch"],
         blurb:
           "焼きたてパンと珈琲の老舗。学生街の昼はサンドイッチ定食が早い。",
         x: 0.78,
@@ -262,11 +302,53 @@ export const STATIONS: StationSeed[] = [
         name: "枡形の揚げもの屋台まわり",
         genre: "gourmet",
         guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch", "dinner"],
         blurb:
           "商店街でコロッケや唐揚げを袋買い。ベンチがなくても、川端で立ったまま昼になる。",
         x: 0.53,
         y: 0.54,
         walkMinutes: 4,
+      },
+      {
+        id: "demachi-5d",
+        name: "河原町今出川の京定食",
+        genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch", "dinner"],
+        blurb:
+          "学生街寄りの定食屋。煮物とご飯で腹ごしらえしてから川へ戻る向き。",
+        x: 0.68,
+        y: 0.58,
+        walkMinutes: 10,
+      },
+      {
+        id: "demachi-5e",
+        name: "下鴨の落ち着いた京料理",
+        genre: "gourmet",
+        guide: "meal",
+        mealTier: "upscale",
+        mealTimes: ["lunch", "dinner"],
+        blurb:
+          "神社寄りの静かな席。季節の椀とご飯で、昼も夜も一段フォーマルな寄り道。",
+        x: 0.32,
+        y: 0.22,
+        walkMinutes: 18,
+        secretWorthy: true,
+      },
+      {
+        id: "demachi-5f",
+        name: "朝の珈琲とたまごサンド",
+        genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["morning"],
+        blurb:
+          "開店直後のパン屋・喫茶まわり。荷物を置かず、立ったまま朝をすませられる。",
+        x: 0.62,
+        y: 0.5,
+        walkMinutes: 6,
       },
       {
         id: "demachi-10",
@@ -396,6 +478,9 @@ export const STATIONS: StationSeed[] = [
         id: "kanita-2",
         name: "港寄りの食堂",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch", "dinner"],
         blurb: "味噌汁の色が、今日の海を教えてくれる。",
         x: 0.66,
         y: 0.44,
@@ -478,6 +563,9 @@ export const STATIONS: StationSeed[] = [
         id: "sawara-2",
         name: "川沿いの甘味処",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch"],
         blurb: "舟の影が、あんみつの隣を通る。",
         x: 0.62,
         y: 0.38,
@@ -528,6 +616,9 @@ export const STATIONS: StationSeed[] = [
         id: "manazuru-2",
         name: "港寄りの定食屋",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch", "dinner"],
         blurb: "日替わりが、今日の海の機嫌を教えてくれる。",
         x: 0.68,
         y: 0.58,
@@ -578,6 +669,9 @@ export const STATIONS: StationSeed[] = [
         id: "hamakanaya-2",
         name: "港の売店",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch"],
         blurb: "塩気が少し強い団子が、旅の正解になる。",
         x: 0.65,
         y: 0.6,
@@ -619,6 +713,9 @@ export const STATIONS: StationSeed[] = [
         id: "nagatoro-2",
         name: "川辺の茶屋",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch"],
         blurb: "湯気と川霧が、同じ高さで混ざる。",
         x: 0.6,
         y: 0.4,
@@ -660,6 +757,9 @@ export const STATIONS: StationSeed[] = [
         id: "katsunuma-2",
         name: "小さな醸造所の窓口",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "upscale",
+        mealTimes: ["lunch", "dinner"],
         blurb: "試飲の有無より、匂いだけで十分。",
         x: 0.62,
         y: 0.48,
@@ -701,6 +801,9 @@ export const STATIONS: StationSeed[] = [
         id: "kobuchizawa-2",
         name: "純喫茶アサヒ",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["morning", "lunch"],
         blurb: "深煎りの香ばしさと、トーストの角。地元の朝の文法。",
         x: 0.62,
         y: 0.4,
@@ -796,6 +899,9 @@ export const STATIONS: StationSeed[] = [
         id: "shimosuwa-2",
         name: "古い和菓子屋",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["morning", "lunch"],
         blurb: "包装紙の柄が、旅の記念になる。",
         x: 0.6,
         y: 0.38,
@@ -837,6 +943,9 @@ export const STATIONS: StationSeed[] = [
         id: "yui-2",
         name: "桜えびの店先",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch"],
         blurb: "香ばしさが、駅まで届く日がある。",
         x: 0.62,
         y: 0.42,
@@ -914,6 +1023,9 @@ export const STATIONS: StationSeed[] = [
         id: "amarube-2",
         name: "駅前の小さな店",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch", "dinner"],
         blurb: "橋の話が、メニューより先に来る。",
         x: 0.55,
         y: 0.55,
@@ -955,6 +1067,9 @@ export const STATIONS: StationSeed[] = [
         id: "onomichi-2",
         name: "港寄りの珈琲店",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["morning", "lunch"],
         blurb: "窓の外で船が動き、カップの中は動かない。",
         x: 0.7,
         y: 0.45,
@@ -1014,6 +1129,9 @@ export const STATIONS: StationSeed[] = [
         id: "misumi-2",
         name: "海辺の食堂",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch", "dinner"],
         blurb: "終点の定食は、少しだけ塩が効いている。",
         x: 0.4,
         y: 0.55,
@@ -1055,6 +1173,9 @@ export const STATIONS: StationSeed[] = [
         id: "usuki-2",
         name: "城下の喫茶",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["morning", "lunch"],
         blurb: "窓から見えるのは、観光バスではなく石垣。",
         x: 0.58,
         y: 0.4,
@@ -1106,6 +1227,9 @@ export const STATIONS: StationSeed[] = [
         id: "hitoyoshi-3",
         name: "焼酎蔵の匂いのする角",
         genre: "gourmet",
+        guide: "meal",
+        mealTier: "casual",
+        mealTimes: ["lunch", "dinner"],
         blurb: "入口に入らなくても、香りで十分な訪問。",
         x: 0.65,
         y: 0.58,
