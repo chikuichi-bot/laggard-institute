@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   GENRE_LABEL,
   REGIONS,
@@ -30,10 +30,25 @@ function seedTourCopy(station: StationSeed): TourCopy {
   };
 }
 
-export default function MishiranuApp() {
-  const [step, setStep] = useState<Step>("hero");
-  const [stationId, setStationId] = useState<string>(STATIONS[0].id);
-  const [timeId, setTimeId] = useState<TimeOptionId>("1h");
+type Props = {
+  initialStep?: Step;
+  initialStationId?: string;
+  initialTimeId?: TimeOptionId;
+};
+
+export default function MishiranuApp({
+  initialStep = "hero",
+  initialStationId,
+  initialTimeId = "1h",
+}: Props) {
+  const startStationId =
+    initialStationId && STATIONS.some((s) => s.id === initialStationId)
+      ? initialStationId
+      : STATIONS[0].id;
+
+  const [step, setStep] = useState<Step>(initialStep);
+  const [stationId, setStationId] = useState<string>(startStationId);
+  const [timeId, setTimeId] = useState<TimeOptionId>(initialTimeId);
   const [regionFilter, setRegionFilter] = useState<string>("すべて");
   const [query, setQuery] = useState("");
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
@@ -95,15 +110,19 @@ export default function MishiranuApp() {
     }
   }
 
-  async function beginTour(nextStation?: StationSeed) {
-    const chosen = nextStation ?? station;
-    setStationId(chosen.id);
-    setActiveSpotId(null);
-    setSecret(null);
-    setSecretOpen(false);
-    setShareNote(null);
-    setStep("tour");
-    await loadCopy(chosen, timeId);
+  useEffect(() => {
+    if (step !== "tour") return;
+    void loadCopy(station, timeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when entering tour via URL/state
+  }, [step, stationId, timeId]);
+
+  function goTour(nextStationId: string, nextTimeId: TimeOptionId = timeId) {
+    const params = new URLSearchParams({
+      view: "tour",
+      station: nextStationId,
+      time: nextTimeId,
+    });
+    window.location.assign(`?${params.toString()}`);
   }
 
   function drawSecret() {
@@ -141,29 +160,30 @@ export default function MishiranuApp() {
       <div className="mishiranu-shell">
         {step === "hero" ? (
           <section className="mishiranu-hero" aria-label="見知らぬ駅">
-            <p className="mishiranu-kicker">LAGADO LAB</p>
-            <h1 className="mishiranu-brand">見知らぬ駅</h1>
-            <p className="mishiranu-lead">
-              降りた駅の、徒歩圏だけを、物語にする。予定のない寄り道を、いまここから。
-            </p>
-            <div className="mishiranu-cta-row">
-              <button
-                type="button"
-                className="mishiranu-btn mishiranu-btn--primary"
-                onClick={() => setStep("pick")}
-              >
-                この駅で始める
-              </button>
-              <button
-                type="button"
-                className="mishiranu-btn"
-                onClick={() => {
-                  const home = STATIONS.find((s) => s.id === "demachiyanagi");
-                  if (home) void beginTour(home);
-                }}
-              >
-                出町柳ですぐ見る
-              </button>
+            <div className="mishiranu-hero-copy">
+              <p className="mishiranu-kicker">LAGADO LAB</p>
+              <h1 className="mishiranu-brand">見知らぬ駅</h1>
+              <p className="mishiranu-lead">
+                降りた駅の、徒歩圏だけを、物語にする。予定のない寄り道を、いまここから。
+              </p>
+              <div className="mishiranu-cta-row">
+                <a
+                  className="mishiranu-btn mishiranu-btn--primary"
+                  href="?view=pick"
+                >
+                  この駅で始める
+                </a>
+                <a
+                  className="mishiranu-btn"
+                  href="?view=tour&station=demachiyanagi&time=1h"
+                >
+                  出町柳ですぐ見る
+                </a>
+              </div>
+              <p className="mishiranu-fallback-links">
+                押せないとき:{" "}
+                <a href="?view=tour&station=demachiyanagi&time=1h">出町柳の物語へ</a>
+              </p>
             </div>
           </section>
         ) : null}
@@ -185,7 +205,7 @@ export default function MishiranuApp() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="例: 尾道 / 山陰 / 北海道"
+                placeholder="例: 出町柳 / 叡山 / 京都"
                 autoComplete="off"
               />
             </label>
@@ -253,17 +273,13 @@ export default function MishiranuApp() {
                   type="button"
                   className="mishiranu-btn mishiranu-btn--primary"
                   disabled={filteredStations.length === 0}
-                  onClick={() => void beginTour()}
+                  onClick={() => goTour(stationId, timeId)}
                 >
                   物語をつくる
                 </button>
-                <button
-                  type="button"
-                  className="mishiranu-btn mishiranu-btn--ghost"
-                  onClick={() => setStep("hero")}
-                >
+                <a className="mishiranu-btn mishiranu-btn--ghost" href="?view=hero">
                   戻る
-                </button>
+                </a>
               </div>
             </div>
           </section>
@@ -388,13 +404,9 @@ export default function MishiranuApp() {
               >
                 物語をコピー
               </button>
-              <button
-                type="button"
-                className="mishiranu-btn mishiranu-btn--ghost"
-                onClick={() => setStep("pick")}
-              >
+              <a className="mishiranu-btn mishiranu-btn--ghost" href="?view=pick">
                 駅・時間を変える
-              </button>
+              </a>
             </div>
 
             {shareNote ? (
@@ -421,9 +433,8 @@ export default function MishiranuApp() {
             ) : null}
 
             <p className="mishiranu-foot">
-              方針: 編集20駅 → 抽象マップで温度固め → コピーにAI →
-              後から実地図とiOS。公開環境に GEMINI_API_KEY があれば Gemini 3.1
-              Flash-Lite、なければ編集文です。
+              出町柳など編集駅で感触確認中。公開環境に GEMINI_API_KEY があれば
+              Gemini 3.1 Flash-Lite、なければ編集文です。
             </p>
           </section>
         ) : null}

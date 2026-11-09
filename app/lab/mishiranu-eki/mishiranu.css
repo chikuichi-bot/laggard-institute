@@ -41,6 +41,7 @@
   flex-direction: column;
   justify-content: flex-end;
   padding: 2.5rem 0 3rem;
+  z-index: 1;
 }
 
 .mishiranu-hero::before {
@@ -48,6 +49,7 @@
   position: absolute;
   inset: 8% -10% auto;
   height: 42%;
+  z-index: 0;
   background:
     linear-gradient(90deg, transparent, rgba(232, 238, 244, 0.08) 40%, transparent),
     repeating-linear-gradient(
@@ -60,6 +62,11 @@
   mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
   pointer-events: none;
   animation: mk-rails 18s linear infinite;
+}
+
+.mishiranu-hero-copy {
+  position: relative;
+  z-index: 2;
 }
 
 @keyframes mk-rails {
@@ -91,10 +98,23 @@
 }
 
 .mishiranu-cta-row {
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  animation: mk-rise 0.9s ease-out 0.24s both;
+}
+
+.mishiranu-fallback-links {
+  position: relative;
+  z-index: 3;
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--mk-fog);
+}
+
+.mishiranu-fallback-links a {
+  color: var(--mk-warm);
 }
 
 @keyframes mk-rise {
@@ -118,7 +138,17 @@
   letter-spacing: 0.04em;
   padding: 0.85rem 1.35rem;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 3;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+a.mishiranu-btn {
+  box-sizing: border-box;
 }
 
 .mishiranu-btn:hover,
