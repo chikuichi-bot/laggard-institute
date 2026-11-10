@@ -30,6 +30,18 @@ export const STATION_LL: Record<string, { lat: number; lng: number }> = {
 
 const EARTH_KM = 6371;
 
+/**
+ * Coarsen WGS84 coords before any third-party call (~1.1 km at the equator).
+ * Precise GPS stays on-server for curated nearest-station matching only.
+ */
+export function fuzzLatLngForExternal(
+  lat: number,
+  lng: number,
+): { lat: number; lng: number } {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  return { lat: round2(lat), lng: round2(lng) };
+}
+
 export function haversineKm(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number },
