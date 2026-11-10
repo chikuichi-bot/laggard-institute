@@ -336,8 +336,8 @@ export default function PlaceSamples() {
         <p className="ps-hero-kicker">見知らぬ駅 · UI サンプル</p>
         <h1>土地ページを、観光案内の標識みたいに</h1>
         <p className="ps-hero-lead">
-          電車で着く前に把握できるよう、案内板・道標・看板の三つの型です。気に入った案を選んでください。iPhone
-          版へ反映します。
+          採用：A · 駅前案内板。濃い見出し帯と番号索引の型を、iPhone
+          の土地ページに反映しています。
         </p>
         <div className="ps-picker" role="tablist" aria-label="サンプル切替">
           {SAMPLES.map((item) => (

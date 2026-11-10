@@ -7,7 +7,10 @@ struct TourView: View {
         @Bindable var model = model
         VStack(spacing: 0) {
             if let station = model.station {
-                TourHeader(station: station)
+                // 土地タブは駅前案内板ヘッダーをページ内に持つので、共通ヘッダーは出さない。
+                if model.tourTab != .place {
+                    TourHeader(station: station)
+                }
                 Group {
                     switch model.tourTab {
                     case .map: TourMapPage(station: station)

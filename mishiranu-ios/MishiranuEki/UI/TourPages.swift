@@ -55,152 +55,184 @@ private struct ReadingText: View {
     }
 }
 
-private struct PlaceSectionHeader: View {
-    let kicker: String
-    let title: String
-    let pictogram: Pictogram
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Kicker(text: kicker, pictogram: pictogram)
-            Text(title)
-                .font(.mincho(.title2, weight: .semibold))
-                .foregroundStyle(Palette.ink)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-private struct PlaceNote: View {
+private struct PlaceBoardNote: View {
     let index: Int
     let note: HistoryNote
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(String(format: "%02d", index))
-                    .font(.caption.weight(.semibold))
-                    .tracking(1)
-                    .foregroundStyle(Palette.warm)
-                    .monospacedDigit()
+        HStack(alignment: .top, spacing: 10) {
+            Text(String(format: "%02d", index))
+                .font(.caption.weight(.semibold))
+                .tracking(0.5)
+                .foregroundStyle(Palette.warm)
+                .monospacedDigit()
+                .frame(width: 26, alignment: .leading)
+            VStack(alignment: .leading, spacing: 6) {
                 Text(note.title)
-                    .font(.mincho(.title3, weight: .semibold))
+                    .font(.mincho(.callout, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
+                ReadingText(
+                    lines: readingLines(note.body),
+                    size: .footnote,
+                    color: Palette.fog,
+                    lineSpacing: 6,
+                    paragraphSpacing: 8
+                )
             }
-            ReadingText(lines: readingLines(note.body), size: .body, color: Palette.fog, lineSpacing: 8, paragraphSpacing: 12)
-                .padding(.leading, 30)
         }
-        .padding(.vertical, 4)
     }
 }
 
-// MARK: - 土地
+private enum PlaceBoardSection: String, Hashable {
+    case intro, walk, history, sight
+}
+
+// MARK: - 土地（A · 駅前案内板）
 
 struct PlacePage: View {
+    @Environment(AppModel.self) private var model
     let station: Station
     @State private var narrator = PlaceNarrator()
 
     var body: some View {
-        let area = readingLines(station.areaAbout)
         let intro = readingLines(station.stationIntro)
         let walk = readingLines(station.walkGuide)
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                PlaceListenBar(narrator: narrator, station: station)
-                    .padding(.bottom, 22)
+        let area = readingLines(station.areaAbout)
+        let hasIntro = !intro.isEmpty || (station.mood == .empty && station.emptyCopy != nil)
+        let hasWalk = !walk.isEmpty
+        let hasHistory = !area.isEmpty || !station.historyNotes.isEmpty
+        let hasSight = !station.sightseeingNotes.isEmpty
 
-                if !intro.isEmpty {
-                    ReadingText(lines: intro, size: .title3, color: Palette.ink, lineSpacing: 10, paragraphSpacing: 18)
-                        .padding(.bottom, 28)
-                }
+        VStack(spacing: 0) {
+            PlaceBoardHeader(station: station)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        PlaceListenBar(narrator: narrator, station: station)
 
-                if !walk.isEmpty {
-                    placeRule
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(spacing: 8) {
-                            PictogramIcon(.trekking, size: 20).foregroundStyle(Palette.moss)
-                            Text("歩き方の目安")
-                                .font(.mincho(.title3, weight: .semibold))
-                                .foregroundStyle(Palette.ink)
+                        PlaceBoardIndex(
+                            hasIntro: hasIntro,
+                            hasWalk: hasWalk,
+                            hasHistory: hasHistory,
+                            hasSight: hasSight
+                        ) { section in
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                proxy.scrollTo(section, anchor: .top)
+                            }
                         }
-                        ReadingText(lines: walk, size: .body, color: Palette.fog, lineSpacing: 8, paragraphSpacing: 14)
-                    }
-                    .padding(.vertical, 22)
-                    .padding(.horizontal, 16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Palette.moss.opacity(0.08))
-                    )
-                    .padding(.bottom, 32)
-                }
 
-                if station.mood == .empty, let empty = station.emptyCopy {
-                    placeRule
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text(empty.headline)
-                            .font(.mincho(.title3, weight: .semibold))
-                            .foregroundStyle(Palette.ink)
-                        ReadingText(lines: readingLines(empty.body), size: .body, color: Palette.fog)
-                    }
-                    .padding(.vertical, 24)
-                }
-
-                if !area.isEmpty || !station.historyNotes.isEmpty {
-                    placeRule
-                    VStack(alignment: .leading, spacing: 20) {
-                        PlaceSectionHeader(
-                            kicker: "AREA · HISTORY",
-                            title: "このエリアのこと・歴史",
-                            pictogram: .history
-                        )
-                        if !area.isEmpty {
-                            ReadingText(lines: area, size: .body, color: Palette.fog, lineSpacing: 8, paragraphSpacing: 16)
-                                .padding(.top, 4)
-                        }
-                        if !station.historyNotes.isEmpty {
-                            VStack(alignment: .leading, spacing: 28) {
-                                ForEach(Array(station.historyNotes.enumerated()), id: \.element.title) { index, note in
-                                    PlaceNote(index: index + 1, note: note)
+                        if hasIntro {
+                            PlaceBoardPanel(
+                                number: "01",
+                                title: "この駅のこと",
+                                accent: Palette.ink,
+                                pictogram: nil
+                            ) {
+                                if !intro.isEmpty {
+                                    ReadingText(
+                                        lines: intro,
+                                        size: .body,
+                                        color: Palette.fog,
+                                        lineSpacing: 8,
+                                        paragraphSpacing: 12
+                                    )
+                                }
+                                if station.mood == .empty, let empty = station.emptyCopy {
+                                    Text(empty.headline)
+                                        .font(.mincho(.callout, weight: .semibold))
+                                        .foregroundStyle(Palette.ink)
+                                        .padding(.top, intro.isEmpty ? 0 : 8)
+                                    ReadingText(lines: readingLines(empty.body), size: .footnote, color: Palette.fog)
                                 }
                             }
-                            .padding(.top, area.isEmpty ? 4 : 12)
+                            .id(PlaceBoardSection.intro)
                         }
-                    }
-                    .padding(.vertical, 28)
-                }
 
-                if !station.sightseeingNotes.isEmpty {
-                    placeRule
-                    VStack(alignment: .leading, spacing: 20) {
-                        PlaceSectionHeader(
-                            kicker: "SIGHTSEEING",
-                            title: "観光案内メモ",
-                            pictogram: .photoSpot
-                        )
-                        VStack(alignment: .leading, spacing: 28) {
-                            ForEach(Array(station.sightseeingNotes.enumerated()), id: \.element.title) { index, note in
-                                PlaceNote(index: index + 1, note: note)
+                        if hasWalk {
+                            PlaceBoardPanel(
+                                number: "02",
+                                title: "歩き方の目安",
+                                accent: Palette.moss,
+                                pictogram: .trekking
+                            ) {
+                                ReadingText(
+                                    lines: walk,
+                                    size: .body,
+                                    color: Palette.fog,
+                                    lineSpacing: 8,
+                                    paragraphSpacing: 12
+                                )
                             }
+                            .id(PlaceBoardSection.walk)
                         }
-                        .padding(.top, 4)
-                    }
-                    .padding(.vertical, 28)
-                }
 
-                if intro.isEmpty && walk.isEmpty && area.isEmpty
-                    && station.historyNotes.isEmpty && station.sightseeingNotes.isEmpty {
-                    Text("この駅の土地メモはまだ少なめです。")
-                        .font(.footnote)
-                        .foregroundStyle(Palette.mist)
+                        if hasHistory {
+                            PlaceBoardPanel(
+                                number: "03",
+                                title: "このエリアのこと・歴史",
+                                accent: Palette.ink,
+                                pictogram: .history
+                            ) {
+                                if !area.isEmpty {
+                                    ReadingText(
+                                        lines: area,
+                                        size: .body,
+                                        color: Palette.fog,
+                                        lineSpacing: 8,
+                                        paragraphSpacing: 12
+                                    )
+                                }
+                                if !station.historyNotes.isEmpty {
+                                    VStack(alignment: .leading, spacing: 14) {
+                                        ForEach(
+                                            Array(station.historyNotes.enumerated()),
+                                            id: \.element.title
+                                        ) { index, note in
+                                            PlaceBoardNote(index: index + 1, note: note)
+                                        }
+                                    }
+                                    .padding(.top, area.isEmpty ? 0 : 8)
+                                }
+                            }
+                            .id(PlaceBoardSection.history)
+                        }
+
+                        if hasSight {
+                            PlaceBoardPanel(
+                                number: "04",
+                                title: "観光案内メモ",
+                                accent: Palette.ink,
+                                pictogram: .photoSpot
+                            ) {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    ForEach(
+                                        Array(station.sightseeingNotes.enumerated()),
+                                        id: \.element.title
+                                    ) { index, note in
+                                        PlaceBoardNote(index: index + 1, note: note)
+                                    }
+                                }
+                            }
+                            .id(PlaceBoardSection.sight)
+                        }
+
+                        if !hasIntro && !hasWalk && !hasHistory && !hasSight {
+                            Text("この駅の土地メモはまだ少なめです。")
+                                .font(.footnote)
+                                .foregroundStyle(Palette.mist)
+                                .padding(.top, 8)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
+                    .padding(.bottom, 36)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .background(Color(hex: 0xefe8d6))
             }
-            .padding(.horizontal, 22)
-            .padding(.top, 8)
-            .padding(.bottom, 36)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .background(Palette.ink.ignoresSafeArea(edges: .top))
         .onChange(of: station.id) { _, _ in
             narrator.stop()
         }
@@ -208,12 +240,164 @@ struct PlacePage: View {
             narrator.stop()
         }
     }
+}
 
-    private var placeRule: some View {
-        Rectangle()
-            .fill(Palette.line)
-            .frame(height: 1)
-            .padding(.bottom, 4)
+/// 琺瑯案内板風の見出し帯。
+private struct PlaceBoardHeader: View {
+    @Environment(AppModel.self) private var model
+    let station: Station
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                model.startArrival()
+            } label: {
+                Text("← 駅を探し直す")
+                    .font(.footnote)
+                    .foregroundStyle(Palette.paper.opacity(0.7))
+            }
+            .buttonStyle(.plain)
+
+            Text("\(station.prefecture) · \(station.line)")
+                .font(.caption2)
+                .foregroundStyle(Palette.paper.opacity(0.65))
+                .lineLimit(1)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("土地案内")
+                    .font(.caption2.weight(.semibold))
+                    .tracking(2)
+                    .foregroundStyle(Palette.gold)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .stroke(Palette.gold, lineWidth: 1)
+                    )
+
+                Text(station.name)
+                    .font(.system(size: 30, weight: .medium, design: .serif))
+                    .foregroundStyle(Palette.paper)
+                    .tracking(1)
+
+                Text(model.selectedCourse?.title ?? station.tourTitle)
+                    .font(.mincho(.subheadline))
+                    .foregroundStyle(Palette.paper.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(hex: 0x2a2622))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Palette.gold.opacity(0.45), lineWidth: 1)
+            )
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 8)
+        .padding(.bottom, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.ink)
+    }
+}
+
+private struct PlaceBoardIndex: View {
+    let hasIntro: Bool
+    let hasWalk: Bool
+    let hasHistory: Bool
+    let hasSight: Bool
+    let onSelect: (PlaceBoardSection) -> Void
+
+    private struct IndexItem: Identifiable {
+        let id: PlaceBoardSection
+        let number: String
+        let label: String
+        let enabled: Bool
+    }
+
+    var body: some View {
+        let items: [IndexItem] = [
+            .init(id: .intro, number: "01", label: "導入", enabled: hasIntro),
+            .init(id: .walk, number: "02", label: "歩き方", enabled: hasWalk),
+            .init(id: .history, number: "03", label: "歴史", enabled: hasHistory),
+            .init(id: .sight, number: "04", label: "観光", enabled: hasSight),
+        ]
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+            ForEach(items) { item in
+                Button {
+                    guard item.enabled else { return }
+                    onSelect(item.id)
+                } label: {
+                    VStack(spacing: 2) {
+                        Text(item.number)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(item.enabled ? Palette.warm : Palette.mist)
+                            .monospacedDigit()
+                        Text(item.label)
+                            .font(.caption2)
+                            .foregroundStyle(item.enabled ? Palette.fog : Palette.mist)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Palette.paper)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .stroke(Palette.line, lineWidth: 1)
+                    )
+                    .opacity(item.enabled ? 1 : 0.45)
+                }
+                .buttonStyle(.plain)
+                .disabled(!item.enabled)
+                .accessibilityLabel("\(item.number) \(item.label)")
+            }
+        }
+    }
+}
+
+private struct PlaceBoardPanel<Content: View>: View {
+    let number: String
+    let title: String
+    let accent: Color
+    let pictogram: Pictogram?
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Text(number)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.warm)
+                    .monospacedDigit()
+                if let pictogram {
+                    PictogramIcon(pictogram, size: 16)
+                        .foregroundStyle(Palette.ink)
+                }
+                Text(title)
+                    .font(.mincho(.callout, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+            }
+            .padding(.bottom, 6)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(Palette.line).frame(height: 1)
+            }
+
+            content
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.paper)
+        .overlay(alignment: .leading) {
+            Rectangle()
+                .fill(accent)
+                .frame(width: 4)
+        }
+        .overlay(
+            Rectangle()
+                .stroke(Color(hex: 0xd8c9b2), lineWidth: 1)
+        )
     }
 }
 
@@ -233,22 +417,18 @@ private struct PlaceListenBar: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(narrator.isSpeaking ? "読み上げを止める" : "土地案内を聞く")
                         .font(.mincho(.body, weight: .semibold))
-                    Text(narrator.isSpeaking ? "もう一度押すと止まります" : "駅に着く前に、イヤホンでどうぞ")
+                    Text(narrator.isSpeaking ? "もう一度押すと止まります" : "駅に着く前に、イヤホンで")
                         .font(.caption)
-                        .foregroundStyle(narrator.isSpeaking ? Palette.paper.opacity(0.85) : Palette.mist)
+                        .foregroundStyle(Palette.paper.opacity(0.85))
                 }
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(narrator.isSpeaking ? Palette.paper : Palette.ink)
+            .foregroundStyle(Palette.paper)
             .padding(.vertical, 14)
             .padding(.horizontal, 16)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(narrator.isSpeaking ? Palette.warm : Palette.paper)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(narrator.isSpeaking ? Color.clear : Palette.line, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(narrator.isSpeaking ? Palette.warmDeep : Palette.warm)
             )
         }
         .buttonStyle(.plain)
