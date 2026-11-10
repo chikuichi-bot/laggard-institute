@@ -2,7 +2,8 @@ import type { Spot, StationSeed } from "@/data/mishiranu-stations";
 
 /** WGS84 station centers for the curated set */
 export const STATION_LL: Record<string, { lat: number; lng: number }> = {
-  demachiyanagi: { lat: 35.0292, lng: 135.772 },
+  // OSM: 出町柳駅 building / 叡電・京阪ホーム（今出川通のすぐ北）
+  demachiyanagi: { lat: 35.0305, lng: 135.7729 },
   chushojima: { lat: 34.9267, lng: 135.7594 },
   "iwashimizu-hachimangu": { lat: 34.8796, lng: 135.6998 },
   oyamazaki: { lat: 34.8917, lng: 135.6794 },
@@ -83,12 +84,13 @@ export function findNearestStation(
 
 /** Precise pins for 出町柳 (feel-test home station) */
 export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
-  "demachi-1": { lat: 35.03055, lng: 135.77115 }, // 鴨川デルタ
+  // 鴨川デルタ（OSM leisure=park）。三角の先端＝合流点寄り
+  "demachi-1": { lat: 35.0297, lng: 135.7717 },
   // 枡形は今出川の北・河原町〜寺町のアーケード（OSM way / ふたば・出町座）
   "demachi-2": { lat: 35.03029, lng: 135.76886 }, // 出町枡形商店街
   "demachi-3": { lat: 35.03011, lng: 135.76963 }, // 出町ふたば
   "demachi-3b": { lat: 35.03015, lng: 135.7697 }, // ふたば土産
-  "demachi-4": { lat: 35.02935, lng: 135.77225 }, // 叡電ホーム
+  "demachi-4": { lat: 35.03027, lng: 135.77268 }, // 叡電ホーム
   "demachi-5": { lat: 35.0302, lng: 135.76903 }, // 出町座（枡形）
   "demachi-5b": { lat: 35.0289, lng: 135.7804 }, // 進々堂 百万遍
   "demachi-5c": { lat: 35.0303, lng: 135.7692 }, // 満寿形屋
@@ -96,7 +98,7 @@ export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
   "demachi-5e": { lat: 35.0391, lng: 135.7729 }, // 下鴨茶寮
   "demachi-5f": { lat: 35.02955, lng: 135.7729 }, // COYOTE Roastery
   "demachi-beans": { lat: 35.0322, lng: 135.7782 }, // WEEKENDERS COFFEE
-  "demachi-10": { lat: 35.0304, lng: 135.77105 }, // 鴨川デルタの川端（休む）
+  "demachi-10": { lat: 35.03005, lng: 135.77155 }, // 鴨川デルタの川端（休む）
   "demachi-6": { lat: 35.03205, lng: 135.77045 }, // 下鴨並木入口
   "demachi-9": { lat: 35.0389, lng: 135.7728 }, // 下鴨神社・糺の森
   "demachi-7": { lat: 35.029, lng: 135.7687 }, // 河原町今出川
