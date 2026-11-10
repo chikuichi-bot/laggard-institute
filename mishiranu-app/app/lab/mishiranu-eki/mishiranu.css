@@ -1517,6 +1517,205 @@ a.mishiranu-btn {
   color: var(--mk-fog);
 }
 
+/* —— Tour tabs (iPhone-friendly pages) —— */
+.mishiranu-tour-app {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  min-height: 70vh;
+}
+
+.mishiranu-tour-top {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.mishiranu-tour-top-kicker {
+  margin: 0;
+}
+
+.mishiranu-tour-top-title {
+  margin: 0;
+  font-family: var(--mk-display);
+  font-size: clamp(1.55rem, 5vw, 1.9rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.mishiranu-tour-top-sub {
+  margin: 0;
+  color: var(--mk-fog);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.mishiranu-tour-pages {
+  animation: mk-rise 0.45s ease-out both;
+}
+
+.mishiranu-tour-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.mishiranu-tour-tabs {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 40;
+  transform: translateX(-50%);
+  width: min(760px, 100%);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.15rem;
+  padding: 0.45rem 0.55rem calc(0.45rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--mk-paper) 92%, white);
+  border-top: 1px solid var(--mk-line);
+  backdrop-filter: blur(10px);
+}
+
+.mishiranu-tour-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--mk-mist);
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  padding: 0.45rem 0.2rem;
+  min-height: 52px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: var(--mk-sans);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.mishiranu-tour-tab--active {
+  color: var(--mk-ink);
+  background: var(--mk-warm-soft);
+}
+
+.mishiranu-tour-tab-icon {
+  display: inline-flex;
+  color: inherit;
+}
+
+.mishiranu-tour-tab-icon .mishiranu-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.mishiranu-guide-segments {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mishiranu-guide-segments::-webkit-scrollbar {
+  display: none;
+}
+
+.mishiranu-guide-segment {
+  appearance: none;
+  flex: 0 0 auto;
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  color: var(--mk-fog);
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--mk-sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.mishiranu-guide-segment--active {
+  border-color: color-mix(in srgb, currentColor 45%, var(--mk-line));
+  background: color-mix(in srgb, currentColor 8%, var(--mk-paper));
+  font-weight: 600;
+}
+
+.mishiranu-guide-item--compact {
+  padding: 0.8rem 0.95rem;
+}
+
+.mishiranu-guide-item--compact .mishiranu-guide-item-blurb,
+.mishiranu-guide-item--compact .mishiranu-guide-item-detail {
+  display: none;
+}
+
+.mishiranu-actions--stack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mishiranu-spot-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  align-items: end;
+}
+
+.mishiranu-spot-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(31, 27, 23, 0.35);
+  cursor: pointer;
+}
+
+.mishiranu-spot-sheet-panel {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  margin: 0 auto;
+  max-height: min(72vh, 560px);
+  overflow: auto;
+  padding: 0.65rem 1.15rem calc(1.25rem + env(safe-area-inset-bottom));
+  background: var(--mk-paper);
+  border-radius: 18px 18px 0 0;
+  border: 1px solid var(--mk-line);
+  border-bottom: 0;
+  box-shadow: 0 -10px 40px rgba(31, 27, 23, 0.12);
+  animation: mk-sheet-up 0.28s ease-out both;
+}
+
+.mishiranu-spot-sheet-handle {
+  width: 2.5rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--mk-taupe);
+  margin: 0.15rem auto 0.85rem;
+}
+
+.mishiranu-spot-sheet-close {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+@keyframes mk-sheet-up {
+  from {
+    transform: translateY(18%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.mishiranu-shell:has(.mishiranu-tour-app) {
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+
 @media (max-width: 480px) {
   .mishiranu-time-row {
     grid-template-columns: 1fr;
