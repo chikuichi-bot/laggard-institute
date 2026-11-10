@@ -26,8 +26,8 @@ enum MealTier: String, Codable, Hashable {
 
     var label: String {
         switch self {
-        case .casual: return "気軽に"
-        case .upscale: return "少し奮発"
+        case .casual: return "庶民的"
+        case .upscale: return "高級"
         }
     }
 }
