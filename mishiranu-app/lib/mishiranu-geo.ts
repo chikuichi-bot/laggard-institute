@@ -92,7 +92,8 @@ export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
   "demachi-5c": { lat: 35.0284, lng: 135.77035 }, // 満寿形屋
   "demachi-5d": { lat: 35.0282, lng: 135.7726 }, // 手打大山そば 響
   "demachi-5e": { lat: 35.0391, lng: 135.7729 }, // 下鴨茶寮
-  "demachi-5f": { lat: 35.0291, lng: 135.7714 }, // コーヒーハウス マキ
+  "demachi-5f": { lat: 35.02955, lng: 135.7729 }, // COYOTE Roastery
+  "demachi-beans": { lat: 35.0322, lng: 135.7782 }, // WEEKENDERS COFFEE
   "demachi-10": { lat: 35.0304, lng: 135.77105 }, // 鴨川デルタの川端（休む）
   "demachi-6": { lat: 35.03205, lng: 135.77045 }, // 下鴨並木入口
   "demachi-9": { lat: 35.0389, lng: 135.7728 }, // 下鴨神社・糺の森

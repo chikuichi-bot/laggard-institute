@@ -378,14 +378,14 @@ export const STATIONS: StationSeed[] = [
       },
       {
         id: "demachi-5f",
-        name: "コーヒーハウス マキ",
+        name: "COYOTE Roastery",
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
-        mealTimes: ["morning"],
-        hours: "8:00〜18:00（店休日あり）",
+        mealTimes: ["morning", "lunch"],
+        hours: "平日 8:30〜18:00 / 土 10:00〜18:00（日曜定休）",
         blurb:
-          "出町柳から徒歩圏の老舗珈琲店。サンドウィッチと珈琲で、朝の荷物をいったん下ろせる。",
+          "出町柳駅すぐのエルサルバドル専門ロースタリー。ドリップの一杯と、焙煎したての豆の持ち帰りができる。",
         x: 0.62,
         y: 0.5,
         walkMinutes: 6,
@@ -438,6 +438,21 @@ export const STATIONS: StationSeed[] = [
         x: 0.7,
         y: 0.65,
         walkMinutes: 14,
+      },
+      {
+        id: "demachi-beans",
+        name: "WEEKENDERS COFFEE",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "10:00〜19:00（豆の販売のみ・焙煎状況で変更あり）",
+        blurb:
+          "元田中寄りのロースター窓口。淹れずに豆だけ持ち帰れるので、コーヒー好きの手土産向き。",
+        detail:
+          "出町柳〜元田中の徒歩圏。焙煎状況で開店が前後するので、行く前に営業を確かめると安心です。",
+        x: 0.72,
+        y: 0.42,
+        walkMinutes: 12,
+        secretWorthy: true,
       },
       {
         id: "demachi-8",
@@ -936,11 +951,11 @@ export const STATIONS: StationSeed[] = [
       },
       {
         id: "oyam-6",
-        name: "地元の小さな土産",
+        name: "大山崎 COFFEE ROASTERS",
         genre: "gourmet",
         guide: "souvenir",
-        hours: "店による（おおよそ 10:00〜18:00）",
-        blurb: "菓子や茶など、重い工場土産でなく手に収まるもの。路地の店で見つけると旅らしい。",
+        hours: "木・土 10:00〜15:00（それ以外は休み・要確認）",
+        blurb: "天王山ふもとの焙煎所。焙煎後まもない豆を、挽かずに袋で持ち帰れる。",
         x: 0.47,
         y: 0.52,
         walkMinutes: 10,
@@ -2184,7 +2199,7 @@ export const STATIONS: StationSeed[] = [
         mealTier: "casual",
         mealTimes: ["morning", "lunch"],
         hours: "8:30〜18:00（元日休み）",
-        blurb: "尾道駅から徒歩数分の自家焙煎。窓から尾道水道を見ながら、朝から一杯置ける。",
+        blurb: "尾道駅から徒歩数分の自家焙煎。窓から尾道水道を見ながら一杯置き、豆も袋で持ち帰れる。",
         x: 0.7,
         y: 0.45,
         walkMinutes: 12,
@@ -2221,6 +2236,20 @@ export const STATIONS: StationSeed[] = [
         walkMinutes: 20,
       },
     
+      {
+        id: "onomichi-beans",
+        name: "尾道浪漫珈琲の豆",
+        genre: "gourmet",
+        guide: "souvenir",
+        hours: "8:30〜18:00（元日休み・店舗により前後）",
+        blurb:
+          "駅前店や本店で買える自家焙煎の豆。水道を見たあとに、香りだけ持ち帰る土産。",
+        detail:
+          "ブレンドや挽き具合は店で相談できることが多い。重い瓶より袋の豆が旅向きです。",
+        x: 0.68,
+        y: 0.46,
+        walkMinutes: 12,
+      },
       {
         id: "onomichi-s",
         name: "猫の小さな雑貨",
