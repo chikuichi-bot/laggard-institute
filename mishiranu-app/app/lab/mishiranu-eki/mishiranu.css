@@ -514,6 +514,50 @@ a.mishiranu-btn {
   padding: 0.35rem 0 1rem;
 }
 
+.mishiranu-hero-install {
+  margin-top: 2rem;
+  max-width: 26rem;
+}
+
+.mishiranu-ios-install {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.05rem 1.1rem;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-radius);
+  background: color-mix(in srgb, var(--mk-paper) 88%, #fff);
+}
+
+.mishiranu-ios-install--ready {
+  border-color: color-mix(in srgb, var(--mk-moss) 35%, var(--mk-line));
+}
+
+.mishiranu-ios-install-title {
+  margin: 0 0 0.55rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+
+.mishiranu-ios-install-steps {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--mk-fog);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+@media (display-mode: standalone) {
+  .mishiranu-shell {
+    padding-top: max(0.35rem, env(safe-area-inset-top));
+  }
+
+  .mishiranu-tour-tabs {
+    padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
+  }
+}
+
 .mishiranu-course-card {
   appearance: none;
   width: 100%;

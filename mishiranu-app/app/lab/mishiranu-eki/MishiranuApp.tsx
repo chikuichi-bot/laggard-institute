@@ -68,6 +68,7 @@ import {
   IconWalk,
   StayIcon,
 } from "./MishiranuIcons";
+import { IosInstallCard } from "./IosInstall";
 import "./mishiranu.css";
 
 const StationMap = dynamic(() => import("./StationMap"), {
@@ -1004,6 +1005,9 @@ export default function MishiranuApp({
                 {" · "}
                 <a href="?view=tour&station=demachiyanagi&time=1h">出町柳の物語へ</a>
               </p>
+              <div className="mishiranu-hero-install">
+                <IosInstallCard compact />
+              </div>
             </div>
           </section>
         ) : null}
@@ -1657,6 +1661,8 @@ export default function MishiranuApp({
 
               {tourTab === "more" ? (
                 <div className="mishiranu-tour-page" role="tabpanel" aria-label="ほか">
+                  <IosInstallCard />
+
                   <section
                     className="mishiranu-bike-rental"
                     aria-labelledby="bike-rental-title"
