@@ -210,7 +210,7 @@ export default function MishiranuApp({
   mealBudgetRef.current = mealBudget;
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [tourTab, setTourTab] = useState<TourTab>("map");
-  const [guideTab, setGuideTab] = useState<GuideKind>("meal");
+  const [guideTab, setGuideTab] = useState<GuideKind>("sight");
   const [spotSheetOpen, setSpotSheetOpen] = useState(false);
   const [secret, setSecret] = useState<Spot | null>(null);
   const [secretOpen, setSecretOpen] = useState(false);

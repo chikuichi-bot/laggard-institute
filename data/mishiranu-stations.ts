@@ -130,9 +130,9 @@ export const GUIDE_COLOR: Record<GuideKind, string> = {
 };
 
 export const GUIDE_ORDER: GuideKind[] = [
+  "sight",
   "meal",
   "souvenir",
-  "sight",
   "rest",
   "tip",
 ];
