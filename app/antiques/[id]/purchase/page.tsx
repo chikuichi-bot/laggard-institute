@@ -1,22 +1,26 @@
-export const dynamic = "force-dynamic";
-
 import Link from "next/link";
 import PurchaseCheckout from "@/components/PurchaseCheckout";
 import SiteShell from "@/components/SiteShell";
 import { categoryLabel } from "@/lib/category";
 import { canPurchaseItem } from "@/lib/purchase-mailto";
-import { getItem } from "@/lib/items";
+import { getItem, readCatalog } from "@/lib/items";
+import { isLolipopStaticExport } from "@/lib/site-mode";
 import { isStripeCheckoutAvailable } from "@/lib/stripe";
 import { notFound } from "next/navigation";
 
 type Props = { params: Promise<{ id: string }> };
+
+export async function generateStaticParams() {
+  const items = await readCatalog("antiques");
+  return items.filter(canPurchaseItem).map((item) => ({ id: item.id }));
+}
 
 export default async function AntiquePurchasePage({ params }: Props) {
   const { id } = await params;
   const item = await getItem("antiques", id);
   if (!item || !canPurchaseItem(item)) notFound();
 
-  const stripeAvailable = isStripeCheckoutAvailable();
+  const stripeAvailable = !isLolipopStaticExport && isStripeCheckoutAvailable();
   const cardCheckoutReady = stripeAvailable && Boolean(item.price && item.price > 0);
 
   return (
@@ -29,7 +33,9 @@ export default async function AntiquePurchasePage({ params }: Props) {
           <p className="detail-antique-eyebrow">購入</p>
           <h1 className="purchase-page-title">購入に進む</h1>
           <p className="purchase-page-lead">
-            発送先の住所を入力すると、送料込みの合計が表示されます。
+            {item.price && item.price > 0
+              ? "発送先の住所を入力すると、送料込みの合計が表示されます。"
+              : "銀行振込でのお申し込み、またはお問い合わせから進めます。"}
           </p>
         </header>
 

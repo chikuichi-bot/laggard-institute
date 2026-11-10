@@ -32,7 +32,8 @@ if [[ -d "$SRC_DIR/$ASSET_DIR/icons" ]]; then
     wazukana-byo.png \
     tsuitara-memo.png \
     4s-camera.png \
-    abomon-game.png
+    abomon-game.png \
+    sorakara.png
   do
     if [[ -f "$SRC_DIR/$ASSET_DIR/icons/$name" ]]; then
       cp "$SRC_DIR/$ASSET_DIR/icons/$name" "$OUT_DIR/$ASSET_DIR/icons/$name"

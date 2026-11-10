@@ -44,11 +44,35 @@ function AppListItem({
           <p className="app-connect-date">
             制作日 {formatAppReleasedAt(app.releasedAt)}
           </p>
+          {app.updatedAt ? (
+            <p className="app-connect-date">
+              最新更新日 {formatAppReleasedAt(app.updatedAt)}
+            </p>
+          ) : null}
         </div>
       </div>
-      {app.editions.length > 0 ? (
+      {app.editions.length > 0 || app.friendOffer ? (
         <div className="app-connect-actions">
-          <StoreBadges editions={app.editions} />
+          {app.editions.length > 0 ? (
+            <StoreBadges editions={app.editions} />
+          ) : null}
+          {app.friendOffer ? (
+            <a
+              className="app-friend-offer"
+              href={app.friendOffer.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="app-friend-offer-label">
+                {app.friendOffer.label ?? "友人"}
+              </span>
+              {app.friendOffer.detail ? (
+                <span className="app-friend-offer-detail">
+                  {app.friendOffer.detail}
+                </span>
+              ) : null}
+            </a>
+          ) : null}
         </div>
       ) : null}
     </li>

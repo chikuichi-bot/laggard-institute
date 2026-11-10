@@ -30,11 +30,10 @@ elif [[ "$LOLIPOP_MINIMAL" == "1" ]]; then
     "app/amappola"
   )
 else
+  # 購入・問い合わせは静的でも載せる（振込 mailto / 完了面）。API のみ退避。
   SKIP_MOVE=(
     "app/api"
     "app/admin"
-    "app/antiques/[id]/purchase"
-    "app/antiques/[id]/inquiry"
   )
 fi
 

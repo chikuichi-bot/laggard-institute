@@ -27,6 +27,7 @@ LOLIPOP_KNOWN_SKIP_PATHS=(
 
 # Legacy skip dir names (suffix after .lolipop-skip-) → canonical path
 # Older builds used non-encoded names for some routes.
+# purchase/inquiry は現在スキップしないが、過去ビルドの退避復元用に残す。
 LOLIPOP_LEGACY_SKIP_KEYS=(
   "amappola-purchase-success:app/amappola/purchase/success"
 )

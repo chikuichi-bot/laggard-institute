@@ -2,6 +2,7 @@ import Link from "next/link";
 import PurchaseCheckout from "@/components/PurchaseCheckout";
 import SiteShell from "@/components/SiteShell";
 import { canPurchaseAmappola, getAmappolaProduct } from "@/lib/amappola";
+import { isLolipopStaticExport } from "@/lib/site-mode";
 import { isStripeCheckoutAvailable } from "@/lib/stripe";
 import { notFound } from "next/navigation";
 
@@ -9,7 +10,7 @@ export default function AmappolaPurchasePage() {
   const item = getAmappolaProduct();
   if (!canPurchaseAmappola()) notFound();
 
-  const stripeAvailable = isStripeCheckoutAvailable();
+  const stripeAvailable = !isLolipopStaticExport && isStripeCheckoutAvailable();
   const cardCheckoutReady = stripeAvailable && Boolean(item.price && item.price > 0);
 
   return (

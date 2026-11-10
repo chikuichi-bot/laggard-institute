@@ -1,0 +1,14 @@
+# Old /lagado/ tree still had the full catalog publicly.
+# Public face is now domain root + /lagado2026/{news,map,contact}.
+# Redirect archive URLs; do not delete files (--delete forbidden).
+
+RewriteEngine On
+
+# Canonical public pages
+RewriteRule ^$ / [R=302,L]
+RewriteRule ^news(/.*)?$ /lagado2026/news$1 [R=302,L]
+RewriteRule ^map(/.*)?$ /lagado2026/map$1 [R=302,L]
+RewriteRule ^contact(/.*)?$ /lagado2026/contact$1 [R=302,L]
+
+# Former catalog (and anything else under /lagado/) → public home
+RewriteRule ^ / [R=302,L]

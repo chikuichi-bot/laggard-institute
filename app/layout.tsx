@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { INSTITUTE_NAME } from "@/lib/constants";
+import { isLolipopMinimal } from "@/lib/site-mode";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: INSTITUTE_NAME,
-  description:
-    "古道具と、街や海で拾ったものと、言葉の標本。淡嶋健仁の工房。",
+  description: isLolipopMinimal
+    ? "営業日・地図・連絡。京都・北白川。"
+    : "古道具と、街や海で拾ったものと、言葉の標本。淡嶋健仁の工房。",
 };
 
 export const viewport: Viewport = {

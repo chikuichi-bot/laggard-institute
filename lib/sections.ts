@@ -47,15 +47,34 @@ export type AppEdition = {
   version?: string;
 };
 
+export type AppFriendOffer = {
+  /** App Store Offer Code redeem など、無料枠の実URLのみ（推測禁止） */
+  url: string;
+  /** ボタン主文言。例: 友人 */
+  label?: string;
+  /** 短い副文言。例: 一年無料 */
+  detail?: string;
+};
+
 export type AppEntry = {
   name: string;
   icon?: string;
   description: string;
   /** 掲載順用。いちばん早い版の公開日 */
   releasedAt: string;
+  /**
+   * 最新更新日（YYYY-MM-DD）。
+   * App Store `currentVersionReleaseDate` など、ストア上の現行版リリース日。
+   */
+  updatedAt?: string;
   editions: AppEdition[];
   videoBase?: string;
   poster?: string;
+  /**
+   * 友人向け無料枠があるときだけ設定。
+   * 無いアプリには付けない（ボタンも出さない）。
+   */
+  friendOffer?: AppFriendOffer;
 };
 
 export function appPlatformLabel(platform: AppPlatform): string {
@@ -124,11 +143,50 @@ export function primaryAppHref(editions: AppEdition[]): string | undefined {
 /** Lagado 自作（表示は制作日の新しい順） */
 export const apps: AppEntry[] = [
   {
+    name: "今日の過去新聞",
+    icon: "/icons/past-today.png",
+    description: "今日の月日が、一件を差し出す。新聞の体で読む。",
+    releasedAt: "2026-11-03",
+    updatedAt: "2026-11-03",
+    editions: [
+      {
+        platform: "ios",
+        href: "https://apps.apple.com/jp/app/%E4%BB%8A%E6%97%A5%E3%81%AE%E9%81%8E%E5%8E%BB%E6%96%B0%E8%81%9E/id6828013368",
+        releasedAt: "2026-11-03",
+        version: "1.1",
+      },
+    ],
+  },
+  {
+    name: "そらから",
+    /** ?v= は Cloudflare が旧グレーPNGをキャッシュしていたためのバスト（2026-10-11） */
+    icon: "/icons/sorakara.png?v=20261011",
+    description:
+      "空の散歩。ただ浮いて、街を上から眺めます。たまに、新しい発見があります。",
+    releasedAt: "2026-10-09",
+    updatedAt: "2026-11-03",
+    editions: [
+      {
+        platform: "ios",
+        href: "https://apps.apple.com/jp/app/%E3%81%9D%E3%82%89%E3%81%8B%E3%82%89/id6819470015",
+        releasedAt: "2026-10-09",
+        version: "1.6.2",
+      },
+    ],
+    /** App Store Connect カスタムオファーコード SORAKARA1Y（2026-12-31 まで · 最大500） */
+    friendOffer: {
+      url: "https://apps.apple.com/redeem?ctx=offercodes&id=6819470015&code=SORAKARA1Y",
+      label: "友人",
+      detail: "一年無料",
+    },
+  },
+  {
     name: "おみくじ文庫",
     icon: "/icons/omikuji-bunko.png",
     description:
       "青空文庫のなかから、偶然の一節を引く小さな図書館。言葉の漂着物を、毎日ひとつ。",
     releasedAt: "2026-03-03",
+    updatedAt: "2026-11-02",
     editions: [
       {
         platform: "web",
@@ -139,7 +197,7 @@ export const apps: AppEntry[] = [
         platform: "ios",
         href: "https://apps.apple.com/jp/app/%E3%81%8A%E3%81%BF%E3%81%8F%E3%81%98%E6%96%87%E5%BA%AB/id6760742804",
         releasedAt: "2026-03-26",
-        version: "1.2.11",
+        version: "1.3.1",
       },
       {
         platform: "android",
@@ -147,18 +205,25 @@ export const apps: AppEntry[] = [
         releasedAt: "2026-04-30",
       },
     ],
+    /** App Store Connect カスタムオファーコード OMIKUJI1Y（2026-12-31 まで · 最大500） */
+    friendOffer: {
+      url: "https://apps.apple.com/redeem?ctx=offercodes&id=6760742804&code=OMIKUJI1Y",
+      label: "友人",
+      detail: "一年無料",
+    },
   },
   {
     name: "Fragments - 文学の断片",
     icon: "/icons/literary-fragments.png",
     description: "世界文学の断片を、気配とともに巡るアプリ。",
     releasedAt: "2026-04-10",
+    updatedAt: "2026-09-29",
     editions: [
       {
         platform: "ios",
         href: "https://apps.apple.com/jp/app/fragments-%E6%96%87%E5%AD%A6%E3%81%AE%E6%96%AD%E7%89%87/id6761637530",
         releasedAt: "2026-04-10",
-        version: "1.1.4",
+        version: "1.1.5",
       },
       {
         platform: "android",
@@ -172,6 +237,7 @@ export const apps: AppEntry[] = [
     icon: "/icons/wasure-memo.png",
     description: "思いついたらメモして、あとは忘れて大丈夫。お店の近くで、そっと知らせます。",
     releasedAt: "2026-08-02",
+    updatedAt: "2026-09-09",
     editions: [
       {
         platform: "ios",
@@ -180,26 +246,56 @@ export const apps: AppEntry[] = [
         version: "1.3.2",
       },
     ],
+    /**
+     * IAP 買い切り「フル機能アンロック」の友人向けオファーコード FRIEND2026
+     * （オファー名 FRIEND_FREE_2026 · 期限 2026-10-31 · 最大500 · 非消耗型 ¥300 相当）
+     */
+    friendOffer: {
+      url: "https://apps.apple.com/redeem?ctx=offercodes&id=6794892342&code=FRIEND2026",
+      label: "友人",
+      detail: "買い切り無料",
+    },
   },
   {
     name: "相対性理論計",
     icon: "/icons/wazukana-byo.png",
     description: "万歩計の代わりに、時間のずれを。式は本物。測りはざっくり。",
     releasedAt: "2026-08-25",
+    updatedAt: "2026-09-17",
     editions: [
       {
         platform: "ios",
         href: "https://apps.apple.com/jp/app/%E7%9B%B8%E5%AF%BE%E6%80%A7%E7%90%86%E8%AB%96%E8%A8%88/id6804165772",
         releasedAt: "2026-08-25",
-        version: "2.0",
+        version: "2.2",
       },
     ],
   },
+  {
+    name: "4S カメラ",
+    icon: "/icons/4s-camera.png",
+    description: "いまの iPhone では切れない補正を、切るためのカメラ。綺麗にするアプリではありません。",
+    releasedAt: "2026-09-03",
+    updatedAt: "2026-10-07",
+    editions: [
+      {
+        platform: "ios",
+        href: "https://apps.apple.com/jp/app/4s-%E3%82%AB%E3%83%A1%E3%83%A9/id6803322523",
+        releasedAt: "2026-09-03",
+        version: "1.0.4",
+      },
+    ],
+  },
+];
+
+/** 委託制作（自作アプリと分けて掲載） */
+export const commissionedApps: AppEntry[] = [
   {
     name: "ついたらメモ",
     icon: "/icons/tsuitara-memo.png",
     description: "次の訪問先まで、忘れていい。着いたら、その場所のことだけ出ます。",
     releasedAt: "2026-08-27",
+    updatedAt: "2026-09-10",
     editions: [
       {
         platform: "ios",
@@ -210,28 +306,11 @@ export const apps: AppEntry[] = [
     ],
   },
   {
-    name: "4S カメラ",
-    icon: "/icons/4s-camera.png",
-    description: "いまの iPhone では切れない補正を、切るためのカメラ。綺麗にするアプリではありません。",
-    releasedAt: "2026-09-03",
-    editions: [
-      {
-        platform: "ios",
-        href: "https://apps.apple.com/jp/app/4s-%E3%82%AB%E3%83%A1%E3%83%A9/id6803322523",
-        releasedAt: "2026-09-03",
-        version: "1.0.2",
-      },
-    ],
-  },
-];
-
-/** 委託制作（自作アプリと分けて掲載） */
-export const commissionedApps: AppEntry[] = [
-  {
     name: "アボモンゲーム",
     icon: "/icons/abomon-game.png",
     description: "アボカドかモンキーか。ゆるくてふしぎな、タッチのゲーム。",
     releasedAt: "2026-07-20",
+    updatedAt: "2026-08-20",
     editions: [
       {
         platform: "ios",

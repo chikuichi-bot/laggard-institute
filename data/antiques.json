@@ -8,7 +8,9 @@
       "/uploads/antiques/pottery-leaf-imprint/1.png"
     ],
     "createdAt": "2026-06-29T14:00:00.000Z",
-    "orientation": "landscape"
+    "orientation": "landscape",
+    "forSale": true,
+    "sold": false
   },
   {
     "id": "wood-carving-fusetsu-kansaku",
@@ -23,7 +25,7 @@
     ],
     "createdAt": "2026-06-24T12:00:00.000Z",
     "orientation": "portrait",
-    "forSale": false,
+    "forSale": true,
     "sold": false
   },
   {
@@ -56,7 +58,7 @@
     ],
     "createdAt": "2026-06-24T21:00:00.000Z",
     "orientation": "landscape",
-    "forSale": false,
+    "forSale": true,
     "sold": false
   },
   {
@@ -88,7 +90,7 @@
     ],
     "createdAt": "2026-06-25T00:30:00.000Z",
     "orientation": "portrait",
-    "forSale": false,
+    "forSale": true,
     "sold": false
   },
   {
@@ -302,7 +304,7 @@
     ],
     "createdAt": "2026-06-25T18:30:00.000Z",
     "orientation": "landscape",
-    "forSale": false,
+    "forSale": true,
     "sold": false
   },
   {

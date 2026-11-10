@@ -1,0 +1,28 @@
+# Basic auth for /lagado2026/ — keep catalog private; public face = news/map/contact + assets.
+# Copy to public_html/lagado2026/.htaccess (and sync .lolipop-private-auth/.htaccess).
+# Do not put Auth at site root. Do not Basic-protect _next (homepage CSS/JS).
+
+SetEnvIf Request_URI "(^|/)_next/" lagado_public_asset
+SetEnvIf Request_URI "(^|/)icons/" lagado_public_asset
+SetEnvIf Request_URI "(^|/)favicon\.ico" lagado_public_asset
+SetEnvIf Request_URI "\.(?:css|js|mjs|map|woff2?|ttf|otf|png|jpe?g|webp|gif|svg|ico)$" lagado_public_asset
+
+# 公開面（地図+カレンダー仮公開）: 営業日・地図・連絡は認証なし
+SetEnvIf Request_URI "(^|/)news(/|$)" lagado_public_page
+SetEnvIf Request_URI "(^|/)map(/|$)" lagado_public_page
+SetEnvIf Request_URI "(^|/)contact(/|$)" lagado_public_page
+
+AuthType Basic
+AuthName "Lagado 2026"
+AuthUserFile /home/users/1/lolipop.jp-4144bd1232669fda/web/lagado2026/.htpasswd
+
+<RequireAny>
+  Require env lagado_public_asset
+  Require env lagado_public_page
+  Require valid-user
+</RequireAny>
+
+# Deny direct download of password file
+<Files ".htpasswd">
+  Require all denied
+</Files>

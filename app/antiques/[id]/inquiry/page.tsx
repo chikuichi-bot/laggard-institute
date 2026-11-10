@@ -1,13 +1,16 @@
-export const dynamic = "force-dynamic";
-
 import Link from "next/link";
 import InquiryForm from "@/components/InquiryForm";
 import SiteShell from "@/components/SiteShell";
-import { getItem } from "@/lib/items";
+import { getItem, readCatalog } from "@/lib/items";
 import { canPurchaseItem } from "@/lib/purchase-mailto";
 import { notFound } from "next/navigation";
 
 type Props = { params: Promise<{ id: string }> };
+
+export async function generateStaticParams() {
+  const items = await readCatalog("antiques");
+  return items.filter(canPurchaseItem).map((item) => ({ id: item.id }));
+}
 
 export default async function AntiqueInquiryPage({ params }: Props) {
   const { id } = await params;
