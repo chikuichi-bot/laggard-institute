@@ -18,6 +18,7 @@ struct TourView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .id(model.tourTab)
             }
         }
         .background(Palette.canvas.ignoresSafeArea())

@@ -99,6 +99,7 @@ private struct PlaceNote: View {
 
 struct PlacePage: View {
     let station: Station
+    @State private var narrator = PlaceNarrator()
 
     var body: some View {
         let area = readingLines(station.areaAbout)
@@ -106,6 +107,9 @@ struct PlacePage: View {
         let walk = readingLines(station.walkGuide)
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                PlaceListenBar(narrator: narrator, station: station)
+                    .padding(.bottom, 22)
+
                 if !intro.isEmpty {
                     ReadingText(lines: intro, size: .title3, color: Palette.ink, lineSpacing: 10, paragraphSpacing: 18)
                         .padding(.bottom, 28)
@@ -197,6 +201,12 @@ struct PlacePage: View {
             .padding(.bottom, 36)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .onChange(of: station.id) { _, _ in
+            narrator.stop()
+        }
+        .onDisappear {
+            narrator.stop()
+        }
     }
 
     private var placeRule: some View {
@@ -204,6 +214,46 @@ struct PlacePage: View {
             .fill(Palette.line)
             .frame(height: 1)
             .padding(.bottom, 4)
+    }
+}
+
+/// 電車のイヤホン向け。押すと土地案内を読み上げ／もう一度で停止。
+private struct PlaceListenBar: View {
+    let narrator: PlaceNarrator
+    let station: Station
+
+    var body: some View {
+        Button {
+            narrator.toggle(station: station)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: narrator.isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 22, height: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(narrator.isSpeaking ? "読み上げを止める" : "土地案内を聞く")
+                        .font(.mincho(.body, weight: .semibold))
+                    Text(narrator.isSpeaking ? "もう一度押すと止まります" : "駅に着く前に、イヤホンでどうぞ")
+                        .font(.caption)
+                        .foregroundStyle(narrator.isSpeaking ? Palette.paper.opacity(0.85) : Palette.mist)
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(narrator.isSpeaking ? Palette.paper : Palette.ink)
+            .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(narrator.isSpeaking ? Palette.warm : Palette.paper)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(narrator.isSpeaking ? Color.clear : Palette.line, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(narrator.isSpeaking ? "読み上げを止める" : "土地案内を聞く")
+        .accessibilityHint("駅の土地の文章を音声で読み上げます")
     }
 }
 
