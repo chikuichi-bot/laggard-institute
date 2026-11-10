@@ -345,7 +345,7 @@ final class AppModel {
         }
     }
 
-    private func openTour(tab: TourTab) {
+    func openTour(tab: TourTab) {
         activeSpot = nil
         secret = nil
         tourTab = tab

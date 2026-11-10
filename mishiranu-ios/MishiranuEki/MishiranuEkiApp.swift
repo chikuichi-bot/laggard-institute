@@ -10,6 +10,9 @@ struct MishiranuEkiApp: App {
                 .environment(model)
                 .tint(Palette.warm)
                 .preferredColorScheme(.light)
+                #if DEBUG
+                .onAppear { model.applyLaunchDemo() }
+                #endif
         }
     }
 }
