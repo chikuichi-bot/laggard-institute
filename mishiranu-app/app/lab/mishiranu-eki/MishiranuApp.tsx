@@ -55,11 +55,13 @@ import {
   CourseIcon,
   DayPartIcon,
   GuideKindIcon,
-  IconBinoculars,
   IconBike,
+  IconBinoculars,
   IconClock,
   IconHistory,
   IconLocate,
+  IconMapPin,
+  IconMore,
   IconSearch,
   IconSpark,
   IconTour,
@@ -1784,7 +1786,15 @@ export default function MishiranuApp({
 
                   <p className="mishiranu-foot">
                     地図は OpenStreetMap。出町柳ピンは実座標寄り。
-                    GEMINI_API_KEY があれば Gemini 3.1 Flash-Lite、なければ編集文です。
+                    ピクトグラム素材提供：日本デザインセンター／
+                    <a
+                      href="https://experience-japan.info/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      EXPERIENCE JAPAN PICTOGRAMS
+                    </a>
+                    。GEMINI_API_KEY があれば Gemini 3.1 Flash-Lite、なければ編集文です。
                   </p>
                 </div>
               ) : null}
@@ -1850,7 +1860,7 @@ export default function MishiranuApp({
                 >
                   <span className="mishiranu-tour-tab-icon" aria-hidden="true">
                     {tab.id === "map" ? (
-                      <IconLocate />
+                      <IconMapPin />
                     ) : tab.id === "course" ? (
                       <IconTour />
                     ) : tab.id === "guide" ? (
@@ -1858,7 +1868,7 @@ export default function MishiranuApp({
                     ) : tab.id === "place" ? (
                       <IconHistory />
                     ) : (
-                      <IconBike />
+                      <IconMore />
                     )}
                   </span>
                   <span className="mishiranu-tour-tab-label">{tab.label}</span>

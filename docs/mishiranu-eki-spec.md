@@ -265,6 +265,7 @@
 | 静的公開 | 研究所サイト向けは API なしでも編集コピーで読める想定 |
 | アクセシビリティ | チップ・案内項目はボタン、`aria-*` で段階を示す |
 | iPhone / モバイル | `viewport-fit=cover`、Safe Area、48pxタッチ、入力16px、地図のタッチズーム、ホーム画面用アイコン |
+| アイコン | [EXPERIENCE JAPAN PICTOGRAMS](https://experience-japan.info/) をローカル同梱（ホットリンク禁止）。色・サイズのみ変更。クレジット任意 |
 | セキュリティ | Gemini キーは `x-goog-api-key`、POST は `application/json` 必須。永続レート制限は未実装 |
 
 ---

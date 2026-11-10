@@ -349,12 +349,18 @@ a.mishiranu-btn {
 }
 
 .mishiranu-icon {
-  width: 1.05em;
-  height: 1.05em;
+  width: 1.15em;
+  height: 1.15em;
   flex-shrink: 0;
   display: inline-block;
-  vertical-align: -0.15em;
-  stroke-width: 1.5;
+  vertical-align: -0.2em;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .mishiranu-chat-chip .mishiranu-icon {
