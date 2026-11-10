@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start --port 3010 --hostname 0.0.0.0",
     "lint": "eslint",
-    "ios:sync": "CAP_SERVER_URL=$(node scripts/cap-local-url.mjs) npx cap sync ios",
+    "ios:export": "node scripts/ios-export.mjs",
+    "ios:sync": "npx cap sync ios",
     "ios:open": "npx cap open ios",
-    "ios:local": "npm run ios:sync && npm run ios:open"
+    "ios:app": "npm run ios:sync && npm run ios:open",
+    "ios:rebuild": "npm run ios:export && npm run ios:sync && npm run ios:open",
+    "ios:live": "CAP_SERVER_URL=$(node scripts/cap-local-url.mjs) npx cap sync ios && npx cap open ios"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[39756,["/_next/static/chunks/3kdtmm_isz-qo.js","/_next/static/chunks/158myu8e_yme3.js"],"default"]
+3:I[37457,["/_next/static/chunks/3kdtmm_isz-qo.js","/_next/static/chunks/158myu8e_yme3.js"],"default"]
+:HL["/_next/static/chunks/2zcsa07cy-nq7.css","style"]
+:HL["/_next/static/chunks/3k9po3upeyg5e.css","style"]
+0:{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/2zcsa07cy-nq7.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/chunks/3k9po3upeyg5e.css","precedence":"next"}]],["$","div",null,{"className":"mishiranu-root shippori_mincho_ffd9887a-module__vBYhmW__variable zen_kaku_gothic_new_98a516be-module__0P3LTG__variable","children":["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"hfyarUdLz11xrNvNmP3Vw"}

@@ -6,7 +6,7 @@
 import os from "node:os";
 
 const PORT = process.env.PORT?.trim() || "3010";
-const PATH = "/lab/mishiranu-eki";
+const PATH = "/";
 
 function lanIpv4() {
   const nets = os.networkInterfaces();

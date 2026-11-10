@@ -1,63 +1,47 @@
-# 見知らぬ駅 — Xcode / iOS（ローカル基準）
+# 見知らぬ駅 — Xcode / iOS（Publish 不要）
 
-Capacitor のネイティブ iOS プロジェクトです。**Cursor Apps の Publish は不要**です。Mac 上の Next.js（いま作っているローカル版）を読みます。
+アプリ本体の Web UI を **Xcode プロジェクトに同梱**します。Cursor Apps の Publish は使いません。ネットワーク上の公開 URL も必須ではありません。
 
 - Bundle ID: `jp.lagado.mishiranueki`
 - 表示名: 見知らぬ駅
-- Xcode プロジェクト: `App/App.xcodeproj`
-- 起動 URL（既定）: `http://127.0.0.1:3010/lab/mishiranu-eki`
+- Xcode: `App/App.xcodeproj`
 
-このクラウド環境は Linux のため、シミュレータ実行は **Mac の Xcode** で行ってください。
+このクラウド環境は Linux のため、**ビルドと実機実行は Mac の Xcode** で行ってください。
 
-## Mac での手順（ローカル最新版）
+## いちばん簡単な手順（推奨）
 
-ターミナルを2つ使います。
+白画面になったときは、この手順で **もう一度** sync し直してから Xcode で Run してください。
 
-**1. Next.js を起動**
+Mac のターミナルで:
 
 ```bash
+cd ~/Desktop/laggard-institute
+git pull
 cd mishiranu-app
 npm install
-npm run build
-npm run start
+npm run ios:app
 ```
 
-**2. Capacitor をローカル URL に同期して Xcode を開く**
+同梱する画面（`ios/App/App/public`）は Git に入っているので、Mac では書き出し不要です。`ios:app` は同期して Xcode を開くだけです。
+
+画面のコードを変えたあとに作り直すときだけ `npm run ios:rebuild` を使います。
+
+Xcode で:
+
+1. 左の **App** ターゲットを選ぶ  
+2. **Signing & Capabilities** で自分の Apple ID / Team を選ぶ  
+3. iPhone またはシミュレータを選んで **▶ Run**
+
+地図タイルや（任意の）AI 以外は、同梱ファイルだけで動きます。駅データ・コース・タブ（地図 / 土地 / 歩く / 案内 / ほか）はアプリ内に入っています。
+
+## 開発中だけ Mac の Next に繋ぐ（任意）
 
 ```bash
-cd mishiranu-app
-npm run ios:sync
-npm run ios:open
+npm run start          # 別ターミナル
+npm run ios:live       # ライブ URL に sync → Xcode
 ```
 
-`ios:sync` は同じ Wi‑Fi の LAN IP があればそれを使い、なければ `127.0.0.1` です（シミュレータ向け）。
+## 注意
 
-Xcode が開いたら:
-
-1. 左の **App** ターゲットを選択  
-2. **Signing & Capabilities** で Team（Apple ID）を設定  
-3. シミュレータまたは実機を選び **Run（▶）**
-
-### 実機（iPhone）のとき
-
-iPhone と Mac を同じ Wi‑Fi にしてから `npm run ios:sync` してください。手動指定もできます:
-
-```bash
-CAP_SERVER_URL=http://192.168.x.x:3010/lab/mishiranu-eki npm run ios:sync
-npm run ios:open
-```
-
-Mac の IP は「システム設定 → ネットワーク」、または `ipconfig getifaddr en0` で確認できます。
-
-## Safari / ホーム画面（Publish なし）
-
-1. iPhone の Safari で `http://<MacのLAN-IP>:3010/lab/mishiranu-eki` を開く  
-2. 共有 → 「ホーム画面に追加」
-
-古いホーム画面アイコンは一度消してから追加し直してください。
-
-## 含まれているもの
-
-- `@capacitor/geolocation`（Info.plist に利用目的を記載）
-- `@capacitor/status-bar` / `@capacitor/splash-screen`
-- App Icon / Splash（和紙トーンの「駅」マーク）
+- Gemini の AI 駅生成・コピー生成はサーバー API が必要なため、同梱ビルドではオフライン時に種データへフォールバックします。  
+- App Store 提出前は実機で位置情報許可と画面を確認してください。

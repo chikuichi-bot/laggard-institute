@@ -32,6 +32,14 @@ export function useIosInstallState() {
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
+    // Capacitor's WKWebView breaks if a service worker hijacks local assets.
+    const cap = (
+      window as Window & {
+        Capacitor?: { isNativePlatform?: () => boolean };
+      }
+    ).Capacitor;
+    if (cap?.isNativePlatform?.()) return;
+
     const id = window.setTimeout(() => {
       navigator.serviceWorker
         .register("/sw.js")
@@ -82,9 +90,9 @@ export function IosInstallCard({ compact = false }: Props) {
         <li>名前は「見知らぬ駅」のまま追加</li>
       </ol>
       <p className="mishiranu-note">
-        Publish 不要です。Mac で <code>npm run start</code> のあと{" "}
-        <code>npm run ios:local</code> すると、いまのローカル版が Xcode
-        で開きます（詳細は <code>mishiranu-app/ios/README.md</code>）。
+        Publish 不要です。Mac で <code>npm run ios:app</code>{" "}
+        すると、いまの画面を Xcode アプリに同梱して開けます（詳細は{" "}
+        <code>mishiranu-app/ios/README.md</code>）。
       </p>
     </section>
   );

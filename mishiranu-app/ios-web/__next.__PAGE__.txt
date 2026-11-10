@@ -1,0 +1,9 @@
+1:"$Sreact.fragment"
+2:I[79836,["/_next/static/chunks/3kdtmm_isz-qo.js","/_next/static/chunks/158myu8e_yme3.js","/_next/static/chunks/1wps_4yg0gt2q.js","/_next/static/chunks/3-_pgpsog2xdi.js","/_next/static/chunks/2n5tm0ihnk4u5.js"],"default"]
+3:I[97367,["/_next/static/chunks/3kdtmm_isz-qo.js","/_next/static/chunks/158myu8e_yme3.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+:HL["/_next/static/chunks/41-8_x5508oa5.css","style"]
+:HL["/_next/static/chunks/43azf-4xu-euy.css","style"]
+:HL["/_next/static/chunks/2ny18evromdfi.css","style"]
+0:{"rsc":["$","$1","c",{"children":[["$","div",null,{"className":"mishiranu-root shippori_mincho_1f3d8f9d-module__wdavDW__variable zen_kaku_gothic_new_f515a2f3-module__u8z_Ja__variable","children":["$","$L2",null,{}]}],[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/41-8_x5508oa5.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/chunks/43azf-4xu-euy.css","precedence":"next"}],["$","link","2",{"rel":"stylesheet","href":"/_next/static/chunks/2ny18evromdfi.css","precedence":"next"}],["$","script","script-0",{"src":"/_next/static/chunks/1wps_4yg0gt2q.js","async":true}],["$","script","script-1",{"src":"/_next/static/chunks/3-_pgpsog2xdi.js","async":true}],["$","script","script-2",{"src":"/_next/static/chunks/2n5tm0ihnk4u5.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"hfyarUdLz11xrNvNmP3Vw"}
+5:null

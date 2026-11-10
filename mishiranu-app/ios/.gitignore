@@ -1,13 +1,11 @@
 App/build
 App/Pods
 App/output
-App/App/public
 DerivedData
 xcuserdata
 
 # Cordova plugins for Capacitor
 capacitor-cordova-ios-plugins
 
-# Generated Config files
-App/App/capacitor.config.json
-App/App/config.xml
+# App/App/public, capacitor.config.json and config.xml are committed on purpose:
+# Xcode must find the bundled 見知らぬ駅 web app even if `cap sync` never ran.
