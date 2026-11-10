@@ -48,7 +48,10 @@ import {
   type WalkCourse,
 } from "@/lib/mishiranu-courses";
 import { paragraphsFrom, withAreaDepth } from "@/lib/mishiranu-area-depth";
-import { findNearestStation } from "@/lib/mishiranu-geo";
+import {
+  findNearestStation,
+  fuzzLatLngForExternal,
+} from "@/lib/mishiranu-geo";
 import {
   CourseIcon,
   DayPartIcon,
@@ -441,6 +444,7 @@ export default function MishiranuApp({
         });
       });
       const { latitude: lat, longitude: lng } = position.coords;
+      // Precise GPS stays in the browser for curated matching.
       const local = findNearestStation(lat, lng, STATIONS);
       if (local && local.km <= 3.5) {
         chooseStation(
@@ -451,11 +455,13 @@ export default function MishiranuApp({
         return;
       }
 
+      // Far from curated stations: only send ~1 km coarsened coords to the API.
+      const coarse = fuzzLatLngForExternal(lat, lng);
       const res = await fetch("/api/mishiranu/nearby", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ lat, lng }),
+        body: JSON.stringify({ lat: coarse.lat, lng: coarse.lng }),
       });
       const raw = await res.text();
       let data: {

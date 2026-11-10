@@ -31,8 +31,9 @@ export const STATION_LL: Record<string, { lat: number; lng: number }> = {
 const EARTH_KM = 6371;
 
 /**
- * Coarsen WGS84 coords before any third-party call (~1.1 km at the equator).
- * Precise GPS stays on-server for curated nearest-station matching only.
+ * Coarsen WGS84 coords before any network call (~1.1 km at the equator).
+ * Precise GPS stays in the browser for curated nearest-station matching;
+ * the nearby API and Gemini only ever see these rounded values.
  */
 export function fuzzLatLngForExternal(
   lat: number,
