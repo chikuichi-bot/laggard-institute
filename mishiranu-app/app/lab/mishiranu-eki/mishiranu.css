@@ -1278,6 +1278,34 @@ a.mishiranu-btn {
   border: none !important;
 }
 
+.mishiranu-leaflet-step {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--step-color, #b5493a);
+  color: #fffaf2;
+  font-family: var(--mk-sans), sans-serif;
+  font-weight: 600;
+  letter-spacing: 0;
+  border: 2px solid #fffaf2;
+  box-shadow: 0 1px 0 rgba(31, 27, 23, 0.18);
+  line-height: 1;
+}
+
+.mishiranu-leaflet-step--active {
+  box-shadow:
+    0 0 0 3px rgba(181, 73, 58, 0.35),
+    0 1px 0 rgba(31, 27, 23, 0.18);
+}
+
+.mishiranu-map-course-note {
+  margin: -0.85rem 0 1.1rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--mk-fog);
+  letter-spacing: 0.04em;
+}
+
 .mishiranu-leaflet-tooltip {
   background: transparent !important;
   border: none !important;

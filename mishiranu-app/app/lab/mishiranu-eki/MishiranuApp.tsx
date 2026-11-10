@@ -303,6 +303,13 @@ export default function MishiranuApp({
     for (const rest of byId.values()) ordered.push(rest);
     return ordered;
   }, [station, time.index, selectedCourse]);
+  const courseStopIds = useMemo(
+    () =>
+      selectedCourse && selectedCourse.stops.length > 0
+        ? selectedCourse.stops.map((stop) => stop.spotId)
+        : null,
+    [selectedCourse],
+  );
   const activeSpot =
     spots.find((s) => s.id === activeSpotId) ??
     (activeSpotId ? null : spots[0] ?? null);
@@ -1284,8 +1291,15 @@ export default function MishiranuApp({
                     spots={spots}
                     radiusKm={station.radiiKm[time.index]}
                     activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
+                    courseStopIds={courseStopIds}
                     onSelect={(id) => openSpot(id)}
                   />
+                  {selectedCourse ? (
+                    <p className="mishiranu-map-course-note">
+                      地図の線は「{selectedCourse.title}」の歩き順（駅→
+                      {selectedCourse.stopCount}か所）です。
+                    </p>
+                  ) : null}
                   <ul className="mishiranu-legend">
                     {GUIDE_ORDER.map((kind) => (
                       <li key={kind}>
