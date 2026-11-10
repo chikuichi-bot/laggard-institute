@@ -23,15 +23,17 @@ type Props = {
 
 function pinIcon(color: string, active: boolean) {
   const size = active ? 16 : 12;
+  // iconSize / iconAnchor を点の中心に一致させる（余白なし）
   return L.divIcon({
     className: "mishiranu-leaflet-pin",
     html: `<span style="
       display:block;width:${size}px;height:${size}px;border-radius:50%;
-      background:${color};border:2px solid #ffffff;
+      background:${color};border:2px solid #ffffff;box-sizing:border-box;
       box-shadow:0 0 0 ${active ? 3 : 1}px ${active ? "rgba(255,106,61,0.55)" : "rgba(36,48,56,0.18)"};
     "></span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
   });
 }
 
@@ -41,9 +43,11 @@ function stepIcon(step: number, color: string, active: boolean) {
     className: "mishiranu-leaflet-pin",
     html: `<span class="mishiranu-leaflet-step${active ? " mishiranu-leaflet-step--active" : ""}" style="
       --step-color:${color};width:${size}px;height:${size}px;font-size:${active ? 12 : 11}px;
+      box-sizing:border-box;
     ">${step}</span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
   });
 }
 
@@ -79,7 +83,6 @@ export default function StationMap({
 
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    // OSM is key-free; dusk look comes from CSS filter on .leaflet-tile-pane
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',

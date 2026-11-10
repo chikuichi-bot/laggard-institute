@@ -92,7 +92,7 @@ function SampleBoard() {
         <ListenChip tone="warm" />
         <ol className="ps-a-index" aria-label="この案内の目次">
           <li>
-            <b>01</b>導入
+            <b>01</b>この駅
           </li>
           <li>
             <b>02</b>歩き方
@@ -186,7 +186,7 @@ function SampleWayfinding() {
         <section className="ps-b-blade ps-b-blade--ink">
           <div className="ps-b-flag">
             <img src="/ejp/T_train.svg" alt="" width={20} height={20} />
-            <span>導入</span>
+            <span>この駅</span>
           </div>
           {intro.map((line) => (
             <p key={line}>{line}</p>

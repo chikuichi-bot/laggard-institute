@@ -13,7 +13,8 @@ struct TourMapPage: View {
     private var routeCoordinates: [CLLocationCoordinate2D] {
         guard let course = model.selectedCourse, !course.stops.isEmpty else { return [] }
         return [stationCoordinate] + course.stops.map {
-            CLLocationCoordinate2D(latitude: $0.spot.lat, longitude: $0.spot.lng)
+            let pin = model.resolvedSpot($0.spot)
+            return CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng)
         }
     }
 
@@ -21,25 +22,7 @@ struct TourMapPage: View {
         let spots = model.tourSpots
         let numbers = model.courseNumbers
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(station.name)駅 · 観光案内")
-                    .font(.caption2)
-                    .foregroundStyle(Palette.mist)
-                Text(station.tourTitle)
-                    .font(.mincho(.headline, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
-                Text(station.catchCopy)
-                    .font(.mincho(.footnote))
-                    .foregroundStyle(Palette.fog)
-                    .lineLimit(2)
-                Text("徒歩圏 約 \(formatKm(model.radiusKm)) km · 案内ピン \(spots.count) 件")
-                    .font(.caption)
-                    .foregroundStyle(Palette.river)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-
-            ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .bottomTrailing) {
                 Map(position: $position) {
                     MapCircle(center: stationCoordinate, radius: model.radiusKm * 1000)
                         .foregroundStyle(Palette.river.opacity(0.08))
@@ -58,14 +41,20 @@ struct TourMapPage: View {
                     }
 
                     ForEach(spots) { spot in
-                        Annotation(spot.name, coordinate: CLLocationCoordinate2D(latitude: spot.lat, longitude: spot.lng), anchor: .center) {
+                        let pin = model.resolvedSpot(spot)
+                        Annotation(
+                            pin.name,
+                            coordinate: CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng),
+                            // 円の中心＝座標。番号バッジは描画だけ外に出す。
+                            anchor: .center
+                        ) {
                             Button {
-                                model.openSpot(spot)
+                                model.openSpot(pin)
                             } label: {
-                                SpotPin(kind: spot.guide, number: numbers[spot.id], active: model.activeSpot?.id == spot.id)
+                                SpotPin(kind: pin.guide, number: numbers[pin.id], active: model.activeSpot?.id == pin.id)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("\(spot.guide.label) \(spot.name)")
+                            .accessibilityLabel("\(pin.guide.label) \(pin.name)")
                         }
                         .annotationTitles(.hidden)
                     }
@@ -79,34 +68,46 @@ struct TourMapPage: View {
                 }
 
                 Button {
-                    withAnimation { position = camera() }
+                    withAnimation {
+                        position = .userLocation(followsHeading: false, fallback: camera())
+                    }
                 } label: {
-                    PictogramIcon(.train, size: 18)
+                    Image(systemName: "location")
+                        .font(.body.weight(.semibold))
                         .foregroundStyle(Palette.ink)
+                        .frame(width: 18, height: 18)
                         .padding(10)
                         .background(Circle().fill(Palette.paper))
                         .overlay(Circle().stroke(Palette.line, lineWidth: 1))
                 }
                 .padding(12)
-                .accessibilityLabel("駅に戻る")
+                .accessibilityLabel("現在地を表示")
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(station.catchCopy)
+                    .font(.mincho(.callout))
+                    .foregroundStyle(Palette.fog)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("徒歩圏 約 \(formatKm(model.radiusKm)) km")
+                    .font(.caption)
+                    .foregroundStyle(Palette.river)
                 if let course = model.selectedCourse {
-                    Text("地図の線は「\(course.title)」の歩き順（駅→\(course.stops.count)か所）です。")
+                    Text("線は「\(course.title)」の歩き順（駅→\(course.stops.count)か所）")
                         .font(.caption)
                         .foregroundStyle(Palette.fog)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                HStack(spacing: 12) {
+                FlowLayout(spacing: 10) {
                     ForEach(GuideKind.order) { kind in
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             PictogramIcon(kind.pictogram, size: 14)
                                 .foregroundStyle(kind.color)
                             Text(kind.label)
                                 .font(.caption2)
                                 .foregroundStyle(Palette.fog)
                                 .lineLimit(1)
-                                .fixedSize()
                         }
                     }
                 }
@@ -142,13 +143,21 @@ struct TourMapPage: View {
 }
 
 private struct StationMarker: View {
+    private let size: CGFloat = 32
+
     var body: some View {
-        PictogramIcon(.train, size: 18)
-            .foregroundStyle(Palette.paper)
-            .padding(7)
-            .background(Circle().fill(Palette.ink))
-            .overlay(Circle().stroke(Palette.paper, lineWidth: 2))
-            .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+        ZStack {
+            Circle()
+                .fill(Palette.ink)
+                .frame(width: size, height: size)
+            Circle()
+                .stroke(Palette.paper, lineWidth: 2)
+                .frame(width: size, height: size)
+            PictogramIcon(.train, size: 18)
+                .foregroundStyle(Palette.paper)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
     }
 }
 
@@ -157,24 +166,32 @@ struct SpotPin: View {
     let number: Int?
     let active: Bool
 
+    private var size: CGFloat { active ? 34 : 30 }
+
     var body: some View {
-        PictogramIcon(kind.pictogram, size: 16)
-            .foregroundStyle(Palette.paper)
-            .padding(6)
-            .background(Circle().fill(kind.color))
-            .overlay(Circle().stroke(active ? Palette.ink : Palette.paper, lineWidth: active ? 3 : 2))
-            .overlay(alignment: .topTrailing) {
-                if let number {
-                    Text("\(number)")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Palette.paper)
-                        .frame(width: 18, height: 18)
-                        .background(Circle().fill(Palette.warm))
-                        .overlay(Circle().stroke(Palette.paper, lineWidth: 1.5))
-                        .offset(x: 8, y: -8)
-                }
+        // 固定枠の中心が座標。番号は枠外に描くだけでレイアウトを広げない。
+        ZStack {
+            Circle()
+                .fill(kind.color)
+                .frame(width: size, height: size)
+            Circle()
+                .stroke(active ? Palette.ink : Palette.paper, lineWidth: active ? 3 : 2)
+                .frame(width: size, height: size)
+            PictogramIcon(kind.pictogram, size: 16)
+                .foregroundStyle(Palette.paper)
+            if let number {
+                Text("\(number)")
+                    .font(.readable(.caption2, weight: .bold))
+                    .foregroundStyle(Palette.paper)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(Palette.warm))
+                    .overlay(Circle().stroke(Palette.paper, lineWidth: 1.5))
+                    .offset(x: size * 0.38, y: -size * 0.38)
+                    .allowsHitTesting(false)
             }
-            .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
-            .scaleEffect(active ? 1.15 : 1)
+        }
+        .frame(width: size, height: size)
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
     }
 }

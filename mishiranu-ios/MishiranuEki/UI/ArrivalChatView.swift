@@ -4,27 +4,54 @@ struct ArrivalChatView: View {
     @Environment(AppModel.self) private var model
     @State private var locator = LocationService()
     @FocusState private var composerFocused: Bool
+    @FocusState private var stationSearchFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            thread
-            dock
+        GeometryReader { geo in
+            let coursePicking = model.phase == .course
+            // コース選択中は会話を最小にし、カード一覧へ画面の大半を渡す（キーボードも出さない）
+            let threadCap = geo.size.height * 0.12
+            VStack(spacing: 0) {
+                header
+                thread
+                    .frame(maxHeight: coursePicking ? threadCap : .infinity)
+                    .layoutPriority(coursePicking ? 0 : 1)
+                dock(coursePicking: coursePicking)
+                    .layoutPriority(coursePicking ? 1 : 0)
+                    .frame(maxHeight: coursePicking ? .infinity : nil, alignment: .top)
+            }
         }
         .background(Palette.canvas.ignoresSafeArea())
+        .onChange(of: model.phase) { _, phase in
+            if phase == .course || phase == .ready || phase == .station {
+                composerFocused = false
+            }
+        }
+        .onChange(of: model.showStationSearch) { _, open in
+            if open {
+                DispatchQueue.main.async {
+                    stationSearchFocused = true
+                }
+            } else {
+                stationSearchFocused = false
+            }
+        }
     }
 
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                Kicker(text: "ARRIVAL · 編集 \(model.stations.count) 駅")
-                Text("知らない駅から、コースをつくる")
+                Kicker(text: model.savedCount > 0
+                    ? "ARRIVAL · 保存 \(model.savedCount) 駅 · 全国検索可"
+                    : "ARRIVAL · 全国の駅を検索")
+                Text("知らない駅から、まわり方をつくる")
                     .font(.mincho(.title3, weight: .semibold))
                     .foregroundStyle(Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer()
+            Spacer(minLength: 8)
             Button("はじめに戻る") { model.goHero() }
-                .font(.footnote)
+                .font(.readable(.callout))
                 .foregroundStyle(Palette.mist)
         }
         .padding(.horizontal, 20)
@@ -60,21 +87,31 @@ struct ArrivalChatView: View {
         }
     }
 
-    private var dock: some View {
+    private func dock(coursePicking: Bool) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            replies
-            if model.phase == .ready {
-                Text("案内を開いています…")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.mist)
-                    .frame(maxWidth: .infinity)
+            if coursePicking {
+                GeometryReader { dockGeo in
+                    // 見出し1行分を除き、カード一覧へほぼ全部を渡す
+                    coursePicker(listMaxHeight: max(300, dockGeo.size.height - 28))
+                }
             } else {
-                composer
+                replies
+                if model.phase == .ready {
+                    Text("案内を開いています…")
+                        .font(.readable(.body))
+                        .foregroundStyle(Palette.mist)
+                        .frame(maxWidth: .infinity)
+                } else if model.phase == .station {
+                    // 駅フェーズはチップのみ。検索窓は「駅名で探す」後に出す。
+                    EmptyView()
+                } else {
+                    composer
+                }
             }
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.bottom, coursePicking ? 12 : 8)
         .background(Palette.paper.ignoresSafeArea(edges: .bottom))
         .overlay(alignment: .top) { Divider().overlay(Palette.line) }
     }
@@ -129,15 +166,13 @@ struct ArrivalChatView: View {
                     } label: {
                         VStack(spacing: 2) {
                             Text(pref.label)
-                            Text(pref.hint).font(.caption2).opacity(0.75)
+                            Text(pref.hint).font(.readable(.caption)).opacity(0.8)
                         }
                     }
                     .buttonStyle(ChipButtonStyle(primary: pref == .casual))
                 }
             }
-        case .course:
-            coursePicker
-        case .ready:
+        case .course, .ready:
             EmptyView()
         }
     }
@@ -155,7 +190,9 @@ struct ArrivalChatView: View {
                 .disabled(model.geoLoading)
 
                 Button {
-                    withAnimation { model.showStationSearch.toggle() }
+                    withAnimation {
+                        model.showStationSearch = true
+                    }
                 } label: {
                     chipLabel("駅名で探す", .search)
                 }
@@ -163,9 +200,22 @@ struct ArrivalChatView: View {
             }
             if model.showStationSearch {
                 VStack(alignment: .leading, spacing: 8) {
-                    TextField("例: 出町柳 / 叡山 / 京都", text: $model.query)
-                        .textFieldStyle(.roundedBorder)
-                        .autocorrectionDisabled()
+                    HStack(spacing: 8) {
+                        TextField("例: 出町柳 / 二ノ瀬 / 中書島", text: $model.query)
+                            .textFieldStyle(.roundedBorder)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            .submitLabel(.search)
+                            .focused($stationSearchFocused)
+                            .disabled(model.stationLoading)
+                            .onSubmit { submitStationQuery() }
+                        Button("送る") { submitStationQuery() }
+                            .buttonStyle(ChipButtonStyle(primary: true))
+                            .disabled(
+                                model.stationLoading
+                                    || model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            )
+                    }
                     ScrollView {
                         VStack(spacing: 0) {
                             ForEach(model.filteredStations) { station in
@@ -174,25 +224,27 @@ struct ArrivalChatView: View {
                                 } label: {
                                     HStack {
                                         Text(station.name)
-                                            .font(.mincho(.body, weight: .semibold))
+                                            .font(.mincho(.headline, weight: .semibold))
                                             .foregroundStyle(Palette.ink)
                                         Spacer()
                                         Text("\(station.prefecture) · \(station.line)")
-                                            .font(.caption)
+                                            .font(.readable(.caption))
                                             .foregroundStyle(Palette.mist)
                                             .lineLimit(1)
                                     }
-                                    .padding(.vertical, 10)
+                                    .padding(.vertical, 12)
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .disabled(model.stationLoading)
                                 Divider().overlay(Palette.line)
                             }
-                            if model.filteredStations.isEmpty {
-                                Text("編集リストにはありません。いまは収録駅だけ案内できます。")
-                                    .font(.footnote)
+                            if model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                               model.filteredStations.isEmpty {
+                                Text("駅名を入れて「送る」。初めての駅は Gemini が編集し、この端末に残ります。")
+                                    .font(.callout)
                                     .foregroundStyle(Palette.mist)
-                                    .padding(.vertical, 10)
+                                    .padding(.vertical, 12)
                             }
                         }
                     }
@@ -202,18 +254,14 @@ struct ArrivalChatView: View {
         }
     }
 
-    private var coursePicker: some View {
+    private func coursePicker(listMaxHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Button {
-                model.skipCourse()
-            } label: {
-                chipLabel("コースは作らない", .trekking)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(ChipButtonStyle(primary: true))
+            Text("下のカードから、まわり方を1つ選ぶ")
+                .font(.readable(.caption, weight: .semibold))
+                .foregroundStyle(Palette.mist)
 
             ScrollView {
-                VStack(spacing: 10) {
+                LazyVStack(spacing: 12) {
                     ForEach(Array(model.courses.enumerated()), id: \.element.id) { index, course in
                         Button {
                             model.chooseCourse(course)
@@ -222,10 +270,22 @@ struct ArrivalChatView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    Button {
+                        model.skipCourse()
+                    } label: {
+                        chipLabel("まわり方は決めない（自由に歩く）", .trekking)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(ChipButtonStyle(primary: false))
+                    .padding(.top, 2)
                 }
+                .padding(.bottom, 8)
             }
-            .frame(maxHeight: 300)
+            .frame(maxHeight: listMaxHeight)
+            .scrollIndicators(.visible)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var composer: some View {
@@ -243,8 +303,8 @@ struct ArrivalChatView: View {
     }
 
     private func chipLabel(_ text: String, _ pictogram: Pictogram) -> some View {
-        HStack(spacing: 6) {
-            PictogramIcon(pictogram, size: 16)
+        HStack(spacing: 8) {
+            PictogramIcon(pictogram, size: 18)
             Text(text)
         }
     }
@@ -262,6 +322,13 @@ struct ArrivalChatView: View {
             }
         }
     }
+
+    /// 検索欄の「送る」／キーボード検索。保存の有無に関わらず、毎回 Gemini で解析する。
+    private func submitStationQuery() {
+        let text = model.query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !model.stationLoading else { return }
+        model.requestAiStation(text, spoken: text)
+    }
 }
 
 struct ChatBubble: View {
@@ -271,18 +338,18 @@ struct ChatBubble: View {
         let isGuide = message.role == .guide
         HStack {
             if !isGuide { Spacer(minLength: 48) }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(isGuide ? "案内" : "あなた")
-                    .font(.caption2.weight(.semibold))
+                    .font(.readable(.caption, weight: .semibold))
                     .foregroundStyle(isGuide ? Palette.moss : Palette.paper.opacity(0.8))
                 Text(message.text)
-                    .font(.mincho(.callout))
-                    .lineSpacing(4)
+                    .font(.mincho(.body))
+                    .lineSpacing(6)
                     .foregroundStyle(isGuide ? Palette.ink : Palette.paper)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isGuide ? Palette.paper : Palette.fog)
@@ -300,37 +367,113 @@ struct CourseCard: View {
     let course: WalkCourse
     let index: Int
 
+    private var accent: Color {
+        switch index % 3 {
+        case 0: return Palette.warm
+        case 1: return Palette.river
+        default: return Palette.moss
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("コース \(index + 1)")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Palette.warm)
-            Text(course.title)
-                .font(.mincho(.headline, weight: .semibold))
-                .foregroundStyle(Palette.ink)
-            Text("\(course.subtitle) · 約\(course.totalMinutes)分 · \(course.stops.count)か所")
-                .font(.caption)
-                .foregroundStyle(Palette.mist)
-            Text(course.vibe)
-                .font(.mincho(.footnote))
-                .foregroundStyle(Palette.fog)
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(course.stops) { stop in
-                    HStack(spacing: 6) {
-                        PictogramIcon(stop.spot.guide.pictogram, size: 14)
-                            .foregroundStyle(stop.spot.guide.color)
-                        Text("\(stop.clockLabel) \(stop.spot.name)")
-                            .font(.footnote)
+        HStack(alignment: .top, spacing: 0) {
+            accent
+                .frame(width: 5)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 10) {
+                    Text("\(index + 1)")
+                        .font(.readable(.subheadline, weight: .bold))
+                        .foregroundStyle(Palette.paper)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(accent))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("まわり \(index + 1)")
+                            .font(.readable(.caption2, weight: .semibold))
+                            .foregroundStyle(accent)
+                        Text(course.title)
+                            .font(.mincho(.title3, weight: .semibold))
                             .foregroundStyle(Palette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Palette.mist)
+                }
+
+                HStack(spacing: 8) {
+                    metaChip("約\(course.totalMinutes)分")
+                    metaChip("\(course.stops.count)か所")
+                    Text(course.subtitle)
+                        .font(.readable(.caption))
+                        .foregroundStyle(Palette.mist)
+                        .lineLimit(1)
+                }
+
+                Text(course.vibe)
+                    .font(.mincho(.subheadline))
+                    .foregroundStyle(Palette.fog)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(course.stops.prefix(4).enumerated()), id: \.element.id) { stopIndex, stop in
+                        HStack(alignment: .center, spacing: 10) {
+                            Text(stop.clockLabel)
+                                .font(.readable(.caption, weight: .semibold))
+                                .foregroundStyle(accent)
+                                .frame(width: 44, alignment: .leading)
+                            PictogramIcon(stop.spot.guide.pictogram, size: 14)
+                                .foregroundStyle(stop.spot.guide.color)
+                                .frame(width: 18)
+                            Text(stop.spot.name)
+                                .font(.mincho(.callout))
+                                .foregroundStyle(Palette.ink)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 6)
+                        if stopIndex < min(course.stops.count, 4) - 1 {
+                            Divider().overlay(Palette.line)
+                        }
+                    }
+                    if course.stops.count > 4 {
+                        Text("ほか \(course.stops.count - 4) か所")
+                            .font(.readable(.caption2))
+                            .foregroundStyle(Palette.mist)
+                            .padding(.top, 6)
                     }
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.paper.opacity(0.85)))
+
+                Text("タップして、このまわり方へ")
+                    .font(.readable(.caption, weight: .semibold))
+                    .foregroundStyle(accent)
             }
-            .padding(.top, 2)
+            .padding(.leading, 12)
+            .padding(.trailing, 12)
+            .padding(.vertical, 12)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.canvas))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.line, lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Palette.paper))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(accent.opacity(0.35), lineWidth: 1.5)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 3, y: 1)
         .contentShape(Rectangle())
+        .accessibilityHint("まわり方を選ぶ")
+    }
+
+    private func metaChip(_ text: String) -> some View {
+        Text(text)
+            .font(.readable(.caption2, weight: .semibold))
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Palette.canvas))
+            .overlay(Capsule().stroke(Palette.line, lineWidth: 1))
     }
 }

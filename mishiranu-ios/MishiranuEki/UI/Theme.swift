@@ -13,20 +13,24 @@ extension Color {
 }
 
 enum Palette {
-    static let ink = Color(hex: 0x1f1b17)
-    /// 土地ページ本文向け。ink より一段濃く、紙面でも薄く見えない。
-    static let body = Color(hex: 0x12100e)
-    static let fog = Color(hex: 0x4a433a)
-    static let mist = Color(hex: 0x6e675e)
-    static let paper = Color(hex: 0xf9f4e6)
-    static let canvas = Color(hex: 0xf5eedc)
-    static let warm = Color(hex: 0xb5493a)
-    static let warmDeep = Color(hex: 0x9a3d31)
-    static let river = Color(hex: 0x6b8cca)
-    static let moss = Color(hex: 0x5f7d6a)
-    static let taupe = Color(hex: 0xc1b4a4)
-    static let gold = Color(hex: 0xc5a059)
-    static let line = Color(hex: 0xe3d5c1)
+    /// 設定の見た目（A/C）に追従。切替時は RootView の .id(skin) で再描画。
+    @MainActor private static var tokens: SkinTokens {
+        SkinTokens.tokens(for: ThemeStore.shared.skin)
+    }
+
+    @MainActor static var ink: Color { tokens.ink }
+    @MainActor static var body: Color { tokens.body }
+    @MainActor static var fog: Color { tokens.fog }
+    @MainActor static var mist: Color { tokens.mist }
+    @MainActor static var paper: Color { tokens.paper }
+    @MainActor static var canvas: Color { tokens.canvas }
+    @MainActor static var warm: Color { tokens.warm }
+    @MainActor static var warmDeep: Color { tokens.warmDeep }
+    @MainActor static var river: Color { tokens.river }
+    @MainActor static var moss: Color { tokens.moss }
+    @MainActor static var taupe: Color { tokens.taupe }
+    @MainActor static var gold: Color { tokens.gold }
+    @MainActor static var line: Color { tokens.line }
 }
 
 extension GuideKind {
@@ -76,8 +80,14 @@ extension TourTab {
 }
 
 extension Font {
+    /// A/C ともゴシック（交通・地図の顔）。
     static func mincho(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
-        .system(style, design: .serif).weight(weight)
+        .system(style, design: .default).weight(weight)
+    }
+
+    /// ゴシックの意味階層を保ったまま Dynamic Type に追従する。
+    static func readable(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
+        .system(style).weight(weight)
     }
 }
 
@@ -104,7 +114,7 @@ struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.mincho(.body, weight: .semibold))
-            .padding(.vertical, 14)
+            .padding(.vertical, 15)
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity)
             .foregroundStyle(filled ? Palette.paper : Palette.ink)
@@ -125,9 +135,9 @@ struct ChipButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.subheadline.weight(.medium))
-            .padding(.vertical, 10)
-            .padding(.horizontal, 14)
+            .font(.body.weight(.medium))
+            .padding(.vertical, 11)
+            .padding(.horizontal, 15)
             .foregroundStyle(primary ? Palette.paper : Palette.ink)
             .background(
                 Capsule().fill(primary ? Palette.warm : Palette.paper)

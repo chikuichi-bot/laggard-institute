@@ -1,6 +1,6 @@
 .ps {
   --ink: #1f1b17;
-  --body: #12100e;
+  --body: #35302b;
   --fog: #4a433a;
   --mist: #6e675e;
   --paper: #f9f4e6;
@@ -307,15 +307,15 @@
 }
 .ps-a-panel h2 {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   font-weight: 500;
 }
 .ps-a-panel > p {
-  margin: 0 0 0.65rem;
-  font-size: 0.86rem;
-  line-height: 1.7;
+  margin: 0 0 0.85rem;
+  font-size: 1.03rem;
+  line-height: 1.85;
   color: var(--body);
-  font-weight: 500;
+  font-weight: 400;
 }
 .ps-a-notes {
   list-style: none;

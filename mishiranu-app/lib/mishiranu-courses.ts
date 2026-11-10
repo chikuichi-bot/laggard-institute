@@ -121,11 +121,22 @@ const DAY_PART_MEAL: Record<DayPart, MealTime[]> = {
   night: ["dinner"],
 };
 
+/** コース組み立て用。朝でもランチ店を残さないと3コースが観光地だけになる */
+const DAY_PART_MEAL_COURSE: Record<DayPart, MealTime[]> = {
+  morning: ["morning", "lunch"],
+  midday: ["morning", "lunch"],
+  afternoon: ["lunch"],
+  evening: ["lunch", "dinner"],
+  night: ["dinner"],
+};
+
 const STAY_BUDGET: Record<TimeOptionId, number> = {
   "1h": 55,
   "3h": 150,
   half: 240,
 };
+
+type CourseLevel = "beginner" | "intermediate" | "advanced";
 
 const COURSE_TEMPLATES: Array<{
   id: string;
@@ -133,27 +144,31 @@ const COURSE_TEMPLATES: Array<{
   subtitle: string;
   vibe: string;
   prefer: GuideKind[];
+  level: CourseLevel;
 }> = [
   {
-    id: "slow",
-    title: "ゆる歩きコース",
-    subtitle: "景色と休みを多めに",
-    vibe: "急がず、土地の気配を拾う",
-    prefer: ["sight", "rest", "tip"],
+    id: "beginner",
+    title: "初心者コース",
+    subtitle: "有名どころを短く結ぶ",
+    vibe: "迷わず、土地の顔から入る",
+    prefer: ["sight", "souvenir", "meal"],
+    level: "beginner",
   },
   {
-    id: "taste",
-    title: "食べる寄り道コース",
-    subtitle: "ご飯と土産を軸に",
-    vibe: "空腹と手土産のあいだを歩く",
-    prefer: ["meal", "souvenir", "rest"],
+    id: "intermediate",
+    title: "中級者コース",
+    subtitle: "ご飯と寄り道を織り交ぜる",
+    vibe: "定番のとなりを、少しだけ外す",
+    prefer: ["meal", "rest", "tip"],
+    level: "intermediate",
   },
   {
-    id: "farther",
-    title: "少し先までコース",
-    subtitle: "徒歩圏の端まで伸ばす",
-    vibe: "駅前を抜けて、ひとつ奥へ",
-    prefer: ["tip", "sight", "meal"],
+    id: "advanced",
+    title: "上級者コース",
+    subtitle: "徒歩圏の奥と穴場へ",
+    vibe: "駅前を抜けて、ひとつ奥の気配へ",
+    prefer: ["tip", "rest", "meal"],
+    level: "advanced",
   },
 ];
 
@@ -207,6 +222,37 @@ function formatClock(hour: number, minute: number): string {
   return `${h}:${String(m).padStart(2, "0")}`;
 }
 
+/** 営業時間文字列から、その時刻に開いていそうか。不明は true。 */
+export function isLikelyOpenAtHour(
+  hours: string | undefined,
+  hour: number,
+): boolean | null {
+  if (!hours) return null;
+  const t = hours.normalize("NFKC");
+  if (/終日|屋外|24時間/.test(t)) return true;
+  const m = t.match(
+    /(\d{1,2})\s*[:：]\s*(\d{2})\s*[〜～\-~－—]\s*(\d{1,2})\s*[:：]\s*(\d{2})/,
+  );
+  if (!m) return null;
+  const openMin = Number(m[1]) * 60 + Number(m[2]);
+  let closeMin = Number(m[3]) * 60 + Number(m[4]);
+  if (closeMin <= openMin) closeMin += 24 * 60;
+  const h = ((Math.floor(hour) % 24) + 24) % 24;
+  let now = h * 60 + 30;
+  if (now < openMin) now += 24 * 60;
+  return now >= openMin && now < closeMin;
+}
+
+export function isLikelyOpen(spot: Spot, dayPart: DayPart): boolean {
+  const hour = defaultClockHour(dayPart);
+  const parsed = isLikelyOpenAtHour(spot.hours, hour);
+  if (parsed !== null) return parsed;
+  if (spotGuide(spot) === "meal") {
+    return mealFits(spot, dayPart);
+  }
+  return true;
+}
+
 function mealFits(spot: Spot, dayPart: DayPart): boolean {
   if (spotGuide(spot) !== "meal") return true;
   const allowed = new Set(DAY_PART_MEAL[dayPart]);
@@ -214,65 +260,125 @@ function mealFits(spot: Spot, dayPart: DayPart): boolean {
   return times.some((t) => allowed.has(t));
 }
 
+function mealFitsForCourse(spot: Spot, dayPart: DayPart): boolean {
+  if (spotGuide(spot) !== "meal") return true;
+  const allowed = new Set(DAY_PART_MEAL_COURSE[dayPart]);
+  const times = spot.mealTimes?.length ? spot.mealTimes : (["lunch"] as MealTime[]);
+  return times.some((t) => allowed.has(t));
+}
+
+function dwellFor(guide: GuideKind): number {
+  if (guide === "meal") return 25;
+  if (guide === "rest") return 15;
+  return 12;
+}
+
 function scoreSpot(
   spot: Spot,
   prefer: GuideKind[],
   dayPart: DayPart,
   used: Set<string>,
-  mealPrefs?: MealPrefs | null,
+  mealPrefs: MealPrefs | null | undefined,
+  level: CourseLevel,
+  forceGuide: GuideKind | null,
 ): number {
   if (used.has(spot.id)) return -1;
-  if (!mealFits(spot, dayPart)) return -1;
+  if (!mealFitsForCourse(spot, dayPart)) return -1;
   const guide = spotGuide(spot);
+  if (isFoodGuide(guide) && !isLikelyOpen(spot, dayPart)) return -1;
+  if (forceGuide && guide !== forceGuide) return -1;
   const preferIdx = prefer.indexOf(guide);
-  let score = preferIdx >= 0 ? 40 - preferIdx * 8 : 8;
-  if (spot.secretWorthy) score += 6;
-  // Prefer nearer pins early, farther later via template
-  score += Math.max(0, 18 - spot.walkMinutes * 0.35);
-  const orderBoost = GUIDE_ORDER.indexOf(guide);
-  score += (5 - orderBoost) * 0.4;
+  let score = preferIdx >= 0 ? 50 - preferIdx * 10 : 4;
+  if (level === "beginner") {
+    // 土地の顔（major）を先に。近い無名カフェで埋めない。
+    if (spot.majorWorthy) score += 72;
+    if (guide === "sight") score += 14;
+    if (guide === "souvenir") score += 10;
+    if (guide === "meal" && spot.mealTier === "casual") score += 8;
+    if (spot.secretWorthy) score -= 4;
+    if (!spot.majorWorthy && guide === "meal") score -= 42;
+    if (/多目的|つながる|知る、感じる|コワーキング/.test(`${spot.name}${spot.blurb ?? ""}`)) {
+      score -= 35;
+    }
+    score += Math.max(0, 12 - spot.walkMinutes * 0.35);
+  } else if (level === "intermediate") {
+    if (guide === "meal") score += 10;
+    if (guide === "rest" || guide === "tip") score += 8;
+    if (spot.secretWorthy) score += 4;
+    score += Math.max(0, 14 - Math.abs(spot.walkMinutes - 12) * 0.7);
+  } else {
+    if (spot.secretWorthy) score += 14;
+    if (guide === "tip" || guide === "rest") score += 10;
+    if (guide === "meal" && spot.mealTier === "upscale") score += 6;
+    score += spot.walkMinutes * 0.95;
+  }
   score += mealPrefScore(spot, mealPrefs);
   return score;
 }
 
-function pickStops(
+function isFoodGuide(guide: GuideKind): boolean {
+  return guide === "meal" || guide === "souvenir";
+}
+
+function bestCandidate(
   pool: Spot[],
   prefer: GuideKind[],
   dayPart: DayPart,
+  used: Set<string>,
+  mealPrefs: MealPrefs | null | undefined,
+  level: CourseLevel,
+  elapsed: number,
+  budgetMinutes: number,
+  forceGuide: GuideKind | null,
+): Spot | null {
+  let best: Spot | null = null;
+  let bestScore = -1;
+  for (const spot of pool) {
+    const guide = spotGuide(spot);
+    const cost = spot.walkMinutes + dwellFor(guide);
+    if (elapsed + cost > budgetMinutes + 8) continue;
+    const score = scoreSpot(
+      spot,
+      prefer,
+      dayPart,
+      used,
+      mealPrefs,
+      level,
+      forceGuide,
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      best = spot;
+    }
+  }
+  return bestScore >= 0 ? best : null;
+}
+
+function pickStops(
+  pool: Spot[],
+  preferIn: GuideKind[],
+  dayPart: DayPart,
   budgetMinutes: number,
   startHour: number,
-  mealPrefs?: MealPrefs | null,
+  mealPrefs: MealPrefs | null | undefined,
+  level: CourseLevel,
+  avoid: Set<string>,
 ): CourseStop[] {
-  const used = new Set<string>();
+  let prefer = [...preferIn];
+  const used = new Set(avoid);
   const stops: CourseStop[] = [];
   let elapsed = 0;
   let cursorHour = startHour;
   let cursorMinute = 0;
   const maxStops = budgetMinutes <= 60 ? 3 : budgetMinutes <= 160 ? 4 : 5;
 
-  while (stops.length < maxStops) {
-    let best: Spot | null = null;
-    let bestScore = -1;
-    for (const spot of pool) {
-      const dwell = spotGuide(spot) === "meal" ? 25 : spotGuide(spot) === "rest" ? 15 : 12;
-      const cost = spot.walkMinutes + dwell;
-      if (elapsed + cost > budgetMinutes + 8) continue;
-      const score = scoreSpot(spot, prefer, dayPart, used, mealPrefs);
-      if (score > bestScore) {
-        bestScore = score;
-        best = spot;
-      }
-    }
-    if (!best || bestScore < 0) break;
-
-    const dwell =
-      spotGuide(best) === "meal" ? 25 : spotGuide(best) === "rest" ? 15 : 12;
+  const pushStop = (best: Spot) => {
+    const dwell = dwellFor(spotGuide(best));
     const walk = best.walkMinutes;
     cursorMinute += walk;
     cursorHour += Math.floor(cursorMinute / 60);
     cursorMinute %= 60;
     const clockLabel = formatClock(cursorHour, cursorMinute);
-
     stops.push({
       spotId: best.id,
       name: best.name,
@@ -287,12 +393,153 @@ function pickStops(
     cursorMinute += dwell;
     cursorHour += Math.floor(cursorMinute / 60);
     cursorMinute %= 60;
-
-    // Rotate preference so courses don't clone the same first pick only
     prefer = [...prefer.slice(1), prefer[0]!];
+  };
+
+  // 初心者: 土地の顔（major）を先に入れる
+  if (level === "beginner") {
+    const faces = pool
+      .filter((s) => s.majorWorthy)
+      .sort((a, b) => {
+        const fame = (s: Spot) => {
+          let v = 0;
+          if (/神社|寺|城|神宮|大社|デルタ|港|市場/.test(s.name)) v += 40;
+          if (/世界遺産|名物|銘菓/.test(`${s.name}${s.blurb ?? ""}`)) v += 20;
+          if (/ふたば|赤福|もみじ/.test(s.name)) v += 30;
+          return v - s.walkMinutes * 0.2;
+        };
+        return fame(b) - fame(a);
+      });
+    for (const face of faces) {
+      if (stops.length >= maxStops) break;
+      const guide = spotGuide(face);
+      const cost = face.walkMinutes + dwellFor(guide);
+      if (used.has(face.id)) continue;
+      if (elapsed + cost > budgetMinutes + 8) continue;
+      if (!mealFitsForCourse(face, dayPart)) continue;
+      if (isFoodGuide(guide) && !isLikelyOpen(face, dayPart)) continue;
+      pushStop(face);
+    }
+  }
+
+  const primary = prefer[0] ?? null;
+  if (stops.length === 0 && primary) {
+    const first = bestCandidate(
+      pool,
+      prefer,
+      dayPart,
+      used,
+      mealPrefs,
+      level,
+      elapsed,
+      budgetMinutes,
+      primary,
+    );
+    if (first) pushStop(first);
+  }
+
+  while (stops.length < maxStops) {
+    const best = bestCandidate(
+      pool,
+      prefer,
+      dayPart,
+      used,
+      mealPrefs,
+      level,
+      elapsed,
+      budgetMinutes,
+      null,
+    );
+    if (!best) break;
+    pushStop(best);
   }
 
   return stops;
+}
+
+function ensureLocalMajors(station: StationSeed): StationSeed {
+  let working = station;
+  if (
+    /出町柳/.test(working.name) &&
+    !working.spots.some((s) => s.name.includes("ふたば"))
+  ) {
+    working = {
+      ...working,
+      spots: [
+        ...working.spots,
+        {
+          id: "ai-major-futaba",
+          name: "出町ふたば",
+          genre: "gourmet",
+          guide: "meal",
+          mealTier: "casual",
+          mealTimes: ["morning", "lunch"],
+          soloOk: true,
+          budgetYen: "〜¥800",
+          blurb: "出町の顔といえば豆餅。",
+          walkMinutes: 3,
+          x: 0.45,
+          y: 0.4,
+          majorWorthy: true,
+          lat: 35.03011,
+          lng: 135.76963,
+        },
+      ],
+    };
+  }
+  const marked = working.spots.filter((s) => s.majorWorthy);
+  const scored = [...working.spots]
+    .map((s) => {
+      let score = 0;
+      if (s.majorWorthy) score += 100;
+      if (/ふたば|みたらし|だんご|団子/.test(s.name)) score += 60;
+      if (s.guide === "sight") score += 42;
+      else if (s.guide === "meal") score += 28;
+      else if (s.guide === "souvenir") score += 18;
+      if (/神社|寺|城|デルタ|公園|ふたば|市場/.test(s.name)) score += 28;
+      score += Math.max(0, 22 - s.walkMinutes);
+      if (s.secretWorthy) score -= 35;
+      return { s, score };
+    })
+    .sort((a, b) => b.score - a.score || a.s.walkMinutes - b.s.walkMinutes);
+
+  // 名所2＋名物1
+  const must = working.spots.find((s) => s.name.includes("ふたば"));
+  const landmarkRows = scored.filter(
+    (x) =>
+      x.s.guide === "sight" ||
+      /神社|寺|デルタ|城|宮|公園/.test(x.s.name),
+  );
+  if (
+    marked.length >= 3 &&
+    marked.filter((m) => m.guide === "sight").length >= 2 &&
+    (!must || marked.some((m) => m.id === must.id))
+  ) {
+    return working;
+  }
+
+  const picked: Spot[] = [];
+  for (const row of landmarkRows) {
+    if (picked.length >= 2) break;
+    picked.push(row.s);
+  }
+  if (must && picked.length < 3) picked.push(must);
+  for (const row of scored) {
+    if (picked.length >= 3) break;
+    if (isFoodGuide(spotGuide(row.s)) && picked.some((p) => isFoodGuide(spotGuide(p)))) {
+      continue;
+    }
+    if (!picked.some((p) => p.id === row.s.id)) picked.push(row.s);
+  }
+  const ids = new Set(picked.slice(0, 3).map((p) => p.id));
+  return {
+    ...working,
+    spots: working.spots.map((s) => ({
+      ...s,
+      majorWorthy: ids.has(s.id),
+      secretWorthy: ids.has(s.id) ? false : s.secretWorthy,
+    })),
+  };
 }
 
 export function buildCoursesForStation(
@@ -301,18 +548,27 @@ export function buildCoursesForStation(
   dayPart: DayPart,
   mealPrefs?: MealPrefs | null,
 ): WalkCourse[] {
+  const prepared = ensureLocalMajors(station);
   const timeIndex = timeId === "1h" ? 0 : timeId === "3h" ? 1 : 2;
-  const pool = spotsForTime(station, timeIndex).filter((s) => mealFits(s, dayPart));
-  const fallbackPool = spotsForTime(station, timeIndex);
+  const walkPool = spotsForTime(prepared, timeIndex);
+  const pool = walkPool.filter(
+    (s) =>
+      mealFitsForCourse(s, dayPart) &&
+      (!isFoodGuide(spotGuide(s)) || isLikelyOpen(s, dayPart)),
+  );
+  const openWalk = walkPool.filter(
+    (s) => !isFoodGuide(spotGuide(s)) || isLikelyOpen(s, dayPart),
+  );
+  const source = pool.length >= 3 ? pool : openWalk;
   const budget = STAY_BUDGET[timeId];
   const startHour = defaultClockHour(dayPart);
+  const claimed = new Set<string>();
 
   return COURSE_TEMPLATES.map((template) => {
-    const source = pool.length >= 3 ? pool : fallbackPool;
     const prefer =
-      dayPart === "morning" && template.id === "taste"
-        ? (["meal", "sight", "souvenir"] as GuideKind[])
-        : dayPart === "night" && template.id === "farther"
+      dayPart === "morning" && template.level === "intermediate"
+        ? (["meal", "souvenir", "sight"] as GuideKind[])
+        : dayPart === "night" && template.level === "advanced"
           ? (["meal", "tip", "rest"] as GuideKind[])
           : template.prefer;
     const stops = pickStops(
@@ -322,7 +578,10 @@ export function buildCoursesForStation(
       budget,
       startHour,
       mealPrefs,
+      template.level,
+      claimed,
     );
+    for (const stop of stops.slice(0, 2)) claimed.add(stop.spotId);
     const totalMinutes = stops.reduce(
       (sum, s) => sum + s.walkMinutes + s.dwellMinutes,
       0,

@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 
 struct TourView: View {
@@ -7,17 +8,14 @@ struct TourView: View {
         @Bindable var model = model
         VStack(spacing: 0) {
             if let station = model.station {
-                // 土地タブは駅前案内板ヘッダーをページ内に持つので、共通ヘッダーは出さない。
-                if model.tourTab != .place {
-                    TourHeader(station: station)
-                }
+                StationChromeHeader(station: station)
                 Group {
                     switch model.tourTab {
                     case .map: TourMapPage(station: station)
                     case .place: PlacePage(station: station)
                     case .walk: WalkPage()
-                    case .guide: GuidePage()
-                    case .more: MorePage(station: station)
+                    case .guide: GuidePage(station: station)
+                    case .more: SettingsPage(station: station)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -37,41 +35,6 @@ struct TourView: View {
     }
 }
 
-private struct TourHeader: View {
-    @Environment(AppModel.self) private var model
-    let station: Station
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Button {
-                model.startArrival()
-            } label: {
-                Text("← 駅を探し直す")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.mist)
-            }
-            .padding(.bottom, 2)
-            Text("\(station.prefecture) · \(station.line) · \(model.dayPart.label) · \(model.stay.label)")
-                .font(.caption2)
-                .foregroundStyle(Palette.mist)
-                .lineLimit(1)
-            Text(station.name)
-                .font(.system(size: 28, weight: .semibold, design: .serif))
-                .foregroundStyle(Palette.ink)
-            Text(model.selectedCourse?.title ?? station.tourTitle)
-                .font(.mincho(.subheadline))
-                .foregroundStyle(Palette.fog)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.top, 6)
-        .padding(.bottom, 12)
-        .background(Palette.paper)
-        .overlay(alignment: .bottom) { Divider().overlay(Palette.line) }
-    }
-}
-
 struct TourTabBar: View {
     @Binding var selection: TourTab
 
@@ -85,7 +48,8 @@ struct TourTabBar: View {
                     VStack(spacing: 4) {
                         PictogramIcon(tab.pictogram, size: 24)
                         Text(tab.label)
-                            .font(.caption2.weight(active ? .semibold : .regular))
+                            .font(.caption.weight(active ? .semibold : .regular))
+                            .lineLimit(1)
                     }
                     .foregroundStyle(active ? Palette.warm : Palette.mist)
                     .frame(maxWidth: .infinity)
@@ -108,6 +72,10 @@ struct SpotSheet: View {
     @Environment(\.dismiss) private var dismiss
     let spot: Spot
 
+    private var shopCamera: MapCameraPosition {
+        .camera(MapCamera(centerCoordinate: coordinate, distance: 700, heading: 0, pitch: 0))
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -115,20 +83,20 @@ struct SpotSheet: View {
                     PictogramIcon(spot.guide.pictogram, size: 18)
                         .foregroundStyle(spot.guide.color)
                     Text(metaLine)
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(Palette.mist)
                 }
                 if spot.guide == .meal {
                     Text(mealMetaLine(spot))
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(Palette.warm)
                 }
                 if let number = model.courseNumbers[spot.id] {
-                    Text("コースの \(number) か所目")
-                        .font(.caption.weight(.semibold))
+                    Text("まわりの \(number) か所目")
+                        .font(.callout.weight(.semibold))
                         .foregroundStyle(Palette.paper)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
                         .background(Capsule().fill(Palette.warm))
                 }
                 Text(spot.name)
@@ -136,7 +104,7 @@ struct SpotSheet: View {
                     .foregroundStyle(Palette.ink)
                 Text(spot.blurb)
                     .font(.mincho(.body))
-                    .lineSpacing(5)
+                    .lineSpacing(6)
                     .foregroundStyle(Palette.fog)
                 if let detail = spot.detail {
                     Text(detail)
@@ -144,12 +112,39 @@ struct SpotSheet: View {
                         .lineSpacing(5)
                         .foregroundStyle(Palette.mist)
                 }
+
+                Text("場所")
+                    .font(.mincho(.subheadline, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .padding(.top, 4)
+                Color.clear
+                    .frame(height: 200)
+                    .overlay {
+                        Map(position: .constant(shopCamera), interactionModes: []) {
+                            Annotation(spot.name, coordinate: coordinate, anchor: .center) {
+                                SpotPin(kind: spot.guide, number: model.courseNumbers[spot.id], active: true)
+                            }
+                            .annotationTitles(.hidden)
+                        }
+                        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Palette.line, lineWidth: 1)
+                    )
+                    .accessibilityLabel("\(spot.name)の地図")
+
                 Button("閉じる") { dismiss() }
                     .buttonStyle(PrimaryButtonStyle())
                     .padding(.top, 8)
             }
             .padding(24)
         }
+    }
+
+    private var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: spot.lat, longitude: spot.lng)
     }
 
     private var metaLine: String {

@@ -1,0 +1,74 @@
+{
+  "_note": "店名検索や手打ち緯度では置かない。住所は人間が確認する正本。lat/lng は OpenStreetMap の店舗ノード（番地の代表点ではない）。mishiranu-app/data/landmark-locks.json と中身を同じにする。",
+  "locks": [
+    {
+      "id": "demachi-delta",
+      "station": "出町柳",
+      "kind": "river",
+      "keywords": ["デルタ", "河川敷", "三角州"],
+      "address": "鴨川と高野川の合流（鴨川デルタ）",
+      "osm": "nominatim:鴨川デルタ",
+      "lat": 35.0301227,
+      "lng": 135.7717415,
+      "walkMinutes": 3
+    },
+    {
+      "id": "demachi-futaba",
+      "station": "出町柳",
+      "kind": "keyword",
+      "keywords": ["ふたば"],
+      "address": "京都市上京区出町桝形商店街（出町ふたば）",
+      "osm": "node/4374432589",
+      "lat": 35.0301072,
+      "lng": 135.7696274,
+      "walkMinutes": 3
+    },
+    {
+      "id": "demachi-shimogamo",
+      "station": "出町柳",
+      "kind": "keyword",
+      "keywords": ["下鴨神社", "賀茂御祖"],
+      "address": "京都市左京区下鴨泉川町59",
+      "osm": "nominatim:下鴨神社",
+      "lat": 35.0369916,
+      "lng": 135.7724506,
+      "walkMinutes": 15
+    },
+    {
+      "id": "demachi-shinshindo",
+      "station": "出町柳",
+      "kind": "meal",
+      "keywords": ["進々堂", "新進堂", "進々堂 京大北門前"],
+      "canonical": "進々堂 京大北門前",
+      "address": "京都市左京区北白川追分町88",
+      "osm": "node/1774463562",
+      "lat": 35.028684,
+      "lng": 135.7819409,
+      "walkMinutes": 12
+    },
+    {
+      "id": "demachi-onigiri",
+      "station": "出町柳",
+      "kind": "meal",
+      "keywords": ["お米自慢 おにぎり屋さん", "お米自慢", "おにぎり屋さん"],
+      "canonical": "お米自慢 おにぎり屋さん",
+      "address": "京都市左京区田中上柳町53",
+      "osm": "way/163155132",
+      "lat": 35.0303809,
+      "lng": 135.7737394,
+      "walkMinutes": 2
+    },
+    {
+      "id": "demachi-masugataya",
+      "station": "出町柳",
+      "kind": "meal",
+      "keywords": ["満寿形屋", "満寿形", "ますがた"],
+      "canonical": "満寿形屋",
+      "address": "京都市上京区桝形通出町西入ル二神町179",
+      "osm": "approx:枡形商店街",
+      "lat": 35.03005,
+      "lng": 135.76985,
+      "walkMinutes": 4
+    }
+  ]
+}

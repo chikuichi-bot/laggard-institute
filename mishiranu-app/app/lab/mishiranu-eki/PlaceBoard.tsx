@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { StationSeed } from "@/data/mishiranu-stations";
+import {
+  stationAboutTitle,
+  stationBaseName,
+  stationNameReading,
+} from "@/data/mishiranu-station-readings";
 import { IconBinoculars, IconHistory, IconWalk } from "./MishiranuIcons";
 
 function readingLines(text?: string | null): string[] {
@@ -50,15 +55,16 @@ function placeScript(station: StationSeed, tourTitle: string): string {
 type Props = {
   station: StationSeed;
   tourTitle: string;
-  metaLine: string;
-  onBack: () => void;
 };
 
-export function PlaceBoard({ station, tourTitle, metaLine, onBack }: Props) {
+export function PlaceBoard({ station, tourTitle }: Props) {
   const [speaking, setSpeaking] = useState(false);
   const intro = useMemo(() => readingLines(station.stationIntro), [station.stationIntro]);
   const walk = useMemo(() => readingLines(station.walkGuide), [station.walkGuide]);
   const area = useMemo(() => readingLines(station.areaAbout), [station.areaAbout]);
+  const aboutTitle = stationAboutTitle(station.name);
+  const nameReading = stationNameReading(station);
+  const indexStationLabel = stationBaseName(station.name);
   const history = station.historyNotes ?? [];
   const sight = station.sightseeingNotes ?? [];
   const hasIntro = intro.length > 0;
@@ -105,20 +111,6 @@ export function PlaceBoard({ station, tourTitle, metaLine, onBack }: Props) {
 
   return (
     <div className="mishiranu-place-board">
-      <header className="mishiranu-place-board-head">
-        <button type="button" className="mishiranu-place-board-back" onClick={onBack}>
-          ← 駅を探し直す
-        </button>
-        <p className="mishiranu-place-board-meta">{metaLine}</p>
-        <div className="mishiranu-place-board-sign">
-          <span className="mishiranu-place-board-badge">土地案内</span>
-          <h2 id="tour-title" className="mishiranu-place-board-title">
-            {station.name}
-          </h2>
-          <p className="mishiranu-place-board-sub">{tourTitle}</p>
-        </div>
-      </header>
-
       <div className="mishiranu-place-board-body">
         <button
           type="button"
@@ -137,7 +129,7 @@ export function PlaceBoard({ station, tourTitle, metaLine, onBack }: Props) {
         <div className="mishiranu-place-index" role="navigation" aria-label="この案内の目次">
           {(
             [
-              ["place-intro", "01", "導入", hasIntro],
+              ["place-intro", "01", indexStationLabel, hasIntro],
               ["place-walk", "02", "歩き方", hasWalk],
               ["place-history", "03", "歴史", hasHistory],
               ["place-sight", "04", "観光", hasSight],
@@ -160,7 +152,12 @@ export function PlaceBoard({ station, tourTitle, metaLine, onBack }: Props) {
           <section id="place-intro" className="mishiranu-place-panel">
             <div className="mishiranu-place-panel-head">
               <span>01</span>
-              <h3>この駅のこと</h3>
+              <div className="mishiranu-place-panel-titles">
+                {nameReading ? (
+                  <p className="mishiranu-place-panel-reading">{nameReading}</p>
+                ) : null}
+                <h3>{aboutTitle}</h3>
+              </div>
             </div>
             {intro.map((line) => (
               <p key={line}>{line}</p>

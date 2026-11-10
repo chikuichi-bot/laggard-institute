@@ -42,6 +42,7 @@ try {
 
   for (const [mod, rel] of Object.entries({
     "data/mishiranu-stations": "data/mishiranu-stations.ts",
+    "data/mishiranu-station-readings": "data/mishiranu-station-readings.ts",
     "lib/mishiranu-area-depth": "lib/mishiranu-area-depth.ts",
   })) {
     const js = transpileTo(tmp, rel).replace(
@@ -54,6 +55,7 @@ try {
   // Geo: load coordinates JSON directly (avoid TS .default interop issues under plain Node).
   const coordinates = JSON.parse(fs.readFileSync(coordsFile, "utf8"));
   const data = require(path.join(tmp, "data/mishiranu-stations.js"));
+  const readings = require(path.join(tmp, "data/mishiranu-station-readings.js"));
   const depth = require(path.join(tmp, "lib/mishiranu-area-depth.js"));
 
   function stationLL(station) {
@@ -84,6 +86,7 @@ try {
     return {
       id: station.id,
       name: station.name,
+      nameReading: readings.stationNameReading(station) ?? null,
       line: station.line,
       prefecture: station.prefecture,
       region: station.region,

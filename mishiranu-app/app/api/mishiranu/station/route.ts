@@ -1,16 +1,15 @@
-import { STATIONS } from "@/data/mishiranu-stations";
+import { requireStationViewer } from "@/lib/mishiranu-device-auth";
 import {
   allowViewerRequest,
   hasViewerHourlyBudget,
 } from "@/lib/mishiranu-rate-limit";
 import { requireJsonContentType } from "@/lib/mishiranu-request";
 import { generateStationGuideWithGemini } from "@/lib/mishiranu-station-ai";
-import { requireIdentity } from "../../../../cursor/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 /** Hosted apps may cut long Gemini+Search calls; keep headroom for the fast path + one retry. */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 type Body = {
   name?: string;
@@ -25,21 +24,14 @@ function normalizeName(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
 }
 
-function findCuratedByName(name: string) {
-  const bare = name.replace(/駅$/u, "");
-  return STATIONS.find(
-    (s) => s.name === bare || s.name === name || `${s.name}駅` === name,
-  );
-}
-
 export async function POST(request: Request) {
-  const identity = await requireIdentity(request);
-  if (identity instanceof Response) return identity;
+  const viewer = await requireStationViewer(request);
+  if (viewer instanceof Response) return viewer;
 
   const media = requireJsonContentType(request);
   if (media) return media;
 
-  if (!allowViewerRequest(`station:${identity.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
+  if (!allowViewerRequest(`station:${viewer.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
     return Response.json(
       {
         error: "rate_limited",
@@ -67,28 +59,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const curated = findCuratedByName(name);
-  if (curated) {
-    return Response.json(
-      { station: curated, source: "seed" as const },
-      { headers: NO_STORE },
-    );
-  }
-
+  // 収録シードは使わない。毎回 Gemini 解析。
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     return Response.json(
       {
         error: "no_api_key",
         message:
-          "GEMINI_API_KEY が未設定のため、編集リスト外の駅はまだ案内できません。",
+          "GEMINI_API_KEY が未設定のため、まだその駅の案内をつくれません。",
       },
       { status: 503, headers: NO_STORE },
     );
   }
 
   // Soft peek only — each Gemini HTTP call charges the hourly budget itself.
-  if (!hasViewerHourlyBudget(identity.sub)) {
+  if (!hasViewerHourlyBudget(viewer.sub)) {
     return Response.json(
       {
         error: "rate_limited",
@@ -102,7 +87,7 @@ export async function POST(request: Request) {
     const result = await generateStationGuideWithGemini(
       name,
       apiKey,
-      identity.sub,
+      viewer.sub,
     );
     if ("error" in result) {
       const status =

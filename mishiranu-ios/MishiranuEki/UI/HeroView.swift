@@ -18,31 +18,28 @@ struct HeroView: View {
             Text("降りた駅の、徒歩圏だけを、物語にする。予定のない寄り道を、いまここから。")
                 .font(.mincho(.body))
                 .foregroundStyle(Palette.fog)
-                .lineSpacing(6)
+                .lineSpacing(8)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 Button {
                     model.startArrival()
                 } label: {
                     Label {
                         Text("知らない駅に到着")
                     } icon: {
-                        PictogramIcon(.arrival, size: 20)
+                        PictogramIcon(.arrival, size: 24)
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
-
-                Button("出町柳ですぐ見る") {
-                    model.quickDemo()
-                }
-                .buttonStyle(PrimaryButtonStyle(filled: false))
             }
-            Text("収録 \(model.stations.count) 駅 · 位置情報は端末の外に送りません")
-                .font(.caption)
+            Text(model.savedCount > 0
+                ? "保存 \(model.savedCount) 駅 · 検索した駅だけがここに残ります"
+                : "駅を検索すると、ここに少しずつ貯まります")
+                .font(.readable(.caption))
                 .foregroundStyle(Palette.mist)
                 .frame(maxWidth: .infinity)
-                .padding(.top, 14)
+                .padding(.top, 16)
                 .padding(.bottom, 8)
         }
         .padding(.horizontal, 28)

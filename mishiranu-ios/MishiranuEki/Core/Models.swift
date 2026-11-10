@@ -53,16 +53,49 @@ struct HistoryNote: Codable, Hashable {
     let body: String
 }
 
+enum BikeRentalKind: String, Codable, Hashable {
+    case local
+    case app
+
+    var label: String {
+        switch self {
+        case .local: return "地元のレンタサイクル"
+        case .app: return "アプリで借りる"
+        }
+    }
+
+    var hint: String {
+        switch self {
+        case .local: return "店頭で借りる半日〜1日向き"
+        case .app: return "会員登録のあと、ポートで解錠"
+        }
+    }
+}
+
 struct BikeRentalPlace: Codable, Hashable {
     let name: String
+    let kind: BikeRentalKind?
     let walkMinutes: Int?
     let note: String?
+
+    var resolvedKind: BikeRentalKind {
+        if let kind { return kind }
+        let blob = "\(name) \(note ?? "")"
+        if blob.contains("シェア") || blob.contains("アプリ") || blob.contains("HELLO") || blob.contains("ドコモ") {
+            return .app
+        }
+        return .local
+    }
 }
 
 struct BikeRental: Codable, Hashable {
     let available: Bool
     let summary: String
     let places: [BikeRentalPlace]?
+
+    func places(kind: BikeRentalKind) -> [BikeRentalPlace] {
+        (places ?? []).filter { $0.resolvedKind == kind }
+    }
 }
 
 struct EmptyCopy: Codable, Hashable {
@@ -84,6 +117,8 @@ struct Spot: Codable, Hashable, Identifiable {
     let detail: String?
     let walkMinutes: Int
     let secretWorthy: Bool
+    /// その駅の顔になる定番（初心者コース用。駅ごとにだいたい3件）
+    let majorWorthy: Bool
     let lat: Double
     let lng: Double
 
@@ -97,11 +132,62 @@ struct Spot: Codable, Hashable, Identifiable {
         default: return "ちょっと変わった"
         }
     }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, genre, guide, mealTier, mealTimes, soloOk, budgetYen
+        case hours, blurb, detail, walkMinutes, secretWorthy, majorWorthy, lat, lng
+    }
+
+    init(
+        id: String, name: String, genre: String, guide: GuideKind, mealTier: MealTier,
+        mealTimes: [MealTime], soloOk: Bool, budgetYen: String, hours: String?, blurb: String,
+        detail: String?, walkMinutes: Int, secretWorthy: Bool, majorWorthy: Bool = false,
+        lat: Double, lng: Double
+    ) {
+        self.id = id
+        self.name = name
+        self.genre = genre
+        self.guide = guide
+        self.mealTier = mealTier
+        self.mealTimes = mealTimes
+        self.soloOk = soloOk
+        self.budgetYen = budgetYen
+        self.hours = hours
+        self.blurb = blurb
+        self.detail = detail
+        self.walkMinutes = walkMinutes
+        self.secretWorthy = secretWorthy
+        self.majorWorthy = majorWorthy
+        self.lat = lat
+        self.lng = lng
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        genre = try c.decode(String.self, forKey: .genre)
+        guide = try c.decode(GuideKind.self, forKey: .guide)
+        mealTier = try c.decodeIfPresent(MealTier.self, forKey: .mealTier) ?? .casual
+        mealTimes = try c.decodeIfPresent([MealTime].self, forKey: .mealTimes) ?? [.lunch]
+        soloOk = try c.decodeIfPresent(Bool.self, forKey: .soloOk) ?? true
+        budgetYen = try c.decodeIfPresent(String.self, forKey: .budgetYen) ?? "〜¥1,500"
+        hours = try c.decodeIfPresent(String.self, forKey: .hours)
+        blurb = try c.decode(String.self, forKey: .blurb)
+        detail = try c.decodeIfPresent(String.self, forKey: .detail)
+        walkMinutes = try c.decode(Int.self, forKey: .walkMinutes)
+        secretWorthy = try c.decodeIfPresent(Bool.self, forKey: .secretWorthy) ?? false
+        majorWorthy = try c.decodeIfPresent(Bool.self, forKey: .majorWorthy) ?? false
+        lat = try c.decode(Double.self, forKey: .lat)
+        lng = try c.decode(Double.self, forKey: .lng)
+    }
 }
 
 struct Station: Codable, Hashable, Identifiable {
     let id: String
     let name: String
+    /// 駅名のひらがな読み（土地ページ見出し用）
+    let nameReading: String?
     let line: String
     let prefecture: String
     let region: String
@@ -119,6 +205,21 @@ struct Station: Codable, Hashable, Identifiable {
     let lat: Double
     let lng: Double
     let spots: [Spot]
+
+    /// 「出町柳」→「出町柳駅のこと」
+    var aboutTitle: String {
+        let base = name.hasSuffix("駅") ? String(name.dropLast()) : name
+        return "\(base)駅のこと"
+    }
+
+    var displayNameReading: String? {
+        let trimmed = nameReading?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (trimmed?.isEmpty == false) ? trimmed : nil
+    }
+
+    var indexStationLabel: String {
+        name.hasSuffix("駅") ? String(name.dropLast()) : name
+    }
 
     func radiusKm(for stay: StayOption) -> Double {
         let index = min(stay.index, radiiKm.count - 1)

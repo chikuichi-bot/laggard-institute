@@ -17,32 +17,8 @@ const coordinates = (
  * Hand-entered fallbacks only used until `scripts/geocode-coordinates.mjs`
  * fills `data/mishiranu-coordinates.json`. Prefer the JSON for every pin.
  */
-export const STATION_LL: Record<string, LatLng> = {
-  demachiyanagi: { lat: 35.0305, lng: 135.7729 },
-  chushojima: { lat: 34.9267, lng: 135.7594 },
-  "iwashimizu-hachimangu": { lat: 34.8796, lng: 135.6998 },
-  oyamazaki: { lat: 34.8917, lng: 135.6794 },
-  biei: { lat: 43.5884, lng: 142.466 },
-  kanita: { lat: 41.037, lng: 140.643 },
-  ashio: { lat: 36.633, lng: 139.442 },
-  sawara: { lat: 35.891, lng: 140.496 },
-  manazuru: { lat: 35.157, lng: 139.138 },
-  hamakanaya: { lat: 35.155, lng: 139.826 },
-  nagatoro: { lat: 36.094, lng: 139.112 },
-  katsunuma: { lat: 35.671, lng: 138.729 },
-  kobuchizawa: { lat: 35.863, lng: 138.317 },
-  obasute: { lat: 36.508, lng: 138.093 },
-  shimosuwa: { lat: 36.004, lng: 138.111 },
-  yui: { lat: 35.098, lng: 138.556 },
-  nebukawa: { lat: 35.202, lng: 139.139 },
-  amarube: { lat: 35.652, lng: 134.548 },
-  onomichi: { lat: 34.404, lng: 133.193 },
-  misumi: { lat: 32.617, lng: 130.463 },
-  usuki: { lat: 33.126, lng: 131.805 },
-  hitoyoshi: { lat: 32.211, lng: 130.755 },
-  tsukazaki: { lat: 35.263, lng: 140.148 },
-  tamatsukuri: { lat: 35.421, lng: 132.896 },
-};
+/** 収録カタログ廃止後は空。座標は駅オブジェクトの lat/lng を使う。 */
+export const STATION_LL: Record<string, LatLng> = {};
 
 const EARTH_KM = 6371;
 
@@ -125,6 +101,8 @@ export function stationLatLng(station: StationSeed): LatLng {
   }
   const fallback = STATION_LL[station.id];
   if (fallback) return fallback;
+  // 未選択プレースホルダ用（地図は開かない想定）
+  if (station.id === "__empty__") return { lat: 35.6812, lng: 139.7671 };
   throw new Error(`駅座標がありません: ${station.id}`);
 }
 

@@ -23,37 +23,10 @@ const UA = "mishiranu-eki-geocoder/1.0 (laggard-institute; local curation)";
 const require = createRequire(path.join(webRoot, "package.json"));
 const ts = require("typescript");
 
-/** Hand-verified pins. Never overwritten by auto geocode. */
+/** Hand-verified pins. Never overwritten by auto geocode. 収録カタログ廃止後は空。 */
 const MANUAL = {
-  stations: {
-    demachiyanagi: {
-      lat: 35.0305,
-      lng: 135.7729,
-      source: "manual",
-      name: "出町柳駅",
-      note: "Keihan/Eizan platforms north of Imadegawa",
-    },
-  },
-  spots: {
-    "demachi-1": { lat: 35.0297, lng: 135.7717, source: "manual", name: "鴨川デルタ" },
-    "demachi-2": { lat: 35.03029, lng: 135.76886, source: "manual", name: "出町枡形商店街" },
-    "demachi-3": { lat: 35.03011, lng: 135.76963, source: "manual", name: "出町ふたば" },
-    "demachi-3b": { lat: 35.03015, lng: 135.7697, source: "manual", name: "出町ふたばの豆餅（土産）" },
-    "demachi-4": { lat: 35.03027, lng: 135.77268, source: "manual", name: "叡山電鉄のホーム端" },
-    "demachi-5": { lat: 35.0302, lng: 135.76903, source: "manual", name: "出町座" },
-    "demachi-5b": { lat: 35.0289, lng: 135.7804, source: "manual", name: "進々堂 百万遍店" },
-    "demachi-5c": { lat: 35.0303, lng: 135.7692, source: "manual", name: "満寿形屋" },
-    "demachi-5d": { lat: 35.0282, lng: 135.7726, source: "manual", name: "手打大山そば 響" },
-    "demachi-5e": { lat: 35.0391, lng: 135.7729, source: "manual", name: "下鴨茶寮" },
-    "demachi-5f": { lat: 35.02955, lng: 135.7729, source: "manual", name: "COYOTE Roastery" },
-    "demachi-beans": { lat: 35.0322, lng: 135.7782, source: "manual", name: "WEEKENDERS COFFEE" },
-    "demachi-10": { lat: 35.03005, lng: 135.77155, source: "manual", name: "鴨川デルタの川端" },
-    "demachi-6": { lat: 35.03205, lng: 135.77045, source: "manual", name: "下鴨神社へ向かう並木の入口" },
-    "demachi-9": { lat: 35.0389, lng: 135.7728, source: "manual", name: "下鴨神社・糺の森" },
-    "demachi-7": { lat: 35.029, lng: 135.7687, source: "manual", name: "河原町今出川あたりの角" },
-    "demachi-8": { lat: 35.03028, lng: 135.7694, source: "manual", name: "枡形の紙もの・雑貨" },
-    "demachi-11": { lat: 35.03025, lng: 135.7705, source: "manual", name: "駅前のレンタサイクル" },
-  },
+  stations: {},
+  spots: {},
 };
 
 /** OSM station name when it differs from our display name. */
@@ -340,13 +313,24 @@ async function geocodeSpot(spot, station, stationCenter, nearby) {
   return null;
 }
 
+/** Apple マップ照合（mishiranu-ios/scripts/applemaps-geocode.swift）の結果は地図表示の正なので残す。 */
+const KEEP_SOURCES = new Set(["apple-maps", "station-anchor"]);
+
+function keptEntries(kind) {
+  if (!fs.existsSync(outFile)) return {};
+  const prev = JSON.parse(fs.readFileSync(outFile, "utf8"))[kind] ?? {};
+  return Object.fromEntries(
+    Object.entries(prev).filter(([, v]) => KEEP_SOURCES.has(v.source) || v.locked),
+  );
+}
+
 async function main() {
   const stations = loadStations();
   const next = {
     version: 1,
     updatedAt: new Date().toISOString(),
-    stations: { ...MANUAL.stations },
-    spots: { ...MANUAL.spots },
+    stations: { ...MANUAL.stations, ...keptEntries("stations") },
+    spots: { ...MANUAL.spots, ...keptEntries("spots") },
     unresolved: [],
   };
 
@@ -356,7 +340,7 @@ async function main() {
   console.log(`  ${railwayNodes.length} candidate nodes`);
 
   for (const station of stations) {
-    if (next.stations[station.id]?.source === "manual") {
+    if (["manual", ...KEEP_SOURCES].includes(next.stations[station.id]?.source)) {
       console.log(`  = ${station.name} (manual)`);
       continue;
     }
@@ -411,7 +395,7 @@ async function main() {
     }
 
     for (const spot of station.spots) {
-      if (next.spots[spot.id]?.source === "manual") continue;
+      if (["manual", ...KEEP_SOURCES].includes(next.spots[spot.id]?.source)) continue;
       const hit = await geocodeSpot(spot, station, center, nearby);
       if (hit) {
         next.spots[spot.id] = hit;

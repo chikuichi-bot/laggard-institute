@@ -22,12 +22,23 @@ enum TextMatch {
         }
     }
 
-    static func filterStations(_ query: String, in stations: [Station], limit: Int = 8) -> [Station] {
+    /// 空クエリは保存済みだけ（ごちゃつかせない）。文字入力で全国カタログを絞る。
+    static func filterStations(
+        _ query: String,
+        in stations: [Station],
+        savedIds: Set<String> = [],
+        limit: Int = 8
+    ) -> [Station] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hits = q.isEmpty ? stations : stations.filter {
-            $0.name.contains(q) || $0.prefecture.contains(q) || $0.line.contains(q) || $0.tourTitle.contains(q)
+        let pool: [Station]
+        if q.isEmpty {
+            pool = stations.filter { savedIds.contains($0.id) }
+        } else {
+            pool = stations.filter {
+                $0.name.contains(q) || $0.prefecture.contains(q) || $0.line.contains(q) || $0.tourTitle.contains(q)
+            }
         }
-        return Array(hits.prefix(limit))
+        return Array(pool.prefix(limit))
     }
 
     static func stay(_ text: String) -> StayOption? {
@@ -73,6 +84,8 @@ enum TextMatch {
     static func skipsCourse(_ text: String) -> Bool {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return has(t, "コース\\s*(は)?\\s*(作らない|なし|要らない|いらない)")
+            || has(t, "まわり方\\s*(は)?\\s*(決めない|作らない|なし|要らない|いらない)")
+            || has(t, "自由に歩く")
             || has(t, "^(なし|作らない|スキップ|フリー|自由に|行程なし)$")
     }
 }

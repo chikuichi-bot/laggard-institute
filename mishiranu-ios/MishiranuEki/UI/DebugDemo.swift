@@ -7,7 +7,7 @@ extension AppModel {
         guard
             let flag = arguments.firstIndex(of: "-mishiranuDemo"),
             arguments.indices.contains(flag + 1),
-            let station = stations.first(where: { $0.id == "demachiyanagi" })
+            let station = stations.first
         else { return }
         let target = arguments[flag + 1]
 

@@ -22,4 +22,9 @@ enum StationStore {
         }
         return stations
     }
+
+    /// 同梱の種＋端末に保存した駅。
+    static func loadCatalog() -> [Station] {
+        SavedStationStore.merge(bundled: loadBundled(), saved: SavedStationStore.load())
+    }
 }

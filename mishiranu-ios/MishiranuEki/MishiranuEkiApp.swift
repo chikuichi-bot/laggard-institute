@@ -2,14 +2,13 @@ import SwiftUI
 
 @main
 struct MishiranuEkiApp: App {
-    @State private var model = AppModel(stations: StationStore.loadBundled())
+    @State private var model = AppModel(stations: StationStore.loadCatalog())
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(model)
-                .tint(Palette.warm)
-                .preferredColorScheme(.light)
+                .environment(ThemeStore.shared)
                 #if DEBUG
                 .onAppear { model.applyLaunchDemo() }
                 #endif
@@ -19,6 +18,7 @@ struct MishiranuEkiApp: App {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(ThemeStore.self) private var theme
 
     var body: some View {
         ZStack {
@@ -32,6 +32,9 @@ struct RootView: View {
                 TourView().transition(.opacity)
             }
         }
+        .tint(Palette.warm)
+        .preferredColorScheme(theme.skin.preferredColorScheme)
+        .id(theme.skin)
         .animation(.easeInOut(duration: 0.25), value: model.screen)
     }
 }

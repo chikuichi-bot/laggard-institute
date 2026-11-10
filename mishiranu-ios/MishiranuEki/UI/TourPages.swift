@@ -36,11 +36,12 @@ private func readingLines(_ text: String?) -> [String] {
 
 private struct ReadingText: View {
     let lines: [String]
+    /// 土地案内の本文。Dynamic Type 下限で十分大きくなるので body 基準。
     var size: Font.TextStyle = .body
-    /// 土地案内の本文は薄く見えないよう、ほぼ墨色＋medium。
+    /// 土地案内の本文は、真っ黒・太字にせず和紙に馴染ませる。
     var color: Color = Palette.body
-    var weight: Font.Weight = .medium
-    var lineSpacing: CGFloat = 8
+    var weight: Font.Weight = .regular
+    var lineSpacing: CGFloat = 7
     var paragraphSpacing: CGFloat = 14
 
     var body: some View {
@@ -69,17 +70,17 @@ private struct PlaceBoardNote: View {
                 .foregroundStyle(Palette.warm)
                 .monospacedDigit()
                 .frame(width: 26, alignment: .leading)
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(note.title)
-                    .font(.mincho(.callout, weight: .semibold))
+                    .font(.mincho(.headline, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 ReadingText(
                     lines: readingLines(note.body),
-                    size: .callout,
+                    size: .body,
                     color: Palette.body,
-                    lineSpacing: 6,
-                    paragraphSpacing: 8
+                    lineSpacing: 7,
+                    paragraphSpacing: 12
                 )
             }
         }
@@ -107,13 +108,13 @@ struct PlacePage: View {
         let hasSight = !station.sightseeingNotes.isEmpty
 
         VStack(spacing: 0) {
-            PlaceBoardHeader(station: station)
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
                         PlaceListenBar(narrator: narrator, station: station)
 
                         PlaceBoardIndex(
+                            stationLabel: station.indexStationLabel,
                             hasIntro: hasIntro,
                             hasWalk: hasWalk,
                             hasHistory: hasHistory,
@@ -127,25 +128,20 @@ struct PlacePage: View {
                         if hasIntro {
                             PlaceBoardPanel(
                                 number: "01",
-                                title: "この駅のこと",
+                                title: station.aboutTitle,
+                                reading: station.displayNameReading,
                                 accent: Palette.ink,
                                 pictogram: nil
                             ) {
                                 if !intro.isEmpty {
-                                    ReadingText(
-                                        lines: intro,
-                                        size: .body,
-                                        color: Palette.body,
-                                        lineSpacing: 8,
-                                        paragraphSpacing: 12
-                                    )
+                                    ReadingText(lines: intro)
                                 }
                                 if station.mood == .empty, let empty = station.emptyCopy {
                                     Text(empty.headline)
-                                        .font(.mincho(.callout, weight: .semibold))
+                                        .font(.mincho(.headline, weight: .semibold))
                                         .foregroundStyle(Palette.ink)
                                         .padding(.top, intro.isEmpty ? 0 : 8)
-                                    ReadingText(lines: readingLines(empty.body), size: .callout, color: Palette.body)
+                                    ReadingText(lines: readingLines(empty.body))
                                 }
                             }
                             .id(PlaceBoardSection.intro)
@@ -158,13 +154,7 @@ struct PlacePage: View {
                                 accent: Palette.moss,
                                 pictogram: .trekking
                             ) {
-                                ReadingText(
-                                    lines: walk,
-                                    size: .body,
-                                    color: Palette.body,
-                                    lineSpacing: 8,
-                                    paragraphSpacing: 12
-                                )
+                                ReadingText(lines: walk)
                             }
                             .id(PlaceBoardSection.walk)
                         }
@@ -177,13 +167,7 @@ struct PlacePage: View {
                                 pictogram: .history
                             ) {
                                 if !area.isEmpty {
-                                    ReadingText(
-                                        lines: area,
-                                        size: .body,
-                                        color: Palette.body,
-                                        lineSpacing: 8,
-                                        paragraphSpacing: 12
-                                    )
+                                    ReadingText(lines: area)
                                 }
                                 if !station.historyNotes.isEmpty {
                                     VStack(alignment: .leading, spacing: 14) {
@@ -221,7 +205,7 @@ struct PlacePage: View {
 
                         if !hasIntro && !hasWalk && !hasHistory && !hasSight {
                             Text("この駅の土地メモはまだ少なめです。")
-                                .font(.footnote)
+                                .font(.callout)
                                 .foregroundStyle(Palette.mist)
                                 .padding(.top, 8)
                         }
@@ -231,10 +215,10 @@ struct PlacePage: View {
                     .padding(.bottom, 36)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .background(Color(hex: 0xefe8d6))
+                .background(Palette.canvas)
             }
         }
-        .background(Palette.ink.ignoresSafeArea(edges: .top))
+        .background(Palette.canvas)
         .onChange(of: station.id) { _, _ in
             narrator.stop()
         }
@@ -244,69 +228,8 @@ struct PlacePage: View {
     }
 }
 
-/// 琺瑯案内板風の見出し帯。
-private struct PlaceBoardHeader: View {
-    @Environment(AppModel.self) private var model
-    let station: Station
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Button {
-                model.startArrival()
-            } label: {
-                Text("← 駅を探し直す")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.paper.opacity(0.7))
-            }
-            .buttonStyle(.plain)
-
-            Text("\(station.prefecture) · \(station.line) · \(model.dayPart.label) · \(model.stay.label)")
-                .font(.caption2)
-                .foregroundStyle(Palette.paper.opacity(0.65))
-                .lineLimit(2)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("土地案内")
-                    .font(.caption2.weight(.semibold))
-                    .tracking(2)
-                    .foregroundStyle(Palette.gold)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .stroke(Palette.gold, lineWidth: 1)
-                    )
-
-                Text(station.name)
-                    .font(.system(size: 30, weight: .medium, design: .serif))
-                    .foregroundStyle(Palette.paper)
-                    .tracking(1)
-
-                Text(model.selectedCourse?.title ?? station.tourTitle)
-                    .font(.mincho(.subheadline))
-                    .foregroundStyle(Palette.paper.opacity(0.85))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(hex: 0x2a2622))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Palette.gold.opacity(0.45), lineWidth: 1)
-            )
-        }
-        .padding(.horizontal, 14)
-        .padding(.top, 8)
-        .padding(.bottom, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.ink)
-    }
-}
-
 private struct PlaceBoardIndex: View {
+    let stationLabel: String
     let hasIntro: Bool
     let hasWalk: Bool
     let hasHistory: Bool
@@ -322,7 +245,7 @@ private struct PlaceBoardIndex: View {
 
     var body: some View {
         let items: [IndexItem] = [
-            .init(id: .intro, number: "01", label: "導入", enabled: hasIntro),
+            .init(id: .intro, number: "01", label: stationLabel, enabled: hasIntro),
             .init(id: .walk, number: "02", label: "歩き方", enabled: hasWalk),
             .init(id: .history, number: "03", label: "歴史", enabled: hasHistory),
             .init(id: .sight, number: "04", label: "観光", enabled: hasSight),
@@ -333,17 +256,19 @@ private struct PlaceBoardIndex: View {
                     guard item.enabled else { return }
                     onSelect(item.id)
                 } label: {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 3) {
                         Text(item.number)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(item.enabled ? Palette.warm : Palette.mist)
                             .monospacedDigit()
                         Text(item.label)
-                            .font(.caption2)
+                            .font(.footnote)
                             .foregroundStyle(item.enabled ? Palette.fog : Palette.mist)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.9)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 12)
                     .background(Palette.paper)
                     .overlay(
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
@@ -362,33 +287,45 @@ private struct PlaceBoardIndex: View {
 private struct PlaceBoardPanel<Content: View>: View {
     let number: String
     let title: String
+    var reading: String? = nil
     let accent: Color
     let pictogram: Pictogram?
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 8) {
                 Text(number)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Palette.warm)
                     .monospacedDigit()
+                    .padding(.top, reading == nil ? 0 : 2)
                 if let pictogram {
-                    PictogramIcon(pictogram, size: 16)
+                    PictogramIcon(pictogram, size: 18)
                         .foregroundStyle(Palette.ink)
+                        .padding(.top, reading == nil ? 0 : 2)
                 }
-                Text(title)
-                    .font(.mincho(.callout, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
+                VStack(alignment: .leading, spacing: 2) {
+                    if let reading, !reading.isEmpty {
+                        Text(reading)
+                            .font(.caption)
+                            .foregroundStyle(Palette.mist)
+                            .tracking(0.6)
+                    }
+                    Text(title)
+                        .font(.mincho(.headline, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .padding(.bottom, 6)
+            .padding(.bottom, 8)
             .overlay(alignment: .bottom) {
                 Rectangle().fill(Palette.line).frame(height: 1)
             }
 
             content
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.paper)
         .overlay(alignment: .leading) {
@@ -412,22 +349,25 @@ private struct PlaceListenBar: View {
         Button {
             narrator.toggle(station: station)
         } label: {
-            HStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 Image(systemName: narrator.isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 22, height: 22)
-                VStack(alignment: .leading, spacing: 2) {
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 24, height: 24)
+                VStack(alignment: .leading, spacing: 3) {
                     Text(narrator.isSpeaking ? "読み上げを止める" : "土地案内を聞く")
                         .font(.mincho(.body, weight: .semibold))
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(narrator.isSpeaking ? "もう一度押すと止まります" : "駅に着く前に、イヤホンで")
                         .font(.caption)
                         .foregroundStyle(Palette.paper.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
             }
             .foregroundStyle(Palette.paper)
             .padding(.vertical, 14)
             .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(narrator.isSpeaking ? Palette.warmDeep : Palette.warm)
@@ -447,7 +387,7 @@ struct WalkPage: View {
     var body: some View {
         PageScroll {
             if let course = model.selectedCourse {
-                Kicker(text: "COURSE", pictogram: .trekking)
+                Kicker(text: "WALK", pictogram: .trekking)
                 Text(course.title)
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
@@ -470,12 +410,12 @@ struct WalkPage: View {
                 .padding(.top, 4)
             } else {
                 Kicker(text: "FREE WALK", pictogram: .trekking)
-                Text("コースは作っていません")
+                Text("まわり方は、まだ決めていません")
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
-                Text("地図と観光から、気になった場所だけ寄り道できます。あとから会話をやり直してコースを選ぶこともできます。")
-                    .font(.mincho(.callout))
-                    .lineSpacing(4)
+                Text("地図と観光から、気になった場所だけ寄り道できます。あとから会話をやり直して、まわり方を選ぶこともできます。")
+                    .font(.mincho(.body))
+                    .lineSpacing(8)
                     .foregroundStyle(Palette.fog)
                 Button("会話をやり直す") { model.startArrival() }
                     .buttonStyle(PrimaryButtonStyle(filled: false))
@@ -504,24 +444,27 @@ private struct StopRow: View {
                         .frame(maxHeight: .infinity)
                 }
             }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("\(stop.clockLabel) · \(stop.spot.name)")
                     .font(.mincho(.headline, weight: .semibold))
                     .foregroundStyle(Palette.ink)
-                HStack(spacing: 4) {
-                    PictogramIcon(stop.spot.guide.pictogram, size: 14)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    PictogramIcon(stop.spot.guide.pictogram, size: 16)
                         .foregroundStyle(stop.spot.guide.color)
                     Text("\(stop.spot.guide.label) · 徒歩約 \(stop.walkMinutes) 分 · 滞在目安 \(stop.dwellMinutes) 分")
                         .font(.caption)
                         .foregroundStyle(Palette.mist)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(stop.spot.blurb)
-                    .font(.mincho(.footnote))
+                    .font(.mincho(.callout))
                     .foregroundStyle(Palette.fog)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(3)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.bottom, 18)
-            Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
     }
@@ -531,56 +474,158 @@ private struct StopRow: View {
 
 struct GuidePage: View {
     @Environment(AppModel.self) private var model
+    let station: Station
+
+    private var bikeColor: Color { Palette.moss }
 
     var body: some View {
         let kind = model.guideKind
+        let showBike = model.guideShowsBike
         let items = model.guideSpots(kind)
         VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(GuideKind.order) { option in
-                        let active = option == kind
+                        let active = !showBike && option == kind
                         Button {
+                            model.guideShowsBike = false
                             model.guideKind = option
                         } label: {
-                            HStack(spacing: 6) {
-                                PictogramIcon(option.pictogram, size: 16)
-                                Text(option.label)
-                            }
-                            .font(.subheadline.weight(active ? .semibold : .regular))
-                            .foregroundStyle(active ? Palette.paper : option.color)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(Capsule().fill(active ? option.color : Palette.paper))
-                            .overlay(Capsule().stroke(active ? Color.clear : Palette.line, lineWidth: 1))
+                            guideChip(
+                                label: option.label,
+                                pictogram: option.pictogram,
+                                color: option.color,
+                                active: active
+                            )
                         }
                         .buttonStyle(.plain)
                     }
+
+                    let bikeActive = showBike
+                    Button {
+                        model.guideShowsBike = true
+                    } label: {
+                        guideChip(
+                            label: "レンタサイクル",
+                            pictogram: .bicycleRental,
+                            color: bikeColor,
+                            active: bikeActive
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("レンタサイクル")
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
 
             PageScroll {
-                if kind == .meal && model.hasMealPrefs {
-                    Text("希望: \(model.mealPrefs.solo.label) · \(model.mealPrefs.budget.label)")
-                        .font(.caption)
-                        .foregroundStyle(Palette.warm)
-                }
-                if items.isEmpty {
-                    Text("この徒歩圏・時間ではまだ少なめです。時間を延ばすと増えることがあります。")
-                        .font(.footnote)
-                        .foregroundStyle(Palette.mist)
-                }
-                ForEach(items) { spot in
-                    let score = kind == .meal ? CourseBuilder.mealPrefScore(spot, prefs: model.mealPrefs) : 0
-                    Button {
-                        model.openSpot(spot)
-                    } label: {
-                        GuideRow(spot: spot, match: score > 0)
-                            .opacity(score < 0 ? 0.55 : 1)
+                if showBike {
+                    BikeRentalCard(bike: station.bikeRental)
+                } else {
+                    if kind == .meal && model.hasMealPrefs {
+                        Text("希望: \(model.mealPrefs.solo.label) · \(model.mealPrefs.budget.label)")
+                            .font(.caption)
+                            .foregroundStyle(Palette.warm)
                     }
-                    .buttonStyle(.plain)
+                    if items.isEmpty {
+                        Text("この徒歩圏・時間ではまだ少なめです。時間を延ばすと増えることがあります。")
+                            .font(.callout)
+                            .foregroundStyle(Palette.mist)
+                    }
+                    ForEach(items) { spot in
+                        let score = kind == .meal ? CourseBuilder.mealPrefScore(spot, prefs: model.mealPrefs) : 0
+                        Button {
+                            model.openSpot(spot)
+                        } label: {
+                            GuideRow(spot: spot, match: score > 0)
+                                .opacity(score < 0 ? 0.55 : 1)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private func guideChip(
+        label: String,
+        pictogram: Pictogram,
+        color: Color,
+        active: Bool
+    ) -> some View {
+        HStack(spacing: 8) {
+            PictogramIcon(pictogram, size: 17)
+            Text(label)
+        }
+        .font(.subheadline.weight(active ? .semibold : .regular))
+        .foregroundStyle(active ? Palette.paper : color)
+        .padding(.vertical, 9)
+        .padding(.horizontal, 13)
+        .background(Capsule().fill(active ? color : Palette.paper))
+        .overlay(Capsule().stroke(active ? Color.clear : Palette.line, lineWidth: 1))
+    }
+}
+
+private struct BikeRentalCard: View {
+    let bike: BikeRental
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Card {
+                Kicker(text: "MOBILITY", pictogram: .bicycleRental)
+                Text("レンタサイクル")
+                    .font(.mincho(.title3, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                Text(bike.available ? "駅周辺で借りられます" : "いまは未確認／少なめ")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(bike.available ? Palette.moss : Palette.mist)
+                Text(bike.summary)
+                    .font(.mincho(.callout))
+                    .lineSpacing(5)
+                    .foregroundStyle(Palette.fog)
+            }
+
+            bikeGroup(kind: .local, places: bike.places(kind: .local))
+            bikeGroup(kind: .app, places: bike.places(kind: .app))
+        }
+    }
+
+    @ViewBuilder
+    private func bikeGroup(kind: BikeRentalKind, places: [BikeRentalPlace]) -> some View {
+        Card {
+            Text(kind.label)
+                .font(.readable(.subheadline, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+            Text(kind.hint)
+                .font(.caption)
+                .foregroundStyle(Palette.mist)
+            if places.isEmpty {
+                Text(
+                    kind == .local
+                        ? "地元店の具体名は、まだ少なめです。観光案内所や駅掲示も見てください。"
+                        : "アプリ型のポート情報は、まだ少なめです。HELLO CYCLING など地域のアプリを確認してください。"
+                )
+                .font(.callout)
+                .foregroundStyle(Palette.fog)
+            } else {
+                ForEach(places, id: \.name) { place in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(place.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Palette.ink)
+                        if let minutes = place.walkMinutes {
+                            Text("徒歩約 \(minutes) 分")
+                                .font(.caption)
+                                .foregroundStyle(Palette.mist)
+                        }
+                        if let note = place.note {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundStyle(Palette.fog)
+                        }
+                    }
+                    .padding(.top, 4)
                 }
             }
         }
@@ -592,9 +637,9 @@ private struct GuideRow: View {
     let match: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                PictogramIcon(spot.guide.pictogram, size: 16)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                PictogramIcon(spot.guide.pictogram, size: 18)
                     .foregroundStyle(spot.guide.color)
                 Text(spot.name)
                     .font(.mincho(.headline, weight: .semibold))
@@ -604,8 +649,8 @@ private struct GuideRow: View {
                     Text("希望に近い")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(Palette.paper)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(Capsule().fill(Palette.moss))
                 }
             }
@@ -618,9 +663,15 @@ private struct GuideRow: View {
                     .foregroundStyle(Palette.warm)
             }
             Text(spot.blurb)
-                .font(.mincho(.footnote))
+                .font(.mincho(.callout))
                 .foregroundStyle(Palette.fog)
-                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            if let detail = spot.detail, !detail.isEmpty {
+                Text(detail)
+                    .font(.mincho(.footnote))
+                    .foregroundStyle(Palette.mist)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -633,68 +684,101 @@ private struct GuideRow: View {
     }
 }
 
-// MARK: - ほか
+// MARK: - 設定（旧・ほか。項目を増やしていく場所）
 
-struct MorePage: View {
+struct SettingsPage: View {
     @Environment(AppModel.self) private var model
+    @Environment(ThemeStore.self) private var theme
     let station: Station
     @State private var copied = false
 
     var body: some View {
-        let bike = station.bikeRental
+        @Bindable var theme = theme
         PageScroll {
-            Card {
-                Kicker(text: "MOBILITY", pictogram: .bicycleRental)
-                Text("レンタサイクル")
-                    .font(.mincho(.title3, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
-                Text(bike.available ? "駅周辺で借りられます" : "いまは未確認／少なめ")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(bike.available ? Palette.moss : Palette.mist)
-                Text(bike.summary)
-                    .font(.mincho(.callout))
-                    .lineSpacing(4)
-                    .foregroundStyle(Palette.fog)
-                ForEach(bike.places ?? [], id: \.name) { place in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(place.name)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Palette.ink)
-                        if let minutes = place.walkMinutes {
-                            Text("徒歩約 \(minutes) 分").font(.caption).foregroundStyle(Palette.mist)
-                        }
-                        if let note = place.note {
-                            Text(note).font(.caption).foregroundStyle(Palette.fog)
+            Text("設定")
+                .font(.mincho(.title2, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+
+            settingsGroup(title: "この駅") {
+                settingsRow(title: "いまの駅", detail: "\(station.name) · \(station.prefecture)")
+                Button {
+                    model.requestAiStation(station.name)
+                } label: {
+                    settingsButtonLabel("案内を作り直す（AI）", pictogram: .train)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.stationLoading)
+                Button {
+                    model.startArrival()
+                } label: {
+                    settingsButtonLabel("駅を探し直す", pictogram: .search)
+                }
+                .buttonStyle(.plain)
+            }
+
+            settingsGroup(title: "見た目") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("案内の色と空気")
+                        .font(.mincho(.body))
+                        .foregroundStyle(Palette.ink)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(spacing: 8) {
+                        ForEach(AppSkin.allCases) { skin in
+                            Button {
+                                theme.skin = skin
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("\(skin.codeLabel) · \(skin.label)")
+                                        .font(.readable(.subheadline, weight: .semibold))
+                                    Text(skin.blurb)
+                                        .font(.readable(.caption2))
+                                        .foregroundStyle(
+                                            theme.skin == skin ? Palette.paper.opacity(0.85) : Palette.mist
+                                        )
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(12)
+                                .foregroundStyle(theme.skin == skin ? Palette.paper : Palette.ink)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(theme.skin == skin ? Palette.warm : Palette.canvas)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(
+                                            theme.skin == skin ? Color.clear : Palette.line,
+                                            lineWidth: 1
+                                        )
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
+                .padding(14)
             }
 
-            VStack(spacing: 10) {
+            settingsGroup(title: "物語・寄り道") {
                 Button {
                     model.drawSecret()
                 } label: {
-                    Label {
-                        Text("とりあえずここに行け")
-                    } icon: {
-                        PictogramIcon(.approved, size: 18)
-                    }
+                    settingsButtonLabel("とりあえずここに行け", pictogram: .approved)
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                .buttonStyle(.plain)
 
-                Button(copied ? "コピーしました" : "物語をコピー") {
+                Button {
                     UIPasteboard.general.string = model.shareText
                     copied = true
+                } label: {
+                    settingsButtonLabel(copied ? "コピーしました" : "物語をコピー", pictogram: .information)
                 }
-                .buttonStyle(PrimaryButtonStyle(filled: false))
+                .buttonStyle(.plain)
 
                 ShareLink(item: model.shareText) {
-                    Text("共有する")
+                    settingsButtonLabel("共有する", pictogram: .meetingPoint)
                 }
-                .buttonStyle(PrimaryButtonStyle(filled: false))
-
-                Button("駅を探し直す") { model.startArrival() }
-                    .buttonStyle(PrimaryButtonStyle(filled: false))
+                .buttonStyle(.plain)
             }
 
             if let secret = model.secret {
@@ -714,6 +798,11 @@ struct MorePage: View {
                 }
             }
 
+            settingsGroup(title: "表示") {
+                settingsRow(title: "文字の大きさ", detail: "システム設定に合わせる")
+                settingsRow(title: "地図の詳細", detail: "準備中")
+            }
+
             if model.messages.count > 1 {
                 DisclosureGroup("これまでの会話") {
                     VStack(alignment: .leading, spacing: 10) {
@@ -725,14 +814,66 @@ struct MorePage: View {
                 .foregroundStyle(Palette.ink)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            settingsGroup(title: "このアプリについて") {
                 Text("地図は Apple マップ。出町柳ピンは実座標寄り、ほかの駅は目安の位置です。")
+                    .font(.caption)
+                    .foregroundStyle(Palette.mist)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("ピクトグラム素材提供：日本デザインセンター／EXPERIENCE JAPAN PICTOGRAMS")
+                    .font(.caption)
+                    .foregroundStyle(Palette.mist)
+                    .fixedSize(horizontal: false, vertical: true)
                 Link("experience-japan.info", destination: URL(string: "https://experience-japan.info/")!)
+                    .font(.caption)
             }
-            .font(.caption2)
-            .foregroundStyle(Palette.mist)
         }
         .onChange(of: station.id) { copied = false }
+    }
+
+    private func settingsGroup<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.readable(.caption, weight: .semibold))
+                .foregroundStyle(Palette.mist)
+                .textCase(.none)
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.paper))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.line, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    private func settingsRow(title: String, detail: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.mincho(.body))
+                .foregroundStyle(Palette.ink)
+            Spacer(minLength: 8)
+            Text(detail)
+                .font(.readable(.caption))
+                .foregroundStyle(Palette.mist)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    private func settingsButtonLabel(_ title: String, pictogram: Pictogram) -> some View {
+        HStack(spacing: 10) {
+            PictogramIcon(pictogram, size: 18)
+                .foregroundStyle(Palette.warm)
+            Text(title)
+                .font(.mincho(.body))
+                .foregroundStyle(Palette.ink)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Palette.mist)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .contentShape(Rectangle())
     }
 }

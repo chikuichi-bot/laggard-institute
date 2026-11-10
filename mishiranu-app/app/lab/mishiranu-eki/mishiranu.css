@@ -1,36 +1,62 @@
 .mishiranu {
-  /* おみくじ文庫と同系：和紙・明朝・落ち着いた藍と朱 */
-  --mk-ink: #1f1b17;
-  --mk-body: #12100e;
-  --mk-fog: #4a433a;
-  --mk-mist: #6e675e;
-  --mk-paper: #f9f4e6;
-  --mk-canvas: #f5eedc;
-  --mk-warm: #b5493a;
-  --mk-warm-deep: #9a3d31;
-  --mk-warm-soft: rgba(181, 73, 58, 0.1);
-  --mk-river: #6b8cca;
-  --mk-sky: #6b8cca;
-  --mk-moss: #5f7d6a;
-  --mk-taupe: #c1b4a4;
-  --mk-splash: #b8b0a4;
-  --mk-gold: #c5a059;
-  --mk-line: #e3d5c1;
-  --mk-radius: 16px;
-  --mk-display: var(--font-mishiranu-display), "Yu Mincho", "YuMincho",
-    "Hiragino Mincho ProN", serif;
   --mk-sans: var(--font-mishiranu-sans), "Hiragino Sans", "Yu Gothic", sans-serif;
+  --mk-display: var(--mk-sans);
 
   min-height: 100vh;
   min-height: 100dvh;
   color: var(--mk-ink);
   background: var(--mk-canvas);
-  font-family: var(--mk-display);
+  font-family: var(--mk-sans);
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* A · ホームの時刻表 */
+.mishiranu[data-skin="board"] {
+  --mk-ink: #e8edf5;
+  --mk-body: #c9d2e0;
+  --mk-fog: #9aa6b8;
+  --mk-mist: #7a8699;
+  --mk-paper: #1a1f28;
+  --mk-canvas: #12151a;
+  --mk-warm: #f0b429;
+  --mk-warm-deep: #d9a01f;
+  --mk-warm-soft: rgba(240, 180, 41, 0.14);
+  --mk-river: #3d8bfd;
+  --mk-sky: #3d8bfd;
+  --mk-moss: #5f8f7a;
+  --mk-taupe: #3a4558;
+  --mk-splash: #2a3342;
+  --mk-gold: #f0b429;
+  --mk-line: #2a3342;
+  --mk-radius: 4px;
+  color-scheme: dark;
+}
+
+/* C · ポケット地形図 */
+.mishiranu[data-skin="topo"] {
+  --mk-ink: #2c3328;
+  --mk-body: #3a4236;
+  --mk-fog: #5c6556;
+  --mk-mist: #6e7768;
+  --mk-paper: #efece2;
+  --mk-canvas: #e6e2d6;
+  --mk-warm: #4f6b4a;
+  --mk-warm-deep: #3f5740;
+  --mk-warm-soft: rgba(79, 107, 74, 0.12);
+  --mk-river: #3d5f78;
+  --mk-sky: #3d5f78;
+  --mk-moss: #4f6b4a;
+  --mk-taupe: #b8b39c;
+  --mk-splash: #c9c4b4;
+  --mk-gold: #8b4a3a;
+  --mk-line: #c9c4b4;
+  --mk-radius: 2px;
+  color-scheme: light;
 }
 
 .mishiranu *,
@@ -107,24 +133,25 @@
 .mishiranu-hero::before {
   content: "";
   position: absolute;
-  inset: 8% -6% auto;
-  height: 48%;
+  inset: 0;
   z-index: 0;
-  background:
-    radial-gradient(
-      ellipse 55% 60% at 72% 40%,
-      rgba(184, 176, 164, 0.35),
-      transparent 70%
-    ),
-    linear-gradient(
-      180deg,
-      transparent,
-      rgba(227, 213, 193, 0.45) 48%,
-      transparent
-    );
-  mask-image: linear-gradient(180deg, transparent, #000 24%, #000 78%, transparent);
   pointer-events: none;
-  animation: mk-rails 22s ease-in-out infinite alternate;
+}
+
+.mishiranu[data-skin="board"] .mishiranu-hero::before {
+  background:
+    radial-gradient(80% 50% at 70% 18%, #2a3a55 0%, transparent 60%),
+    linear-gradient(160deg, #0e1218, #1a2433 55%, #12151a);
+}
+
+.mishiranu[data-skin="topo"] .mishiranu-hero::before {
+  background:
+    repeating-radial-gradient(
+      circle at 60% 30%,
+      transparent 0 22px,
+      color-mix(in srgb, #4f6b4a 12%, transparent) 23px 24px
+    ),
+    linear-gradient(155deg, #d9d3c2, #b7b39f 55%, #e6e2d6);
 }
 
 .mishiranu-hero-copy {
@@ -142,9 +169,9 @@
 }
 
 .mishiranu-brand {
-  font-family: var(--mk-display);
+  font-family: var(--mk-sans);
   font-size: clamp(2.5rem, 9vw, 3.6rem);
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: 0.12em;
   line-height: 1.2;
   margin: 0 0 1rem;
@@ -226,18 +253,18 @@ a.mishiranu-btn {
 }
 
 .mishiranu-btn--primary {
-  background: var(--mk-ink);
-  border-color: var(--mk-ink);
-  color: var(--mk-paper);
+  background: var(--mk-warm);
+  border-color: var(--mk-warm);
+  color: var(--mk-canvas);
 }
 
 .mishiranu-btn--primary:hover,
 .mishiranu-btn--primary:focus-visible {
-  background: #1f1c18;
-  border-color: #1f1c18;
-  color: var(--mk-paper);
+  background: var(--mk-warm-deep);
+  border-color: var(--mk-warm-deep);
+  color: var(--mk-canvas);
   transform: scale(0.99);
-  opacity: 0.92;
+  opacity: 0.96;
 }
 
 .mishiranu-btn--ghost {
@@ -293,11 +320,16 @@ a.mishiranu-btn {
 }
 
 .mishiranu-chat-dock .mishiranu-course-picks {
-  max-height: min(36vh, 18rem);
+  /* 3コースをできるだけ画面内で見渡せる高さ */
+  max-height: min(68vh, 36rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   margin: 0;
   -webkit-overflow-scrolling: touch;
+}
+
+.mishiranu-chat-dock:has(.mishiranu-course-choose) .mishiranu-chat-composer {
+  display: none;
 }
 
 .mishiranu-chat-dock .mishiranu-chat-composer {
@@ -411,21 +443,28 @@ a.mishiranu-btn {
 }
 
 .mishiranu-chat-chip--primary {
-  background: var(--mk-ink);
-  border-color: var(--mk-ink);
-  color: var(--mk-paper);
+  background: var(--mk-warm);
+  border-color: var(--mk-warm);
+  color: var(--mk-canvas);
 }
 
 .mishiranu-chat-chip--primary:hover,
 .mishiranu-chat-chip--primary:focus-visible {
-  background: #1f1c18;
-  border-color: #1f1c18;
-  color: var(--mk-paper);
+  background: var(--mk-warm-deep);
+  border-color: var(--mk-warm-deep);
+  color: var(--mk-canvas);
 }
 
 .mishiranu-chat-search {
   flex-basis: 100%;
   margin-top: 0.35rem;
+}
+
+.mishiranu-chat-search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  align-items: end;
 }
 
 .mishiranu-ai-station-ask {
@@ -559,66 +598,181 @@ a.mishiranu-btn {
   }
 }
 
+.mishiranu-course-choose-hint {
+  margin: 0 0 0.35rem;
+  font-family: var(--mk-sans);
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--mk-mist);
+  letter-spacing: 0.04em;
+}
+
 .mishiranu-course-card {
+  --course-accent: var(--mk-warm-deep);
   appearance: none;
   width: 100%;
   text-align: left;
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-radius);
-  background: var(--mk-paper);
-  padding: 1rem 1.05rem 1.05rem;
+  border: 1.5px solid color-mix(in srgb, var(--course-accent) 35%, var(--mk-line));
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      90deg,
+      var(--course-accent) 0 5px,
+      var(--mk-paper) 5px 100%
+    );
+  padding: 0.9rem 1rem 0.95rem 1.15rem;
   cursor: pointer;
   color: inherit;
   font: inherit;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 4%);
   transition: border-color 160ms ease, transform 160ms ease;
 }
 
+.mishiranu-course-card--1 {
+  --course-accent: var(--mk-river);
+}
+
+.mishiranu-course-card--2 {
+  --course-accent: var(--mk-moss, #5a6b4a);
+}
+
 .mishiranu-course-card:hover {
-  border-color: var(--mk-warm-deep);
+  border-color: var(--course-accent);
   transform: translateY(-1px);
+}
+
+.mishiranu-course-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin-bottom: 0.55rem;
+}
+
+.mishiranu-course-card-num {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--course-accent);
+  color: var(--mk-paper);
+  font-family: var(--mk-sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.mishiranu-course-card-head-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
 }
 
 .mishiranu-course-card-index {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  color: var(--mk-warm-deep);
-  font-size: 0.78rem;
+  gap: 0.35rem;
+  color: var(--course-accent);
+  font-size: 0.72rem;
   letter-spacing: 0.08em;
-  margin-bottom: 0.35rem;
+  font-weight: 650;
 }
 
 .mishiranu-course-card-title {
   display: block;
-  font-size: 1.12rem;
+  font-family: var(--mk-display);
+  font-size: 1.18rem;
   font-weight: 650;
-  margin-bottom: 0.25rem;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+}
+
+.mishiranu-course-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.mishiranu-course-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--mk-line);
+  background: var(--mk-canvas, var(--mk-paper));
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--mk-ink);
 }
 
 .mishiranu-course-card-sub,
 .mishiranu-course-card-vibe {
   display: block;
   color: var(--mk-fog);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.45;
 }
 
+.mishiranu-course-card-sub {
+  font-family: var(--mk-sans);
+  font-size: 0.78rem;
+  color: var(--mk-mist);
+}
+
 .mishiranu-course-card-vibe {
-  margin-top: 0.2rem;
+  font-family: var(--mk-display);
+  margin: 0.15rem 0 0.55rem;
 }
 
 .mishiranu-course-card-stops {
-  margin: 0.7rem 0 0;
-  padding-left: 1.15rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--mk-paper) 70%, var(--mk-canvas, #f3eee4));
   color: var(--mk-ink);
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-size: 0.88rem;
 }
 
 .mishiranu-course-card-stops li {
-  display: flex;
+  display: grid;
+  grid-template-columns: 2.7rem 1.1rem 1fr;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--mk-line);
+}
+
+.mishiranu-course-card-stops li:last-child {
+  border-bottom: 0;
+}
+
+.mishiranu-course-stop-time {
+  font-family: var(--mk-sans);
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--course-accent);
+}
+
+.mishiranu-course-stop-name {
+  font-family: var(--mk-display);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mishiranu-course-card-cta {
+  display: block;
+  margin-top: 0.55rem;
+  font-family: var(--mk-sans);
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--course-accent);
+  letter-spacing: 0.04em;
 }
 
 .mishiranu-course-itinerary {
@@ -1021,8 +1175,156 @@ a.mishiranu-btn {
   gap: 0.45rem;
 }
 
-.mishiranu-bike-rental {
-  margin: 0 0 1.35rem;
+.mishiranu-settings-title {
+  margin: 0 0 0.85rem;
+  font-family: var(--mk-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.mishiranu-settings-group {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1.1rem;
+}
+
+.mishiranu-settings-group-label {
+  margin: 0;
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--mk-mist);
+  letter-spacing: 0.06em;
+}
+
+.mishiranu-settings-card {
+  border: 1px solid var(--mk-line);
+  border-radius: 14px;
+  background: var(--mk-paper);
+  overflow: hidden;
+}
+
+.mishiranu-settings-row,
+.mishiranu-settings-action {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border: 0;
+  border-bottom: 1px solid var(--mk-line);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: var(--mk-ink);
+}
+
+.mishiranu-settings-card > :last-child {
+  border-bottom: 0;
+}
+
+.mishiranu-settings-action {
+  font-family: var(--mk-display);
+  cursor: pointer;
+}
+
+.mishiranu-settings-action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.mishiranu-settings-detail {
+  font-family: var(--mk-sans);
+  font-size: 0.78rem;
+  color: var(--mk-mist);
+  text-align: right;
+}
+
+.mishiranu-settings-card--skin {
+  padding: 0.85rem 0.95rem 1rem;
+}
+
+.mishiranu-settings-skin-lead {
+  margin: 0 0 0.65rem;
+  font-family: var(--mk-display);
+  font-size: 0.95rem;
+  color: var(--mk-ink);
+}
+
+.mishiranu-skin-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.mishiranu-skin-pick {
+  appearance: none;
+  border: 1px solid var(--mk-line);
+  border-radius: 10px;
+  background: var(--mk-canvas);
+  color: var(--mk-ink);
+  padding: 0.75rem 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 0.3rem;
+  font: inherit;
+}
+
+.mishiranu-skin-pick--on {
+  background: var(--mk-warm);
+  border-color: var(--mk-warm);
+  color: var(--mk-canvas);
+}
+
+.mishiranu[data-skin="board"] .mishiranu-skin-pick--on {
+  color: var(--mk-canvas);
+}
+
+.mishiranu[data-skin="topo"] .mishiranu-skin-pick--on {
+  color: var(--mk-paper);
+}
+
+.mishiranu-skin-pick-title {
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.mishiranu-skin-pick-blurb {
+  font-size: 0.68rem;
+  line-height: 1.4;
+  opacity: 0.88;
+}
+
+.mishiranu-tour-page--guide .mishiranu-bike-rental,
+.mishiranu-tour-page .mishiranu-bike-rental {
+  margin-bottom: 1rem;
+}
+
+.mishiranu-bike-rental-stack {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.mishiranu-bike-rental-group-title {
+  margin: 0 0 0.25rem;
+  font-family: var(--mk-sans);
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--mk-ink);
+}
+
+.mishiranu-bike-rental-group-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.75rem;
+  color: var(--mk-mist);
+}
+
+.mishiranu-bike-rental {  margin: 0 0 1.35rem;
   padding: 1.25rem 1.2rem 1.15rem;
   border: 1px solid var(--mk-line);
   border-radius: calc(var(--mk-radius) + 4px);
@@ -1353,6 +1655,9 @@ a.mishiranu-btn {
 .mishiranu-leaflet-pin {
   background: transparent !important;
   border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
 }
 
 .mishiranu-leaflet-step {
@@ -1717,33 +2022,96 @@ a.mishiranu-btn {
   min-height: 70vh;
 }
 
-.mishiranu-tour-top {
+/* C案 · 駅名ピル（地図・土地・歩く／案内／設定で共通） */
+.mishiranu-station-chrome {
   display: grid;
-  gap: 0.55rem;
-  margin-bottom: 1rem;
+  gap: 0.25rem;
+  margin: 0 0 0.85rem;
+  padding: 0.35rem 0 0.65rem;
+  border-bottom: 1px solid var(--mk-line);
 }
 
-.mishiranu-tour-top-kicker {
-  margin: 0;
+.mishiranu-station-chrome-top {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
-.mishiranu-tour-top-title {
+.mishiranu-station-chrome-back {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--mk-ink);
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
   margin: 0;
-  font-family: var(--mk-display);
-  font-size: clamp(1.55rem, 5vw, 1.9rem);
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  cursor: pointer;
+  flex: 0 0 auto;
 }
 
-.mishiranu-tour-top-sub {
-  margin: 0;
-  color: var(--mk-fog);
+.mishiranu-station-chrome-back:hover,
+.mishiranu-station-chrome-back:focus-visible {
+  background: color-mix(in srgb, var(--mk-ink) 6%, transparent);
+  outline: none;
+}
+
+.mishiranu-station-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--mk-radius);
+  background: var(--mk-warm);
+  color: var(--mk-canvas);
+  font-family: var(--mk-sans);
   font-size: 0.92rem;
-  line-height: 1.5;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  flex: 0 0 auto;
+  line-height: 1.2;
 }
 
+.mishiranu[data-skin="topo"] .mishiranu-station-pill {
+  background: var(--mk-ink);
+  color: var(--mk-paper);
+}
+
+.mishiranu-station-course {
+  font-family: var(--mk-display);
+  font-size: 0.8rem;
+  color: var(--mk-fog);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mishiranu-station-chrome-meta {
+  margin: 0;
+  padding-left: 2.35rem;
+  font-family: var(--mk-sans);
+  font-size: 0.68rem;
+  color: var(--mk-mist);
+  line-height: 1.25;
+}
+
+/* Leaflet は祖先に transform があるとタイルとピンがずれる。opacity のみ動かす。 */
 .mishiranu-tour-pages {
-  animation: mk-rise 0.45s ease-out both;
+  animation: mk-fade 0.35s ease-out both;
+}
+
+@keyframes mk-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .mishiranu-tour-page {
@@ -1985,12 +2353,30 @@ a.mishiranu-btn {
 }
 
 /* —— Place board (A · 駅前案内板) —— */
-.mishiranu-tour-app--place {
+.mishiranu-tour-app--place,
+.mishiranu-tour-app--map {
   padding-top: 0;
 }
 
 .mishiranu-tour-page--place {
   gap: 0;
+}
+
+.mishiranu-map-foot {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.mishiranu-map-foot .mishiranu-tour-catch {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.mishiranu-map-foot .mishiranu-radius,
+.mishiranu-map-foot .mishiranu-map-course-note {
+  margin: 0;
+  font-size: 0.8rem;
 }
 
 .mishiranu-place-board {
@@ -1999,72 +2385,8 @@ a.mishiranu-btn {
   max-width: none;
 }
 
-.mishiranu-place-board-head {
-  background: var(--mk-ink);
-  color: var(--mk-paper);
-  padding: 0.65rem max(1.35rem, env(safe-area-inset-right)) 1rem
-    max(1.35rem, env(safe-area-inset-left));
-  display: grid;
-  gap: 0.55rem;
-}
-
-.mishiranu-place-board-back {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: color-mix(in srgb, var(--mk-paper) 70%, transparent);
-  font-family: var(--mk-sans);
-  font-size: 0.85rem;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  width: fit-content;
-}
-
-.mishiranu-place-board-meta {
-  margin: 0;
-  font-family: var(--mk-sans);
-  font-size: 0.72rem;
-  color: color-mix(in srgb, var(--mk-paper) 65%, transparent);
-}
-
-.mishiranu-place-board-sign {
-  border: 1px solid color-mix(in srgb, var(--mk-gold) 55%, transparent);
-  border-radius: 10px;
-  background: #2a2622;
-  padding: 0.85rem 0.95rem 1rem;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.mishiranu-place-board-badge {
-  justify-self: start;
-  border: 1px solid var(--mk-gold);
-  color: var(--mk-gold);
-  font-family: var(--mk-sans);
-  font-size: 0.62rem;
-  letter-spacing: 0.16em;
-  padding: 0.15rem 0.45rem;
-}
-
-.mishiranu-place-board-title {
-  margin: 0;
-  font-family: var(--mk-display);
-  font-size: clamp(1.7rem, 6vw, 2rem);
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  color: var(--mk-paper);
-}
-
-.mishiranu-place-board-sub {
-  margin: 0;
-  font-size: 0.88rem;
-  line-height: 1.45;
-  color: color-mix(in srgb, var(--mk-paper) 85%, transparent);
-}
-
 .mishiranu-place-board-body {
-  background: #efe8d6;
+  background: var(--mk-canvas);
   padding: 0.85rem max(1.35rem, env(safe-area-inset-right)) 1.5rem
     max(1.35rem, env(safe-area-inset-left));
   display: grid;
@@ -2116,19 +2438,19 @@ a.mishiranu-btn {
   border: 1px solid var(--mk-line);
   background: var(--mk-paper);
   border-radius: 4px;
-  padding: 0.55rem 0.4rem;
+  padding: 0.65rem 0.4rem;
   display: grid;
-  gap: 0.1rem;
+  gap: 0.15rem;
   justify-items: center;
   font-family: var(--mk-sans);
-  font-size: 0.68rem;
+  font-size: 0.88rem;
   color: var(--mk-fog);
   cursor: pointer;
 }
 
 .mishiranu-place-index-item b {
   color: var(--mk-warm);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .mishiranu-place-index-item:disabled {
@@ -2158,24 +2480,40 @@ a.mishiranu-btn {
 
 .mishiranu-place-panel-head span {
   font-family: var(--mk-sans);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 650;
   color: var(--mk-warm);
+}
+
+.mishiranu-place-panel-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.mishiranu-place-panel-reading {
+  margin: 0;
+  font-family: var(--mk-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--mk-mist);
 }
 
 .mishiranu-place-panel-head h3 {
   margin: 0;
   font-family: var(--mk-display);
-  font-size: 0.98rem;
+  font-size: 1.15rem;
   font-weight: 500;
 }
 
 .mishiranu-place-panel > p {
-  margin: 0 0 0.65rem;
+  margin: 0 0 0.85rem;
   color: var(--mk-body);
-  line-height: 1.75;
-  font-size: 0.95rem;
-  font-weight: 500;
+  line-height: 1.85;
+  font-size: 1.03rem;
+  font-weight: 400;
 }
 
 .mishiranu-place-panel > p:last-child {
@@ -2204,16 +2542,16 @@ a.mishiranu-btn {
 }
 
 .mishiranu-place-notes h4 {
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.25rem;
   font-family: var(--mk-display);
-  font-size: 0.92rem;
+  font-size: 1.05rem;
   font-weight: 500;
 }
 
 .mishiranu-place-notes p {
   margin: 0;
   color: var(--mk-body);
-  font-size: 0.9rem;
-  line-height: 1.65;
-  font-weight: 500;
+  font-size: 0.98rem;
+  line-height: 1.75;
+  font-weight: 400;
 }
