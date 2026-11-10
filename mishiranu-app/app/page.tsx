@@ -1,32 +1,28 @@
-"use client";
+import { Shippori_Mincho, Zen_Kaku_Gothic_New } from "next/font/google";
+import MishiranuApp from "./lab/mishiranu-eki/MishiranuApp";
 
-import { useEffect } from "react";
+const display = Shippori_Mincho({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  variable: "--font-mishiranu-display",
+  display: "swap",
+});
 
-/** Home → 見知らぬ駅. Client redirect so static iOS export works. */
+const sans = Zen_Kaku_Gothic_New({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  variable: "--font-mishiranu-sans",
+  display: "swap",
+});
+
+/**
+ * Capacitor opens webDir/index.html (= `/`).
+ * Same chrome as /lab/mishiranu-eki so the native shell needs no redirect.
+ */
 export default function HomePage() {
-  useEffect(() => {
-    const native =
-      window.location.protocol === "capacitor:" ||
-      window.location.protocol === "ionic:" ||
-      window.location.protocol === "file:";
-    window.location.replace(
-      native ? "/lab/mishiranu-eki/" : "/lab/mishiranu-eki",
-    );
-  }, []);
-
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "#f5eedc",
-        color: "#1f1b17",
-        fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
-        letterSpacing: "0.12em",
-      }}
-    >
-      <p>見知らぬ駅へ…</p>
-    </main>
+    <div className={`mishiranu-root ${display.variable} ${sans.variable}`}>
+      <MishiranuApp />
+    </div>
   );
 }

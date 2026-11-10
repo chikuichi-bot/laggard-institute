@@ -32,6 +32,14 @@ export function useIosInstallState() {
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
+    // Capacitor's WKWebView breaks if a service worker hijacks local assets.
+    const cap = (
+      window as Window & {
+        Capacitor?: { isNativePlatform?: () => boolean };
+      }
+    ).Capacitor;
+    if (cap?.isNativePlatform?.()) return;
+
     const id = window.setTimeout(() => {
       navigator.serviceWorker
         .register("/sw.js")

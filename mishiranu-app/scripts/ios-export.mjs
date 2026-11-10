@@ -77,26 +77,19 @@ try {
   if (!fs.existsSync(lab)) {
     throw new Error("missing lab/mishiranu-eki/index.html in export");
   }
-  // Capacitor opens webDir/index.html — jump straight into the lab (no Publish host).
-  fs.writeFileSync(
-    path.join(webDir, "index.html"),
-    `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta http-equiv="refresh" content="0;url=lab/mishiranu-eki/"/>
-<title>見知らぬ駅</title>
-<script>location.replace("lab/mishiranu-eki/");</script>
-</head>
-<body style="margin:0;background:#f5eedc;color:#1f1b17;font-family:serif;display:grid;place-items:center;min-height:100vh">
-<p>見知らぬ駅</p>
-</body>
-</html>
-`,
-  );
   pruneExportNoise(webDir);
-  console.log("Wrote static bundle → ios-web/ (Capacitor entry → lab/mishiranu-eki/)");
+  const home = path.join(webDir, "index.html");
+  if (!fs.existsSync(home)) {
+    throw new Error("missing index.html in export (Capacitor entry)");
+  }
+  // Sanity: home page must embed the app shell, not a redirect stub.
+  const homeHtml = fs.readFileSync(home, "utf8");
+  if (!homeHtml.includes("mishiranu-brand") || !homeHtml.includes("mishiranu-root")) {
+    throw new Error(
+      "ios-web/index.html is missing the 見知らぬ駅 shell — export is wrong",
+    );
+  }
+  console.log("Wrote static bundle → ios-web/ (Capacitor opens / with 見知らぬ駅)");
 } finally {
   restore();
 }

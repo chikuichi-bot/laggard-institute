@@ -10,9 +10,13 @@
 
 ## いちばん簡単な手順（推奨）
 
+白画面になったときは、この手順で **もう一度** sync し直してから Xcode で Run してください。
+
 Mac のターミナルで:
 
 ```bash
+cd ~/Desktop/laggard-institute
+git pull
 cd mishiranu-app
 npm install
 npm run ios:app

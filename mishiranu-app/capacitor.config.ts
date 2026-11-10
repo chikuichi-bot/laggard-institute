@@ -2,10 +2,10 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
  * Native iOS shell for 見知らぬ駅.
- * Bundled static web (ios-web/) — no Cursor Apps Publish, no remote host required.
+ * Bundled static web (ios-web/) — no Cursor Apps Publish required.
  *
  * Optional live reload against a Mac Next server:
- *   CAP_SERVER_URL=http://127.0.0.1:3010/lab/mishiranu-eki/ npm run ios:sync
+ *   CAP_SERVER_URL=http://127.0.0.1:3010/ npm run ios:sync
  */
 const liveReload = process.env.CAP_SERVER_URL?.trim();
 
@@ -27,7 +27,8 @@ const config: CapacitorConfig = {
     contentInset: "automatic",
     preferredContentMode: "mobile",
     backgroundColor: "#f5eedc",
-    scheme: "Mishiranu Eki",
+    // Must be a single token — spaces break WKWebView asset URLs (white screen).
+    scheme: "MishiranuEki",
   },
   plugins: {
     SplashScreen: {
