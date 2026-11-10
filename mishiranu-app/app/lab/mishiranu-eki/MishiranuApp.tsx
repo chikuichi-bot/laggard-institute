@@ -432,9 +432,24 @@ export default function MishiranuApp({
     }
   }
 
+  function readDevicePosition(options: PositionOptions) {
+    return new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+  }
+
   async function locateHere() {
     if (geoLoading || stationLoading) return;
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setShowStationSearch(true);
+      pushMessages({
+        role: "guide",
+        text: "位置情報は https か localhost でのみ使えます。Ports の Open in Browser か、駅名で探してください。",
+      });
+      return;
+    }
     if (!navigator.geolocation) {
+      setShowStationSearch(true);
       pushMessages({
         role: "guide",
         text: "この端末では現在地が使えません。駅名を入力するか、「駅名で探す」から選んでください。",
@@ -450,13 +465,21 @@ export default function MishiranuApp({
       },
     );
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
+      let position: GeolocationPosition;
+      try {
+        position = await readDevicePosition({
           enableHighAccuracy: true,
-          timeout: 12000,
-          maximumAge: 30_000,
+          timeout: 10_000,
+          maximumAge: 60_000,
         });
-      });
+      } catch {
+        // Desktop / Preview often reject high-accuracy GPS; retry quietly.
+        position = await readDevicePosition({
+          enableHighAccuracy: false,
+          timeout: 20_000,
+          maximumAge: 120_000,
+        });
+      }
       const { latitude: lat, longitude: lng } = position.coords;
       // Precise GPS never leaves the browser. Only curated matching runs locally.
       const local = findNearestStation(lat, lng, STATIONS);
@@ -480,14 +503,23 @@ export default function MishiranuApp({
           `${nearestHint}位置情報は端末の外に送っていません。駅名を入力するか、「駅名で探す」から選んでください。`.trim(),
       });
     } catch (err) {
-      const denied =
-        err instanceof GeolocationPositionError &&
-        err.code === err.PERMISSION_DENIED;
+      setShowStationSearch(true);
+      const code =
+        err && typeof err === "object" && "code" in err
+          ? Number((err as { code: number }).code)
+          : NaN;
+      const denied = code === 1;
+      const unavailable = code === 2;
+      const timedOut = code === 3;
       pushMessages({
         role: "guide",
         text: denied
-          ? "位置情報の許可が必要です。許可するか、駅名を入力してください。"
-          : "現在地を取得できませんでした。駅名を入力するか、もう一度どうぞ。",
+          ? "位置情報の許可が必要です。ブラウザで許可するか、駅名で探してください。"
+          : timedOut
+            ? "現在地の確認がタイムアウトしました。もう一度試すか、駅名で探してください。"
+            : unavailable
+              ? "このプレビューでは位置が取れないことがあります。Ports の Open in Browser、または実機の Safari で開くか、駅名で探してください。"
+              : "現在地を取得できませんでした。駅名で探すか、もう一度どうぞ。",
       });
     } finally {
       setGeoLoading(false);
