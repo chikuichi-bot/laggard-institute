@@ -1982,3 +1982,235 @@ a.mishiranu-btn {
     padding-bottom: max(4rem, calc(2.5rem + env(safe-area-inset-bottom)));
   }
 }
+
+/* —— Place board (A · 駅前案内板) —— */
+.mishiranu-tour-app--place {
+  padding-top: 0;
+}
+
+.mishiranu-tour-page--place {
+  gap: 0;
+}
+
+.mishiranu-place-board {
+  margin-inline: calc(-1 * max(1.35rem, env(safe-area-inset-left)));
+  width: calc(100% + 2 * max(1.35rem, env(safe-area-inset-left)));
+  max-width: none;
+}
+
+.mishiranu-place-board-head {
+  background: var(--mk-ink);
+  color: var(--mk-paper);
+  padding: 0.65rem max(1.35rem, env(safe-area-inset-right)) 1rem
+    max(1.35rem, env(safe-area-inset-left));
+  display: grid;
+  gap: 0.55rem;
+}
+
+.mishiranu-place-board-back {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--mk-paper) 70%, transparent);
+  font-family: var(--mk-sans);
+  font-size: 0.85rem;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.mishiranu-place-board-meta {
+  margin: 0;
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--mk-paper) 65%, transparent);
+}
+
+.mishiranu-place-board-sign {
+  border: 1px solid color-mix(in srgb, var(--mk-gold) 55%, transparent);
+  border-radius: 10px;
+  background: #2a2622;
+  padding: 0.85rem 0.95rem 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mishiranu-place-board-badge {
+  justify-self: start;
+  border: 1px solid var(--mk-gold);
+  color: var(--mk-gold);
+  font-family: var(--mk-sans);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  padding: 0.15rem 0.45rem;
+}
+
+.mishiranu-place-board-title {
+  margin: 0;
+  font-family: var(--mk-display);
+  font-size: clamp(1.7rem, 6vw, 2rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--mk-paper);
+}
+
+.mishiranu-place-board-sub {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--mk-paper) 85%, transparent);
+}
+
+.mishiranu-place-board-body {
+  background: #efe8d6;
+  padding: 0.85rem max(1.35rem, env(safe-area-inset-right)) 1.5rem
+    max(1.35rem, env(safe-area-inset-left));
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mishiranu-place-listen {
+  appearance: none;
+  border: 0;
+  border-radius: 12px;
+  background: var(--mk-warm);
+  color: var(--mk-paper);
+  padding: 0.85rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
+}
+
+.mishiranu-place-listen--on {
+  background: var(--mk-warm-deep);
+}
+
+.mishiranu-place-listen-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.mishiranu-place-listen-copy strong {
+  font-family: var(--mk-display);
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.mishiranu-place-listen-copy small {
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  opacity: 0.88;
+}
+
+.mishiranu-place-index {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.mishiranu-place-index-item {
+  appearance: none;
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  border-radius: 4px;
+  padding: 0.55rem 0.4rem;
+  display: grid;
+  gap: 0.1rem;
+  justify-items: center;
+  font-family: var(--mk-sans);
+  font-size: 0.68rem;
+  color: var(--mk-fog);
+  cursor: pointer;
+}
+
+.mishiranu-place-index-item b {
+  color: var(--mk-warm);
+  font-size: 0.75rem;
+}
+
+.mishiranu-place-index-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mishiranu-place-panel {
+  background: var(--mk-paper);
+  border: 1px solid #d8c9b2;
+  border-left: 4px solid var(--mk-ink);
+  padding: 0.85rem 0.9rem 1rem;
+}
+
+.mishiranu-place-panel--moss {
+  border-left-color: var(--mk-moss);
+}
+
+.mishiranu-place-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--mk-line);
+}
+
+.mishiranu-place-panel-head span {
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--mk-warm);
+}
+
+.mishiranu-place-panel-head h3 {
+  margin: 0;
+  font-family: var(--mk-display);
+  font-size: 0.98rem;
+  font-weight: 500;
+}
+
+.mishiranu-place-panel > p {
+  margin: 0 0 0.65rem;
+  color: var(--mk-fog);
+  line-height: 1.75;
+  font-size: 0.92rem;
+}
+
+.mishiranu-place-panel > p:last-child {
+  margin-bottom: 0;
+}
+
+.mishiranu-place-notes {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mishiranu-place-notes li {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.45rem;
+}
+
+.mishiranu-place-notes b {
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  color: var(--mk-warm);
+  padding-top: 0.15rem;
+}
+
+.mishiranu-place-notes h4 {
+  margin: 0 0 0.2rem;
+  font-family: var(--mk-display);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.mishiranu-place-notes p {
+  margin: 0;
+  color: var(--mk-fog);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}

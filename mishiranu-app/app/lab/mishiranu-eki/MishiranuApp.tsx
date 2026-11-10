@@ -74,6 +74,7 @@ import {
   StayIcon,
 } from "./MishiranuIcons";
 import { IosInstallCard } from "./IosInstall";
+import { PlaceBoard } from "./PlaceBoard";
 import "./mishiranu.css";
 
 const StationMap = dynamic(() => import("./StationMap"), {
@@ -261,6 +262,16 @@ export default function MishiranuApp({
     const focusParam = params.get("focus");
     if (view === "hero" || view === "pick" || view === "tour") {
       setStep(view);
+    }
+    const tabParam = params.get("tab");
+    if (
+      tabParam === "map" ||
+      tabParam === "place" ||
+      tabParam === "course" ||
+      tabParam === "guide" ||
+      tabParam === "more"
+    ) {
+      setTourTab(tabParam);
     }
     if (stationParam && STATIONS.some((s) => s.id === stationParam)) {
       setStationId(stationParam);
@@ -1264,30 +1275,32 @@ export default function MishiranuApp({
 
         {step === "tour" ? (
           <section
-            className="mishiranu-section mishiranu-tour-app"
+            className={`mishiranu-section mishiranu-tour-app${tourTab === "place" ? " mishiranu-tour-app--place" : ""}`}
             aria-labelledby="tour-title"
           >
-            <header className="mishiranu-tour-top">
-              <button
-                type="button"
-                className="mishiranu-tour-back"
-                onClick={() => goChat(true)}
-              >
-                ← 駅を探し直す
-              </button>
-              <div className="mishiranu-tour-top-copy">
-                <p className="mishiranu-kicker mishiranu-tour-top-kicker">
-                  {station.prefecture} · {station.line} · {dayPartLabel(dayPart)} ·{" "}
-                  {time.label}
-                </p>
-                <h2 id="tour-title" className="mishiranu-tour-top-title">
-                  {station.name}
-                </h2>
-                <p className="mishiranu-tour-top-sub">
-                  {selectedCourse ? selectedCourse.title : shownCopy.tourTitle}
-                </p>
-              </div>
-            </header>
+            {tourTab !== "place" ? (
+              <header className="mishiranu-tour-top">
+                <button
+                  type="button"
+                  className="mishiranu-tour-back"
+                  onClick={() => goChat(true)}
+                >
+                  ← 駅を探し直す
+                </button>
+                <div className="mishiranu-tour-top-copy">
+                  <p className="mishiranu-kicker mishiranu-tour-top-kicker">
+                    {station.prefecture} · {station.line} · {dayPartLabel(dayPart)} ·{" "}
+                    {time.label}
+                  </p>
+                  <h2 id="tour-title" className="mishiranu-tour-top-title">
+                    {station.name}
+                  </h2>
+                  <p className="mishiranu-tour-top-sub">
+                    {selectedCourse ? selectedCourse.title : shownCopy.tourTitle}
+                  </p>
+                </div>
+              </header>
+            ) : null}
 
             <div className="mishiranu-tour-pages">
               {tourTab === "map" ? (
@@ -1532,95 +1545,15 @@ export default function MishiranuApp({
               ) : null}
 
               {tourTab === "place" ? (
-                <div className="mishiranu-tour-page" role="tabpanel" aria-label="土地">
-                  {station.stationIntro ? (
-                    <p className="mishiranu-station-intro">{station.stationIntro}</p>
-                  ) : null}
-                  {station.walkGuide ? (
-                    <div className="mishiranu-walk-guide">
-                      <h3 className="mishiranu-walk-guide-title">
-                        <IconWalk />
-                        歩き方の目安
-                      </h3>
-                      <p>{station.walkGuide}</p>
-                    </div>
-                  ) : null}
-                  {station.mood === "empty" &&
-                  (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (
-                    <div className="mishiranu-empty">
-                      {shownCopy.emptyHeadline ? (
-                        <h3>{shownCopy.emptyHeadline}</h3>
-                      ) : null}
-                      {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
-                    </div>
-                  ) : null}
-                  {areaParagraphs.length > 0 ||
-                  (station.historyNotes && station.historyNotes.length > 0) ? (
-                    <section
-                      className="mishiranu-area-story"
-                      aria-labelledby="area-story-title"
-                    >
-                      <p className="mishiranu-kicker">
-                        <IconHistory />
-                        AREA · HISTORY
-                      </p>
-                      <h3
-                        id="area-story-title"
-                        className="mishiranu-area-story-title"
-                      >
-                        <IconHistory />
-                        このエリアのこと・歴史
-                      </h3>
-                      {areaParagraphs.map((para) => (
-                        <p key={para.slice(0, 24)} className="mishiranu-area-about">
-                          {para}
-                        </p>
-                      ))}
-                      {station.historyNotes && station.historyNotes.length > 0 ? (
-                        <ol className="mishiranu-history-list">
-                          {station.historyNotes.map((note) => (
-                            <li key={note.title}>
-                              <h4>{note.title}</h4>
-                              <p>{note.body}</p>
-                            </li>
-                          ))}
-                        </ol>
-                      ) : null}
-                    </section>
-                  ) : null}
-                  {station.sightseeingNotes &&
-                  station.sightseeingNotes.length > 0 ? (
-                    <section
-                      className="mishiranu-sight-notes"
-                      aria-labelledby="sight-notes-title"
-                    >
-                      <p className="mishiranu-kicker">
-                        <IconBinoculars />
-                        SIGHTSEEING
-                      </p>
-                      <h3
-                        id="sight-notes-title"
-                        className="mishiranu-sight-notes-title"
-                      >
-                        <IconBinoculars />
-                        観光案内メモ
-                      </h3>
-                      <ol className="mishiranu-history-list">
-                        {station.sightseeingNotes.map((note) => (
-                          <li key={note.title}>
-                            <h4>{note.title}</h4>
-                            <p>{note.body}</p>
-                          </li>
-                        ))}
-                      </ol>
-                    </section>
-                  ) : null}
-                  {!station.stationIntro &&
-                  areaParagraphs.length === 0 &&
-                  !(station.historyNotes && station.historyNotes.length) &&
-                  !(station.sightseeingNotes && station.sightseeingNotes.length) ? (
-                    <p className="mishiranu-note">この駅の土地メモはまだ少なめです。</p>
-                  ) : null}
+                <div className="mishiranu-tour-page mishiranu-tour-page--place" role="tabpanel" aria-label="土地">
+                  <PlaceBoard
+                    station={station}
+                    tourTitle={
+                      selectedCourse ? selectedCourse.title : shownCopy.tourTitle
+                    }
+                    metaLine={`${station.prefecture} · ${station.line}`}
+                    onBack={() => goChat(true)}
+                  />
                 </div>
               ) : null}
 

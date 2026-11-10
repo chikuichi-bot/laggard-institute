@@ -258,10 +258,10 @@ private struct PlaceBoardHeader: View {
             }
             .buttonStyle(.plain)
 
-            Text("\(station.prefecture) · \(station.line)")
+            Text("\(station.prefecture) · \(station.line) · \(model.dayPart.label) · \(model.stay.label)")
                 .font(.caption2)
                 .foregroundStyle(Palette.paper.opacity(0.65))
-                .lineLimit(1)
+                .lineLimit(2)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("土地案内")
