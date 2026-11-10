@@ -15,23 +15,83 @@ private struct PageScroll<Content: View>: View {
     }
 }
 
-private struct NoteList: View {
-    let notes: [HistoryNote]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ForEach(notes, id: \.title) { note in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(note.title)
-                        .font(.mincho(.subheadline, weight: .semibold))
-                        .foregroundStyle(Palette.ink)
-                    Text(note.body)
-                        .font(.mincho(.callout))
-                        .lineSpacing(4)
-                        .foregroundStyle(Palette.fog)
-                }
+/// 句点で区切って、画面上の段落にする（土地ページの読みやすさ用）。
+private func readingLines(_ text: String?) -> [String] {
+    paragraphs(text).flatMap { block -> [String] in
+        var lines: [String] = []
+        var current = ""
+        for character in block {
+            current.append(character)
+            if "。！？".contains(character) {
+                let trimmed = current.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty { lines.append(trimmed) }
+                current = ""
             }
         }
+        let rest = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !rest.isEmpty { lines.append(rest) }
+        return lines.isEmpty ? [block] : lines
+    }
+}
+
+private struct ReadingText: View {
+    let lines: [String]
+    var size: Font.TextStyle = .body
+    var color: Color = Palette.fog
+    var lineSpacing: CGFloat = 8
+    var paragraphSpacing: CGFloat = 14
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: paragraphSpacing) {
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .font(.mincho(size))
+                    .lineSpacing(lineSpacing)
+                    .foregroundStyle(color)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+}
+
+private struct PlaceSectionHeader: View {
+    let kicker: String
+    let title: String
+    let pictogram: Pictogram
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Kicker(text: kicker, pictogram: pictogram)
+            Text(title)
+                .font(.mincho(.title2, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct PlaceNote: View {
+    let index: Int
+    let note: HistoryNote
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(String(format: "%02d", index))
+                    .font(.caption.weight(.semibold))
+                    .tracking(1)
+                    .foregroundStyle(Palette.warm)
+                    .monospacedDigit()
+                Text(note.title)
+                    .font(.mincho(.title3, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ReadingText(lines: readingLines(note.body), size: .body, color: Palette.fog, lineSpacing: 8, paragraphSpacing: 12)
+                .padding(.leading, 30)
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -41,69 +101,109 @@ struct PlacePage: View {
     let station: Station
 
     var body: some View {
-        let area = paragraphs(station.areaAbout)
-        PageScroll {
-            if let intro = station.stationIntro {
-                Text(intro)
-                    .font(.mincho(.body))
-                    .lineSpacing(6)
-                    .foregroundStyle(Palette.ink)
-            }
-            if let walk = station.walkGuide {
-                Card {
-                    Label {
-                        Text("歩き方の目安").font(.mincho(.headline, weight: .semibold))
-                    } icon: {
-                        PictogramIcon(.trekking, size: 18).foregroundStyle(Palette.moss)
+        let area = readingLines(station.areaAbout)
+        let intro = readingLines(station.stationIntro)
+        let walk = readingLines(station.walkGuide)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                if !intro.isEmpty {
+                    ReadingText(lines: intro, size: .title3, color: Palette.ink, lineSpacing: 10, paragraphSpacing: 18)
+                        .padding(.bottom, 28)
+                }
+
+                if !walk.isEmpty {
+                    placeRule
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(spacing: 8) {
+                            PictogramIcon(.trekking, size: 20).foregroundStyle(Palette.moss)
+                            Text("歩き方の目安")
+                                .font(.mincho(.title3, weight: .semibold))
+                                .foregroundStyle(Palette.ink)
+                        }
+                        ReadingText(lines: walk, size: .body, color: Palette.fog, lineSpacing: 8, paragraphSpacing: 14)
                     }
-                    Text(walk)
-                        .font(.mincho(.callout))
-                        .lineSpacing(4)
-                        .foregroundStyle(Palette.fog)
+                    .padding(.vertical, 22)
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Palette.moss.opacity(0.08))
+                    )
+                    .padding(.bottom, 32)
                 }
-            }
-            if station.mood == .empty, let empty = station.emptyCopy {
-                Card {
-                    Text(empty.headline).font(.mincho(.headline, weight: .semibold))
-                    Text(empty.body)
-                        .font(.mincho(.callout))
-                        .lineSpacing(4)
-                        .foregroundStyle(Palette.fog)
-                }
-            }
-            if !area.isEmpty || !station.historyNotes.isEmpty {
-                Card {
-                    Kicker(text: "AREA · HISTORY", pictogram: .history)
-                    Text("このエリアのこと・歴史")
-                        .font(.mincho(.title3, weight: .semibold))
-                        .foregroundStyle(Palette.ink)
-                    ForEach(area, id: \.self) { para in
-                        Text(para)
-                            .font(.mincho(.callout))
-                            .lineSpacing(5)
-                            .foregroundStyle(Palette.fog)
+
+                if station.mood == .empty, let empty = station.emptyCopy {
+                    placeRule
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(empty.headline)
+                            .font(.mincho(.title3, weight: .semibold))
+                            .foregroundStyle(Palette.ink)
+                        ReadingText(lines: readingLines(empty.body), size: .body, color: Palette.fog)
                     }
-                    if !station.historyNotes.isEmpty {
-                        Divider().overlay(Palette.line)
-                        NoteList(notes: station.historyNotes)
+                    .padding(.vertical, 24)
+                }
+
+                if !area.isEmpty || !station.historyNotes.isEmpty {
+                    placeRule
+                    VStack(alignment: .leading, spacing: 20) {
+                        PlaceSectionHeader(
+                            kicker: "AREA · HISTORY",
+                            title: "このエリアのこと・歴史",
+                            pictogram: .history
+                        )
+                        if !area.isEmpty {
+                            ReadingText(lines: area, size: .body, color: Palette.fog, lineSpacing: 8, paragraphSpacing: 16)
+                                .padding(.top, 4)
+                        }
+                        if !station.historyNotes.isEmpty {
+                            VStack(alignment: .leading, spacing: 28) {
+                                ForEach(Array(station.historyNotes.enumerated()), id: \.element.title) { index, note in
+                                    PlaceNote(index: index + 1, note: note)
+                                }
+                            }
+                            .padding(.top, area.isEmpty ? 4 : 12)
+                        }
                     }
+                    .padding(.vertical, 28)
+                }
+
+                if !station.sightseeingNotes.isEmpty {
+                    placeRule
+                    VStack(alignment: .leading, spacing: 20) {
+                        PlaceSectionHeader(
+                            kicker: "SIGHTSEEING",
+                            title: "観光案内メモ",
+                            pictogram: .photoSpot
+                        )
+                        VStack(alignment: .leading, spacing: 28) {
+                            ForEach(Array(station.sightseeingNotes.enumerated()), id: \.element.title) { index, note in
+                                PlaceNote(index: index + 1, note: note)
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+                    .padding(.vertical, 28)
+                }
+
+                if intro.isEmpty && walk.isEmpty && area.isEmpty
+                    && station.historyNotes.isEmpty && station.sightseeingNotes.isEmpty {
+                    Text("この駅の土地メモはまだ少なめです。")
+                        .font(.footnote)
+                        .foregroundStyle(Palette.mist)
                 }
             }
-            if !station.sightseeingNotes.isEmpty {
-                Card {
-                    Kicker(text: "SIGHTSEEING", pictogram: .photoSpot)
-                    Text("観光案内メモ")
-                        .font(.mincho(.title3, weight: .semibold))
-                        .foregroundStyle(Palette.ink)
-                    NoteList(notes: station.sightseeingNotes)
-                }
-            }
-            if station.stationIntro == nil && area.isEmpty && station.historyNotes.isEmpty && station.sightseeingNotes.isEmpty {
-                Text("この駅の土地メモはまだ少なめです。")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.mist)
-            }
+            .padding(.horizontal, 22)
+            .padding(.top, 8)
+            .padding(.bottom, 36)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var placeRule: some View {
+        Rectangle()
+            .fill(Palette.line)
+            .frame(height: 1)
+            .padding(.bottom, 4)
     }
 }
 
