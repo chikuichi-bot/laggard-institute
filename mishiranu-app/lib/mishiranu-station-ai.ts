@@ -383,11 +383,13 @@ function buildNarrativeExpandPrompt(station: StationSeed): string {
 async function expandStationNarrative(
   station: StationSeed,
   apiKey: string,
+  viewerSub: string,
 ): Promise<StationSeed> {
   if (!isNarrativeThin(station)) return station;
 
   const expanded = await callGeminiGenerate(
     apiKey,
+    viewerSub,
     {
       contents: [
         {
@@ -455,10 +457,11 @@ async function expandStationNarrative(
 
 async function callGeminiGenerate(
   apiKey: string,
+  viewerSub: string,
   body: Record<string, unknown>,
   timeoutMs: number,
 ): Promise<GeminiCallResult> {
-  const paid = beginPaidAiCall();
+  const paid = beginPaidAiCall(viewerSub);
   if (!paid.ok) {
     return {
       ok: false,
@@ -544,9 +547,14 @@ function stationFromGeminiText(
 async function finalizeAiStation(
   result: AiStationResult | { error: string; message: string },
   apiKey: string,
+  viewerSub: string,
 ): Promise<AiStationResult | { error: string; message: string }> {
   if ("error" in result) return result;
-  const station = await expandStationNarrative(result.station, apiKey);
+  const station = await expandStationNarrative(
+    result.station,
+    apiKey,
+    viewerSub,
+  );
   return { station, source: "ai" };
 }
 
@@ -554,11 +562,13 @@ async function generateFromPrompt(
   prompt: string,
   fallbackName: string,
   apiKey: string,
+  viewerSub: string,
 ): Promise<AiStationResult | { error: string; message: string }> {
   const contents = [{ role: "user", parts: [{ text: prompt }] }];
 
   const fast = await callGeminiGenerate(
     apiKey,
+    viewerSub,
     {
       contents,
       generationConfig: {
@@ -573,16 +583,17 @@ async function generateFromPrompt(
   if (fast.ok) {
     const parsed = stationFromGeminiText(fast.text, fallbackName);
     if (!("error" in parsed)) {
-      return finalizeAiStation(parsed, apiKey);
+      return finalizeAiStation(parsed, apiKey, viewerSub);
     }
     if (parsed.error === "not_a_station") return parsed;
   } else if (fast.error === "gemini_http") {
-    // Auth / quota issues won't improve with a second call.
+    // Auth / quota / budget issues won't improve with a second call.
     return { error: fast.error, message: fast.message };
   }
 
   const grounded = await callGeminiGenerate(
     apiKey,
+    viewerSub,
     {
       contents,
       tools: [{ google_search: {} }],
@@ -599,6 +610,7 @@ async function generateFromPrompt(
       return finalizeAiStation(
         stationFromGeminiText(fast.text, fallbackName),
         apiKey,
+        viewerSub,
       );
     }
     return { error: grounded.error, message: grounded.message };
@@ -606,20 +618,28 @@ async function generateFromPrompt(
   return finalizeAiStation(
     stationFromGeminiText(grounded.text, fallbackName),
     apiKey,
+    viewerSub,
   );
 }
 
 export async function generateStationGuideWithGemini(
   rawName: string,
   apiKey: string,
+  viewerSub: string,
 ): Promise<AiStationResult | { error: string; message: string }> {
-  return generateFromPrompt(buildStationPrompt(rawName), rawName, apiKey);
+  return generateFromPrompt(
+    buildStationPrompt(rawName),
+    rawName,
+    apiKey,
+    viewerSub,
+  );
 }
 
 export async function generateNearbyStationWithGemini(
   lat: number,
   lng: number,
   apiKey: string,
+  viewerSub: string,
 ): Promise<AiStationResult | { error: string; message: string }> {
   // Defensive: always send coarsened coords even if a caller forgot to fuzz.
   const coarse = fuzzLatLngForExternal(lat, lng);
@@ -627,5 +647,6 @@ export async function generateNearbyStationWithGemini(
     buildNearbyPrompt(coarse.lat, coarse.lng),
     `現在地(${coarse.lat.toFixed(2)},${coarse.lng.toFixed(2)})`,
     apiKey,
+    viewerSub,
   );
 }

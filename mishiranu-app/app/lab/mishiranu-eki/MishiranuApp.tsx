@@ -48,10 +48,7 @@ import {
   type WalkCourse,
 } from "@/lib/mishiranu-courses";
 import { paragraphsFrom, withAreaDepth } from "@/lib/mishiranu-area-depth";
-import {
-  findNearestStation,
-  fuzzLatLngForExternal,
-} from "@/lib/mishiranu-geo";
+import { findNearestStation } from "@/lib/mishiranu-geo";
 import {
   CourseIcon,
   DayPartIcon,
@@ -444,7 +441,7 @@ export default function MishiranuApp({
         });
       });
       const { latitude: lat, longitude: lng } = position.coords;
-      // Precise GPS stays in the browser for curated matching.
+      // Precise GPS never leaves the browser. Only curated matching runs locally.
       const local = findNearestStation(lat, lng, STATIONS);
       if (local && local.km <= 3.5) {
         chooseStation(
@@ -455,57 +452,16 @@ export default function MishiranuApp({
         return;
       }
 
-      // Far from curated stations: only send ~1 km coarsened coords to the API.
-      const coarse = fuzzLatLngForExternal(lat, lng);
-      const res = await fetch("/api/mishiranu/nearby", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ lat: coarse.lat, lng: coarse.lng }),
+      // Far from curated stations: do not upload coordinates. Ask for a name.
+      setShowStationSearch(true);
+      const nearestHint = local
+        ? `いちばん近い編集駅は${local.station.name}（約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）ですが、徒歩圏外です。`
+        : "";
+      pushMessages({
+        role: "guide",
+        text:
+          `${nearestHint}位置情報は端末の外に送っていません。駅名を入力するか、「駅名で探す」から選んでください。`.trim(),
       });
-      const raw = await res.text();
-      let data: {
-        station?: StationSeed;
-        source?: "ai" | "seed";
-        km?: number;
-        error?: string;
-        message?: string;
-        note?: string;
-      } = {};
-      try {
-        data = raw ? (JSON.parse(raw) as typeof data) : {};
-      } catch {
-        pushMessages({
-          role: "guide",
-          text: stationLookupErrorMessage(res.status, {}, raw),
-        });
-        return;
-      }
-      if (!res.ok || !data.station) {
-        pushMessages({
-          role: "guide",
-          text: stationLookupErrorMessage(res.status, data, raw),
-        });
-        return;
-      }
-      const next: StationSeed = {
-        ...data.station,
-        source: data.source ?? data.station.source ?? "ai",
-      };
-      const dist =
-        typeof data.km === "number"
-          ? data.km < 1
-            ? `約${Math.round(data.km * 1000)}m`
-            : `約${data.km.toFixed(1)}km`
-          : "";
-      chooseStation(
-        next,
-        `現在地（${next.name}${dist ? `・${dist}` : ""}）`,
-        { omitYou: true },
-      );
-      if (data.note) {
-        pushMessages({ role: "guide", text: data.note });
-      }
     } catch (err) {
       const denied =
         err instanceof GeolocationPositionError &&

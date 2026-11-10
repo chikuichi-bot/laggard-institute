@@ -5,8 +5,8 @@ import {
   type TourCopy,
 } from "@/lib/mishiranu-copy";
 import {
-  allowViewerHourlyBudget,
   allowViewerRequest,
+  hasViewerHourlyBudget,
 } from "@/lib/mishiranu-rate-limit";
 import { requireJsonContentType } from "@/lib/mishiranu-request";
 import { requireIdentity } from "../../../../cursor/identity";
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     return Response.json(fallback, { headers: NO_STORE });
   }
 
-  if (!allowViewerHourlyBudget(identity.sub)) {
+  if (!hasViewerHourlyBudget(identity.sub)) {
     return Response.json(fallback, { headers: NO_STORE });
   }
 
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
       spots,
       time.label,
       apiKey,
+      identity.sub,
     );
     return Response.json(ai ?? fallback, { headers: NO_STORE });
   } catch {

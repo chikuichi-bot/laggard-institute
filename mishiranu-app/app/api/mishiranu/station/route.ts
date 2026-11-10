@@ -1,7 +1,7 @@
 import { STATIONS } from "@/data/mishiranu-stations";
 import {
-  allowViewerHourlyBudget,
   allowViewerRequest,
+  hasViewerHourlyBudget,
 } from "@/lib/mishiranu-rate-limit";
 import { requireJsonContentType } from "@/lib/mishiranu-request";
 import { generateStationGuideWithGemini } from "@/lib/mishiranu-station-ai";
@@ -87,7 +87,8 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!allowViewerHourlyBudget(identity.sub)) {
+  // Soft peek only — each Gemini HTTP call charges the hourly budget itself.
+  if (!hasViewerHourlyBudget(identity.sub)) {
     return Response.json(
       {
         error: "rate_limited",
@@ -98,7 +99,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await generateStationGuideWithGemini(name, apiKey);
+    const result = await generateStationGuideWithGemini(
+      name,
+      apiKey,
+      identity.sub,
+    );
     if ("error" in result) {
       const status =
         result.error === "not_a_station"

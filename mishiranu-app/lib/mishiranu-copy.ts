@@ -69,13 +69,14 @@ export async function generateTourCopyWithGemini(
   spots: Spot[],
   timeLabel: string,
   apiKey: string,
+  viewerSub: string,
 ): Promise<TourCopy | null> {
   const prompt = buildCopyPrompt(station, spots, timeLabel);
   // おみくじ文庫の AI 解説と同じ系統（Gemini 3.1 Flash-Lite）
   const url =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
 
-  const paid = beginPaidAiCall();
+  const paid = beginPaidAiCall(viewerSub);
   if (!paid.ok) return null;
 
   try {

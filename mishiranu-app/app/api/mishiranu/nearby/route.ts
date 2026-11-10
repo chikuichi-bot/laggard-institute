@@ -1,8 +1,8 @@
 import { STATIONS } from "@/data/mishiranu-stations";
 import { findNearestStation, fuzzLatLngForExternal } from "@/lib/mishiranu-geo";
 import {
-  allowViewerHourlyBudget,
   allowViewerRequest,
+  hasViewerHourlyBudget,
 } from "@/lib/mishiranu-rate-limit";
 import { requireJsonContentType } from "@/lib/mishiranu-request";
 import { generateNearbyStationWithGemini } from "@/lib/mishiranu-station-ai";
@@ -102,7 +102,8 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!allowViewerHourlyBudget(identity.sub)) {
+  // Soft peek only — each Gemini HTTP call charges the hourly budget itself.
+  if (!hasViewerHourlyBudget(identity.sub)) {
     return Response.json(
       {
         error: "rate_limited",
@@ -117,6 +118,7 @@ export async function POST(request: Request) {
       coarse.lat,
       coarse.lng,
       apiKey,
+      identity.sub,
     );
     if ("error" in result) {
       const status =
