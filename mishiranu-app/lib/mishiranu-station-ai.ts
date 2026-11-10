@@ -105,10 +105,12 @@ const STATION_SCHEMA_BLOCK = [
   "",
   "制約:",
   "- 日本の実在の鉄道駅でなければ { \"error\": \"not_a_station\", \"message\": \"理由\" } を返す。",
-  "- spots は 6〜10件。story のとき guide の meal/souvenir/sight/rest/tip をそれぞれ1件以上。",
+  "- spots は 8〜14件。story のとき guide の meal/souvenir/sight/rest/tip をそれぞれ1件以上。",
+  "- sight は実在の観光地・名所を必ず 2〜4件。寺社・港・城跡・展望・博物館など固有名詞にする。",
   "- meal と souvenir の name は必ず実在する店・施設の正式名称（例: 「出町ふたば」「石翠亭」）。",
-  "- 禁止の name: 「駅前の定食」「港寄りの食堂」「甘味・茶店まわり」「揚げもの屋台まわり」など総称・曖昧名。",
+  "- 禁止の name: 「駅前の定食」「港寄りの食堂」「甘味・茶店まわり」「揚げもの屋台まわり」「駅前の景色」「町並みまわり」など総称・曖昧名。",
   "- meal の blurb には店名と、そこで食べる具体的な料理名を入れる。",
+  "- sight の blurb には地名と、そこで見る具体的な風景・建築・展示を入れる。",
   "- meal には必ず soloOk と budgetYen を入れる。一人席・カウンター・気軽な食堂は soloOk true。会席・要予約・酒席主体は false。",
   "- budgetYen は実際の一人あたり目安（税込ざっくり）。casual はだいたい 〜¥1,500、upscale は ¥3,000〜 を目安に具体化する。",
   "- 徒歩圏に焙煎所・珈琲専門店があり豆を売っているなら、souvenir（または tip）に1件入れ、name に店名、blurb に「豆が買える」と豆の特徴を書く。",
@@ -250,7 +252,7 @@ export function parseAiStationPayload(
   const spots = spotsRaw
     .map((s, i) => parseSpot(s, i))
     .filter((s): s is Spot => !!s)
-    .slice(0, 12);
+    .slice(0, 14);
 
   if (spots.length === 0) {
     return {
