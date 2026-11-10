@@ -77,6 +77,11 @@ export function IosInstallCard({ compact = false }: Props) {
         <li>「ホーム画面に追加」を選ぶ</li>
         <li>名前は「見知らぬ駅」のまま追加</li>
       </ol>
+      <p className="mishiranu-note">
+        開発用の Xcode プロジェクトはリポジトリの{" "}
+        <code>mishiranu-app/ios</code> にあります（Mac で{" "}
+        <code>npm run ios:open</code>）。
+      </p>
     </section>
   );
 }

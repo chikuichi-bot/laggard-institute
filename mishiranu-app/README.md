@@ -11,10 +11,17 @@ npm install
 npm run dev
 ```
 
-## iPhone への入れ方
+## iPhone への入れ方（PWA）
 
 1. Safari でアプリの URL を開く  
 2. 共有 → **ホーム画面に追加**  
 3. ホーム画面の「見知らぬ駅」から起動（Safari 枠なし）
 
-App Store 提出用のネイティブ包み（Capacitor / Xcode）は別作業です。
+## Xcode ネイティブアプリ
+
+Capacitor の iOS プロジェクトは `ios/` にあります。詳細は [`ios/README.md`](./ios/README.md)。
+
+```bash
+npm run ios:sync
+npm run ios:open   # Mac + Xcode が必要
+```
