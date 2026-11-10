@@ -65,8 +65,10 @@ export async function POST(request: Request) {
     );
   }
 
-  // Precise coords stay on-server for curated matching only.
-  const nearest = findNearestStation(lat, lng, STATIONS);
+  // Clients should send already-coarsened coords. Re-fuzz defensively so
+  // precise GPS never reaches Gemini even if an older client posts raw values.
+  const coarse = fuzzLatLngForExternal(lat, lng);
+  const nearest = findNearestStation(coarse.lat, coarse.lng, STATIONS);
   if (nearest && nearest.km <= CURATED_RADIUS_KM) {
     return Response.json(
       {
@@ -109,8 +111,6 @@ export async function POST(request: Request) {
       { status: 429, headers: NO_STORE },
     );
   }
-
-  const coarse = fuzzLatLngForExternal(lat, lng);
 
   try {
     const result = await generateNearbyStationWithGemini(
