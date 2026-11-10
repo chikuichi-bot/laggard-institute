@@ -12,6 +12,12 @@ import { GUIDE_ORDER, REGIONS } from "@/data/mishiranu-stations";
 import { fuzzLatLngForExternal } from "@/lib/mishiranu-geo";
 import { beginPaidAiCall } from "@/lib/mishiranu-rate-limit";
 import landmarkLocks from "@/data/landmark-locks.json";
+import {
+  filterFirstVisitSpots,
+  isGuidebookWorship,
+  isNeighborhoodWorship,
+  isOrdinaryPublicFace,
+} from "@/lib/mishiranu-first-visit-faces";
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
@@ -82,7 +88,9 @@ const STATION_SCHEMA_BLOCK = [
   '  "catchCopy": "40字以内",',
   '  "emptyHeadline": "emptyのときだけ20字以内",',
   '  "emptyBody": "emptyのときだけ80字以内",',
-  '  "bikeRental": { "available": boolean, "summary": "2〜3文。地元店とアプリ型の両方に触れる", "places": [ { "kind": "local|app", "name": "場所名", "walkMinutes": 5, "note": "使い方1文" } ] },',
+  '  "bikeRental": { "available": boolean, "summary": "2〜3文。地元店とアプリ型の両方に触れる", "places": [ { "kind": "local|app", "name": "実在サービス・店の正式名", "walkMinutes": 5, "note": "使い方1文" } ] },',
+  "- bikeRental.places の name は総称禁止（「駅前のレンタサイクル店」不可）。CLEW/クルー、HELLO CYCLING、えむじか など実在名。",
+  "- 例（出町柳）: CLEW（クルー）京阪出町柳駅前（app）、レンタサイクルえむじか 出町柳店（local）。",
   '  "historyNotes": [{ "title": "短い見出し", "body": "歴史メモ。各3〜5文・80字以上" }]（必ず4〜6件。地名由来・産業/信仰・交通・災害や町の変遷など具体的に）,',
   '  "sightseeingNotes": [{ "title": "短い見出し", "body": "観光メモ。各2〜4文" }]（必ず3〜4件。まず見る/時間があるとき/食べる休む）,',
   '  "spots": [',
@@ -101,7 +109,7 @@ const STATION_SCHEMA_BLOCK = [
   '      "lat": 緯度,',
   '      "lng": 経度,',
   '      "secretWorthy": boolean,',
-  '      "majorWorthy": boolean（その駅で初心者がまず行く定番なら true。駅ごとにちょうど3件）',
+  '      "majorWorthy": boolean（その駅の顔＝散歩中心でまず行く定番なら true。駅ごとにちょうど3件）',
   "    }",
   "  ]",
   "}",
@@ -109,15 +117,16 @@ const STATION_SCHEMA_BLOCK = [
   "制約:",
   "- 日本の実在の鉄道駅でなければ { \"error\": \"not_a_station\", \"message\": \"理由\" } を返す。",
   "- spots は 12〜18件。story のとき meal は必ず5〜7件（いずれも駅から徒歩18分以内）、souvenir は必ず3〜5件、sight/rest/tip は各2件以上。",
-  "- sight は実在の観光地・名所を必ず 3〜5件。寺社・港・城跡・展望・博物館・川・商店街など固有名詞にする。",
+  "- sight は、初めて駅を降りた人が通るメジャーな普通のところだけ。川の合流・橋・商店街・港・市場・公園・ガイドブック級の名社寺。近所の無名な寺・小社は禁止。",
+  "- sight に入れない例: 長徳寺・法性寺・西園寺のような、土地の顔ではない近所の寺。近いだけでは出さない。",
   "- rest は「腰を下ろして休む場所」を必ず2〜4件。内訳はAIが選ぶ。景色で座る場所（川の合流・三角州・公園・橋のたもと）を1件以上、長居できる喫茶を1件以上。食事目的の定食屋は meal のまま。寺社そのものは sight。",
   "- meal と souvenir の name は必ず実在する店・施設の正式名称（Google検索で確認できるものだけ）。",
   "- majorWorthy は駅ごとにちょうど3件だけ true。「初めてその駅に降りた人が必ず見るべき土地の顔」（ガイドブック1ページ目級）。",
   "- majorWorthy の内訳は必ず: 名所・景色・社寺 2件 + 名物店 1件。甘味屋を2件以上 major にしない。",
   "- majorWorthy の選び方: その駅名と結びついて誰もが挙げる場所。世界遺産・名社寺・川の合流・港・城・土地の銘菓を優先。",
-  "- majorWorthy に入れない: 近所の無名カフェ、多目的スペース、コワーキング、知る・感じる系の屋号、近いだけの個人店。",
-  "- 例（出町柳の考え方）: 下鴨神社・鴨川デルタ・出町ふたばが顔。みたらしをふたばと同時 major にしない。かぜのね等の近所カフェは major にしない。",
-  "- 「近い」より「その土地の名前と結びついた有名どころ」。徒歩圏なら12〜15分の名社寺を、2分の無名カフェより優先する。",
+  "- majorWorthy に入れない: 近所の無名カフェ、近所の無名な寺・小社、多目的スペース、コワーキング、知る・感じる系の屋号、近いだけの個人店。",
+  "- 例（出町柳の考え方）: 下鴨神社・鴨川デルタ・出町ふたばが顔。長徳寺・法性寺・西園寺は出さない。みたらしをふたばと同時 major にしない。かぜのね等の近所カフェは major にしない。",
+  "- 「近い」より「その土地の名前と結びついた有名どころ」。徒歩圏なら12〜15分の名社寺を、2分の無名寺・無名カフェより優先する。",
   "- secretWorthy は穴場向け。majorWorthy と同時 true にしない。",
   "- meal / souvenir は駅から徒歩18分以内（約1.3km）の店だけ。今出川・丸太町・銀閣寺エリアなど、駅名の土地ではない店は入れない。",
   "- meal は「その土地の定番めし」を先に入れる。優先: 地元パン屋・おにぎり・商店街の食堂・うどん・そば・定食。ジャンルを散らす。",
@@ -144,6 +153,7 @@ const STATION_SCHEMA_BLOCK = [
   "- 例の禁止: 「迷子」（喫茶・古本、浄土寺上南田町）は銀閣寺近く。出町柳の案内に入れない。座標を田中や今出川に寄せない。",
   "- 同様に、駅名と結びつきやすい有名店でも Google で「駅名＋店名＋徒歩」を確認し、届かない店は別の実在店に替える。",
   "- いちばん重要: stationIntro / areaAbout / historyNotes を短くしない。読者が歴史を知れる分量にする。",
+  "- historyNotes の本文には、spots の sight と majorWorthy の場所を正式名称のまま登場させ、その場所で目で確かめられる痕跡（石碑・地名・川筋・社殿・古い看板など）を1文ずつ書く。歩く途中に、その一文だけを手渡すため。",
   "- 禁止: 1文だけの areaAbout、2件以下の historyNotes、抽象語だけの紹介。",
 ].join("\n");
 
@@ -251,7 +261,7 @@ function parseBike(raw: unknown): BikeRentalInfo | undefined {
       const kind =
         kindRaw === "app" || kindRaw === "local"
           ? kindRaw
-          : name.includes("シェア") || name.includes("アプリ") || name.includes("HELLO")
+          : /シェア|アプリ|HELLO|ドコモ|CLEW|クルー|CREW|Clew/i.test(name)
             ? ("app" as const)
             : ("local" as const);
       const walk =
@@ -324,7 +334,7 @@ export function parseAiStationPayload(
     prefecture: asString(parsed.prefecture, "日本"),
     region,
     mood,
-    radiiKm: [1.0, 2.2, 3.0],
+    radiiKm: [0.9, 1.0, 1.2],
     stationIntro: asString(parsed.stationIntro) || undefined,
     areaAbout: asString(parsed.areaAbout) || undefined,
     walkGuide: asString(parsed.walkGuide) || undefined,
@@ -916,7 +926,12 @@ function promoteMajorHeuristic(station: StationSeed): StationSeed {
     if (s.guide === "souvenir") score += 28;
     if (s.guide === "meal") score += 22;
     if (s.guide === "rest") score += 8;
-    if (/神社|寺|城|宮|デルタ|公園|橋|市場|本店|老舗|陵|神社境内/.test(s.name)) {
+    if (isNeighborhoodWorship(s.name, station.name)) score -= 80;
+    else if (
+      isGuidebookWorship(s.name, station.name) ||
+      isOrdinaryPublicFace(s.name) ||
+      /城|宮|本店|老舗|陵/.test(s.name)
+    ) {
       score += 24;
     }
     score += Math.max(0, 22 - s.walkMinutes);
@@ -963,6 +978,73 @@ function promoteMajorHeuristic(station: StationSeed): StationSeed {
  * - landmarks: 一番有名な名所・景色 2
  * - omiyage: 手土産になる名物菓子・名産 2（お土産タブ用。1件目は初心者コースの名物枠）
  */
+/** 出町柳のレンタは CLEW（クルー）とえむじかを正式名で残す。総称行は落とす。 */
+function sealDemachiBikeRentals(station: StationSeed): StationSeed {
+  if (!/出町柳/.test(station.name)) return station;
+  const must = [
+    {
+      kind: "app" as const,
+      name: "CLEW（クルー）京阪出町柳駅前",
+      walkMinutes: 1,
+      note: "京阪7番出口付近のポート。アプリ登録のあとQRで解錠。",
+    },
+    {
+      kind: "local" as const,
+      name: "レンタサイクルえむじか 出町柳店",
+      walkMinutes: 2,
+      note: "駅すぐの店頭貸出。半日〜長期向き。",
+    },
+  ];
+  const generics = /駅前のレンタ|枡形・駅前のレンタ|周辺のレンタ|貸自転車$/;
+  let places = [...(station.bikeRental?.places ?? [])].filter(
+    (p) => !generics.test(p.name),
+  );
+  for (const m of must) {
+    if (
+      !places.some(
+        (p) =>
+          p.name.includes("CLEW") ||
+          p.name.includes("クルー") ||
+          p.name.includes("えむじか") ||
+          p.name === m.name,
+      ) ||
+      (m.name.includes("CLEW") &&
+        !places.some((p) => /CLEW|クルー|CREW/i.test(p.name))) ||
+      (m.name.includes("えむじか") &&
+        !places.some((p) => p.name.includes("えむじか")))
+    ) {
+      // 系統ごとに不足分だけ足す
+    }
+  }
+  if (!places.some((p) => /CLEW|クルー|CREW/i.test(p.name))) {
+    places.push(must[0]!);
+  }
+  if (!places.some((p) => p.name.includes("えむじか"))) {
+    places.push(must[1]!);
+  }
+  // 重複整理
+  const seen = new Set<string>();
+  places = places.filter((p) => {
+    const key = /CLEW|クルー|CREW/i.test(p.name)
+      ? "clew"
+      : p.name.includes("えむじか")
+        ? "emusica"
+        : p.name;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return {
+    ...station,
+    bikeRental: {
+      available: true,
+      summary:
+        "駅すぐには CLEW（クルー）のポートと、店頭貸出のえむじかがあります。短い移動はアプリ、半日たっぷりなら店頭が向きます。",
+      places,
+    },
+  };
+}
+
 /**
  * ご飯タブ用: 土地の定番めし（パン・おにぎり・商店街食堂など）を確保。
  * 近い無名カフェで埋めない。
@@ -1095,7 +1177,7 @@ async function ensureMajorSpotEntries(
     "どの駅でも同じ基準で「メジャーどころ」を出してください。穴場・マニア向けは禁止。",
     "",
     "必ず返すもの:",
-    "1) landmarks ちょうど2件 … その駅でいちばん有名な観光名所・景色（社寺・城・景勝・市場の顔など）。脇社・小さな祠・マイナー店は禁止。",
+    "1) landmarks ちょうど2件 … その駅でいちばん有名な観光名所・景色（名社寺・川の合流・橋・商店街・城・市場の顔など）。近所の無名な寺・脇社・小さな祠・マイナー店は禁止。",
     "2) omiyage ちょうど2件 … 手土産になる名物（菓子・銘菓・土地の顔になる甘いお土産を優先）。一般の漬物屋・鰹節屋・雑貨より、ガイドブックに載る名物菓子を優先。",
     "",
     "例:",
@@ -1405,6 +1487,7 @@ async function finalizeAiStation(
   }
   // 土地の定番めし（パン・おにぎり・食堂など）を先に確保
   station = await ensureStapleMealEntries(station, apiKey, viewerSub);
+  station = sealDemachiBikeRentals(station);
   // 初心者コース用のメジャー3つを必ず用意（名所2＋名物1）
   station = await ensureMajorSpotEntries(station, apiKey, viewerSub);
   station = sealIconicMajors(station);
@@ -1422,8 +1505,13 @@ async function finalizeAiStation(
     }
   }
   station = reclassifyWorshipPlaces(station);
+  station = {
+    ...station,
+    spots: filterFirstVisitSpots(station.spots, station.name),
+  };
   station = await expandRestSpots(station, apiKey, viewerSub);
   station = snapRiverLandmarks(station);
+  station = balanceMajorsSightseeing(station);
   return { station, source: "ai" };
 }
 
@@ -1495,20 +1583,18 @@ function normalizeEdibleSouvenirs(station: StationSeed): StationSeed {
   return { ...station, spots };
 }
 
-function landmarkFameScore(spot: Spot): number {
+function landmarkFameScore(spot: Spot, stationName?: string): number {
   const n = spot.name;
   const blob = `${n}${spot.blurb ?? ""}`;
   let score = 0;
   if (spot.majorWorthy) score += 40;
   if (spot.guide === "sight") score += 8;
-  if (/下鴨|賀茂御祖|賀茂別雷/.test(n)) score += 55;
-  if (/デルタ/.test(n)) score += 45;
-  if (/大社|神宮|八幡/.test(n)) score += 35;
+  if (isGuidebookWorship(n, stationName)) score += 55;
+  if (isOrdinaryPublicFace(n) || /合流/.test(n)) score += 45;
   if (/城|金閣|清水|浅草/.test(n)) score += 35;
   if (/世界遺産|参道/.test(blob)) score += 20;
-  if (/鴨.*公園|公園.*鴨/.test(n)) score += 18;
+  if (isNeighborhoodWorship(n, stationName)) score -= 80;
   if (/幸神社|境内社|摂社/.test(n)) score -= 60;
-  if (/神社/.test(n) && score < 25 && !spot.majorWorthy) score -= 25;
   score += Math.max(0, 8 - spot.walkMinutes * 0.2);
   return score;
 }
@@ -1544,19 +1630,31 @@ function balanceMajorsSightseeing(station: StationSeed): StationSeed {
     };
   }
 
+  working = {
+    ...working,
+    spots: filterFirstVisitSpots(working.spots, working.name),
+  };
+
   const majors = working.spots.filter((s) => s.majorWorthy);
   const isFood = (s: Spot) => s.guide === "meal" || s.guide === "souvenir";
   const isSightish = (s: Spot) =>
-    s.guide === "sight" || /神社|寺|デルタ|城|宮|公園|橋/.test(s.name);
+    s.guide === "sight" ||
+    isGuidebookWorship(s.name, working.name) ||
+    isOrdinaryPublicFace(s.name) ||
+    /城|宮/.test(s.name);
 
   const landmarkPool = [...majors, ...working.spots]
     .filter(isSightish)
+    .filter((s) => !isNeighborhoodWorship(s.name, working.name))
     .filter((s) => !/幸神社/.test(s.name))
     .reduce<Spot[]>((acc, s) => {
       if (!acc.some((x) => x.id === s.id)) acc.push(s);
       return acc;
     }, [])
-    .sort((a, b) => landmarkFameScore(b) - landmarkFameScore(a));
+    .sort(
+      (a, b) =>
+        landmarkFameScore(b, working.name) - landmarkFameScore(a, working.name),
+    );
 
   const foodMajors = majors.filter(isFood);
   const iconicFood =

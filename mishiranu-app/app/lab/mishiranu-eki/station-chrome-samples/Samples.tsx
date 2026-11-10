@@ -9,7 +9,7 @@ const s = {
   line: "叡山電鉄鞍馬線",
   dayPart: "夕方",
   stay: "1時間",
-  course: "初心者コース",
+  course: "散歩中心",
   pinCount: 8,
   catchCopy: "山あいの駅、貴船川のせせらぎと紅葉のトンネルに抱かれて。",
 };

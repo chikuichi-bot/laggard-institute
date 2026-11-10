@@ -4,15 +4,15 @@ import MapKit
 /// 場所の正本は Apple マップ。
 /// 初めて降りる人向けに、土地の顔になるメジャーなものだけ残す。
 enum SpotLocator {
-    /// 観光・休むところの採取半径。
-    private static let walkRadiusKm = 2.0
+    /// 観光・休むところの採取半径（徒歩圏 約1km）。
+    private static let walkRadiusKm = 1.1
     /// ご飯・土産の採取半径。
-    private static let shopWalkRadiusKm = 1.6
+    private static let shopWalkRadiusKm = 1.0
     private static let shopMaxWalkMinutes = 18
     /// 件数より「その土地の顔」を優先。埋めるための店は足さない。
     private static let maxSightSpots = 4
     private static let maxMealSpots = 3
-    private static let maxSouvenirSpots = 2
+    private static let maxSouvenirSpots = 4
     private static let maxRestSpots = 2
     private static let maxTipSpots = 1
 
@@ -36,9 +36,41 @@ enum SpotLocator {
         )
         // 2) AI 文案は、地図上の同名へだけ載せる
         let blended = blendAICopy(aiSpots: station.spots, appleSpots: appleSpots, stationName: station.name)
-        // 3) 名物の正本ピン（ふたば等）を最後に上書き
-        let relocated = station.relocated(center: center, spots: markMajorFaces(blended))
-        return LandmarkRegistry.apply(to: relocated)
+        let firstVisit = FirstVisitFaces.filterSpots(blended, stationName: station.name)
+        // 3) レンタサイクル（CLEW 等）を Apple から拾って bikeRental へ
+        let bikeHits = await harvestBikeRentals(around: center, stationName: station.name)
+        let withBike = BikeRentalSeal.merging(appleNames: bikeHits, into: station.relocated(center: center, spots: firstVisit))
+        // 4) 名物の正本ピン（ふたば等）を最後に上書き
+        let relocated = withBike.relocated(center: center, spots: markMajorFaces(withBike.spots))
+        return BikeRentalSeal.ensure(LandmarkRegistry.apply(to: relocated))
+    }
+
+    private static func harvestBikeRentals(
+        around center: CLLocationCoordinate2D,
+        stationName: String
+    ) async -> [(name: String, walk: Int)] {
+        let bare = SavedStationStore.bareName(stationName)
+        let queries = [
+            "CLEW \(bare)",
+            "クルー \(bare)",
+            "\(bare) レンタサイクル",
+            "えむじか \(bare)",
+            "HELLO CYCLING \(bare)",
+        ]
+        var hits: [(name: String, walk: Int)] = []
+        var seen = Set<String>()
+        for query in queries {
+            if Task.isCancelled { break }
+            for place in await searchQuery(query, around: center, maxKm: shopWalkRadiusKm) {
+                guard BikeRentalSeal.looksLikeBike(place.name) || place.name.uppercased().contains("CLEW")
+                    || place.name.contains("クルー") || place.name.contains("えむじか") else { continue }
+                let key = NameMatch.normalize(place.name)
+                guard seen.insert(key).inserted else { continue }
+                let walk = max(1, min(30, Int((place.km * 1.3 / 4.5 * 60).rounded())))
+                hits.append((place.name, walk))
+            }
+        }
+        return hits
     }
 
     // MARK: - Apple harvest
@@ -66,16 +98,32 @@ enum SpotLocator {
             stationName: stationName,
             existingNames: preferredMajors
         )
-        let queries = [
+        // 駅名そのもの（石清水八幡宮など）と、門前の定番社寺を先に引く。
+        // 「駅名 寺」は近所の無名寺まで拾うので使わない。ガイドブック級は preferredMajors で引く。
+        var queries = [
+            bare,
+            "\(bare)神社",
             "\(bare) 名所",
             "\(bare) 観光",
             "\(bare) 神社",
-            "\(bare) 寺",
             "\(bare) 庭園",
             "\(bare) 名物",
             "\(bare) 和菓子",
+            "\(bare) 餅",
+            "\(bare) 土産",
+            "\(bare) お土産",
+            "\(bare) みやげ",
             "\(bare) 公園",
-        ] + stapleQueries + preferredMajors.prefix(3).map { "\($0) \(bare)" }
+            "\(bare) 商店街",
+            "\(bare) 市場",
+            "\(bare) 橋",
+        ] + stapleQueries + preferredMajors.prefix(5).map { "\($0)" }
+        if bare.contains("八幡") {
+            queries.append(contentsOf: [
+                "飛行神社", "飛行神社 \(bare)", "石清水八幡宮",
+                "走井餅", "やわた走井餅老舗", "八幡 土産",
+            ])
+        }
         for query in queries {
             if Task.isCancelled { break }
             places.append(contentsOf: await searchQuery(query, around: center, maxKm: walkRadiusKm))
@@ -95,7 +143,11 @@ enum SpotLocator {
             let walk = max(1, min(90, Int((place.km * 1.3 / 4.5 * 60).rounded())))
             if guide == .meal || guide == .souvenir, walk > shopMaxWalkMinutes { continue }
 
-            var fame = fameScore(place: place, guide: guide, preferredMajors: preferredMajors)
+            // 近所の寺・小社は、初めて降りる人の案内に載せない
+            if FirstVisitFaces.isNeighborhoodWorship(place.name, stationName: stationName) {
+                continue
+            }
+            var fame = fameScore(place: place, guide: guide, preferredMajors: preferredMajors, stationName: stationName)
             if guide == .meal {
                 fame += MealStapleCatcher.brandTradeScore(place.name)
                 if MealStapleCatcher.isWeakCategoryName(place.name) { continue }
@@ -150,7 +202,12 @@ enum SpotLocator {
         return noise.contains { n.contains($0) }
     }
 
-    private static func fameScore(place: ApplePlace, guide: GuideKind, preferredMajors: [String]) -> Double {
+    private static func fameScore(
+        place: ApplePlace,
+        guide: GuideKind,
+        preferredMajors: [String],
+        stationName: String
+    ) -> Double {
         let n = place.name
         var score = 40.0 - place.km * 12
         if preferredMajors.contains(where: { NameMatch.score($0, n) >= 80 }) { score += 50 }
@@ -168,9 +225,13 @@ enum SpotLocator {
                 if #available(iOS 18.0, *), category == .nationalMonument { score += 32 }
             }
         }
-        if n.contains("神社") || n.contains("神宮") || n.hasSuffix("寺") || n.contains("庭園") || n.contains("城") {
-            score += 36
+        // 社寺はガイドブック級だけ加点。近所の寺はここに来る前に落とす。
+        if FirstVisitFaces.isGuidebookWorship(n, stationName: stationName) {
+            score += 42
+        } else if n.contains("庭園") || n.contains("城") {
+            score += 28
         }
+        if FirstVisitFaces.isOrdinaryPublicFace(n) { score += 24 }
         if n.contains("園"), guide == .sight || guide == .rest { score += 22 }
         if n.contains("おにぎり") || n.contains("うどん") || n.contains("そば") || n.contains("蕎麦") || n.contains("食堂") {
             score += 26
@@ -226,10 +287,9 @@ enum SpotLocator {
             case .meal: score += 8
             case .tip: score += 2
             }
-            if n.contains("神社") || n.contains("寺") || n.contains("城") || n.contains("神宮") || n.contains("大社") {
-                score += 42
-            }
-            if n.contains("デルタ") || n.contains("三角州") || blob.contains("合流") { score += 48 }
+            if FirstVisitFaces.isGuidebookWorship(n) { score += 42 }
+            else if n.contains("城") { score += 28 }
+            if FirstVisitFaces.isOrdinaryPublicFace(n) || blob.contains("合流") { score += 48 }
             if blob.contains("世界遺産") || blob.contains("名物") || blob.contains("銘菓") { score += 28 }
             if CourseBuilder.isEdibleOmiyage(spot) { score += 40 }
             if n.contains("ふたば") || n.contains("赤福") || n.contains("もみじ饅頭") { score += 30 }
@@ -272,9 +332,11 @@ enum SpotLocator {
     }
 
     private static func isLandmarkish(_ name: String) -> Bool {
-        name.contains("神社") || name.contains("寺") || name.contains("城")
-            || name.contains("デルタ") || name.contains("宮") || name.contains("公園")
-            || name.contains("港") || name.contains("市場")
+        // 近所の寺は「名所っぽい」扱いにしない（長徳寺・法性寺・西園寺など）
+        if FirstVisitFaces.isNeighborhoodWorship(name) { return false }
+        return FirstVisitFaces.isGuidebookWorship(name)
+            || FirstVisitFaces.isOrdinaryPublicFace(name)
+            || name.contains("城") || name.contains("宮")
     }
 
     private static func searchNearbyPOIs(center: CLLocationCoordinate2D, radiusMeters: Double) async -> [ApplePlace] {
@@ -352,8 +414,14 @@ enum SpotLocator {
         }
         let n = place.name
         if n.hasSuffix("駅") { return .sight }
-        if n.contains("神社") || n.contains("神宮") || n.hasSuffix("寺") || n.contains("庭園") || n.contains("城") {
+        if FirstVisitFaces.isGuidebookWorship(n)
+            || n.contains("庭園") || n.contains("城")
+            || FirstVisitFaces.isOrdinaryPublicFace(n) {
             return .sight
+        }
+        // 近所の寺・小社は観光枠にも載せない
+        if FirstVisitFaces.isNeighborhoodWorship(n) {
+            return nil
         }
         if n.contains("園"), !n.contains("保育園"), !n.contains("幼稚園") { return .sight }
         if n.contains("カフェ") || n.contains("食堂") || n.contains("レストラン") || n.contains("ラーメン")
@@ -361,7 +429,9 @@ enum SpotLocator {
             || n.contains("茶房") || n.contains("料理") {
             return .meal
         }
-        if n.contains("餅") || n.contains("菓子") || n.contains("和菓子") || n.contains("銘菓") || n.contains("土産") {
+        if n.contains("餅") || n.contains("菓子") || n.contains("和菓子") || n.contains("銘菓")
+            || n.contains("土産") || n.contains("みやげ") || n.contains("お土産")
+            || n.contains("走井") || n.contains("授与") || n.contains("お守り") {
             return .souvenir
         }
         if n.contains("公園") || n.contains("河川敷") || n.contains("喫茶") {
@@ -381,26 +451,25 @@ enum SpotLocator {
     }
 
     private static func appleBlurb(name: String, guide: GuideKind, address: String?) -> String {
-        let whereText = address.map { "（\($0)）" } ?? ""
-        switch guide {
-        case .meal:
-            return "\(name)\(whereText)。駅からの徒歩圏で立ち寄れる食事どころ。"
-        case .souvenir:
-            return "\(name)\(whereText)。手土産や買い物の候補。"
-        case .sight:
-            return "\(name)\(whereText)。この駅からの観光の目印。"
-        case .rest:
-            return "\(name)\(whereText)。歩いたあとに腰を下ろせる場所。"
-        case .tip:
-            return "\(name)\(whereText)。予定にない寄り道向き。"
-        }
+        SpotCopy.compose(name: name, guide: guide, address: address)
     }
 
-    /// AI の文案・major 印を、Apple の同名スポットへ移す。メジャー指定は優先して残す。
+    /// AI の文案・major 印を、Apple の同名スポットへ移す。
+    /// 地図に無い名所でも、土地の顔（major / 社寺 / 駅名そのもの）は捨てない。
     private static func blendAICopy(aiSpots: [Spot], appleSpots: [Spot], stationName: String) -> [Spot] {
         var result = appleSpots
-        let preferred = aiSpots.filter { $0.majorWorthy || LandmarkRegistry.isLocked($0, stationName: stationName) }
+        let bare = SavedStationStore.bareName(stationName)
+        let preferred = aiSpots.filter {
+            if FirstVisitFaces.isNeighborhoodWorship($0.name, stationName: stationName) { return false }
+            return $0.majorWorthy
+                || LandmarkRegistry.isLocked($0, stationName: stationName)
+                || isLandmarkish($0.name)
+                || NameMatch.score($0.name, bare) >= 78
+        }
         for ai in preferred + aiSpots {
+            if FirstVisitFaces.isNeighborhoodWorship(ai.name, stationName: stationName) {
+                continue
+            }
             if LandmarkRegistry.isLocked(ai, stationName: stationName) {
                 let locked = LandmarkRegistry.apply(ai, stationName: stationName)
                 if let idx = result.firstIndex(where: { NameMatch.score($0.name, locked.name) >= 85 }) {
@@ -408,19 +477,30 @@ enum SpotLocator {
                         to: CLLocationCoordinate2D(latitude: locked.lat, longitude: locked.lng),
                         walkMinutes: locked.walkMinutes
                     )
-                } else if ai.majorWorthy || preferred.contains(where: { $0.id == ai.id }) {
-                    result.append(locked)
+                } else {
+                    result.append(locked.withCopy(from: ai))
                 }
                 continue
             }
-            guard let idx = result.firstIndex(where: { NameMatch.score($0.name, ai.name) >= 82 }) else { continue }
-            let apple = result[idx]
-            result[idx] = apple.withCopy(from: ai).moved(
-                to: CLLocationCoordinate2D(latitude: apple.lat, longitude: apple.lng),
-                walkMinutes: apple.walkMinutes
-            )
+            if let idx = result.firstIndex(where: { NameMatch.score($0.name, ai.name) >= 82 }) {
+                let apple = result[idx]
+                result[idx] = apple.withCopy(from: ai).moved(
+                    to: CLLocationCoordinate2D(latitude: apple.lat, longitude: apple.lng),
+                    walkMinutes: apple.walkMinutes
+                )
+                continue
+            }
+            // Apple に無い名所・名物土産でも、土地の顔は残す（近所の寺は除く）
+            let keep = ai.majorWorthy
+                || isLandmarkish(ai.name)
+                || NameMatch.score(ai.name, bare) >= 78
+                || ai.guide == .souvenir
+                || CourseBuilder.isEdibleOmiyage(ai)
+            if keep, !result.contains(where: { NameMatch.score($0.name, ai.name) >= 85 }) {
+                result.append(ai)
+            }
         }
-        return result
+        return FirstVisitFaces.filterSpots(result, stationName: stationName)
     }
 
     // MARK: - Matching helpers (station center)

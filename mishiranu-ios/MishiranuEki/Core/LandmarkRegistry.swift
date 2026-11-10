@@ -85,7 +85,46 @@ enum LandmarkRegistry {
     }
 
     static func apply(to station: Station) -> Station {
-        let spots = station.spots.map { apply($0, stationName: station.name) }
+        var spots = station.spots.map { apply($0, stationName: station.name) }
+        // ロックされた名所がスポットに無いときは、正本から足す（石清水八幡宮・飛行神社など）
+        for lock in locks where station.name.contains(lock.station) {
+            guard lock.kind == "keyword" || lock.kind == "river" || lock.kind == "souvenir" else { continue }
+            let label = lock.canonical ?? lock.keywords.first ?? lock.id
+            let already = spots.contains { spot in
+                // 「石清水八幡宮駅」は社殿ではない
+                if spot.name.hasSuffix("駅") { return false }
+                if NameMatch.score(spot.name, label) >= 80 { return true }
+                if spot.name.contains(label) { return true }
+                return lock.keywords.contains { key in
+                    key.count >= 3 && spot.name.contains(key)
+                }
+            }
+            guard !already else { continue }
+            let isSouvenir = lock.kind == "souvenir"
+                || lock.keywords.contains { $0.contains("餅") || $0.contains("菓子") || $0.contains("土産") }
+            spots.append(
+                Spot(
+                    id: "lock-\(lock.id)",
+                    name: label,
+                    genre: isSouvenir ? "gourmet" : "history",
+                    guide: isSouvenir ? .souvenir : .sight,
+                    mealTier: .casual,
+                    mealTimes: [.morning, .lunch],
+                    soloOk: true,
+                    budgetYen: isSouvenir ? "〜¥1,000" : "—",
+                    hours: isSouvenir ? "9:00〜17:00（店休日あり・要確認）" : "境内自由（時間は現地掲示）",
+                    blurb: isSouvenir
+                        ? "\(label)。門前の手土産・名物。軽い包みで駅からの帰りにも向きやすい。"
+                        : "\(label)。この駅の土地の顔になる名所。",
+                    detail: lock.address,
+                    walkMinutes: lock.walkMinutes,
+                    secretWorthy: false,
+                    majorWorthy: true,
+                    lat: lock.lat,
+                    lng: lock.lng
+                )
+            )
+        }
         return station.relocated(
             center: CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng),
             spots: spots

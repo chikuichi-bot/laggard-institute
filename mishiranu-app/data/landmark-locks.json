@@ -69,6 +69,42 @@
       "lat": 35.03005,
       "lng": 135.76985,
       "walkMinutes": 4
+    },
+    {
+      "id": "hachiman-shrine",
+      "station": "石清水八幡宮",
+      "kind": "keyword",
+      "keywords": ["石清水八幡宮"],
+      "canonical": "石清水八幡宮",
+      "address": "京都府八幡市八幡高坊",
+      "osm": "nominatim:石清水八幡宮",
+      "lat": 34.8797343,
+      "lng": 135.7000516,
+      "walkMinutes": 8
+    },
+    {
+      "id": "hachiman-hiko",
+      "station": "石清水八幡宮",
+      "kind": "keyword",
+      "keywords": ["飛行神社"],
+      "canonical": "飛行神社",
+      "address": "京都府八幡市八幡旦所",
+      "osm": "nominatim:飛行神社 八幡",
+      "lat": 34.8837747,
+      "lng": 135.7031495,
+      "walkMinutes": 10
+    },
+    {
+      "id": "hachiman-hashirii",
+      "station": "石清水八幡宮",
+      "kind": "souvenir",
+      "keywords": ["走井餅", "やわた走井餅", "走井餅老舗"],
+      "canonical": "やわた走井餅老舗",
+      "address": "京都府八幡市八幡高坊",
+      "osm": "nominatim:走井餅 八幡",
+      "lat": 34.8784038,
+      "lng": 135.7000068,
+      "walkMinutes": 5
     }
   ]
 }

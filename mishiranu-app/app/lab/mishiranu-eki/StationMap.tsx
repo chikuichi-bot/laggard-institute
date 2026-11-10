@@ -51,6 +51,27 @@ function stepIcon(step: number, color: string, active: boolean) {
   });
 }
 
+/** 徒歩の道なり（OSRM foot）。直線だと川の上を横切るので使わない。 */
+async function footRoutePath(
+  points: Array<{ lat: number; lng: number }>,
+): Promise<L.LatLngExpression[] | null> {
+  if (points.length < 2) return null;
+  const coords = points.map((p) => `${p.lng},${p.lat}`).join(";");
+  const url = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      routes?: Array<{ geometry?: { coordinates?: number[][] } }>;
+    };
+    const line = data.routes?.[0]?.geometry?.coordinates;
+    if (!line?.length) return null;
+    return line.map(([lng, lat]) => [lat, lng] as L.LatLngExpression);
+  } catch {
+    return null;
+  }
+}
+
 export default function StationMap({
   station,
   spots,
@@ -123,15 +144,19 @@ export default function StationMap({
 
     const courseIds = (courseStopIds ?? []).filter((id) => spotById.has(id));
     const courseSet = new Set(courseIds);
-    const path: L.LatLngExpression[] = [[center.lat, center.lng]];
+    const waypoints: Array<{ lat: number; lng: number }> = [
+      { lat: center.lat, lng: center.lng },
+    ];
     for (const id of courseIds) {
       const spot = spotById.get(id);
       if (!spot) continue;
       const ll = spotLatLng(station, spot);
-      path.push([ll.lat, ll.lng]);
+      waypoints.push({ lat: ll.lat, lng: ll.lng });
     }
 
-    if (path.length >= 2) {
+    let cancelled = false;
+    const drawCourseLine = (path: L.LatLngExpression[]) => {
+      if (cancelled || !layerRef.current) return;
       L.polyline(path, {
         color: "#9a3d31",
         weight: 4,
@@ -148,6 +173,20 @@ export default function StationMap({
         lineCap: "round",
         dashArray: "1 10",
       }).addTo(layer);
+      map.fitBounds(L.latLngBounds(path), {
+        padding: [36, 36],
+        maxZoom: 16,
+        animate: false,
+      });
+    };
+
+    if (waypoints.length >= 2) {
+      void footRoutePath(waypoints).then((routed) => {
+        const path =
+          routed ??
+          waypoints.map((p) => [p.lat, p.lng] as L.LatLngExpression);
+        drawCourseLine(path);
+      });
     } else {
       L.circle([center.lat, center.lng], {
         radius: radiusKm * 1000,
@@ -208,15 +247,10 @@ export default function StationMap({
       marker.addTo(layer);
     });
 
-    if (path.length >= 2) {
-      map.fitBounds(L.latLngBounds(path), {
-        padding: [36, 36],
-        maxZoom: 16,
-        animate: false,
-      });
-    }
-
     requestAnimationFrame(() => map.invalidateSize());
+    return () => {
+      cancelled = true;
+    };
   }, [station, spots, radiusKm, activeSpotId, courseStopIds]);
 
   return (

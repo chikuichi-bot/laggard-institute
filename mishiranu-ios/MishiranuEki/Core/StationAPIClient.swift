@@ -118,11 +118,8 @@ enum StationNormalizer {
 
         let lat = number(raw["lat"], fallback: 35)
         let lng = number(raw["lng"], fallback: 135)
-        let id: String = {
-            let existing = string(raw["id"])
-            if !existing.isEmpty { return existing }
-            return "ai-\(name)-\(String(Int(Date().timeIntervalSince1970), radix: 36))"
-        }()
+        // 同じ駅名は毎回同じ id（端末保存の再利用用）。時刻付き id は作らない。
+        let id = SavedStationStore.stableId(forName: name)
 
         let spotsRaw = raw["spots"] as? [[String: Any]] ?? []
         let spots: [Spot] = spotsRaw.enumerated().compactMap { index, spot in
@@ -133,8 +130,7 @@ enum StationNormalizer {
         let moodRaw = string(raw["mood"])
         let mood: StationMood = moodRaw == "empty" ? .empty : .story
 
-        let radii = (raw["radiiKm"] as? [Any])?.compactMap { ($0 as? NSNumber)?.doubleValue } ?? [1.0, 2.2, 3.0]
-        let radiiKm = radii.count >= 3 ? Array(radii.prefix(3)) : [1.0, 2.2, 3.0]
+        let radiiKm = [0.9, 1.0, 1.2]
 
         let empty: EmptyCopy? = {
             guard mood == .empty else { return nil }

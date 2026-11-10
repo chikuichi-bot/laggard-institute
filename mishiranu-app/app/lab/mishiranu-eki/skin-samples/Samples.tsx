@@ -39,7 +39,7 @@ const SCREENS: Array<{ id: ScreenId; label: string }> = [
 
 const s = {
   name: "二ノ瀬",
-  course: "初心者コース",
+  course: "散歩中心",
   meta: "夕方 · 1時間",
   catchCopy: "山あいの駅、貴船川のせせらぎと紅葉のトンネルに抱かれて。",
 };

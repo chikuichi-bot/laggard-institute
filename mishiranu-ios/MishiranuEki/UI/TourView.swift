@@ -71,9 +71,14 @@ struct SpotSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let spot: Spot
+    @State private var mapPosition: MapCameraPosition
 
-    private var shopCamera: MapCameraPosition {
-        .camera(MapCamera(centerCoordinate: coordinate, distance: 700, heading: 0, pitch: 0))
+    init(spot: Spot) {
+        self.spot = spot
+        let coord = CLLocationCoordinate2D(latitude: spot.lat, longitude: spot.lng)
+        _mapPosition = State(
+            initialValue: .camera(MapCamera(centerCoordinate: coord, distance: 700, heading: 0, pitch: 0))
+        )
     }
 
     var body: some View {
@@ -102,7 +107,7 @@ struct SpotSheet: View {
                 Text(spot.name)
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
-                Text(spot.blurb)
+                Text(SpotCopy.blurb(for: spot, in: model.station))
                     .font(.mincho(.body))
                     .lineSpacing(6)
                     .foregroundStyle(Palette.fog)
@@ -112,28 +117,30 @@ struct SpotSheet: View {
                         .lineSpacing(5)
                         .foregroundStyle(Palette.mist)
                 }
+                if let station = model.station, let trace = StationLore.trace(for: spot, in: station) {
+                    LoreTrace(text: trace, size: .callout)
+                }
 
                 Text("場所")
                     .font(.mincho(.subheadline, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .padding(.top, 4)
-                Color.clear
-                    .frame(height: 200)
-                    .overlay {
-                        Map(position: .constant(shopCamera), interactionModes: []) {
-                            Annotation(spot.name, coordinate: coordinate, anchor: .center) {
-                                SpotPin(kind: spot.guide, number: model.courseNumbers[spot.id], active: true)
-                            }
-                            .annotationTitles(.hidden)
-                        }
-                        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                Map(position: $mapPosition, interactionModes: [.pan, .zoom]) {
+                    Annotation(spot.name, coordinate: coordinate, anchor: .center) {
+                        SpotPin(kind: spot.guide, number: model.courseNumbers[spot.id], active: true)
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Palette.line, lineWidth: 1)
-                    )
-                    .accessibilityLabel("\(spot.name)の地図")
+                    .annotationTitles(.hidden)
+                }
+                .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                .frame(height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Palette.line, lineWidth: 1)
+                )
+                // ScrollView にジェスチャを奪われないよう、地図操作を優先
+                .simultaneousGesture(DragGesture(minimumDistance: 0))
+                .accessibilityLabel("\(spot.name)の地図。指で動かしたり拡大できます")
 
                 Button("閉じる") { dismiss() }
                     .buttonStyle(PrimaryButtonStyle())

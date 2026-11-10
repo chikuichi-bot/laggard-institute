@@ -37,7 +37,7 @@ export type Spot = {
   walkMinutes: number;
   secretWorthy?: boolean;
   /**
-   * 初心者コース向けの「その駅の顔」になる定番。
+   * 散歩中心などで先に出す「その駅の顔」になる定番。
    * 各駅ちょうど3件を目安（有名社寺・目印の景色・土地を代表する店など）。
    */
   majorWorthy?: boolean;
@@ -230,6 +230,17 @@ export const TIME_OPTIONS = [
 
 export type TimeOptionId = (typeof TIME_OPTIONS)[number]["id"];
 
+/** 地図・表示用の徒歩圏（約1km）。保存データの古い radiiKm は使わない。 */
+export const WALK_RADIUS_KM: Record<TimeOptionId, number> = {
+  "1h": 0.9,
+  "3h": 1.0,
+  half: 1.2,
+};
+
+export function walkRadiusKm(timeId: TimeOptionId): number {
+  return WALK_RADIUS_KM[timeId] ?? 1.0;
+}
+
 /** 収録カタログは空。駅は検索（Gemini）→端末ライブラリにだけ貯める。 */
 export const STATIONS: StationSeed[] = [];
 
@@ -267,12 +278,12 @@ export const EMPTY_STATION: StationSeed = {
   name: "未選択",
   line: "",
   prefecture: "",
-  region: "近畿",
-  mood: "empty",
-  radiiKm: [1, 2.2, 3],
+    region: "近畿",
+    mood: "empty",
+  radiiKm: [0.9, 1.0, 1.2],
   tourTitle: "駅を検索してから開く",
   catchCopy: "知らない駅の名前を入れて、徒歩圏の案内をつくります。",
-  emptyCopy: {
+    emptyCopy: {
     headline: "駅を探してください",
     body: "収録の定番駅はありません。検索した駅だけが、ここに残ります。",
   },
@@ -295,7 +306,8 @@ export function spotsForTime(
   station: StationSeed,
   timeIndex: 0 | 1 | 2,
 ): Spot[] {
-  const maxMinutes = [55, 140, 240][timeIndex];
+  // 徒歩圏 約1km（道なり込みの徒歩分）
+  const maxMinutes = [16, 18, 22][timeIndex];
   return station.spots.filter((s) => s.walkMinutes <= maxMinutes);
 }
 

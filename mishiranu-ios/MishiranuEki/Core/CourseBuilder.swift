@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 struct CourseStop: Hashable, Identifiable {
@@ -19,8 +20,9 @@ struct WalkCourse: Hashable, Identifiable {
     let stops: [CourseStop]
 }
 
-private enum CourseLevel {
-    case beginner, intermediate, advanced
+/// 難易度ではなく、まわり方の切り口。
+private enum CourseStyle {
+    case walk, food, farther
 }
 
 private struct CourseTemplate {
@@ -29,33 +31,33 @@ private struct CourseTemplate {
     let subtitle: String
     let vibe: String
     let prefer: [GuideKind]
-    let level: CourseLevel
+    let style: CourseStyle
 }
 
 private let courseTemplates: [CourseTemplate] = [
     CourseTemplate(
-        id: "beginner",
-        title: "初心者コース",
-        subtitle: "有名どころを短く結ぶ",
-        vibe: "迷わず、土地の顔から入る",
-        prefer: [.sight, .souvenir, .meal],
-        level: .beginner
+        id: "walk",
+        title: "散歩中心",
+        subtitle: "景色と休みを多めに",
+        vibe: "急がず、土地の気配を拾う",
+        prefer: [.sight, .rest, .tip],
+        style: .walk
     ),
     CourseTemplate(
-        id: "intermediate",
-        title: "中級者コース",
-        subtitle: "ご飯と寄り道を織り交ぜる",
-        vibe: "定番のとなりを、少しだけ外す",
-        prefer: [.meal, .rest, .tip],
-        level: .intermediate
+        id: "food",
+        title: "食べ物中心",
+        subtitle: "ご飯と土産を軸に",
+        vibe: "空腹と手土産のあいだを歩く",
+        prefer: [.meal, .souvenir, .rest],
+        style: .food
     ),
     CourseTemplate(
-        id: "advanced",
-        title: "上級者コース",
-        subtitle: "徒歩圏の奥と穴場へ",
-        vibe: "駅前を抜けて、ひとつ奥の気配へ",
-        prefer: [.tip, .rest, .meal],
-        level: .advanced
+        id: "farther",
+        title: "少し先まで",
+        subtitle: "徒歩圏の端まで伸ばす",
+        vibe: "駅前を抜けて、ひとつ奥へ",
+        prefer: [.tip, .sight, .meal],
+        style: .farther
     ),
 ]
 
@@ -93,11 +95,17 @@ enum CourseBuilder {
         return mealFits(spot, dayPart: dayPart)
     }
 
-    static func dwellMinutes(_ guide: GuideKind) -> Int {
+    static func dwellMinutes(_ guide: GuideKind, stay: StayOption = .threeHours) -> Int {
+        let base: Int
         switch guide {
-        case .meal: return 25
-        case .rest: return 15
-        default: return 12
+        case .meal: base = 25
+        case .rest: base = 15
+        default: base = 12
+        }
+        switch stay {
+        case .oneHour: return max(8, Int((Double(base) * 0.55).rounded()))
+        case .threeHours: return base
+        case .halfDay: return Int((Double(base) * 1.2).rounded())
         }
     }
 
@@ -107,7 +115,7 @@ enum CourseBuilder {
         dayPart: DayPart,
         used: Set<String>,
         prefs: MealPrefs?,
-        level: CourseLevel,
+        style: CourseStyle,
         forceGuide: GuideKind?
     ) -> Double {
         if used.contains(spot.id) { return -1 }
@@ -120,30 +128,31 @@ enum CourseBuilder {
         } else {
             score = 4
         }
-        switch level {
-        case .beginner:
-            // 土地の顔（major）を先に。近い無名カフェで埋めない。
+        switch style {
+        case .walk:
+            // 散歩中心: 土地の顔・景色を先に
             if spot.majorWorthy { score += 72 }
             score += landmarkFameScore(spot) * 0.4
             if spot.guide == .sight { score += 14 }
-            if spot.guide == .souvenir { score += 10 }
-            if spot.guide == .meal && spot.mealTier == .casual { score += 8 }
+            if spot.guide == .rest { score += 12 }
+            if spot.guide == .souvenir { score += 6 }
             if spot.secretWorthy { score -= 4 }
-            if !spot.majorWorthy, spot.guide == .meal { score -= 42 }
+            if !spot.majorWorthy, spot.guide == .meal { score -= 30 }
             if isGenericNeighborhoodCafe(spot) { score -= 35 }
-            // 近さは弱い補正（有名度のあとに）
             score += max(0, 12 - Double(spot.walkMinutes) * 0.35)
-        case .intermediate:
-            if spot.guide == .meal { score += 10 }
+        case .food:
+            if spot.guide == .meal { score += 14 }
             if spot.guide == .meal { score += mealStapleScore(spot) * 0.55 }
-            if spot.guide == .rest || spot.guide == .tip { score += 8 }
-            if spot.secretWorthy { score += 4 }
+            if spot.guide == .souvenir { score += 12 }
+            if spot.guide == .rest || spot.guide == .tip { score += 6 }
+            if spot.secretWorthy { score += 2 }
             if isGenericNeighborhoodCafe(spot) { score -= 28 }
             let walk = Double(spot.walkMinutes)
-            score += max(0, 14 - abs(walk - 12) * 0.7)
-        case .advanced:
+            score += max(0, 14 - abs(walk - 10) * 0.7)
+        case .farther:
             if spot.secretWorthy { score += 14 }
             if spot.guide == .tip || spot.guide == .rest { score += 10 }
+            if spot.guide == .sight { score += 6 }
             if spot.guide == .meal && spot.mealTier == .upscale { score += 6 }
             score += Double(spot.walkMinutes) * 0.95
         }
@@ -163,9 +172,10 @@ enum CourseBuilder {
         used: inout Set<String>,
         elapsed: inout Int,
         cursorHour: inout Int,
-        cursorMinute: inout Int
+        cursorMinute: inout Int,
+        stay: StayOption
     ) {
-        let dwell = dwellMinutes(pick.guide)
+        let dwell = dwellMinutes(pick.guide, stay: stay)
         let walk = pick.walkMinutes
         cursorMinute += walk
         cursorHour += cursorMinute / 60
@@ -189,15 +199,16 @@ enum CourseBuilder {
         dayPart: DayPart,
         used: Set<String>,
         prefs: MealPrefs?,
-        level: CourseLevel,
+        style: CourseStyle,
         elapsed: Int,
         budgetMinutes: Int,
+        stay: StayOption,
         forceGuide: GuideKind?
     ) -> Spot? {
         var best: Spot?
         var bestScore = -1.0
         for spot in pool {
-            let cost = spot.walkMinutes + dwellMinutes(spot.guide)
+            let cost = spot.walkMinutes + dwellMinutes(spot.guide, stay: stay)
             if elapsed + cost > budgetMinutes + 8 { continue }
             let score = scoreSpot(
                 spot,
@@ -205,7 +216,7 @@ enum CourseBuilder {
                 dayPart: dayPart,
                 used: used,
                 prefs: prefs,
-                level: level,
+                style: style,
                 forceGuide: forceGuide
             )
             if score > bestScore {
@@ -220,10 +231,10 @@ enum CourseBuilder {
         pool: [Spot],
         prefer initialPrefer: [GuideKind],
         dayPart: DayPart,
-        budgetMinutes: Int,
+        stay: StayOption,
         startHour: Int,
         prefs: MealPrefs?,
-        level: CourseLevel,
+        style: CourseStyle,
         avoid: Set<String>
     ) -> [CourseStop] {
         var prefer = initialPrefer
@@ -232,15 +243,16 @@ enum CourseBuilder {
         var elapsed = 0
         var cursorHour = startHour
         var cursorMinute = 0
-        let maxStops = budgetMinutes <= 60 ? 3 : budgetMinutes <= 160 ? 4 : 5
+        let maxStops = stay.maxCourseStops
+        let budgetMinutes = stay.budgetMinutes
 
-        // 初心者: 土地の顔（major）を有名度順に先に入れる
-        if level == .beginner {
+        // 散歩中心: 土地の顔（major）を有名度順に先に入れる（滞在が短いほど少なく）
+        if style == .walk {
             let faces = pool
                 .filter(\.majorWorthy)
                 .sorted { landmarkFameScore($0) > landmarkFameScore($1) }
             for face in faces where stops.count < maxStops {
-                let cost = face.walkMinutes + dwellMinutes(face.guide)
+                let cost = face.walkMinutes + dwellMinutes(face.guide, stay: stay)
                 if used.contains(face.id) { continue }
                 if elapsed + cost > budgetMinutes + 8 { continue }
                 if !mealFitsForCourse(face, dayPart: dayPart) { continue }
@@ -251,7 +263,8 @@ enum CourseBuilder {
                     used: &used,
                     elapsed: &elapsed,
                     cursorHour: &cursorHour,
-                    cursorMinute: &cursorMinute
+                    cursorMinute: &cursorMinute,
+                    stay: stay
                 )
             }
         }
@@ -264,9 +277,10 @@ enum CourseBuilder {
             dayPart: dayPart,
             used: used,
             prefs: prefs,
-            level: level,
+            style: style,
             elapsed: elapsed,
             budgetMinutes: budgetMinutes,
+            stay: stay,
             forceGuide: primary
            ) {
             appendStop(
@@ -275,7 +289,8 @@ enum CourseBuilder {
                 used: &used,
                 elapsed: &elapsed,
                 cursorHour: &cursorHour,
-                cursorMinute: &cursorMinute
+                cursorMinute: &cursorMinute,
+                stay: stay
             )
             prefer = Array(prefer.dropFirst()) + [prefer[0]]
         }
@@ -287,9 +302,10 @@ enum CourseBuilder {
                 dayPart: dayPart,
                 used: used,
                 prefs: prefs,
-                level: level,
+                style: style,
                 elapsed: elapsed,
                 budgetMinutes: budgetMinutes,
+                stay: stay,
                 forceGuide: nil
             ) else { break }
 
@@ -299,7 +315,8 @@ enum CourseBuilder {
                 used: &used,
                 elapsed: &elapsed,
                 cursorHour: &cursorHour,
-                cursorMinute: &cursorMinute
+                cursorMinute: &cursorMinute,
+                stay: stay
             )
             prefer = Array(prefer.dropFirst()) + [prefer[0]]
         }
@@ -307,9 +324,10 @@ enum CourseBuilder {
     }
 
     private static func isLandmarkName(_ name: String) -> Bool {
-        name.contains("神社") || name.contains("寺") || name.contains("城")
-            || name.contains("デルタ") || name.contains("宮") || name.contains("公園")
-            || name.contains("港") || name.contains("市場") || name.contains("灯台")
+        if FirstVisitFaces.isNeighborhoodWorship(name) { return false }
+        return FirstVisitFaces.isGuidebookWorship(name)
+            || FirstVisitFaces.isOrdinaryPublicFace(name)
+            || name.contains("城") || name.contains("宮")
     }
 
     /// 近所の多目的カフェなど、土地の顔にしない店。
@@ -321,25 +339,23 @@ enum CourseBuilder {
         return soft.contains { n.contains($0) }
     }
 
-    /// 初心者向けの「ベタさ」。近いだけの小社より、土地の顔になる名所を上げる。
+    /// 散歩中心向けの「ベタさ」。近いだけの小社より、土地の顔になる名所を上げる。
     private static func landmarkFameScore(_ spot: Spot) -> Double {
         let n = spot.name
         let blob = n + spot.blurb + (spot.detail ?? "")
         var score = 0.0
         if spot.majorWorthy { score += 40 }
         if spot.guide == .sight { score += 8 }
-        // 全国区・土地の顔（固有の有名どころ）
-        if n.contains("下鴨") || n.contains("賀茂御祖") || n.contains("賀茂別雷") { score += 55 }
-        if n.contains("デルタ") || n.contains("三角州") || n.contains("合流") { score += 45 }
-        if n.contains("大社") || n.contains("神宮") || n.contains("八幡") { score += 35 }
+        // ガイドブック級の社寺・普通の公共の顔
+        if FirstVisitFaces.isGuidebookWorship(n) { score += 55 }
+        if FirstVisitFaces.isOrdinaryPublicFace(n) || n.contains("合流") { score += 45 }
         if n.contains("城") || n.contains("金閣") || n.contains("清水") || n.contains("浅草") { score += 35 }
         if blob.contains("世界遺産") || blob.contains("観光の") || blob.contains("参道") { score += 20 }
         if blob.contains("名物") || blob.contains("銘菓") || blob.contains("顔") { score += 16 }
-        if n.contains("公園") && (n.contains("鴨") || blob.contains("観光")) { score += 18 }
         if isIconicShop(spot) || (isEdibleOmiyage(spot) && spot.guide == .souvenir) { score += 38 }
-        // 初心者に出さない小社・脇社・近所カフェ
+        // 近所の寺・小社・脇社・近所カフェは出さない
+        if FirstVisitFaces.isNeighborhoodWorship(n) { score -= 80 }
         if n.contains("幸神社") || n.contains("境内社") || n.contains("摂社") { score -= 60 }
-        if n.contains("神社"), score < 25, !spot.majorWorthy { score -= 25 }
         if isGenericNeighborhoodCafe(spot) { score -= 50 }
         // 近さは弱い補正（有名度のあとに）
         score += max(0, 8 - Double(spot.walkMinutes) * 0.2)
@@ -355,7 +371,8 @@ enum CourseBuilder {
             || n.contains("最中") || n.contains("羊羹") || n.contains("もみじ饅頭")
             || n.contains("赤福") || n.contains("サブレ") || n.contains("銘菓")
             || n.contains("饅頭") || n.contains("大福") || n.contains("カステラ")
-            || n.contains("餅") || n.contains("もなか")
+            || n.contains("餅") || n.contains("もなか") || n.contains("走井")
+            || n.contains("みやげ") || n.contains("お土産") || n.contains("土産")
     }
 
     private static func isIconicShop(_ spot: Spot) -> Bool {
@@ -384,8 +401,13 @@ enum CourseBuilder {
     }
 
     /// 正本レジストリで誤ピンを上書き（表示・コース・保存の直前に必ず通す）
+    /// 近所の無名寺もここで落とし、保存済みデータにも後から効く。
     static func snapLandmarkPins(_ station: Station) -> Station {
-        LandmarkRegistry.apply(to: station)
+        let filtered = station.relocated(
+            center: CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng),
+            spots: FirstVisitFaces.filterSpots(station.spots, stationName: station.name)
+        )
+        return LandmarkRegistry.apply(to: filtered)
     }
 
     /// 名物菓子を souvenir に寄せる（ご飯だけに閉じない）
@@ -774,7 +796,9 @@ enum CourseBuilder {
         dayPart: DayPart,
         prefs: MealPrefs?
     ) -> [WalkCourse] {
-        let prepared = snapLandmarkPins(ensureLocalMajors(normalizeEdibleSouvenirs(station)))
+        let prepared = snapLandmarkPins(
+            BikeRentalSeal.ensure(ensureLocalMajors(normalizeEdibleSouvenirs(station)))
+        )
         let walkPool = prepared.spots(for: stay)
         // コース用は朝でもランチを残す。案内タブの全件表示とは別。閉店店は入れない。
         let pool = walkPool.filter {
@@ -791,25 +815,33 @@ enum CourseBuilder {
         var claimed = Set<String>()
         return courseTemplates.compactMap { template in
             let prefer: [GuideKind]
-            if dayPart == .morning && template.level == .intermediate {
+            if dayPart == .morning && template.style == .food {
                 prefer = [.meal, .souvenir, .sight]
-            } else if dayPart == .night && template.level == .advanced {
+            } else if dayPart == .night && template.style == .farther {
                 prefer = [.meal, .tip, .rest]
             } else {
                 prefer = template.prefer
             }
 
-            let stops = pickStops(
+            let rawStops = pickStops(
                 pool: source,
                 prefer: prefer,
                 dayPart: dayPart,
-                budgetMinutes: budget,
+                stay: stay,
                 startHour: startHour,
                 prefs: prefs,
-                level: template.level,
+                style: template.style,
                 avoid: claimed
             )
-            guard !stops.isEmpty else { return nil }
+            guard !rawStops.isEmpty else { return nil }
+            // ジャンル優先で拾ったあとに、駅起点で往復しにくい順へ並べ替える
+            let stops = orderStopsAlongWalk(
+                stationLat: prepared.lat,
+                stationLng: prepared.lng,
+                startHour: startHour,
+                stay: stay,
+                stops: rawStops
+            )
             // 次のコースが同じ2か所から始まらないよう、先頭寄りの停留を確保
             for stop in stops.prefix(2) {
                 claimed.insert(stop.spot.id)
@@ -818,12 +850,119 @@ enum CourseBuilder {
             return WalkCourse(
                 id: "\(template.id)-\(stay.rawValue)-\(dayPart.rawValue)",
                 title: template.title,
-                subtitle: template.subtitle,
+                subtitle: "\(template.subtitle) · \(stay.courseLengthHint)",
                 vibe: template.vibe,
                 totalMinutes: total > 0 ? total : min(budget, 45),
                 stops: stops
             )
         }
+    }
+
+    /// 駅から出発し、いまの位置からいちばん近い未訪問へ進む。小さな2-optで交差を減らす。
+    private static func orderStopsAlongWalk(
+        stationLat: Double,
+        stationLng: Double,
+        startHour: Int,
+        stay: StayOption,
+        stops: [CourseStop]
+    ) -> [CourseStop] {
+        guard stops.count > 1 else { return stops }
+        var remaining = stops.map(\.spot)
+        var ordered: [Spot] = []
+        var curLat = stationLat
+        var curLng = stationLng
+        while !remaining.isEmpty {
+            let bestIdx = remaining.indices.min(by: { i, j in
+                let di = Geo.haversineKm(
+                    lat1: curLat, lng1: curLng,
+                    lat2: remaining[i].lat, lng2: remaining[i].lng
+                )
+                let dj = Geo.haversineKm(
+                    lat1: curLat, lng1: curLng,
+                    lat2: remaining[j].lat, lng2: remaining[j].lng
+                )
+                return di < dj
+            })!
+            let next = remaining.remove(at: bestIdx)
+            ordered.append(next)
+            curLat = next.lat
+            curLng = next.lng
+        }
+        ordered = twoOptPath(stationLat: stationLat, stationLng: stationLng, spots: ordered)
+        return rebuildStopsWithLegs(
+            stationLat: stationLat,
+            stationLng: stationLng,
+            startHour: startHour,
+            stay: stay,
+            spots: ordered
+        )
+    }
+
+    /// 固定の出発点付きパスの2-opt（交差・遠回りを軽く減らす）。
+    private static func twoOptPath(stationLat: Double, stationLng: Double, spots: [Spot]) -> [Spot] {
+        guard spots.count >= 3 else { return spots }
+        var best = spots
+        var improved = true
+        while improved {
+            improved = false
+            for i in 0..<(best.count - 1) {
+                for k in (i + 1)..<best.count {
+                    var candidate = best
+                    candidate.replaceSubrange(i...k, with: best[i...k].reversed())
+                    if pathLengthKm(stationLat: stationLat, stationLng: stationLng, spots: candidate) + 0.02
+                        < pathLengthKm(stationLat: stationLat, stationLng: stationLng, spots: best) {
+                        best = candidate
+                        improved = true
+                    }
+                }
+            }
+        }
+        return best
+    }
+
+    private static func pathLengthKm(stationLat: Double, stationLng: Double, spots: [Spot]) -> Double {
+        var lat = stationLat
+        var lng = stationLng
+        var total = 0.0
+        for spot in spots {
+            total += Geo.haversineKm(lat1: lat, lng1: lng, lat2: spot.lat, lng2: spot.lng)
+            lat = spot.lat
+            lng = spot.lng
+        }
+        return total
+    }
+
+    private static func rebuildStopsWithLegs(
+        stationLat: Double,
+        stationLng: Double,
+        startHour: Int,
+        stay: StayOption,
+        spots: [Spot]
+    ) -> [CourseStop] {
+        var out: [CourseStop] = []
+        var hour = startHour
+        var minute = 0
+        var lat = stationLat
+        var lng = stationLng
+        for spot in spots {
+            let km = Geo.haversineKm(lat1: lat, lng1: lng, lat2: spot.lat, lng2: spot.lng)
+            // 道なり係数 1.3 · 徒歩 4.5km/h
+            let walk = max(1, min(90, Int((km * 1.3 / 4.5 * 60).rounded())))
+            minute += walk
+            hour += minute / 60
+            minute %= 60
+            let clock = formatClock(hour: hour, minute: minute)
+            let dwell = dwellMinutes(spot.guide, stay: stay)
+            out.append(
+                CourseStop(spot: spot, walkMinutes: walk, dwellMinutes: dwell, clockLabel: clock)
+            )
+            minute += dwell
+            hour += minute / 60
+            minute %= 60
+            lat = spot.lat
+            lng = spot.lng
+        }
+        return out
     }
 
     /// とりあえずここに行け：secretWorthy を優先してひとつ選ぶ。

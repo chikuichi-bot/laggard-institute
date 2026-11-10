@@ -128,7 +128,8 @@ struct ArrivalChatView: View {
                 } label: {
                     chipLabel("いまの時刻で", .watch)
                 }
-                .buttonStyle(ChipButtonStyle(primary: true))
+                // 他の時間帯と同じ未選択見た目（塗りつぶしだと「もう選んだ」に見える）
+                .buttonStyle(ChipButtonStyle())
                 ForEach(DayPart.allCases) { part in
                     Button {
                         model.chooseClock(part)
@@ -241,7 +242,11 @@ struct ArrivalChatView: View {
                             }
                             if model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                                model.filteredStations.isEmpty {
-                                Text("駅名を入れて「送る」。初めての駅は Gemini が編集し、この端末に残ります。")
+                                Text(
+                                    model.savedCount > 0
+                                        ? "保存 \(model.savedCount) 駅。名前を入れるか、下に出てきた駅を選んでください。"
+                                        : "駅名を入れて「送る」。一度調べた駅は、この端末に残ります。"
+                                )
                                     .font(.callout)
                                     .foregroundStyle(Palette.mist)
                                     .padding(.vertical, 12)
@@ -323,7 +328,7 @@ struct ArrivalChatView: View {
         }
     }
 
-    /// 検索欄の「送る」／キーボード検索。保存の有無に関わらず、毎回 Gemini で解析する。
+    /// 検索欄の「送る」／キーボード検索。保存済みなら端末から開き、なければ調べて残す。
     private func submitStationQuery() {
         let text = model.query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !model.stationLoading else { return }
@@ -338,10 +343,13 @@ struct ChatBubble: View {
         let isGuide = message.role == .guide
         HStack {
             if !isGuide { Spacer(minLength: 48) }
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(isGuide ? "案内" : "あなた")
                     .font(.readable(.caption, weight: .semibold))
                     .foregroundStyle(isGuide ? Palette.moss : Palette.paper.opacity(0.8))
+                if message.isThinking {
+                    ThinkingTimeBadge()
+                }
                 Text(message.text)
                     .font(.mincho(.body))
                     .lineSpacing(6)
@@ -360,6 +368,43 @@ struct ChatBubble: View {
             )
             if isGuide { Spacer(minLength: 48) }
         }
+        .accessibilityLabel(message.isThinking ? "Thinking time。\(message.text)" : message.text)
+    }
+}
+
+/// 考えている待ち時間だと一目でわかる表示。
+private struct ThinkingTimeBadge: View {
+    @State private var phase = 0
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("Thinking time")
+                .font(.readable(.caption, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(Palette.warm)
+            HStack(spacing: 4) {
+                ForEach(0..<3, id: \.self) { index in
+                    Circle()
+                        .fill(Palette.warm.opacity(phase == index ? 1 : 0.35))
+                        .frame(width: 5, height: 5)
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule().fill(Palette.warm.opacity(0.12))
+        )
+        .overlay(
+            Capsule().stroke(Palette.warm.opacity(0.35), lineWidth: 1)
+        )
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                phase = (phase + 1) % 3
+            }
+        }
+        .accessibilityLabel("Thinking time")
     }
 }
 

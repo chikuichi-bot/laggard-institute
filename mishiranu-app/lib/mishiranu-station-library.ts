@@ -55,7 +55,11 @@ export function loadStationLibrary(): StationSeed[] {
 
 export function saveStationToLibrary(station: StationSeed): StationSeed[] {
   if (!canUseStorage()) return [];
-  const next = upsert(loadStationLibrary(), station);
+  const next = upsert(loadStationLibrary(), {
+    ...station,
+    id: stableStationId(station.name, station.id),
+    source: station.source ?? "ai",
+  });
   const file: LibraryFile = {
     version: 1,
     savedAt: new Date().toISOString(),
@@ -67,6 +71,23 @@ export function saveStationToLibrary(station: StationSeed): StationSeed[] {
     // quota 等は黙ってメモリ上の結果だけ返す
   }
   return next;
+}
+
+/** 駅名で保存済みを探す。 */
+export function findSavedStation(
+  name: string,
+  list: StationSeed[] = loadStationLibrary(),
+): StationSeed | undefined {
+  const bare = name.replace(/駅$/u, "").trim();
+  if (!bare) return undefined;
+  return list.find((s) => s.name.replace(/駅$/u, "") === bare);
+}
+
+/** 同じ駅名は毎回同じ id（時刻付き id をやめる）。 */
+export function stableStationId(name: string, fallback?: string): string {
+  const bare = name.replace(/駅$/u, "").trim();
+  if (!bare) return fallback || `ai-unknown`;
+  return `ai-${bare}`;
 }
 
 export function upsert(

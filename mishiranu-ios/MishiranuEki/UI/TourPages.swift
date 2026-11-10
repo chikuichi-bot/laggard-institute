@@ -379,6 +379,32 @@ private struct PlaceListenBar: View {
     }
 }
 
+/// 歩く途中で目に留める、土地の記憶の一文。
+struct LoreTrace: View {
+    let text: String
+    var size: Font.TextStyle = .footnote
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Rectangle()
+                .fill(Palette.warm.opacity(0.7))
+                .frame(width: 2)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("土地の記憶")
+                    .font(.caption2.weight(.semibold))
+                    .tracking(0.5)
+                    .foregroundStyle(Palette.warm)
+                Text(text)
+                    .font(.mincho(size))
+                    .lineSpacing(4)
+                    .foregroundStyle(Palette.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.top, 4)
+    }
+}
+
 // MARK: - 歩く
 
 struct WalkPage: View {
@@ -402,7 +428,12 @@ struct WalkPage: View {
                         Button {
                             model.openSpot(stop.spot)
                         } label: {
-                            StopRow(index: index, stop: stop, isLast: index == course.stops.count - 1)
+                            StopRow(
+                                index: index,
+                                stop: stop,
+                                isLast: index == course.stops.count - 1,
+                                trace: model.station.flatMap { StationLore.trace(for: stop.spot, in: $0) }
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -425,9 +456,11 @@ struct WalkPage: View {
 }
 
 private struct StopRow: View {
+    @Environment(AppModel.self) private var model
     let index: Int
     let stop: CourseStop
     let isLast: Bool
+    var trace: String? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -457,11 +490,14 @@ private struct StopRow: View {
                         .foregroundStyle(Palette.mist)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(stop.spot.blurb)
+                Text(SpotCopy.blurb(for: stop.spot, in: model.station))
                     .font(.mincho(.callout))
                     .foregroundStyle(Palette.fog)
                     .fixedSize(horizontal: false, vertical: true)
-                    .lineLimit(3)
+                    .lineLimit(4)
+                if let trace {
+                    LoreTrace(text: trace)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.bottom, 18)
@@ -529,7 +565,11 @@ struct GuidePage: View {
                             .foregroundStyle(Palette.warm)
                     }
                     if items.isEmpty {
-                        Text("この徒歩圏・時間ではまだ少なめです。時間を延ばすと増えることがあります。")
+                        Text(
+                            kind == .souvenir
+                                ? "お土産の候補は、まだ少なめです。門前の菓子屋・社務所の授与品も現地で探してみてください。"
+                                : "この徒歩圏ではまだ少なめです。別の案内タブも見てみてください。"
+                        )
                             .font(.callout)
                             .foregroundStyle(Palette.mist)
                     }
@@ -666,7 +706,10 @@ private struct GuideRow: View {
                 .font(.mincho(.callout))
                 .foregroundStyle(Palette.fog)
                 .fixedSize(horizontal: false, vertical: true)
-            if let detail = spot.detail, !detail.isEmpty {
+                .lineLimit(5)
+            // detail が住所だけのときは、説明と重複しやすいので出さない
+            if let detail = spot.detail, !detail.isEmpty,
+               !spot.blurb.contains(detail), detail.count > 8 {
                 Text(detail)
                     .font(.mincho(.footnote))
                     .foregroundStyle(Palette.mist)

@@ -1,6 +1,6 @@
 import Foundation
 
-/// 一度 Gemini（または API）が編集した駅を端末に少しずつ保存する。
+/// 一度調べた駅を端末に少しずつ保存する（Application Support）。
 enum SavedStationStore {
     private struct File: Codable {
         var version: Int
@@ -26,12 +26,31 @@ enum SavedStationStore {
     }
 
     static func load() -> [Station] {
-        guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        guard let file = try? JSONDecoder().decode(File.self, from: data) else { return [] }
-        let kept = file.stations.filter { !retiredIds.contains($0.id) }
-        if kept.count != file.stations.count {
-            _ = write(kept)
+        guard let data = try? Data(contentsOf: fileURL), !data.isEmpty else { return [] }
+        // 1件壊れていても全体を捨てない
+        if let file = try? JSONDecoder().decode(File.self, from: data) {
+            let kept = file.stations.filter { !retiredIds.contains($0.id) }
+            if kept.count != file.stations.count {
+                _ = write(kept)
+            }
+            return kept
         }
+        // 旧形式や部分破損: stations 配列だけ拾う
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let rows = root["stations"] as? [[String: Any]]
+        else { return [] }
+        let decoder = JSONDecoder()
+        var kept: [Station] = []
+        for row in rows {
+            guard
+                let rowData = try? JSONSerialization.data(withJSONObject: row),
+                let station = try? decoder.decode(Station.self, from: rowData),
+                !retiredIds.contains(station.id)
+            else { continue }
+            kept.append(station)
+        }
+        if !kept.isEmpty { _ = write(kept) }
         return kept
     }
 
@@ -41,10 +60,28 @@ enum SavedStationStore {
             savedAt: ISO8601DateFormatter().string(from: Date()),
             stations: stations
         )
-        if let data = try? JSONEncoder().encode(file) {
-            try? data.write(to: fileURL, options: [.atomic])
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            let data = try encoder.encode(file)
+            try data.write(to: fileURL, options: [.atomic])
+        } catch {
+            assertionFailure("saved-stations.json の書き込みに失敗: \(error)")
         }
         return stations
+    }
+
+    /// 駅名（「駅」なし）で保存済みを探す。
+    static func find(byName name: String, in stations: [Station]? = nil) -> Station? {
+        let bare = bareName(name)
+        guard !bare.isEmpty else { return nil }
+        let pool = stations ?? load()
+        return pool.first { bareName($0.name) == bare }
+    }
+
+    /// 安定した保存用 id（時刻を付けない）。
+    static func stableId(forName name: String) -> String {
+        "ai-\(bareName(name))"
     }
 
     @discardableResult

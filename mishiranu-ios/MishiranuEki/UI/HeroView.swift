@@ -15,7 +15,7 @@ struct HeroView: View {
                 .font(.system(size: 48, weight: .semibold, design: .serif))
                 .foregroundStyle(Palette.ink)
                 .padding(.bottom, 18)
-            Text("降りた駅の、徒歩圏だけを、物語にする。予定のない寄り道を、いまここから。")
+            Text("知らない駅にも、その駅の歴史がある。降りた場所の記憶をひとかけらずつ手渡して、予定のない散歩にする。")
                 .font(.mincho(.body))
                 .foregroundStyle(Palette.fog)
                 .lineSpacing(8)

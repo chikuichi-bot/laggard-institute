@@ -81,7 +81,10 @@ struct BikeRentalPlace: Codable, Hashable {
     var resolvedKind: BikeRentalKind {
         if let kind { return kind }
         let blob = "\(name) \(note ?? "")"
-        if blob.contains("シェア") || blob.contains("アプリ") || blob.contains("HELLO") || blob.contains("ドコモ") {
+        let upper = blob.uppercased()
+        if blob.contains("シェア") || blob.contains("アプリ") || blob.contains("HELLO")
+            || blob.contains("ドコモ") || upper.contains("CLEW") || blob.contains("クルー")
+            || upper.contains("CREW") {
             return .app
         }
         return .local
@@ -117,7 +120,7 @@ struct Spot: Codable, Hashable, Identifiable {
     let detail: String?
     let walkMinutes: Int
     let secretWorthy: Bool
-    /// その駅の顔になる定番（初心者コース用。駅ごとにだいたい3件）
+    /// その駅の顔になる定番（散歩中心などで先に出す。駅ごとにだいたい3件）
     let majorWorthy: Bool
     let lat: Double
     let lng: Double
@@ -206,6 +209,67 @@ struct Station: Codable, Hashable, Identifiable {
     let lng: Double
     let spots: [Spot]
 
+    enum CodingKeys: String, CodingKey {
+        case id, name, nameReading, line, prefecture, region, mood, radiiKm
+        case stationIntro, areaAbout, walkGuide, historyNotes, sightseeingNotes
+        case bikeRental, tourTitle, catchCopy, emptyCopy, lat, lng, spots
+    }
+
+    init(
+        id: String, name: String, nameReading: String?, line: String, prefecture: String,
+        region: String, mood: StationMood, radiiKm: [Double], stationIntro: String?,
+        areaAbout: String?, walkGuide: String?, historyNotes: [HistoryNote],
+        sightseeingNotes: [HistoryNote], bikeRental: BikeRental, tourTitle: String,
+        catchCopy: String, emptyCopy: EmptyCopy?, lat: Double, lng: Double, spots: [Spot]
+    ) {
+        self.id = id
+        self.name = name
+        self.nameReading = nameReading
+        self.line = line
+        self.prefecture = prefecture
+        self.region = region
+        self.mood = mood
+        self.radiiKm = radiiKm
+        self.stationIntro = stationIntro
+        self.areaAbout = areaAbout
+        self.walkGuide = walkGuide
+        self.historyNotes = historyNotes
+        self.sightseeingNotes = sightseeingNotes
+        self.bikeRental = bikeRental
+        self.tourTitle = tourTitle
+        self.catchCopy = catchCopy
+        self.emptyCopy = emptyCopy
+        self.lat = lat
+        self.lng = lng
+        self.spots = spots
+    }
+
+    /// 端末保存の旧 JSON でも落ちないよう、欠けた配列は空で読む。
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        nameReading = try c.decodeIfPresent(String.self, forKey: .nameReading)
+        line = try c.decodeIfPresent(String.self, forKey: .line) ?? "路線情報は要確認"
+        prefecture = try c.decodeIfPresent(String.self, forKey: .prefecture) ?? "日本"
+        region = try c.decodeIfPresent(String.self, forKey: .region) ?? "関東"
+        mood = try c.decodeIfPresent(StationMood.self, forKey: .mood) ?? .story
+        radiiKm = try c.decodeIfPresent([Double].self, forKey: .radiiKm) ?? [0.9, 1.0, 1.2]
+        stationIntro = try c.decodeIfPresent(String.self, forKey: .stationIntro)
+        areaAbout = try c.decodeIfPresent(String.self, forKey: .areaAbout)
+        walkGuide = try c.decodeIfPresent(String.self, forKey: .walkGuide)
+        historyNotes = try c.decodeIfPresent([HistoryNote].self, forKey: .historyNotes) ?? []
+        sightseeingNotes = try c.decodeIfPresent([HistoryNote].self, forKey: .sightseeingNotes) ?? []
+        bikeRental = try c.decodeIfPresent(BikeRental.self, forKey: .bikeRental)
+            ?? BikeRental(available: false, summary: "レンタサイクル情報は現地でもご確認ください。", places: nil)
+        tourTitle = try c.decodeIfPresent(String.self, forKey: .tourTitle) ?? "\(name)の徒歩圏を、ゆるく歩く"
+        catchCopy = try c.decodeIfPresent(String.self, forKey: .catchCopy) ?? "降りた場所から、予定のない寄り道を。"
+        emptyCopy = try c.decodeIfPresent(EmptyCopy.self, forKey: .emptyCopy)
+        lat = try c.decode(Double.self, forKey: .lat)
+        lng = try c.decode(Double.self, forKey: .lng)
+        spots = try c.decodeIfPresent([Spot].self, forKey: .spots) ?? []
+    }
+
     /// 「出町柳」→「出町柳駅のこと」
     var aboutTitle: String {
         let base = name.hasSuffix("駅") ? String(name.dropLast()) : name
@@ -222,8 +286,8 @@ struct Station: Codable, Hashable, Identifiable {
     }
 
     func radiusKm(for stay: StayOption) -> Double {
-        let index = min(stay.index, radiiKm.count - 1)
-        return index >= 0 ? radiiKm[index] : 1
+        // 徒歩圏は約1km基準（保存データの古い 2.2 / 3.0 は使わない）
+        stay.walkRadiusKm
     }
 
     /// 滞在時間で歩ける範囲のスポット（spotsForTime）。
@@ -258,10 +322,49 @@ enum StayOption: String, CaseIterable, Identifiable, Hashable {
 
     var index: Int { StayOption.allCases.firstIndex(of: self) ?? 0 }
 
-    var maxWalkMinutes: Int { [55, 140, 240][index] }
+    /// 地図に描く徒歩圏（約1km）。
+    var walkRadiusKm: Double {
+        switch self {
+        case .oneHour: return 0.9
+        case .threeHours: return 1.0
+        case .halfDay: return 1.2
+        }
+    }
 
-    /// コースに使える分数（STAY_BUDGET）。
-    var budgetMinutes: Int { [55, 150, 240][index] }
+    /// コース候補に入れる徒歩分の上限（約1km · 道なり係数込み）。
+    var maxWalkMinutes: Int {
+        switch self {
+        case .oneHour: return 16
+        case .threeHours: return 18
+        case .halfDay: return 22
+        }
+    }
+
+    /// コース全体の目安分数。
+    var budgetMinutes: Int {
+        switch self {
+        case .oneHour: return 50
+        case .threeHours: return 165
+        case .halfDay: return 280
+        }
+    }
+
+    /// 立ち寄りか所数の上限（1時間は短く、半日は厚く）。
+    var maxCourseStops: Int {
+        switch self {
+        case .oneHour: return 2
+        case .threeHours: return 4
+        case .halfDay: return 6
+        }
+    }
+
+    var courseLengthHint: String {
+        switch self {
+        case .oneHour: return "さっと2か所"
+        case .threeHours: return "4か所くらい"
+        case .halfDay: return "じっくり最大6か所"
+        }
+    }
 }
 
 enum DayPart: String, CaseIterable, Identifiable, Hashable {

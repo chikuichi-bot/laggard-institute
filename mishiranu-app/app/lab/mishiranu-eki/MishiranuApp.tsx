@@ -19,6 +19,7 @@ import {
   EMPTY_STATION,
   STATIONS,
   TIME_OPTIONS,
+  walkRadiusKm,
   bikePlacesByKind,
   bikeRentalFor,
   budgetYenFor,
@@ -59,10 +60,13 @@ import {
   startDevicePosition,
 } from "@/lib/mishiranu-device-geo";
 import { findNearestStation } from "@/lib/mishiranu-geo";
+import { arrivalFragment, spotTrace } from "@/lib/mishiranu-lore";
 import {
+  findSavedStation,
   loadStationLibrary,
   mergeCatalog,
   saveStationToLibrary,
+  stableStationId,
 } from "@/lib/mishiranu-station-library";
 import {
   CourseIcon,
@@ -136,6 +140,8 @@ type ChatMsg = {
   id: string;
   role: "guide" | "you";
   text: string;
+  /** 案内をつくっている待ち時間（Thinking time） */
+  thinking?: boolean;
 };
 
 function seedTourCopy(station: StationSeed): TourCopy {
@@ -196,7 +202,7 @@ function nextMsgId(prefix: string) {
 }
 
 const OPENING_GUIDE =
-  "知らない駅に到着しましたね。駅名を教えるか、現在地から近い保存済みの駅を探します。どの駅も検索でき、初めての駅は Gemini が徒歩圏を編集します。一度見た駅は、この端末に少しずつ残ります。";
+  "知らない駅に到着しましたね。駅名を教えるか、現在地から近い保存済みの駅を探します。どの駅も検索でき、初めての駅は徒歩圏の案内をその場でつくります。一度見た駅は、この端末に少しずつ残ります。";
 
 export default function MishiranuApp({
   initialStep = "hero",
@@ -446,6 +452,21 @@ export default function MishiranuApp({
     ]);
   }
 
+  function finishThinking(successText: string) {
+    setMessages((prev) => {
+      const idx = [...prev].reverse().findIndex((m) => m.thinking);
+      if (idx < 0) return prev;
+      const real = prev.length - 1 - idx;
+      return prev.map((m, i) =>
+        i === real ? { ...m, thinking: false, text: successText } : m,
+      );
+    });
+  }
+
+  function clearThinkingMessages() {
+    setMessages((prev) => prev.filter((m) => !m.thinking));
+  }
+
   function syncUrl(
     nextStep: Step,
     nextStationId: string,
@@ -498,14 +519,15 @@ export default function MishiranuApp({
     spoken?: string,
     opts?: { omitYou?: boolean },
   ) {
-    const isAi = next.source === "ai" || next.id.startsWith("ai-");
-    if (isAi) {
-      setDynamicStation(next);
-      setSavedStations(saveStationToLibrary({ ...next, source: "ai" }));
-    } else {
-      setDynamicStation(null);
-    }
-    setStationId(next.id);
+    // 一度選んだ駅は端末（localStorage）に残す
+    const toSave: StationSeed = {
+      ...next,
+      id: stableStationId(next.name, next.id),
+      source: next.source ?? "ai",
+    };
+    setDynamicStation(toSave);
+    setSavedStations(saveStationToLibrary(toSave));
+    setStationId(toSave.id);
     setShowStationSearch(false);
     setQuery("");
     setDraft("");
@@ -514,15 +536,22 @@ export default function MishiranuApp({
     setMealSolo("either");
     setMealBudget("either");
     setChatPhase("clock");
-    const aiNote = isAi
-      ? " Gemini が徒歩圏を編集し、この端末に残しました。時間は目安なので、現地でも確認を。"
-      : "";
-    const guideText = `${next.name}ですね。${next.prefecture}・${next.line}。${aiNote}いま何時ごろですか？ 時刻に合わせて、まわり方を組み立てます。`;
+    const guideText = `${toSave.name}ですね。${toSave.prefecture}・${toSave.line}。いま何時ごろですか？ 時刻に合わせて、まわり方を組み立てます。`;
+    const fragment = arrivalFragment(withAreaDepth(toSave));
+    const fragmentMessages = fragment
+      ? [
+          {
+            role: "guide" as const,
+            text: `この駅のひとかけら — ${fragment.title}\n${fragment.line}`,
+          },
+        ]
+      : [];
     if (opts?.omitYou) {
-      pushMessages({ role: "guide", text: guideText });
+      pushMessages(...fragmentMessages, { role: "guide", text: guideText });
     } else {
       pushMessages(
-        { role: "you", text: spoken ?? `${next.name}駅です` },
+        { role: "you", text: spoken ?? `${toSave.name}駅です` },
+        ...fragmentMessages,
         { role: "guide", text: guideText },
       );
     }
@@ -754,6 +783,30 @@ export default function MishiranuApp({
   async function requestAiStation(rawName: string, spoken?: string) {
     const name = rawName.trim();
     if (!name || stationLoading) return;
+    const bare = name.replace(/駅$/u, "");
+
+    // 一度調べた駅は端末から開く（毎回 API しない）
+    const saved =
+      findSavedStation(bare, savedStations) ??
+      findSavedStation(bare, catalog) ??
+      findSavedStation(bare);
+    if (saved) {
+      setStep("pick");
+      setChatPhase("station");
+      setShowStationSearch(false);
+      setDraft("");
+      setQuery("");
+      pushMessages(
+        { role: "you", text: spoken ?? `${bare}駅です` },
+        {
+          role: "guide",
+          text: `「${bare}」は、この端末に残っていた案内を開きます。`,
+        },
+      );
+      chooseStation(saved, spoken, { omitYou: true });
+      return;
+    }
+
     setStationLoading(true);
     setStep("pick");
     setChatPhase("station");
@@ -762,7 +815,8 @@ export default function MishiranuApp({
       { role: "you", text: spoken ?? `${name}駅です` },
       {
         role: "guide",
-        text: `「${name.replace(/駅$/u, "")}」の徒歩圏を、Gemini で調べています…`,
+        text: `「${bare}」のまわりを調べて、徒歩圏の案内をつくっています。`,
+        thinking: true,
       },
     );
     setDraft("");
@@ -785,6 +839,7 @@ export default function MishiranuApp({
       try {
         data = raw ? (JSON.parse(raw) as typeof data) : {};
       } catch {
+        clearThinkingMessages();
         pushMessages({
           role: "guide",
           text: stationLookupErrorMessage(res.status, {}, raw),
@@ -792,6 +847,7 @@ export default function MishiranuApp({
         return;
       }
       if (!res.ok || !data.station) {
+        clearThinkingMessages();
         pushMessages({
           role: "guide",
           text: stationLookupErrorMessage(res.status, data, raw),
@@ -800,10 +856,13 @@ export default function MishiranuApp({
       }
       const next: StationSeed = {
         ...data.station,
+        id: stableStationId(data.station.name, data.station.id),
         source: data.source ?? data.station.source ?? "ai",
       };
+      finishThinking(`「${bare}」の案内ができました。この端末に残します。`);
       chooseStation(next, spoken, { omitYou: true });
     } catch {
+      clearThinkingMessages();
       pushMessages({
         role: "guide",
         text: "案内の通信に失敗しました。通信状況をみて、もう一度どうぞ。",
@@ -845,7 +904,7 @@ export default function MishiranuApp({
     if (!text || chatPhase === "ready") return;
 
     if (chatPhase === "station") {
-      // 保存済みがあっても毎回 AI 解析（収録・ストックに頼らない）
+      // 保存済みなら端末から開き、なければ調べて残す
       void requestAiStation(text, text);
       return;
     }
@@ -957,7 +1016,7 @@ export default function MishiranuApp({
       `【見知らぬ駅】${station.name}`,
       shownCopy.tourTitle,
       shownCopy.catchCopy,
-      `${time.label} · 徒歩圏 約 ${station.radiiKm[time.index]} km`,
+      `${time.label} · 徒歩圏 約 ${walkRadiusKm(time.id)} km`,
     ];
     if (focusKinds.length > 0) {
       lines.push(`案内の重点: ${focusKinds.map((k) => GUIDE_LABEL[k]).join("・")}`);
@@ -990,7 +1049,7 @@ export default function MishiranuApp({
             : chatPhase === "mealBudget"
               ? "例: 気軽に / 少し奮発"
               : chatPhase === "course"
-                ? "例: 初心者コース / まわり方は決めない"
+                ? "例: 散歩中心 / 食べ物中心 / まわり方は決めない"
                 : "";
 
   return (
@@ -1006,7 +1065,7 @@ export default function MishiranuApp({
               <p className="mishiranu-kicker">LAGADO LAB</p>
               <h1 className="mishiranu-brand">見知らぬ駅</h1>
               <p className="mishiranu-lead">
-                降りた駅の、徒歩圏だけを、物語にする。予定のない寄り道を、いまここから。
+                知らない駅にも、その駅の歴史がある。降りた場所の記憶をひとかけらずつ手渡して、予定のない散歩にする。
               </p>
               <div className="mishiranu-cta-row">
                 <button
@@ -1054,13 +1113,24 @@ export default function MishiranuApp({
                   key={msg.id}
                   className={
                     msg.role === "guide"
-                      ? "mishiranu-chat-bubble mishiranu-chat-bubble--guide"
+                      ? `mishiranu-chat-bubble mishiranu-chat-bubble--guide${msg.thinking ? " mishiranu-chat-bubble--thinking" : ""}`
                       : "mishiranu-chat-bubble mishiranu-chat-bubble--you"
                   }
+                  aria-label={msg.thinking ? `Thinking time。${msg.text}` : undefined}
                 >
                   <span className="mishiranu-chat-role">
                     {msg.role === "guide" ? "案内" : "あなた"}
                   </span>
+                  {msg.thinking ? (
+                    <span className="mishiranu-thinking-time" aria-hidden="true">
+                      Thinking time
+                      <span className="mishiranu-thinking-dots">
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                    </span>
+                  ) : null}
                   <p>{msg.text}</p>
                 </div>
               ))}
@@ -1141,14 +1211,13 @@ export default function MishiranuApp({
                       </ul>
                       {!query.trim() && filteredStations.length === 0 ? (
                         <p className="mishiranu-note">
-                          駅名を入れると全国から探せます。初めての駅は Gemini
-                          が編集し、この端末に残ります。
+                          駅名を入れると全国から探せます。初めての駅は徒歩圏の案内をつくり、この端末に残ります。
                         </p>
                       ) : null}
                       {query.trim() && filteredStations.length === 0 ? (
                         <div className="mishiranu-ai-station-ask">
                           <p className="mishiranu-note">
-                            まだ保存されていません。Gemini に徒歩圏の編集を頼めます。
+                            まだ保存されていません。徒歩圏の案内をつくれます。
                           </p>
                           <button
                             type="button"
@@ -1160,8 +1229,8 @@ export default function MishiranuApp({
                           >
                             <IconSpark />
                             {stationLoading
-                              ? "案内をつくっています…"
-                              : `「${query.trim().replace(/駅$/u, "")}」を Gemini で編集する`}
+                              ? "Thinking time…"
+                              : `「${query.trim().replace(/駅$/u, "")}」の案内をつくる`}
                           </button>
                         </div>
                       ) : null}
@@ -1174,7 +1243,7 @@ export default function MishiranuApp({
                 <div className="mishiranu-chat-replies" aria-label="いまの時間帯">
                   <button
                     type="button"
-                    className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                    className="mishiranu-chat-chip"
                     onClick={tapChoice(() =>
                       chooseClock(
                         dayPartFromHour(new Date().getHours()),
@@ -1395,7 +1464,7 @@ export default function MishiranuApp({
                     key={`${station.id}-${skin}`}
                     station={station}
                     spots={spots}
-                    radiusKm={station.radiiKm[time.index]}
+                    radiusKm={walkRadiusKm(time.id)}
                     activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
                     courseStopIds={courseStopIds}
                     onSelect={(id) => openSpot(id)}
@@ -1403,21 +1472,26 @@ export default function MishiranuApp({
                   <div className="mishiranu-map-foot">
                     <p className="mishiranu-tour-catch">{shownCopy.catchCopy}</p>
                     <p className="mishiranu-radius">
-                      徒歩圏 約 {station.radiiKm[time.index]} km
+                      徒歩圏 約 {walkRadiusKm(time.id)} km
                     </p>
                     {selectedCourse ? (
                       <p className="mishiranu-map-course-note">
-                        線は「{selectedCourse.title}」の歩き順（駅→
+                        線は「{selectedCourse.title}」の徒歩ルート（道なり・駅→
                         {selectedCourse.stopCount}か所）
                       </p>
                     ) : null}
                     <ul className="mishiranu-legend">
                       {GUIDE_ORDER.map((kind) => (
-                        <li key={kind}>
-                          <span
-                            className="mishiranu-legend-icon"
-                            style={{ color: GUIDE_COLOR[kind] }}
-                          >
+                        <li
+                          key={kind}
+                          className="mishiranu-legend-chip"
+                          style={
+                            {
+                              "--legend-color": GUIDE_COLOR[kind],
+                            } as React.CSSProperties
+                          }
+                        >
+                          <span className="mishiranu-legend-icon">
                             <GuideKindIcon kind={kind} />
                           </span>
                           {GUIDE_LABEL[kind]}
@@ -1484,6 +1558,20 @@ export default function MishiranuApp({
                                   {GUIDE_LABEL[stop.guide]} · 徒歩約 {stop.walkMinutes}{" "}
                                   分 · 滞在目安 {stop.dwellMinutes} 分
                                 </span>
+                                {(() => {
+                                  const spot = station.spots.find(
+                                    (s) => s.id === stop.spotId,
+                                  );
+                                  const trace = spot ? spotTrace(spot, station) : null;
+                                  return trace ? (
+                                    <span className="mishiranu-lore-trace">
+                                      <span className="mishiranu-lore-trace-label">
+                                        土地の記憶
+                                      </span>
+                                      {trace}
+                                    </span>
+                                  ) : null;
+                                })()}
                               </span>
                             </button>
                           </li>
@@ -1685,36 +1773,34 @@ export default function MishiranuApp({
                           (s) => spotGuide(s) === kind && openEnough(s),
                         );
                         const items =
-                          kind === "meal"
-                            ? [...base].sort(
+                          kind === "souvenir"
+                            ? [
+                                ...base,
+                                ...guidePool.filter(
+                                  (s) =>
+                                    spotGuide(s) !== "souvenir" &&
+                                    edibleOmiyage(s) &&
+                                    openEnough(s),
+                                ),
+                              ]
+                                .filter(
+                                  (s, i, arr) =>
+                                    arr.findIndex((x) => x.id === s.id) === i,
+                                )
+                                .sort(
+                                  (a, b) =>
+                                    a.walkMinutes - b.walkMinutes ||
+                                    a.name.localeCompare(b.name, "ja"),
+                                )
+                            : [...base].sort(
                                 (a, b) =>
-                                  mealPrefScore(b, mealPrefs) -
-                                    mealPrefScore(a, mealPrefs) ||
-                                  a.walkMinutes - b.walkMinutes,
-                              )
-                            : kind === "souvenir"
-                              ? [
-                                  ...base,
-                                  ...guidePool.filter(
-                                    (s) =>
-                                      spotGuide(s) !== "souvenir" &&
-                                      edibleOmiyage(s) &&
-                                      openEnough(s),
-                                  ),
-                                ]
-                                  .filter(
-                                    (s, i, arr) =>
-                                      arr.findIndex((x) => x.id === s.id) === i,
-                                  )
-                                  .sort((a, b) => {
-                                    const ae = edibleOmiyage(a) ? 0 : 1;
-                                    const be = edibleOmiyage(b) ? 0 : 1;
-                                    if (ae !== be) return ae - be;
-                                    return a.walkMinutes - b.walkMinutes;
-                                  })
-                              : [...base].sort(
-                                  (a, b) => a.walkMinutes - b.walkMinutes,
-                                );
+                                  a.walkMinutes - b.walkMinutes ||
+                                  (kind === "meal"
+                                    ? mealPrefScore(b, mealPrefs) -
+                                      mealPrefScore(a, mealPrefs)
+                                    : 0) ||
+                                  a.name.localeCompare(b.name, "ja"),
+                              );
                         if (items.length === 0) {
                           return (
                             <p className="mishiranu-guide-empty">

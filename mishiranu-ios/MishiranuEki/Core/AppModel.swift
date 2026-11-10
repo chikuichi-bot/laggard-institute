@@ -4,9 +4,18 @@ import Observation
 struct ChatMessage: Identifiable, Hashable {
     enum Role: Hashable { case guide, you }
 
-    let id = UUID()
+    let id: UUID
     let role: Role
-    let text: String
+    var text: String
+    /// 案内をつくっている待ち時間（Thinking time）
+    var isThinking: Bool
+
+    init(role: Role, text: String, isThinking: Bool = false, id: UUID = UUID()) {
+        self.id = id
+        self.role = role
+        self.text = text
+        self.isThinking = isThinking
+    }
 }
 
 enum Screen: Hashable {
@@ -51,7 +60,7 @@ enum LocateFailure: Error, Hashable {
 }
 
 let openingGuide =
-    "知らない駅に到着しましたね。駅名を教えるか、現在地から近い保存済みの駅を探します。どの駅も検索でき、初めての駅は Gemini が徒歩圏を編集します。一度見た駅は、この端末に少しずつ残ります。"
+    "知らない駅に到着しましたね。駅名を教えるか、現在地から近い保存済みの駅を探します。どの駅も検索でき、初めての駅は徒歩圏の案内をその場でつくります。一度見た駅は、この端末に少しずつ残ります。"
 
 /// 現在地から自動で選ぶ駅の上限距離。
 let nearbyStationKm = 3.5
@@ -91,10 +100,15 @@ final class AppModel {
     init(stations: [Station], now: @escaping () -> Date = Date.init) {
         let saved = SavedStationStore.load()
         self.savedStationIds = Set(saved.map(\.id))
-        self.stations = stations
+        // 保存済みの近所の寺なども、起動時に一度落としてメジャーな普通のところだけにする
+        let scrubbed = stations.map { CourseBuilder.snapLandmarkPins($0) }
+        self.stations = scrubbed
         self.now = now
-        self.stationId = saved.first?.id ?? stations.first?.id ?? ""
+        self.stationId = saved.first?.id ?? scrubbed.first?.id ?? ""
         self.dayPart = DayPart.from(hour: Calendar.current.component(.hour, from: now()))
+        for station in scrubbed where savedStationIds.contains(station.id) {
+            _ = SavedStationStore.upsert(station)
+        }
     }
 
     var savedCount: Int { savedStationIds.count }
@@ -131,11 +145,18 @@ final class AppModel {
     func guideSpots(_ kind: GuideKind) -> [Spot] {
         // 案内タブは滞在時間で切らない（ご飯・土産が「1時間」で消えるのを防ぐ）
         guard let station else { return [] }
-        let normalized = CourseBuilder.snapLandmarkPins(
-            CourseBuilder.normalizeEdibleSouvenirs(station)
+        let normalized = CourseBuilder.ensureLocalMajors(
+            CourseBuilder.snapLandmarkPins(
+                BikeRentalSeal.ensure(CourseBuilder.normalizeEdibleSouvenirs(station))
+            )
         )
-        // ご飯はメジャー定番のみ（利次郎など二番手は出さない）
+        // 観光も近所の寺は出さない（保存済みの長徳寺・法性寺・西園寺など）
         var items = normalized.spots.filter { $0.guide == kind }
+        if kind == .sight {
+            items = items.filter {
+                !FirstVisitFaces.isNeighborhoodWorship($0.name, stationName: station.name)
+            }
+        }
         if kind == .meal {
             items = MealStapleCatcher.keepMajorMealsOnly(
                 items.map { spot in
@@ -146,8 +167,13 @@ final class AppModel {
             ).filter { $0.guide == .meal }
         }
         // その時間帯に閉まっている店は案内から外す（ふたばの夜など）
-        if kind == .meal || kind == .souvenir || kind == .rest {
+        // お土産は「閉まっていると分かるとき」だけ外す。空にするより、名物を見せる。
+        if kind == .meal || kind == .rest {
             items = items.filter { HoursOpen.isLikelyOpen($0, dayPart: dayPart) }
+        } else if kind == .souvenir {
+            let open = items.filter { HoursOpen.isLikelyOpen($0, dayPart: dayPart) }
+            // 全部落ちるなら時間帯フィルタを外して名物を残す
+            if !open.isEmpty { items = open }
         }
         if kind == .meal {
             let ids = Set(items.map(\.id))
@@ -163,34 +189,42 @@ final class AppModel {
                 items.append(spot)
             }
         }
-        // 名物菓子は meal 扱いでもお土産タブに出す（ふたば・みたらし等）
+        // 名物菓子は meal 扱いでもお土産タブに出す（ふたば・走井餅等）
         if kind == .souvenir {
             let extras = normalized.spots.filter {
                 $0.guide != .souvenir && CourseBuilder.isEdibleOmiyage($0)
             }
-            for spot in extras where !items.contains(where: { $0.id == spot.id }) {
+            for spot in extras where !items.contains(where: {
+                $0.id == spot.id || NameMatch.score($0.name, spot.name) >= 85
+            }) {
                 items.append(spot)
             }
         }
-        guard kind == .meal else {
-            return items.sorted { lhs, rhs in
-                let a = CourseBuilder.isEdibleOmiyage(lhs)
-                let b = CourseBuilder.isEdibleOmiyage(rhs)
-                if a != b { return a && !b }
+        // 定型説明を短い固有文に差し替え（保存済みの「観光の目印」も表示時に直す）
+        let enriched = items.map { spot -> Spot in
+            let text = SpotCopy.blurb(for: spot, in: normalized)
+            guard text != spot.blurb else { return spot }
+            return Spot(
+                id: spot.id, name: spot.name, genre: spot.genre, guide: spot.guide,
+                mealTier: spot.mealTier, mealTimes: spot.mealTimes, soloOk: spot.soloOk,
+                budgetYen: spot.budgetYen, hours: spot.hours, blurb: text,
+                detail: spot.detail, walkMinutes: spot.walkMinutes,
+                secretWorthy: spot.secretWorthy, majorWorthy: spot.majorWorthy,
+                lat: spot.lat, lng: spot.lng
+            )
+        }
+        // 案内は駅から近い順。
+        return enriched.sorted { lhs, rhs in
+            if lhs.walkMinutes != rhs.walkMinutes {
                 return lhs.walkMinutes < rhs.walkMinutes
             }
-        }
-        return items.enumerated()
-            .sorted { lhs, rhs in
-                let stapleA = CourseBuilder.mealStapleScore(lhs.element)
-                let stapleB = CourseBuilder.mealStapleScore(rhs.element)
-                if stapleA != stapleB { return stapleA > stapleB }
-                let a = CourseBuilder.mealPrefScore(lhs.element, prefs: mealPrefs)
-                let b = CourseBuilder.mealPrefScore(rhs.element, prefs: mealPrefs)
+            if kind == .meal {
+                let a = CourseBuilder.mealPrefScore(lhs, prefs: mealPrefs)
+                let b = CourseBuilder.mealPrefScore(rhs, prefs: mealPrefs)
                 if a != b { return a > b }
-                return lhs.element.walkMinutes < rhs.element.walkMinutes
             }
-            .map(\.element)
+            return lhs.name < rhs.name
+        }
     }
 
     var hasMealPrefs: Bool { mealPrefs.solo != .either || mealPrefs.budget != .either }
@@ -206,7 +240,7 @@ final class AppModel {
         case .stay: return "例: 3時間くらい"
         case .mealSolo: return "例: 一人で入りたい"
         case .mealBudget: return "例: 気軽に / 少し奮発"
-        case .course: return "例: 初心者コース / まわり方は決めない"
+        case .course: return "例: 散歩中心 / 食べ物中心 / まわり方は決めない"
         case .ready: return ""
         }
     }
@@ -260,11 +294,23 @@ final class AppModel {
         messages.append(contentsOf: next)
     }
 
+    private func finishThinking(successText: String) {
+        guard let idx = messages.lastIndex(where: \.isThinking) else { return }
+        messages[idx].isThinking = false
+        messages[idx].text = successText
+    }
+
+    private func clearThinkingMessages() {
+        messages.removeAll { $0.isThinking }
+    }
+
     // MARK: - Chat steps
 
-    func chooseStation(_ next: Station, spoken: String? = nil, omitYou: Bool = false, persist: Bool = false) {
-        remember(next, persist: persist || next.id.hasPrefix("ai-"))
-        stationId = next.id
+    func chooseStation(_ next: Station, spoken: String? = nil, omitYou: Bool = false, persist: Bool = true) {
+        // ロック名所を足してから保存（石清水八幡宮・飛行神社などが落ちないように）
+        let sealed = CourseBuilder.ensureLocalMajors(CourseBuilder.snapLandmarkPins(next))
+        remember(sealed, persist: persist)
+        stationId = sealed.id
         showStationSearch = false
         query = ""
         draft = ""
@@ -272,19 +318,24 @@ final class AppModel {
         selectedCourse = nil
         mealPrefs = MealPrefs()
         phase = .clock
-        let guideText = "\(next.name)ですね。\(next.prefecture)・\(next.line)。いま何時ごろですか？ 時刻に合わせて、まわり方を組み立てます。"
+        let guideText = "\(sealed.name)ですね。\(sealed.prefecture)・\(sealed.line)。いま何時ごろですか？ 時刻に合わせて、まわり方を組み立てます。"
         if !omitYou {
-            push(ChatMessage(role: .you, text: spoken ?? "\(next.name)駅です"))
+            push(ChatMessage(role: .you, text: spoken ?? "\(sealed.name)駅です"))
+        }
+        if let fragment = StationLore.arrivalFragment(for: sealed) {
+            push(ChatMessage(role: .guide, text: "この駅のひとかけら — \(fragment.title)\n\(fragment.line)"))
         }
         push(ChatMessage(role: .guide, text: guideText))
-        relocateIfNeeded(next)
+        relocateIfNeeded(sealed)
     }
 
     /// AI の駅は、Apple マップの周辺 POI で店・座標を仕入れてから保存する。
     private func relocateIfNeeded(_ station: Station) {
         guard station.id.hasPrefix("ai-") else { return }
         Task { [weak self] in
-            let located = CourseBuilder.snapLandmarkPins(await SpotLocator.refine(station))
+            let located = CourseBuilder.ensureLocalMajors(
+                CourseBuilder.snapLandmarkPins(await SpotLocator.refine(station))
+            )
             guard let self, !Task.isCancelled, self.stationId == station.id || self.stations.contains(where: { $0.id == station.id }) else { return }
             self.remember(located, persist: true)
             // 座標確定後にメジャー印付きでまわり方を組み直す
@@ -321,16 +372,40 @@ final class AppModel {
     func requestAiStation(_ rawName: String, spoken: String? = nil) {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, !stationLoading else { return }
+        let bare = name.hasSuffix("駅") ? String(name.dropLast()) : name
+
+        // 一度調べた駅は端末から開く（毎回 Gemini しない）
+        if let saved = SavedStationStore.find(byName: bare, in: stations)
+            ?? SavedStationStore.find(byName: bare) {
+            screen = .chat
+            phase = .station
+            showStationSearch = false
+            query = ""
+            draft = ""
+            push(
+                ChatMessage(role: .you, text: spoken ?? "\(bare)駅です"),
+                ChatMessage(
+                    role: .guide,
+                    text: "「\(bare)」は、この端末に残っていた案内を開きます。"
+                )
+            )
+            chooseStation(saved, omitYou: true, persist: true)
+            return
+        }
+
         stationLoading = true
         screen = .chat
         phase = .station
         showStationSearch = true
         query = name
         draft = ""
-        let bare = name.hasSuffix("駅") ? String(name.dropLast()) : name
         push(
             ChatMessage(role: .you, text: spoken ?? "\(bare)駅です"),
-            ChatMessage(role: .guide, text: "「\(bare)」の徒歩圏を、Gemini が編集しています…")
+            ChatMessage(
+                role: .guide,
+                text: "「\(bare)」のまわりを調べて、徒歩圏の案内をつくっています。",
+                isThinking: true
+            )
         )
         pendingStationLookup?.cancel()
         pendingStationLookup = Task { [weak self] in
@@ -338,12 +413,15 @@ final class AppModel {
             do {
                 let station = try await StationAPIClient.lookupStation(name: bare)
                 guard !Task.isCancelled else { return }
+                self.finishThinking(successText: "「\(bare)」の案内ができました。この端末に残します。")
                 self.stationLoading = false
                 self.chooseStation(station, omitYou: true, persist: true)
             } catch is CancellationError {
                 self.stationLoading = false
+                self.clearThinkingMessages()
             } catch {
                 self.stationLoading = false
+                self.clearThinkingMessages()
                 let message = (error as? LocalizedError)?.errorDescription?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 self.push(
@@ -382,7 +460,7 @@ final class AppModel {
         } ?? ""
         push(ChatMessage(
             role: .guide,
-            text: "\(nearestHint)位置情報は端末の外に送っていません。駅名を入力すれば、全国どこでも Gemini が案内を編集します。"
+            text: "\(nearestHint)位置情報は端末の外に送っていません。駅名を入力すれば、全国どこでも徒歩圏の案内をつくれます。"
         ))
     }
 
