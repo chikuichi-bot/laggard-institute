@@ -22,11 +22,9 @@ npm install
 npm run ios:app
 ```
 
-これで次をまとめて実行します。
+同梱する画面（`ios/App/App/public`）は Git に入っているので、Mac では書き出し不要です。`ios:app` は同期して Xcode を開くだけです。
 
-1. 静的 Web を `ios-web/` に書き出し  
-2. Capacitor が iOS プロジェクトへ同期  
-3. Xcode が開く  
+画面のコードを変えたあとに作り直すときだけ `npm run ios:rebuild` を使います。
 
 Xcode で:
 

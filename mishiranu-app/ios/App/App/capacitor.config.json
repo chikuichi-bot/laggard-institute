@@ -1,0 +1,29 @@
+{
+	"appId": "jp.lagado.mishiranueki",
+	"appName": "見知らぬ駅",
+	"webDir": "ios-web",
+	"backgroundColor": "#f5eedc",
+	"ios": {
+		"contentInset": "automatic",
+		"preferredContentMode": "mobile",
+		"backgroundColor": "#f5eedc",
+		"scheme": "MishiranuEki"
+	},
+	"plugins": {
+		"SplashScreen": {
+			"backgroundColor": "#f5eedc",
+			"launchAutoHide": true,
+			"showSpinner": false
+		},
+		"StatusBar": {
+			"style": "DARK",
+			"backgroundColor": "#f5eedc"
+		}
+	},
+	"packageClassList": [
+		"AppPlugin",
+		"GeolocationPlugin",
+		"SplashScreenPlugin",
+		"StatusBarPlugin"
+	]
+}

@@ -10,7 +10,8 @@
     "ios:export": "node scripts/ios-export.mjs",
     "ios:sync": "npx cap sync ios",
     "ios:open": "npx cap open ios",
-    "ios:app": "npm run ios:export && npm run ios:sync && npm run ios:open",
+    "ios:app": "npm run ios:sync && npm run ios:open",
+    "ios:rebuild": "npm run ios:export && npm run ios:sync && npm run ios:open",
     "ios:live": "CAP_SERVER_URL=$(node scripts/cap-local-url.mjs) npx cap sync ios && npx cap open ios"
   },
   "dependencies": {

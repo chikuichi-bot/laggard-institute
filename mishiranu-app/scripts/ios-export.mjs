@@ -77,7 +77,6 @@ try {
   if (!fs.existsSync(lab)) {
     throw new Error("missing lab/mishiranu-eki/index.html in export");
   }
-  pruneExportNoise(webDir);
   const home = path.join(webDir, "index.html");
   if (!fs.existsSync(home)) {
     throw new Error("missing index.html in export (Capacitor entry)");
@@ -92,18 +91,4 @@ try {
   console.log("Wrote static bundle → ios-web/ (Capacitor opens / with 見知らぬ駅)");
 } finally {
   restore();
-}
-
-function pruneExportNoise(dir) {
-  for (const name of fs.readdirSync(dir)) {
-    const full = path.join(dir, name);
-    const st = fs.statSync(full);
-    if (st.isDirectory()) {
-      pruneExportNoise(full);
-      continue;
-    }
-    if (name.startsWith("__next.") || name.endsWith(".txt")) {
-      fs.rmSync(full, { force: true });
-    }
-  }
 }
