@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start --port 3010 --hostname 0.0.0.0",
     "lint": "eslint",
-    "ios:sync": "npx cap sync ios",
-    "ios:open": "npx cap open ios"
+    "ios:sync": "CAP_SERVER_URL=$(node scripts/cap-local-url.mjs) npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:local": "npm run ios:sync && npm run ios:open"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

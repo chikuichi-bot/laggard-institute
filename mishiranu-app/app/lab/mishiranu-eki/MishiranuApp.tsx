@@ -50,6 +50,11 @@ import {
   type WalkCourse,
 } from "@/lib/mishiranu-courses";
 import { paragraphsFrom, withAreaDepth } from "@/lib/mishiranu-area-depth";
+import {
+  DeviceGeoError,
+  geoFailureMessage,
+  startDevicePosition,
+} from "@/lib/mishiranu-device-geo";
 import { findNearestStation } from "@/lib/mishiranu-geo";
 import {
   CourseIcon,
@@ -337,9 +342,10 @@ export default function MishiranuApp({
     };
   }, [messages, showStationSearch, chatPhase, step]);
 
-  function tapChoice(action: () => void) {
+  function tapChoice(action: () => void, opts?: { keepFocus?: boolean }) {
     return (event: MouseEvent<HTMLButtonElement>) => {
-      event.currentTarget.blur();
+      // iOS Safari drops the geolocation user-gesture if we blur first.
+      if (!opts?.keepFocus) event.currentTarget.blur();
       action();
     };
   }
@@ -466,30 +472,12 @@ export default function MishiranuApp({
     }
   }
 
-  function readDevicePosition(options: PositionOptions) {
-    return new Promise<GeolocationPosition>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, options);
-    });
-  }
-
-  async function locateHere() {
+  function locateHere() {
     if (geoLoading || stationLoading) return;
-    if (typeof window !== "undefined" && !window.isSecureContext) {
-      setShowStationSearch(true);
-      pushMessages({
-        role: "guide",
-        text: "位置情報は https か localhost でのみ使えます。Ports の Open in Browser か、駅名で探してください。",
-      });
-      return;
-    }
-    if (!navigator.geolocation) {
-      setShowStationSearch(true);
-      pushMessages({
-        role: "guide",
-        text: "この端末では現在地が使えません。駅名を入力するか、「駅名で探す」から選んでください。",
-      });
-      return;
-    }
+
+    // Start GPS in this same tap turn (required by iOS Safari), before setState.
+    const pending = startDevicePosition();
+
     setGeoLoading(true);
     pushMessages(
       { role: "you", text: "現在地から駅を探す" },
@@ -498,66 +486,43 @@ export default function MishiranuApp({
         text: "いまの位置から、いちばん近い駅名を調べています…",
       },
     );
-    try {
-      let position: GeolocationPosition;
-      try {
-        position = await readDevicePosition({
-          enableHighAccuracy: true,
-          timeout: 10_000,
-          maximumAge: 60_000,
-        });
-      } catch {
-        // Desktop / Preview often reject high-accuracy GPS; retry quietly.
-        position = await readDevicePosition({
-          enableHighAccuracy: false,
-          timeout: 20_000,
-          maximumAge: 120_000,
-        });
-      }
-      const { latitude: lat, longitude: lng } = position.coords;
-      // Precise GPS never leaves the browser. Only curated matching runs locally.
-      const local = findNearestStation(lat, lng, STATIONS);
-      if (local && local.km <= 3.5) {
-        chooseStation(
-          local.station,
-          `現在地（${local.station.name}・約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）`,
-          { omitYou: true },
-        );
-        return;
-      }
 
-      // Far from curated stations: do not upload coordinates. Ask for a name.
-      setShowStationSearch(true);
-      const nearestHint = local
-        ? `いちばん近い編集駅は${local.station.name}（約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）ですが、徒歩圏外です。`
-        : "";
-      pushMessages({
-        role: "guide",
-        text:
-          `${nearestHint}位置情報は端末の外に送っていません。駅名を入力するか、「駅名で探す」から選んでください。`.trim(),
-      });
-    } catch (err) {
-      setShowStationSearch(true);
-      const code =
-        err && typeof err === "object" && "code" in err
-          ? Number((err as { code: number }).code)
-          : NaN;
-      const denied = code === 1;
-      const unavailable = code === 2;
-      const timedOut = code === 3;
-      pushMessages({
-        role: "guide",
-        text: denied
-          ? "位置情報の許可が必要です。ブラウザで許可するか、駅名で探してください。"
-          : timedOut
-            ? "現在地の確認がタイムアウトしました。もう一度試すか、駅名で探してください。"
-            : unavailable
-              ? "このプレビューでは位置が取れないことがあります。Ports の Open in Browser、または実機の Safari で開くか、駅名で探してください。"
-              : "現在地を取得できませんでした。駅名で探すか、もう一度どうぞ。",
-      });
-    } finally {
-      setGeoLoading(false);
-    }
+    void (async () => {
+      try {
+        const { lat, lng } = await pending;
+        // Precise GPS never leaves the browser. Only curated matching runs locally.
+        const local = findNearestStation(lat, lng, STATIONS);
+        if (local && local.km <= 3.5) {
+          chooseStation(
+            local.station,
+            `現在地（${local.station.name}・約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）`,
+            { omitYou: true },
+          );
+          return;
+        }
+
+        // Far from curated stations: do not upload coordinates. Ask for a name.
+        setShowStationSearch(true);
+        const nearestHint = local
+          ? `いちばん近い編集駅は${local.station.name}（約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）ですが、徒歩圏外です。`
+          : "";
+        pushMessages({
+          role: "guide",
+          text:
+            `${nearestHint}位置情報は端末の外に送っていません。駅名を入力するか、「駅名で探す」から選んでください。`.trim(),
+        });
+      } catch (err) {
+        setShowStationSearch(true);
+        const failure =
+          err instanceof DeviceGeoError ? err.failure : "unknown";
+        pushMessages({
+          role: "guide",
+          text: geoFailureMessage(failure),
+        });
+      } finally {
+        setGeoLoading(false);
+      }
+    })();
   }
 
   function chooseClock(next: DayPart, spoken?: string) {
@@ -1052,7 +1017,7 @@ export default function MishiranuApp({
                     type="button"
                     className="mishiranu-chat-chip mishiranu-chat-chip--primary"
                     disabled={geoLoading || stationLoading}
-                    onClick={tapChoice(() => void locateHere())}
+                    onClick={tapChoice(() => locateHere(), { keepFocus: true })}
                   >
                     <IconLocate />
                     {geoLoading ? "現在地を確認中…" : "現在地で駅を探す"}

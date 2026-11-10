@@ -1,48 +1,63 @@
-# 見知らぬ駅 — Xcode / iOS
+# 見知らぬ駅 — Xcode / iOS（ローカル基準）
 
-Capacitor で作ったネイティブ iOS プロジェクトです。
+Capacitor のネイティブ iOS プロジェクトです。**Cursor Apps の Publish は不要**です。Mac 上の Next.js（いま作っているローカル版）を読みます。
 
 - Bundle ID: `jp.lagado.mishiranueki`
 - 表示名: 見知らぬ駅
 - Xcode プロジェクト: `App/App.xcodeproj`
-- 起動 URL（既定）: `https://mishiranu-eki.apps.grok.bot/lab/mishiranu-eki`
+- 起動 URL（既定）: `http://127.0.0.1:3010/lab/mishiranu-eki`
 
-このクラウド環境は Linux のため、**シミュレータ実行や署名ビルドは Mac の Xcode で行ってください。**
+このクラウド環境は Linux のため、シミュレータ実行は **Mac の Xcode** で行ってください。
 
-## Mac での開き方
+## Mac での手順（ローカル最新版）
+
+ターミナルを2つ使います。
+
+**1. Next.js を起動**
 
 ```bash
 cd mishiranu-app
 npm install
-npx cap sync ios
-npx cap open ios
+npm run build
+npm run start
 ```
+
+**2. Capacitor をローカル URL に同期して Xcode を開く**
+
+```bash
+cd mishiranu-app
+npm run ios:sync
+npm run ios:open
+```
+
+`ios:sync` は同じ Wi‑Fi の LAN IP があればそれを使い、なければ `127.0.0.1` です（シミュレータ向け）。
 
 Xcode が開いたら:
 
 1. 左の **App** ターゲットを選択  
 2. **Signing & Capabilities** で Team（Apple ID）を設定  
-3. 実機またはシミュレータを選び **Run（▶）**
+3. シミュレータまたは実機を選び **Run（▶）**
 
-## ローカル Next.js に繋ぐ（開発）
+### 実機（iPhone）のとき
 
-Mac で `npm run start`（または `dev`）を 3010 で起動したうえで:
+iPhone と Mac を同じ Wi‑Fi にしてから `npm run ios:sync` してください。手動指定もできます:
 
 ```bash
-CAP_SERVER_URL=http://127.0.0.1:3010/lab/mishiranu-eki npx cap sync ios
-npx cap open ios
+CAP_SERVER_URL=http://192.168.x.x:3010/lab/mishiranu-eki npm run ios:sync
+npm run ios:open
 ```
 
-実機のときは `127.0.0.1` の代わりに Mac の LAN IP を使います。
+Mac の IP は「システム設定 → ネットワーク」、または `ipconfig getifaddr en0` で確認できます。
+
+## Safari / ホーム画面（Publish なし）
+
+1. iPhone の Safari で `http://<MacのLAN-IP>:3010/lab/mishiranu-eki` を開く  
+2. 共有 → 「ホーム画面に追加」
+
+古いホーム画面アイコンは一度消してから追加し直してください。
 
 ## 含まれているもの
 
-- `@capacitor/geolocation`（位置情報の利用許可文を Info.plist に記載）
+- `@capacitor/geolocation`（Info.plist に利用目的を記載）
 - `@capacitor/status-bar` / `@capacitor/splash-screen`
 - App Icon / Splash（和紙トーンの「駅」マーク）
-
-## App Store 提出メモ
-
-- 現状は WebView がホスト上の Next.js を読みます（Cursor Apps / 自前ホスト）。
-- 審査では「中身が Web」と見なされることがあります。オフライン同梱や機能のネイティブ化が必要になる場合あり。
-- 提出前に `CAP_SERVER_URL` を本番 URL に固定し、`npx cap sync ios` してから Archive してください。

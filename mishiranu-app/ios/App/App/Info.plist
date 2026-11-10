@@ -26,6 +26,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Mac 上で動かしている見知らぬ駅（ローカル）に接続し、最新の案内を表示します。</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>いま降りた駅の近くを案内するため、現在地を使います。位置情報は端末内で照合し、むやみに送信しません。</string>
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
