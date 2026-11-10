@@ -1,0 +1,1597 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-10T06:54:11.226Z",
+  "stations": {
+    "demachiyanagi": {
+      "lat": 35.0305,
+      "lng": 135.7729,
+      "source": "manual",
+      "name": "出町柳駅",
+      "note": "Keihan/Eizan platforms north of Imadegawa"
+    },
+    "chushojima": {
+      "lat": 34.926723,
+      "lng": 135.760166,
+      "source": "overpass-railway",
+      "name": "中書島"
+    },
+    "iwashimizu-hachimangu": {
+      "lat": 34.884629,
+      "lng": 135.700066,
+      "source": "overpass-railway",
+      "name": "石清水八幡宮"
+    },
+    "oyamazaki": {
+      "lat": 34.891441,
+      "lng": 135.681624,
+      "source": "overpass-railway",
+      "name": "大山崎"
+    },
+    "biei": {
+      "lat": 43.59096,
+      "lng": 142.461225,
+      "source": "overpass-railway",
+      "name": "美瑛"
+    },
+    "kanita": {
+      "lat": 41.038369,
+      "lng": 140.642522,
+      "source": "overpass-railway",
+      "name": "蟹田"
+    },
+    "ashio": {
+      "lat": 36.637041,
+      "lng": 139.439974,
+      "source": "overpass-railway",
+      "name": "通洞"
+    },
+    "sawara": {
+      "lat": 35.894546,
+      "lng": 140.494077,
+      "source": "overpass-railway",
+      "name": "佐原"
+    },
+    "manazuru": {
+      "lat": 35.156943,
+      "lng": 139.13228,
+      "source": "overpass-railway",
+      "name": "真鶴"
+    },
+    "hamakanaya": {
+      "lat": 35.168137,
+      "lng": 139.822379,
+      "source": "overpass-railway",
+      "name": "浜金谷"
+    },
+    "nagatoro": {
+      "lat": 36.095295,
+      "lng": 139.112497,
+      "source": "overpass-railway",
+      "name": "長瀞"
+    },
+    "katsunuma": {
+      "lat": 35.672357,
+      "lng": 138.743221,
+      "source": "overpass-railway",
+      "name": "勝沼ぶどう郷"
+    },
+    "kobuchizawa": {
+      "lat": 35.863918,
+      "lng": 138.315962,
+      "source": "overpass-railway",
+      "name": "小淵沢"
+    },
+    "obasute": {
+      "lat": 36.502588,
+      "lng": 138.093324,
+      "source": "nominatim-railway",
+      "name": "姨捨"
+    },
+    "shimosuwa": {
+      "lat": 36.072019,
+      "lng": 138.084858,
+      "source": "overpass-railway",
+      "name": "下諏訪"
+    },
+    "yui": {
+      "lat": 35.097192,
+      "lng": 138.55295,
+      "source": "overpass-railway",
+      "name": "由比"
+    },
+    "nebukawa": {
+      "lat": 35.202666,
+      "lng": 139.138732,
+      "source": "overpass-railway",
+      "name": "根府川"
+    },
+    "amarube": {
+      "lat": 35.648762,
+      "lng": 134.55707,
+      "source": "overpass-railway",
+      "name": "餘部"
+    },
+    "onomichi": {
+      "lat": 34.404821,
+      "lng": 133.193108,
+      "source": "overpass-railway",
+      "name": "尾道"
+    },
+    "misumi": {
+      "lat": 32.607746,
+      "lng": 130.469676,
+      "source": "overpass-railway",
+      "name": "三角"
+    },
+    "usuki": {
+      "lat": 33.118602,
+      "lng": 131.807899,
+      "source": "overpass-railway",
+      "name": "臼杵"
+    },
+    "hitoyoshi": {
+      "lat": 32.215901,
+      "lng": 130.75322,
+      "source": "overpass-railway",
+      "name": "人吉"
+    },
+    "tsukazaki": {
+      "lat": 35.302196,
+      "lng": 140.139392,
+      "source": "overpass-railway",
+      "name": "月崎"
+    },
+    "tamatsukuri": {
+      "lat": 35.43084,
+      "lng": 133.012188,
+      "source": "overpass-railway",
+      "name": "玉造温泉"
+    }
+  },
+  "spots": {
+    "demachi-1": {
+      "lat": 35.0297,
+      "lng": 135.7717,
+      "source": "manual",
+      "name": "鴨川デルタ"
+    },
+    "demachi-2": {
+      "lat": 35.03029,
+      "lng": 135.76886,
+      "source": "manual",
+      "name": "出町枡形商店街"
+    },
+    "demachi-3": {
+      "lat": 35.03011,
+      "lng": 135.76963,
+      "source": "manual",
+      "name": "出町ふたば"
+    },
+    "demachi-3b": {
+      "lat": 35.03015,
+      "lng": 135.7697,
+      "source": "manual",
+      "name": "出町ふたばの豆餅（土産）"
+    },
+    "demachi-4": {
+      "lat": 35.03027,
+      "lng": 135.77268,
+      "source": "manual",
+      "name": "叡山電鉄のホーム端"
+    },
+    "demachi-5": {
+      "lat": 35.0302,
+      "lng": 135.76903,
+      "source": "manual",
+      "name": "出町座"
+    },
+    "demachi-5b": {
+      "lat": 35.0289,
+      "lng": 135.7804,
+      "source": "manual",
+      "name": "進々堂 百万遍店"
+    },
+    "demachi-5c": {
+      "lat": 35.0303,
+      "lng": 135.7692,
+      "source": "manual",
+      "name": "満寿形屋"
+    },
+    "demachi-5d": {
+      "lat": 35.0282,
+      "lng": 135.7726,
+      "source": "manual",
+      "name": "手打大山そば 響"
+    },
+    "demachi-5e": {
+      "lat": 35.0391,
+      "lng": 135.7729,
+      "source": "manual",
+      "name": "下鴨茶寮"
+    },
+    "demachi-5f": {
+      "lat": 35.02955,
+      "lng": 135.7729,
+      "source": "manual",
+      "name": "COYOTE Roastery"
+    },
+    "demachi-beans": {
+      "lat": 35.0322,
+      "lng": 135.7782,
+      "source": "manual",
+      "name": "WEEKENDERS COFFEE"
+    },
+    "demachi-10": {
+      "lat": 35.03005,
+      "lng": 135.77155,
+      "source": "manual",
+      "name": "鴨川デルタの川端"
+    },
+    "demachi-6": {
+      "lat": 35.03205,
+      "lng": 135.77045,
+      "source": "manual",
+      "name": "下鴨神社へ向かう並木の入口"
+    },
+    "demachi-9": {
+      "lat": 35.0389,
+      "lng": 135.7728,
+      "source": "manual",
+      "name": "下鴨神社・糺の森"
+    },
+    "demachi-7": {
+      "lat": 35.029,
+      "lng": 135.7687,
+      "source": "manual",
+      "name": "河原町今出川あたりの角"
+    },
+    "demachi-8": {
+      "lat": 35.03028,
+      "lng": 135.7694,
+      "source": "manual",
+      "name": "枡形の紙もの・雑貨"
+    },
+    "demachi-11": {
+      "lat": 35.03025,
+      "lng": 135.7705,
+      "source": "manual",
+      "name": "駅前のレンタサイクル"
+    },
+    "chusho-1": {
+      "lat": 34.933066,
+      "lng": 135.767379,
+      "source": "overpass",
+      "name": "御香宮神社",
+      "km": 0.964269
+    },
+    "chusho-3": {
+      "lat": 34.927974,
+      "lng": 135.758704,
+      "source": "overpass",
+      "name": "つけ麺 きらり",
+      "km": 0.192663
+    },
+    "chusho-3b": {
+      "lat": 34.931076,
+      "lng": 135.762073,
+      "source": "overpass",
+      "name": "鳥せい本店",
+      "km": 0.514259
+    },
+    "chusho-4": {
+      "lat": 34.930016,
+      "lng": 135.761401,
+      "source": "overpass",
+      "name": "伏見夢百衆",
+      "km": 0.38311
+    },
+    "chusho-5": {
+      "lat": 34.928802,
+      "lng": 135.761604,
+      "source": "overpass",
+      "name": "月桂冠大倉記念館",
+      "km": 0.265753
+    },
+    "chusho-6": {
+      "lat": 34.933725,
+      "lng": 135.767862,
+      "source": "overpass",
+      "name": "御香宮",
+      "km": 1.048055
+    },
+    "chusho-8": {
+      "lat": 34.926723,
+      "lng": 135.760166,
+      "source": "overpass",
+      "name": "中書島",
+      "km": 0.000024
+    },
+    "chusho-s1": {
+      "lat": 34.928802,
+      "lng": 135.761604,
+      "source": "overpass",
+      "name": "月桂冠大倉記念館",
+      "km": 0.265753
+    },
+    "chusho-s2": {
+      "lat": 34.930291,
+      "lng": 135.759557,
+      "source": "overpass",
+      "name": "寺田屋",
+      "km": 0.400549
+    },
+    "hachiman-1": {
+      "lat": 34.884629,
+      "lng": 135.700066,
+      "source": "overpass",
+      "name": "石清水八幡宮",
+      "km": 0.000027
+    },
+    "hachiman-2": {
+      "lat": 34.883775,
+      "lng": 135.70315,
+      "source": "overpass",
+      "name": "飛行神社",
+      "km": 0.296868
+    },
+    "hachiman-3": {
+      "lat": 34.883785,
+      "lng": 135.701606,
+      "source": "overpass",
+      "name": "やわた走井餅",
+      "km": 0.168954
+    },
+    "hachiman-4": {
+      "lat": 34.878251,
+      "lng": 135.700122,
+      "source": "overpass",
+      "name": "石翠亭",
+      "km": 0.709242
+    },
+    "hachiman-5": {
+      "lat": 34.878579,
+      "lng": 135.700592,
+      "source": "overpass",
+      "name": "社務所",
+      "km": 0.67443
+    },
+    "hachiman-7": {
+      "lat": 34.884629,
+      "lng": 135.700066,
+      "source": "overpass",
+      "name": "石清水八幡宮",
+      "km": 0.000027
+    },
+    "hachiman-s1": {
+      "lat": 34.884629,
+      "lng": 135.700066,
+      "source": "overpass",
+      "name": "石清水八幡宮",
+      "km": 0.000027
+    },
+    "hachiman-s2": {
+      "lat": 34.873314,
+      "lng": 135.683208,
+      "source": "walk-bearing",
+      "km": 1.983333,
+      "note": "clamped oversize geocode"
+    },
+    "oyam-2": {
+      "lat": 34.901827,
+      "lng": 135.678831,
+      "source": "overpass",
+      "name": "天王山",
+      "km": 1.182619
+    },
+    "oyam-3": {
+      "lat": 34.884464,
+      "lng": 135.700769,
+      "source": "overpass",
+      "name": "観光案内所",
+      "km": 1.910753
+    },
+    "oyam-4": {
+      "lat": 34.891983,
+      "lng": 135.681752,
+      "source": "overpass",
+      "name": "hermit green cafe",
+      "km": 0.061381
+    },
+    "oyam-5": {
+      "lat": 34.89198,
+      "lng": 135.680068,
+      "source": "overpass",
+      "name": "tabi tabi",
+      "km": 0.1541
+    },
+    "oyam-6": {
+      "lat": 34.891441,
+      "lng": 135.681624,
+      "source": "overpass",
+      "name": "大山崎",
+      "km": 0.000045
+    },
+    "oyam-s1": {
+      "lat": 34.895557,
+      "lng": 135.679649,
+      "source": "overpass",
+      "name": "アサヒビール大山崎山荘美術館",
+      "km": 0.491839
+    },
+    "oyam-s2": {
+      "lat": 34.891615,
+      "lng": 135.680071,
+      "source": "overpass",
+      "name": "離宮八幡宮",
+      "km": 0.142933
+    },
+    "biei-s1": {
+      "lat": 43.59096,
+      "lng": 142.461225,
+      "source": "overpass",
+      "name": "美瑛",
+      "km": 0.000014
+    },
+    "kanita-s1": {
+      "lat": 41.038369,
+      "lng": 140.642522,
+      "source": "overpass",
+      "name": "蟹田",
+      "km": 0.000035
+    },
+    "kanita-s2": {
+      "lat": 41.038369,
+      "lng": 140.642522,
+      "source": "overpass",
+      "name": "蟹田",
+      "km": 0.000035
+    },
+    "ashio-s1": {
+      "lat": 36.637041,
+      "lng": 139.439974,
+      "source": "overpass",
+      "name": "通洞",
+      "km": 0.00005
+    },
+    "ashio-s2": {
+      "lat": 36.641603,
+      "lng": 139.447628,
+      "source": "overpass",
+      "name": "足尾",
+      "km": 0.850705
+    },
+    "sawara-r": {
+      "lat": 35.889403,
+      "lng": 140.49856,
+      "source": "overpass",
+      "name": "縁",
+      "km": 0.70014
+    },
+    "sawara-s1": {
+      "lat": 35.88843,
+      "lng": 140.498079,
+      "source": "overpass",
+      "name": "小野川",
+      "km": 0.769714
+    },
+    "sawara-s2": {
+      "lat": 35.88839,
+      "lng": 140.497164,
+      "source": "overpass",
+      "name": "伊能忠敬記念館",
+      "km": 0.738849
+    },
+    "sawara-s3": {
+      "lat": 35.894546,
+      "lng": 140.494077,
+      "source": "overpass",
+      "name": "佐原",
+      "km": 0.000057
+    },
+    "manazuru-2": {
+      "lat": 35.151734,
+      "lng": 139.143525,
+      "source": "overpass",
+      "name": "宵（よい）",
+      "km": 1.174979
+    },
+    "manazuru-s1": {
+      "lat": 35.156943,
+      "lng": 139.13228,
+      "source": "overpass",
+      "name": "真鶴",
+      "km": 0.000049
+    },
+    "hamakanaya-s2": {
+      "lat": 35.158571,
+      "lng": 139.828853,
+      "source": "overpass",
+      "name": "鋸山",
+      "km": 1.215659
+    },
+    "nagatoro-2": {
+      "lat": 36.09474,
+      "lng": 139.113138,
+      "source": "overpass",
+      "name": "むらた",
+      "km": 0.08444
+    },
+    "nagatoro-s1": {
+      "lat": 36.09468,
+      "lng": 139.115782,
+      "source": "overpass",
+      "name": "岩畳",
+      "km": 0.30301
+    },
+    "nagatoro-s2": {
+      "lat": 36.095295,
+      "lng": 139.112497,
+      "source": "overpass",
+      "name": "長瀞",
+      "km": 0.000014
+    },
+    "nagatoro-s3": {
+      "lat": 36.093132,
+      "lng": 139.091622,
+      "source": "overpass",
+      "name": "宝登山",
+      "km": 1.890995
+    },
+    "katsunuma-s1": {
+      "lat": 35.676962,
+      "lng": 138.740277,
+      "source": "overpass",
+      "name": "勝沼ぶどうの丘",
+      "km": 0.577003
+    },
+    "katsunuma-s2": {
+      "lat": 35.655911,
+      "lng": 138.743143,
+      "source": "overpass",
+      "name": "大善寺",
+      "km": 1.828714
+    },
+    "kobuchizawa-s1": {
+      "lat": 35.863918,
+      "lng": 138.315962,
+      "source": "overpass",
+      "name": "小淵沢",
+      "km": 0.000035
+    },
+    "kobuchizawa-s2": {
+      "lat": 35.863918,
+      "lng": 138.315962,
+      "source": "overpass",
+      "name": "小淵沢",
+      "km": 0.000035
+    },
+    "obasute-s1": {
+      "lat": 36.502797,
+      "lng": 138.093184,
+      "source": "overpass",
+      "name": "姨捨",
+      "km": 0.026381
+    },
+    "obasute-s2": {
+      "lat": 36.503865,
+      "lng": 138.097925,
+      "source": "overpass",
+      "name": "姨捨の棚田",
+      "km": 0.435087
+    },
+    "shimosuwa-2": {
+      "lat": 36.075568,
+      "lng": 138.090531,
+      "source": "overpass",
+      "name": "新鶴本店",
+      "km": 0.644683
+    },
+    "shimosuwa-r": {
+      "lat": 36.06002,
+      "lng": 138.068835,
+      "source": "overpass",
+      "name": "足湯",
+      "km": 1.963277
+    },
+    "shimosuwa-s1": {
+      "lat": 36.074859,
+      "lng": 138.090337,
+      "source": "overpass",
+      "name": "諏訪大社 下社秋宮",
+      "km": 0.584942
+    },
+    "shimosuwa-s2": {
+      "lat": 36.082924,
+      "lng": 138.081947,
+      "source": "overpass",
+      "name": "万治の石仏",
+      "km": 1.240441
+    },
+    "shimosuwa-s3": {
+      "lat": 36.072019,
+      "lng": 138.084858,
+      "source": "overpass",
+      "name": "下諏訪",
+      "km": 0.000029
+    },
+    "yui-2": {
+      "lat": 35.096556,
+      "lng": 138.552849,
+      "source": "overpass",
+      "name": "さくら",
+      "km": 0.07134
+    },
+    "yui-s1": {
+      "lat": 35.097192,
+      "lng": 138.55295,
+      "source": "overpass",
+      "name": "由比",
+      "km": 0
+    },
+    "yui-s2": {
+      "lat": 35.108009,
+      "lng": 138.567097,
+      "source": "overpass",
+      "name": "東海道広重美術館",
+      "km": 1.761557
+    },
+    "yui-s3": {
+      "lat": 35.107111,
+      "lng": 138.567213,
+      "source": "walk-bearing",
+      "km": 1.7,
+      "note": "clamped oversize geocode"
+    },
+    "nebukawa-s1": {
+      "lat": 35.202666,
+      "lng": 139.138732,
+      "source": "overpass",
+      "name": "根府川",
+      "km": 0.000035
+    },
+    "nebukawa-s2": {
+      "lat": 35.202666,
+      "lng": 139.138732,
+      "source": "overpass",
+      "name": "根府川",
+      "km": 0.000035
+    },
+    "amarube-2": {
+      "lat": 35.648762,
+      "lng": 134.55707,
+      "source": "overpass",
+      "name": "餘部",
+      "km": 0.000045
+    },
+    "amarube-s1": {
+      "lat": 35.648762,
+      "lng": 134.55707,
+      "source": "overpass",
+      "name": "餘部",
+      "km": 0.000045
+    },
+    "amarube-s2": {
+      "lat": 35.648762,
+      "lng": 134.55707,
+      "source": "overpass",
+      "name": "餘部",
+      "km": 0.000045
+    },
+    "onomichi-2": {
+      "lat": 34.404821,
+      "lng": 133.193108,
+      "source": "overpass",
+      "name": "尾道",
+      "km": 0.000058
+    },
+    "onomichi-beans": {
+      "lat": 34.404821,
+      "lng": 133.193108,
+      "source": "overpass",
+      "name": "尾道",
+      "km": 0.000058
+    },
+    "onomichi-s1": {
+      "lat": 34.409829,
+      "lng": 133.196382,
+      "source": "overpass",
+      "name": "千光寺公園",
+      "km": 0.632742
+    },
+    "onomichi-s2": {
+      "lat": 34.410725,
+      "lng": 133.200566,
+      "source": "overpass",
+      "name": "艮神社",
+      "km": 0.948181
+    },
+    "onomichi-s3": {
+      "lat": 34.404821,
+      "lng": 133.193108,
+      "source": "overpass",
+      "name": "尾道",
+      "km": 0.000058
+    },
+    "misumi-2": {
+      "lat": 32.610318,
+      "lng": 130.460302,
+      "source": "overpass",
+      "name": "海の隠れ家",
+      "km": 0.92348
+    },
+    "misumi-s1": {
+      "lat": 32.621993,
+      "lng": 130.455751,
+      "source": "overpass",
+      "name": "三角西港",
+      "km": 2.051959
+    },
+    "usuki-1": {
+      "lat": 33.118694,
+      "lng": 131.798626,
+      "source": "nominatim",
+      "name": "二王座歴史の道",
+      "query": "二王座歴史の道 大分",
+      "km": 0.863639
+    },
+    "usuki-s1": {
+      "lat": 33.118602,
+      "lng": 131.807899,
+      "source": "overpass",
+      "name": "臼杵",
+      "km": 0.000011
+    },
+    "usuki-s2": {
+      "lat": 33.121755,
+      "lng": 131.804314,
+      "source": "overpass",
+      "name": "臼杵城跡（臼杵公園）",
+      "km": 0.484106
+    },
+    "hitoyoshi-3": {
+      "lat": 32.209727,
+      "lng": 130.76022,
+      "source": "nominatim",
+      "name": "繊月酒造 焼酎蔵",
+      "query": "繊月酒造 熊本",
+      "km": 0.951287
+    },
+    "hitoyoshi-s1": {
+      "lat": 32.215901,
+      "lng": 130.75322,
+      "source": "overpass",
+      "name": "人吉",
+      "km": 0.000058
+    },
+    "hitoyoshi-s2": {
+      "lat": 32.213381,
+      "lng": 130.753045,
+      "source": "overpass",
+      "name": "青井阿蘇神社",
+      "km": 0.280748
+    },
+    "tsukazaki-s1": {
+      "lat": 35.302196,
+      "lng": 140.139392,
+      "source": "overpass",
+      "name": "月崎",
+      "km": 0.000052
+    },
+    "tamatsukuri-m": {
+      "lat": 35.417337,
+      "lng": 133.009552,
+      "source": "nominatim",
+      "name": "ケーキハウス　アガート",
+      "query": "ケーキハウス アガート 島根",
+      "km": 1.520332
+    },
+    "tamatsukuri-s1": {
+      "lat": 35.43084,
+      "lng": 133.012188,
+      "source": "overpass",
+      "name": "玉造温泉",
+      "km": 0.000009
+    },
+    "tamatsukuri-s2": {
+      "lat": 35.41343,
+      "lng": 133.011742,
+      "source": "overpass",
+      "name": "稲荷神社",
+      "km": 1.936359
+    },
+    "chusho-2": {
+      "lat": 34.923292,
+      "lng": 135.756127,
+      "source": "nominatim-token",
+      "name": "十石舟乗り場",
+      "query": "十石舟",
+      "km": 0.530237
+    },
+    "chusho-7": {
+      "lat": 34.920576,
+      "lng": 135.751835,
+      "source": "walk-bearing",
+      "km": 1.02,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hachiman-6": {
+      "lat": 34.863045,
+      "lng": 135.697657,
+      "source": "nominatim-token",
+      "name": "京都銀行男山支店",
+      "query": "男山",
+      "km": 2.410046
+    },
+    "oyam-1": {
+      "lat": 34.894329,
+      "lng": 135.678103,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "clamped oversize geocode"
+    },
+    "oyam-7": {
+      "lat": 34.890039,
+      "lng": 135.67308,
+      "source": "walk-bearing",
+      "km": 0.793333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "biei-1": {
+      "lat": 43.591981,
+      "lng": 142.461225,
+      "source": "station-adjacent",
+      "km": 0.113333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "biei-2": {
+      "lat": 43.594095,
+      "lng": 142.456587,
+      "source": "walk-bearing",
+      "km": 0.51,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "biei-r": {
+      "lat": 43.590535,
+      "lng": 142.460834,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "biei-t": {
+      "lat": 43.591279,
+      "lng": 142.461775,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "biei-s2": {
+      "lat": 43.591799,
+      "lng": 142.468178,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kanita-1": {
+      "lat": 41.038369,
+      "lng": 140.641845,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kanita-2": {
+      "lat": 41.041109,
+      "lng": 140.649786,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kanita-3": {
+      "lat": 41.043153,
+      "lng": 140.634594,
+      "source": "walk-bearing",
+      "km": 0.85,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kanita-s": {
+      "lat": 41.03908,
+      "lng": 140.651951,
+      "source": "walk-bearing",
+      "km": 0.793333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kanita-r": {
+      "lat": 41.03888,
+      "lng": 140.642522,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kanita-t": {
+      "lat": 41.039127,
+      "lng": 140.640008,
+      "source": "station-adjacent",
+      "km": 0.226667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "ashio-1": {
+      "lat": 36.637552,
+      "lng": 139.439974,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "ashio-2": {
+      "lat": 36.639486,
+      "lng": 139.434389,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "ashio-3": {
+      "lat": 36.634987,
+      "lng": 139.448505,
+      "source": "walk-bearing",
+      "km": 0.793333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "ashio-m": {
+      "lat": 36.638636,
+      "lng": 139.442458,
+      "source": "walk-bearing",
+      "km": 0.283333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "ashio-s": {
+      "lat": 36.635555,
+      "lng": 139.447381,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "ashio-r": {
+      "lat": 36.639324,
+      "lng": 139.434284,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "sawara-1": {
+      "lat": 35.889931,
+      "lng": 140.500746,
+      "source": "nominatim-token",
+      "name": "私立千葉萌陽高等学校",
+      "query": "通り",
+      "km": 0.790091
+    },
+    "sawara-2": {
+      "lat": 35.899197,
+      "lng": 140.498998,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "sawara-3": {
+      "lat": 35.906515,
+      "lng": 140.489126,
+      "source": "nominatim-token",
+      "name": "利根川両総水門",
+      "query": "水門",
+      "km": 1.403575
+    },
+    "sawara-4": {
+      "lat": 35.893864,
+      "lng": 140.499686,
+      "source": "walk-bearing",
+      "km": 0.51,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "sawara-s": {
+      "lat": 35.898931,
+      "lng": 140.498407,
+      "source": "walk-bearing",
+      "km": 0.623333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "manazuru-1": {
+      "lat": 35.158475,
+      "lng": 139.13228,
+      "source": "station-adjacent",
+      "km": 0.17,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "manazuru-3": {
+      "lat": 35.159056,
+      "lng": 139.126596,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "manazuru-4": {
+      "lat": 35.162441,
+      "lng": 139.133681,
+      "source": "walk-bearing",
+      "km": 0.623333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "manazuru-s": {
+      "lat": 35.158748,
+      "lng": 139.134488,
+      "source": "walk-bearing",
+      "km": 0.283333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "manazuru-r": {
+      "lat": 35.158839,
+      "lng": 139.126482,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "manazuru-s2": {
+      "lat": 35.159831,
+      "lng": 139.135812,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "manazuru-s3": {
+      "lat": 35.155219,
+      "lng": 139.147747,
+      "source": "walk-bearing",
+      "km": 1.416667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hamakanaya-1": {
+      "lat": 35.169158,
+      "lng": 139.822379,
+      "source": "station-adjacent",
+      "km": 0.113333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hamakanaya-2": {
+      "lat": 35.166215,
+      "lng": 139.826787,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hamakanaya-3": {
+      "lat": 35.170064,
+      "lng": 139.830798,
+      "source": "walk-bearing",
+      "km": 0.793333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hamakanaya-s": {
+      "lat": 35.166311,
+      "lng": 139.826848,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hamakanaya-r": {
+      "lat": 35.169158,
+      "lng": 139.822379,
+      "source": "walk-bearing",
+      "km": 0.113333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hamakanaya-t": {
+      "lat": 35.167447,
+      "lng": 139.828567,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hamakanaya-s1": {
+      "lat": 35.165304,
+      "lng": 139.825044,
+      "source": "walk-bearing",
+      "km": 0.396667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "nagatoro-1": {
+      "lat": 36.095295,
+      "lng": 139.10997,
+      "source": "station-adjacent",
+      "km": 0.226667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "nagatoro-3": {
+      "lat": 36.099889,
+      "lng": 139.107481,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "nagatoro-s": {
+      "lat": 36.097208,
+      "lng": 139.115457,
+      "source": "walk-bearing",
+      "km": 0.34,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "nagatoro-r": {
+      "lat": 36.099946,
+      "lng": 139.107563,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "nagatoro-t": {
+      "lat": 36.096739,
+      "lng": 139.11071,
+      "source": "walk-bearing",
+      "km": 0.226667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "katsunuma-1": {
+      "lat": 35.675494,
+      "lng": 138.740003,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "katsunuma-2": {
+      "lat": 35.663733,
+      "lng": 138.737145,
+      "source": "nominatim-token",
+      "name": "シャトー勝沼",
+      "query": "シャトー勝沼",
+      "km": 1.104967
+    },
+    "katsunuma-3": {
+      "lat": 35.669846,
+      "lng": 138.737038,
+      "source": "walk-bearing",
+      "km": 0.623333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "katsunuma-s": {
+      "lat": 35.673843,
+      "lng": 138.750537,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "katsunuma-r": {
+      "lat": 35.675546,
+      "lng": 138.74008,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kobuchizawa-1": {
+      "lat": 35.863918,
+      "lng": 138.315332,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kobuchizawa-2": {
+      "lat": 35.866806,
+      "lng": 138.319525,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kobuchizawa-3": {
+      "lat": 35.867886,
+      "lng": 138.310202,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kobuchizawa-4": {
+      "lat": 35.860749,
+      "lng": 138.324564,
+      "source": "walk-bearing",
+      "km": 0.85,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kobuchizawa-5": {
+      "lat": 35.862162,
+      "lng": 138.336538,
+      "source": "nominatim-token",
+      "name": "身曾岐神社",
+      "query": "神社",
+      "km": 1.864459
+    },
+    "kobuchizawa-s": {
+      "lat": 35.864487,
+      "lng": 138.317717,
+      "source": "station-adjacent",
+      "km": 0.17,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "kobuchizawa-r": {
+      "lat": 35.863918,
+      "lng": 138.315332,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "obasute-1": {
+      "lat": 36.503099,
+      "lng": 138.093324,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "obasute-2": {
+      "lat": 36.500762,
+      "lng": 138.08878,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "obasute-r": {
+      "lat": 36.503072,
+      "lng": 138.093525,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "obasute-t": {
+      "lat": 36.502949,
+      "lng": 138.092875,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "shimosuwa-1": {
+      "lat": 36.074546,
+      "lng": 138.081732,
+      "source": "walk-bearing",
+      "km": 0.396667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "shimosuwa-3": {
+      "lat": 36.066727,
+      "lng": 138.090546,
+      "source": "nominatim-token",
+      "name": "湖畔町南",
+      "query": "湖畔",
+      "km": 0.779504
+    },
+    "shimosuwa-s": {
+      "lat": 36.075342,
+      "lng": 138.087795,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "shimosuwa-t": {
+      "lat": 36.072019,
+      "lng": 138.080437,
+      "source": "walk-bearing",
+      "km": 0.396667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "yui-1": {
+      "lat": 35.106868,
+      "lng": 138.567039,
+      "source": "nominatim-token",
+      "name": "東海道由比宿おもしろ宿場館",
+      "query": "宿場",
+      "km": 1.67343
+    },
+    "yui-3": {
+      "lat": 35.094452,
+      "lng": 138.559647,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "yui-s": {
+      "lat": 35.099743,
+      "lng": 138.556848,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "yui-r": {
+      "lat": 35.106868,
+      "lng": 138.567039,
+      "source": "nominatim-token",
+      "name": "東海道由比宿おもしろ宿場館",
+      "query": "宿場",
+      "km": 1.67343
+    },
+    "nebukawa-1": {
+      "lat": 35.203081,
+      "lng": 139.139095,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "nebukawa-2": {
+      "lat": 35.201528,
+      "lng": 139.135251,
+      "source": "walk-bearing",
+      "km": 0.34,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "nebukawa-r": {
+      "lat": 35.203081,
+      "lng": 139.139095,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "nebukawa-s": {
+      "lat": 35.203177,
+      "lng": 139.138732,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "amarube-1": {
+      "lat": 35.653859,
+      "lng": 134.552888,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "amarube-3": {
+      "lat": 35.652267,
+      "lng": 134.561637,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "amarube-s": {
+      "lat": 35.651315,
+      "lng": 134.55707,
+      "source": "walk-bearing",
+      "km": 0.283333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "amarube-r": {
+      "lat": 35.654531,
+      "lng": 134.554534,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "amarube-t": {
+      "lat": 35.648762,
+      "lng": 134.558326,
+      "source": "station-adjacent",
+      "km": 0.113333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "onomichi-1": {
+      "lat": 34.406467,
+      "lng": 133.197693,
+      "source": "nominatim-token",
+      "name": "中商店街",
+      "query": "商店街",
+      "km": 0.458779
+    },
+    "onomichi-3": {
+      "lat": 34.406125,
+      "lng": 133.197505,
+      "source": "nominatim-token",
+      "name": "石畳小路",
+      "query": "石畳",
+      "km": 0.428647
+    },
+    "onomichi-4": {
+      "lat": 34.401168,
+      "lng": 133.195322,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "onomichi-5": {
+      "lat": 34.402016,
+      "lng": 133.181209,
+      "source": "walk-bearing",
+      "km": 1.133333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "onomichi-s": {
+      "lat": 34.400925,
+      "lng": 133.196059,
+      "source": "walk-bearing",
+      "km": 0.51,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "onomichi-r": {
+      "lat": 34.411199,
+      "lng": 133.186924,
+      "source": "walk-bearing",
+      "km": 0.906667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "misumi-1": {
+      "lat": 32.6119,
+      "lng": 130.473199,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "misumi-3": {
+      "lat": 32.611857,
+      "lng": 130.477345,
+      "source": "walk-bearing",
+      "km": 0.85,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "misumi-s": {
+      "lat": 32.611856,
+      "lng": 130.472115,
+      "source": "walk-bearing",
+      "km": 0.51,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "misumi-r": {
+      "lat": 32.611686,
+      "lng": 130.477471,
+      "source": "walk-bearing",
+      "km": 0.85,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "misumi-t": {
+      "lat": 32.607746,
+      "lng": 130.468464,
+      "source": "station-adjacent",
+      "km": 0.113333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "misumi-s2": {
+      "lat": 32.613225,
+      "lng": 130.466424,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "usuki-2": {
+      "lat": 33.122425,
+      "lng": 131.810942,
+      "source": "walk-bearing",
+      "km": 0.51,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "usuki-3": {
+      "lat": 33.115406,
+      "lng": 131.815532,
+      "source": "walk-bearing",
+      "km": 0.793333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "usuki-s": {
+      "lat": 33.124218,
+      "lng": 131.807899,
+      "source": "walk-bearing",
+      "km": 0.623333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "usuki-r": {
+      "lat": 33.122429,
+      "lng": 131.802187,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hitoyoshi-1": {
+      "lat": 32.218454,
+      "lng": 130.75322,
+      "source": "station-adjacent",
+      "km": 0.283333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hitoyoshi-2": {
+      "lat": 32.21909,
+      "lng": 130.748508,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hitoyoshi-s": {
+      "lat": 32.209727,
+      "lng": 130.76022,
+      "source": "nominatim-token",
+      "name": "繊月酒造 焼酎蔵",
+      "query": "焼酎",
+      "km": 0.951287
+    },
+    "hitoyoshi-t": {
+      "lat": 32.218454,
+      "lng": 130.75322,
+      "source": "walk-bearing",
+      "km": 0.283333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "hitoyoshi-s3": {
+      "lat": 32.214434,
+      "lng": 130.759,
+      "source": "walk-bearing",
+      "km": 0.566667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "tsukazaki-1": {
+      "lat": 35.302707,
+      "lng": 140.139392,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "tsukazaki-2": {
+      "lat": 35.300214,
+      "lng": 140.135749,
+      "source": "station-adjacent",
+      "km": 0.396667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "tsukazaki-r": {
+      "lat": 35.302707,
+      "lng": 140.139392,
+      "source": "station-adjacent",
+      "km": 0.056667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "tsukazaki-t": {
+      "lat": 35.300357,
+      "lng": 140.135637,
+      "source": "station-adjacent",
+      "km": 0.396667,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "tsukazaki-s2": {
+      "lat": 35.308079,
+      "lng": 140.133385,
+      "source": "walk-bearing",
+      "km": 0.85,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "tamatsukuri-1": {
+      "lat": 35.433728,
+      "lng": 133.008644,
+      "source": "walk-bearing",
+      "km": 0.453333,
+      "note": "Bearing from editorial x/y; distance from walkMinutes around corrected station"
+    },
+    "tamatsukuri-2": {
+      "lat": 35.416807,
+      "lng": 133.009531,
+      "source": "nominatim-token",
+      "name": "玉造温泉足湯",
+      "query": "足湯",
+      "km": 1.57889
+    },
+    "tamatsukuri-3": {
+      "lat": 35.427442,
+      "lng": 133.005932,
+      "source": "walk-bearing",
+      "km": 0.68,
+      "note": "clamped oversize geocode"
+    },
+    "tamatsukuri-s": {
+      "lat": 35.416069,
+      "lng": 133.009663,
+      "source": "nominatim-token",
+      "name": "勾玉橋",
+      "query": "勾玉",
+      "km": 1.658377
+    },
+    "tamatsukuri-r": {
+      "lat": 35.416807,
+      "lng": 133.009531,
+      "source": "nominatim-token",
+      "name": "玉造温泉足湯",
+      "query": "足湯",
+      "km": 1.57889
+    },
+    "tamatsukuri-s3": {
+      "lat": 35.416069,
+      "lng": 133.009663,
+      "source": "nominatim-token",
+      "name": "勾玉橋",
+      "query": "勾玉橋",
+      "km": 1.658377
+    }
+  },
+  "unresolved": []
+}

@@ -12,7 +12,11 @@
     "ios:open": "npx cap open ios",
     "ios:app": "npm run ios:sync && npm run ios:open",
     "ios:rebuild": "npm run ios:export && npm run ios:sync && npm run ios:open",
-    "ios:live": "CAP_SERVER_URL=$(node scripts/cap-local-url.mjs) npx cap sync ios && npx cap open ios"
+    "ios:live": "CAP_SERVER_URL=$(node scripts/cap-local-url.mjs) npx cap sync ios && npx cap open ios",
+    "geo:geocode": "node scripts/geocode-coordinates.mjs",
+    "geo:fill": "node scripts/fill-unresolved-coordinates.mjs",
+    "geo:refresh": "npm run geo:geocode && npm run geo:fill && npm run geo:export-ios",
+    "geo:export-ios": "node ../mishiranu-ios/scripts/export-stations.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

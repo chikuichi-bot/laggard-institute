@@ -34,15 +34,15 @@ Xcode が開いたら：
 
 ## 駅データを更新したとき
 
-駅やスポットは `mishiranu-app/data/mishiranu-stations.ts` が元データです。編集したら JSON を書き出し直します。
+駅やスポットの文章は `mishiranu-app/data/mishiranu-stations.ts`、**地図の座標は** `mishiranu-app/data/mishiranu-coordinates.json` が正本です。相対位置（x/y）からピンを作ることはしません。
 
 ```bash
 cd ~/Desktop/laggard-institute/mishiranu-app
 npm install
-node ../mishiranu-ios/scripts/export-stations.mjs
+npm run geo:refresh
 ```
 
-`mishiranu-ios/MishiranuEki/Resources/stations.json` が更新されます。
+これで OpenStreetMap から駅・スポット座標を取り直し、iOS 用の `stations.json` まで書き出します。出町柳など手確認のピンは `source: "manual"` のまま上書きしません。
 
 ## 構成
 

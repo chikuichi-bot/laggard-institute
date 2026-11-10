@@ -1,8 +1,23 @@
 import type { Spot, StationSeed } from "@/data/mishiranu-stations";
+import coordinatesJson from "@/data/mishiranu-coordinates.json";
 
-/** WGS84 station centers for the curated set */
-export const STATION_LL: Record<string, { lat: number; lng: number }> = {
-  // OSM: 出町柳駅 building / 叡電・京阪ホーム（今出川通のすぐ北）
+type LatLng = { lat: number; lng: number };
+
+type CoordinatesFile = {
+  stations: Record<string, LatLng & { source?: string; name?: string }>;
+  spots: Record<string, LatLng & { source?: string; name?: string }>;
+};
+
+// Next (esModuleInterop) and plain Node JSON require both work.
+const coordinates = (
+  (coordinatesJson as { default?: CoordinatesFile }).default ?? coordinatesJson
+) as CoordinatesFile;
+
+/**
+ * Hand-entered fallbacks only used until `scripts/geocode-coordinates.mjs`
+ * fills `data/mishiranu-coordinates.json`. Prefer the JSON for every pin.
+ */
+export const STATION_LL: Record<string, LatLng> = {
   demachiyanagi: { lat: 35.0305, lng: 135.7729 },
   chushojima: { lat: 34.9267, lng: 135.7594 },
   "iwashimizu-hachimangu": { lat: 34.8796, lng: 135.6998 },
@@ -82,31 +97,24 @@ export function findNearestStation(
   return best;
 }
 
-/** Precise pins for 出町柳 (feel-test home station) */
-export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
-  // 鴨川デルタ（OSM leisure=park）。三角の先端＝合流点寄り
-  "demachi-1": { lat: 35.0297, lng: 135.7717 },
-  // 枡形は今出川の北・河原町〜寺町のアーケード（OSM way / ふたば・出町座）
-  "demachi-2": { lat: 35.03029, lng: 135.76886 }, // 出町枡形商店街
-  "demachi-3": { lat: 35.03011, lng: 135.76963 }, // 出町ふたば
-  "demachi-3b": { lat: 35.03015, lng: 135.7697 }, // ふたば土産
-  "demachi-4": { lat: 35.03027, lng: 135.77268 }, // 叡電ホーム
-  "demachi-5": { lat: 35.0302, lng: 135.76903 }, // 出町座（枡形）
-  "demachi-5b": { lat: 35.0289, lng: 135.7804 }, // 進々堂 百万遍
-  "demachi-5c": { lat: 35.0303, lng: 135.7692 }, // 満寿形屋
-  "demachi-5d": { lat: 35.0282, lng: 135.7726 }, // 手打大山そば 響
-  "demachi-5e": { lat: 35.0391, lng: 135.7729 }, // 下鴨茶寮
-  "demachi-5f": { lat: 35.02955, lng: 135.7729 }, // COYOTE Roastery
-  "demachi-beans": { lat: 35.0322, lng: 135.7782 }, // WEEKENDERS COFFEE
-  "demachi-10": { lat: 35.03005, lng: 135.77155 }, // 鴨川デルタの川端（休む）
-  "demachi-6": { lat: 35.03205, lng: 135.77045 }, // 下鴨並木入口
-  "demachi-9": { lat: 35.0389, lng: 135.7728 }, // 下鴨神社・糺の森
-  "demachi-7": { lat: 35.029, lng: 135.7687 }, // 河原町今出川
-  "demachi-8": { lat: 35.03028, lng: 135.7694 }, // 紙もの雑貨
-  "demachi-11": { lat: 35.03025, lng: 135.7705 }, // 駅前レンタサイクル
-};
+/** Snapshot of curated spot pins (from mishiranu-coordinates.json). */
+export const SPOT_LL: Record<string, LatLng> = Object.fromEntries(
+  Object.entries(coordinates.spots).map(([id, v]) => [id, { lat: v.lat, lng: v.lng }]),
+);
 
-export function stationLatLng(station: StationSeed): { lat: number; lng: number } {
+function fromCoordinatesStation(id: string): LatLng | undefined {
+  const hit = coordinates.stations[id];
+  return hit ? { lat: hit.lat, lng: hit.lng } : undefined;
+}
+
+function fromCoordinatesSpot(id: string): LatLng | undefined {
+  const hit = coordinates.spots[id];
+  return hit ? { lat: hit.lat, lng: hit.lng } : undefined;
+}
+
+export function stationLatLng(station: StationSeed): LatLng {
+  const curated = fromCoordinatesStation(station.id);
+  if (curated) return curated;
   if (
     typeof station.lat === "number" &&
     typeof station.lng === "number" &&
@@ -115,14 +123,18 @@ export function stationLatLng(station: StationSeed): { lat: number; lng: number 
   ) {
     return { lat: station.lat, lng: station.lng };
   }
-  return STATION_LL[station.id] ?? { lat: 35.0, lng: 135.0 };
+  const fallback = STATION_LL[station.id];
+  if (fallback) return fallback;
+  throw new Error(`駅座標がありません: ${station.id}`);
 }
 
-/** Map relative x/y (0–1) onto ~2.4km box around the station when no precise pin */
-export function spotLatLng(
-  station: StationSeed,
-  spot: Spot,
-): { lat: number; lng: number } {
+/**
+ * Real WGS84 only. Never invent pins from relative x/y — that caused map drift.
+ * Unresolved spots must be added to data/mishiranu-coordinates.json.
+ */
+export function spotLatLng(station: StationSeed, spot: Spot): LatLng {
+  const curated = fromCoordinatesSpot(spot.id);
+  if (curated) return curated;
   if (
     typeof spot.lat === "number" &&
     typeof spot.lng === "number" &&
@@ -131,11 +143,7 @@ export function spotLatLng(
   ) {
     return { lat: spot.lat, lng: spot.lng };
   }
-  const precise = SPOT_LL[spot.id];
-  if (precise) return precise;
-  const center = stationLatLng(station);
-  const spanDeg = 0.022; // ~2.4km
-  const lng = center.lng + (spot.x - 0.5) * spanDeg;
-  const lat = center.lat + (0.52 - spot.y) * spanDeg;
-  return { lat, lng };
+  throw new Error(
+    `スポット座標がありません: ${spot.id}（${spot.name} @ ${station.name}）。scripts/geocode-coordinates.mjs を実行するか、data/mishiranu-coordinates.json に lat/lng を追加してください。`,
+  );
 }
