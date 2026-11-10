@@ -121,9 +121,23 @@ struct TourMapPage: View {
         .onChange(of: model.stay) { position = camera() }
     }
 
+    /// 駅とピンが収まる範囲。ピンが少ないときは徒歩圏の円を目安にする。
     private func camera() -> MapCameraPosition {
-        let meters = model.radiusKm * 1000 * 2.3
-        return .region(MKCoordinateRegion(center: stationCoordinate, latitudinalMeters: meters, longitudinalMeters: meters))
+        let spots = model.tourSpots
+        guard spots.count >= 2 else {
+            let meters = model.radiusKm * 1000 * 2.3
+            return .region(MKCoordinateRegion(center: stationCoordinate, latitudinalMeters: meters, longitudinalMeters: meters))
+        }
+        let lats = [station.lat] + spots.map(\.lat)
+        let lngs = [station.lng] + spots.map(\.lng)
+        let minLat = lats.min()!, maxLat = lats.max()!
+        let minLng = lngs.min()!, maxLng = lngs.max()!
+        let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2, longitude: (minLng + maxLng) / 2)
+        let span = MKCoordinateSpan(
+            latitudeDelta: max((maxLat - minLat) * 1.6, 0.008),
+            longitudeDelta: max((maxLng - minLng) * 1.6, 0.008)
+        )
+        return .region(MKCoordinateRegion(center: center, span: span))
     }
 }
 
