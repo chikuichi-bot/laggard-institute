@@ -154,25 +154,54 @@ export function allowViewerRequest(
   return true;
 }
 
+/** Max paid Gemini HTTP calls per viewer per rolling hour. */
+export const VIEWER_HOURLY_PAID_MAX = 40;
+
 /**
- * Shared hourly budget for AI-generating routes (nearby/station/copy).
- * Separate from the short per-route window so a viewer cannot burn quota all day.
+ * Peek whether the viewer still has hourly paid-call budget (does not charge).
  */
-export function allowViewerHourlyBudget(
+export function hasViewerHourlyBudget(
   viewerSub: string,
-  maxHits = 40,
+  maxHits = VIEWER_HOURLY_PAID_MAX,
+  windowMs = 60 * 60_000,
+): boolean {
+  ensureLoaded();
+  const now = Date.now();
+  const prev = buckets.get(`hourly:${viewerSub}`);
+  const recent = pruneHits(prev?.hits ?? [], now, windowMs);
+  return recent.length < maxHits;
+}
+
+/**
+ * Charge one unit of the viewer's hourly paid-call budget.
+ * Returns false when the budget is already exhausted.
+ */
+export function consumeViewerHourlyBudget(
+  viewerSub: string,
+  maxHits = VIEWER_HOURLY_PAID_MAX,
   windowMs = 60 * 60_000,
 ): boolean {
   return allowViewerRequest(`hourly:${viewerSub}`, maxHits, windowMs);
 }
 
+/** @deprecated Use hasViewerHourlyBudget / consume via beginPaidAiCall. */
+export function allowViewerHourlyBudget(
+  viewerSub: string,
+  maxHits = VIEWER_HOURLY_PAID_MAX,
+  windowMs = 60 * 60_000,
+): boolean {
+  return hasViewerHourlyBudget(viewerSub, maxHits, windowMs);
+}
+
 /**
- * Process-wide gate before any paid Gemini HTTP call.
+ * Gate before any paid Gemini HTTP call.
+ * Charges both the process-wide budget and one unit of the viewer's hourly
+ * paid-call budget (so a route that makes 3 Gemini calls costs 3, not 1).
  * Returns a release() that must be called in finally.
  */
-export function beginPaidAiCall():
-  | { ok: true; release: () => void }
-  | { ok: false } {
+export function beginPaidAiCall(
+  viewerSub: string,
+): { ok: true; release: () => void } | { ok: false } {
   ensureLoaded();
   const now = Date.now();
   const recent = pruneHits(globalPaidHits, now, GLOBAL_PAID_WINDOW_MS);
@@ -183,6 +212,11 @@ export function beginPaidAiCall():
     globalPaidHits.length >= GLOBAL_PAID_MAX ||
     inFlightPaid >= GLOBAL_IN_FLIGHT_MAX
   ) {
+    markDirty();
+    return { ok: false };
+  }
+
+  if (!consumeViewerHourlyBudget(viewerSub)) {
     markDirty();
     return { ok: false };
   }
