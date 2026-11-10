@@ -93,9 +93,9 @@ const TOUR_TABS: Array<{
   label: string;
 }> = [
   { id: "map", label: "地図" },
+  { id: "place", label: "土地" },
   { id: "course", label: "歩く" },
   { id: "guide", label: "案内" },
-  { id: "place", label: "土地" },
   { id: "more", label: "ほか" },
 ];
 
