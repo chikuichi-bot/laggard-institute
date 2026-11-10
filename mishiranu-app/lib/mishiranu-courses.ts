@@ -1,8 +1,11 @@
 import {
   GUIDE_ORDER,
+  mealTierFor,
+  soloOkFor,
   spotGuide,
   spotsForTime,
   type GuideKind,
+  type MealTier,
   type MealTime,
   type Spot,
   type StationSeed,
@@ -10,6 +13,72 @@ import {
 } from "@/data/mishiranu-stations";
 
 export type DayPart = "morning" | "midday" | "afternoon" | "evening" | "night";
+
+/** ご飯屋の一人可否の希望 */
+export type SoloPref = "solo" | "together" | "either";
+
+/** ご飯の予算希望（mealTier に対応、either は指定なし） */
+export type BudgetPref = MealTier | "either";
+
+export type MealPrefs = {
+  solo: SoloPref;
+  budget: BudgetPref;
+};
+
+export const SOLO_PREF_OPTIONS: Array<{
+  id: SoloPref;
+  label: string;
+  hint: string;
+}> = [
+  { id: "solo", label: "一人で入りたい", hint: "カウンターや気軽な店寄り" },
+  { id: "either", label: "人数は気にしない", hint: "一人可否は問わない" },
+  { id: "together", label: "みんなで寄りたい", hint: "席や予約向きも歓迎" },
+];
+
+export const BUDGET_PREF_OPTIONS: Array<{
+  id: BudgetPref;
+  label: string;
+  hint: string;
+}> = [
+  { id: "casual", label: "気軽に", hint: "だいたい 〜¥1,500" },
+  { id: "upscale", label: "少し奮発", hint: "だいたい ¥3,000〜" },
+  { id: "either", label: "どちらでも", hint: "価格帯は問わない" },
+];
+
+export function matchSoloPref(text: string): SoloPref | undefined {
+  const t = text.trim();
+  if (/一人|ひとり|ソロ|おひとり/.test(t)) return "solo";
+  if (/みんな|複数|二人|ふたり|グループ|連れ|同伴/.test(t)) return "together";
+  if (/どちら|気にし|問わ|なんでも|おまかせ|関係な/.test(t)) return "either";
+  return undefined;
+}
+
+export function matchBudgetPref(text: string): BudgetPref | undefined {
+  const t = text.trim();
+  if (/奮発|高級|高め|フォーマル|会席|贅沢|ぜいたく|3\s*000|3000|五千|万円/.test(t)) {
+    return "upscale";
+  }
+  if (/気軽|安め|安い|庶民|ランチ|軽く|千円|1500|〜¥|~¥|カジュアル/.test(t)) {
+    return "casual";
+  }
+  if (/どちら|なんでも|おまかせ|問わ|気にし/.test(t)) return "either";
+  const hit = BUDGET_PREF_OPTIONS.find((o) => t.includes(o.label));
+  return hit?.id;
+}
+
+export function mealPrefScore(spot: Spot, prefs?: MealPrefs | null): number {
+  if (!prefs || spotGuide(spot) !== "meal") return 0;
+  let score = 0;
+  if (prefs.solo === "solo") {
+    score += soloOkFor(spot) ? 14 : -18;
+  } else if (prefs.solo === "together") {
+    score += soloOkFor(spot) ? 2 : 8;
+  }
+  if (prefs.budget !== "either") {
+    score += mealTierFor(spot) === prefs.budget ? 12 : -10;
+  }
+  return score;
+}
 
 export type CourseStop = {
   spotId: string;
@@ -150,6 +219,7 @@ function scoreSpot(
   prefer: GuideKind[],
   dayPart: DayPart,
   used: Set<string>,
+  mealPrefs?: MealPrefs | null,
 ): number {
   if (used.has(spot.id)) return -1;
   if (!mealFits(spot, dayPart)) return -1;
@@ -161,6 +231,7 @@ function scoreSpot(
   score += Math.max(0, 18 - spot.walkMinutes * 0.35);
   const orderBoost = GUIDE_ORDER.indexOf(guide);
   score += (5 - orderBoost) * 0.4;
+  score += mealPrefScore(spot, mealPrefs);
   return score;
 }
 
@@ -170,6 +241,7 @@ function pickStops(
   dayPart: DayPart,
   budgetMinutes: number,
   startHour: number,
+  mealPrefs?: MealPrefs | null,
 ): CourseStop[] {
   const used = new Set<string>();
   const stops: CourseStop[] = [];
@@ -185,7 +257,7 @@ function pickStops(
       const dwell = spotGuide(spot) === "meal" ? 25 : spotGuide(spot) === "rest" ? 15 : 12;
       const cost = spot.walkMinutes + dwell;
       if (elapsed + cost > budgetMinutes + 8) continue;
-      const score = scoreSpot(spot, prefer, dayPart, used);
+      const score = scoreSpot(spot, prefer, dayPart, used, mealPrefs);
       if (score > bestScore) {
         bestScore = score;
         best = spot;
@@ -227,6 +299,7 @@ export function buildCoursesForStation(
   station: StationSeed,
   timeId: TimeOptionId,
   dayPart: DayPart,
+  mealPrefs?: MealPrefs | null,
 ): WalkCourse[] {
   const timeIndex = timeId === "1h" ? 0 : timeId === "3h" ? 1 : 2;
   const pool = spotsForTime(station, timeIndex).filter((s) => mealFits(s, dayPart));
@@ -242,7 +315,14 @@ export function buildCoursesForStation(
         : dayPart === "night" && template.id === "farther"
           ? (["meal", "tip", "rest"] as GuideKind[])
           : template.prefer;
-    const stops = pickStops(source, [...prefer], dayPart, budget, startHour);
+    const stops = pickStops(
+      source,
+      [...prefer],
+      dayPart,
+      budget,
+      startHour,
+      mealPrefs,
+    );
     const totalMinutes = stops.reduce(
       (sum, s) => sum + s.walkMinutes + s.dwellMinutes,
       0,

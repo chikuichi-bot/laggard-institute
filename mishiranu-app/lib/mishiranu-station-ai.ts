@@ -90,6 +90,8 @@ const STATION_SCHEMA_BLOCK = [
   '      "guide": "meal|souvenir|sight|rest|tip",',
   '      "mealTier": "casual|upscale（mealのみ）",',
   '      "mealTimes": ["morning|lunch|dinner"]（mealのみ・1つ以上）,',
+  '      "soloOk": true|false（mealのみ。一人でも入りやすければ true。予約必須・個室・酒席向きは false）,',
+  '      "budgetYen": "予算目安の短い表記。例 〜¥1,200 / ¥5,000〜（mealのみ）",',
   '      "hours": "何時から何時まで。例 10:00〜18:00（火曜定休）。屋外は終日（屋外）",',
   '      "blurb": "2文。meal/souvenir は店名と看板メニューを含める",',
   '      "detail": "歴史や見方の補足を2文",',
@@ -107,6 +109,8 @@ const STATION_SCHEMA_BLOCK = [
   "- meal と souvenir の name は必ず実在する店・施設の正式名称（例: 「出町ふたば」「石翠亭」）。",
   "- 禁止の name: 「駅前の定食」「港寄りの食堂」「甘味・茶店まわり」「揚げもの屋台まわり」など総称・曖昧名。",
   "- meal の blurb には店名と、そこで食べる具体的な料理名を入れる。",
+  "- meal には必ず soloOk と budgetYen を入れる。一人席・カウンター・気軽な食堂は soloOk true。会席・要予約・酒席主体は false。",
+  "- budgetYen は実際の一人あたり目安（税込ざっくり）。casual はだいたい 〜¥1,500、upscale は ¥3,000〜 を目安に具体化する。",
   "- 徒歩圏に焙煎所・珈琲専門店があり豆を売っているなら、souvenir（または tip）に1件入れ、name に店名、blurb に「豆が買える」と豆の特徴を書く。",
   "- コーヒー豆の店も総称禁止。実在のロースタリー／専門店名のみ。閉店済みの店は出さない。",
   "- Google検索で実在を確認できない店は出さない。わからないときは別の実在店に替える。",
@@ -190,6 +194,14 @@ function parseSpot(raw: unknown, index: number): Spot | null {
       .map((t) => asString(t) as MealTime)
       .filter((t): t is MealTime => MEAL_TIME_SET.has(t));
     spot.mealTimes = times.length > 0 ? times : ["lunch"];
+    if (typeof o.soloOk === "boolean") {
+      spot.soloOk = o.soloOk;
+    } else {
+      spot.soloOk = spot.mealTier !== "upscale";
+    }
+    const budget = asString(o.budgetYen);
+    spot.budgetYen =
+      budget || (spot.mealTier === "upscale" ? "¥3,000〜" : "〜¥1,500");
     if (!spot.guide) spot.guide = "meal";
   }
 

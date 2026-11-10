@@ -12,11 +12,16 @@ import {
   GUIDE_COLOR,
   GUIDE_LABEL,
   GUIDE_ORDER,
+  MEAL_TIER_LABEL,
+  SOLO_OK_LABEL,
   STATIONS,
   TIME_OPTIONS,
   bikeRentalFor,
+  budgetYenFor,
   hoursFor,
+  mealTierFor,
   pickSecret,
+  soloOkFor,
   spotGuide,
   spotsForTime,
   type GuideKind,
@@ -26,12 +31,20 @@ import {
 } from "@/data/mishiranu-stations";
 import type { TourCopy } from "@/lib/mishiranu-copy";
 import {
+  BUDGET_PREF_OPTIONS,
   DAY_PART_OPTIONS,
+  SOLO_PREF_OPTIONS,
   buildCoursesForStation,
   dayPartFromHour,
   dayPartLabel,
+  matchBudgetPref,
   matchDayPart,
+  matchSoloPref,
+  mealPrefScore,
+  type BudgetPref,
   type DayPart,
+  type MealPrefs,
+  type SoloPref,
   type WalkCourse,
 } from "@/lib/mishiranu-courses";
 import { paragraphsFrom, withAreaDepth } from "@/lib/mishiranu-area-depth";
@@ -63,7 +76,19 @@ const StationMap = dynamic(() => import("./StationMap"), {
 });
 
 type Step = "hero" | "pick" | "tour";
-type ChatPhase = "station" | "clock" | "stay" | "course" | "ready";
+type ChatPhase =
+  | "station"
+  | "clock"
+  | "stay"
+  | "mealSolo"
+  | "mealBudget"
+  | "course"
+  | "ready";
+
+function mealMetaLine(spot: Spot): string {
+  const solo = soloOkFor(spot) ? SOLO_OK_LABEL.yes : SOLO_OK_LABEL.no;
+  return `${solo} · ${budgetYenFor(spot)} · ${MEAL_TIER_LABEL[mealTierFor(spot)]}`;
+}
 
 type ChatMsg = {
   id: string;
@@ -125,7 +150,7 @@ function nextMsgId(prefix: string) {
 }
 
 const OPENING_GUIDE =
-  "知らない駅に到着しましたね。まず現在地から最寄りの駅名を探すか、駅名を教えてください。見つかったら、いま何時か・どのくらい滞在するかを聞いて、3つのコースを組み立てます。";
+  "知らない駅に到着しましたね。まず現在地から最寄りの駅名を探すか、駅名を教えてください。見つかったら、いま何時か・滞在・ご飯は一人で入れるか／予算を聞いて、3つのコースを組み立てます。";
 
 export default function MishiranuApp({
   initialStep = "hero",
@@ -162,7 +187,13 @@ export default function MishiranuApp({
   );
   const [courses, setCourses] = useState<WalkCourse[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<WalkCourse | null>(null);
+  const [mealSolo, setMealSolo] = useState<SoloPref>("either");
+  const [mealBudget, setMealBudget] = useState<BudgetPref>("either");
   const [geoLoading, setGeoLoading] = useState(false);
+  const mealSoloRef = useRef(mealSolo);
+  const mealBudgetRef = useRef(mealBudget);
+  mealSoloRef.current = mealSolo;
+  mealBudgetRef.current = mealBudget;
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [secret, setSecret] = useState<Spot | null>(null);
   const [secretOpen, setSecretOpen] = useState(false);
@@ -232,6 +263,10 @@ export default function MishiranuApp({
   }, [query]);
 
   const time = TIME_OPTIONS.find((t) => t.id === timeId) ?? TIME_OPTIONS[0];
+  const mealPrefs = useMemo<MealPrefs>(
+    () => ({ solo: mealSolo, budget: mealBudget }),
+    [mealSolo, mealBudget],
+  );
   // ご飯・お土産・観光・休むところ・寄り道は常に全部出す（コース選択時は立ち寄り順を優先）
   const spots = useMemo(() => {
     const base = spotsForTime(station, time.index);
@@ -330,6 +365,8 @@ export default function MishiranuApp({
       setDynamicStation(null);
       setCourses([]);
       setSelectedCourse(null);
+      setMealSolo("either");
+      setMealBudget("either");
       setDayPart(dayPartFromHour(new Date().getHours()));
       setQuery("");
       setDraft("");
@@ -360,6 +397,8 @@ export default function MishiranuApp({
     setDraft("");
     setCourses([]);
     setSelectedCourse(null);
+    setMealSolo("either");
+    setMealBudget("either");
     setChatPhase("clock");
     const aiNote =
       next.source === "ai"
@@ -493,21 +532,64 @@ export default function MishiranuApp({
     const t = TIME_OPTIONS.find((opt) => opt.id === nextId) ?? TIME_OPTIONS[0];
     setTimeId(t.id);
     setDraft("");
-    const current =
-      dynamicStationRef.current?.id === stationIdRef.current
-        ? dynamicStationRef.current
-        : (STATIONS.find((s) => s.id === stationIdRef.current) ?? station);
-    const built = buildCoursesForStation(current, t.id, dayPart);
-    setCourses(built);
+    setCourses([]);
     setSelectedCourse(null);
-    setChatPhase("course");
+    setChatPhase("mealSolo");
     pushMessages(
       { role: "you", text: spoken ?? `${t.label}くらい` },
       {
         role: "guide",
+        text: `${t.label}ですね。ご飯屋は、一人で入りたいですか？`,
+      },
+    );
+  }
+
+  function chooseMealSolo(next: SoloPref, spoken?: string) {
+    setMealSolo(next);
+    setDraft("");
+    setChatPhase("mealBudget");
+    const label =
+      SOLO_PREF_OPTIONS.find((o) => o.id === next)?.label ?? next;
+    pushMessages(
+      { role: "you", text: spoken ?? label },
+      {
+        role: "guide",
+        text: "予算の目安はどれくらいですか？",
+      },
+    );
+  }
+
+  function chooseMealBudget(next: BudgetPref, spoken?: string) {
+    setMealBudget(next);
+    setDraft("");
+    const prefs: MealPrefs = {
+      solo: mealSoloRef.current,
+      budget: next,
+    };
+    const current =
+      dynamicStationRef.current?.id === stationIdRef.current
+        ? dynamicStationRef.current
+        : (STATIONS.find((s) => s.id === stationIdRef.current) ?? station);
+    const built = buildCoursesForStation(
+      current,
+      timeIdRef.current,
+      dayPart,
+      prefs,
+    );
+    setCourses(built);
+    setSelectedCourse(null);
+    setChatPhase("course");
+    const label =
+      BUDGET_PREF_OPTIONS.find((o) => o.id === next)?.label ?? next;
+    const soloLabel =
+      SOLO_PREF_OPTIONS.find((o) => o.id === prefs.solo)?.label ?? prefs.solo;
+    pushMessages(
+      { role: "you", text: spoken ?? label },
+      {
+        role: "guide",
         text:
           built.length > 0
-            ? `${dayPartLabel(dayPart)}・${t.label}向けに、${built.length}つのコースを用意しました。どれにしますか？`
+            ? `${dayPartLabel(dayPart)}・${TIME_OPTIONS.find((t) => t.id === timeIdRef.current)?.label ?? ""}・${soloLabel}・${label}向けに、${built.length}つのコースを用意しました。どれにしますか？`
             : "この条件ではコースを組めませんでした。滞在時間を変えてみてください。",
       },
     );
@@ -687,6 +769,40 @@ export default function MishiranuApp({
       return;
     }
 
+    if (chatPhase === "mealSolo") {
+      const hit = matchSoloPref(text);
+      if (!hit) {
+        pushMessages(
+          { role: "you", text },
+          {
+            role: "guide",
+            text: "「一人で入りたい」「人数は気にしない」「みんなで寄りたい」のどれかで教えてください。",
+          },
+        );
+        setDraft("");
+        return;
+      }
+      chooseMealSolo(hit, text);
+      return;
+    }
+
+    if (chatPhase === "mealBudget") {
+      const hit = matchBudgetPref(text);
+      if (!hit) {
+        pushMessages(
+          { role: "you", text },
+          {
+            role: "guide",
+            text: "予算は「気軽に」「少し奮発」「どちらでも」のどれかで教えてください。",
+          },
+        );
+        setDraft("");
+        return;
+      }
+      chooseMealBudget(hit, text);
+      return;
+    }
+
     if (chatPhase === "course") {
       const hit = courses.find(
         (c) => text.includes(c.title) || c.title.includes(text),
@@ -754,9 +870,13 @@ export default function MishiranuApp({
         ? "例: いま14時ごろ / 夕方"
         : chatPhase === "stay"
           ? "例: 3時間くらい"
-          : chatPhase === "course"
-            ? "例: ゆる歩きコース"
-            : "";
+          : chatPhase === "mealSolo"
+            ? "例: 一人で入りたい"
+            : chatPhase === "mealBudget"
+              ? "例: 気軽に / 少し奮発"
+              : chatPhase === "course"
+                ? "例: ゆる歩きコース"
+                : "";
 
   return (
     <div className="mishiranu">
@@ -802,7 +922,7 @@ export default function MishiranuApp({
               知らない駅から、コースをつくる
             </h2>
             <p className="mishiranu-note">
-              現在地で駅を探す → いまの時刻 → 滞在時間 → 3コース。チップでも入力欄でも進められます。
+              現在地で駅を探す → いまの時刻 → 滞在 → 一人可否 → 予算 → 3コース。チップでも入力欄でも進められます。
             </p>
 
             <div className="mishiranu-chat-thread" role="log" aria-live="polite">
@@ -934,6 +1054,46 @@ export default function MishiranuApp({
                   >
                     <StayIcon id={t.id} />
                     {t.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {chatPhase === "mealSolo" ? (
+              <div className="mishiranu-chat-replies" aria-label="一人で入れるか">
+                {SOLO_PREF_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={
+                      opt.id === "solo"
+                        ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
+                        : "mishiranu-chat-chip"
+                    }
+                    title={opt.hint}
+                    onClick={() => chooseMealSolo(opt.id)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {chatPhase === "mealBudget" ? (
+              <div className="mishiranu-chat-replies" aria-label="予算の目安">
+                {BUDGET_PREF_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={
+                      opt.id === "casual"
+                        ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
+                        : "mishiranu-chat-chip"
+                    }
+                    title={opt.hint}
+                    onClick={() => chooseMealBudget(opt.id)}
+                  >
+                    {opt.label}
                   </button>
                 ))}
               </div>
@@ -1242,7 +1402,13 @@ export default function MishiranuApp({
 
             <div className="mishiranu-guide-board">
               {guideBoardKinds.map((kind) => {
-                const items = spots.filter((s) => spotGuide(s) === kind);
+                const items =
+                  kind === "meal"
+                    ? [...spots.filter((s) => spotGuide(s) === kind)].sort(
+                        (a, b) =>
+                          mealPrefScore(b, mealPrefs) - mealPrefScore(a, mealPrefs),
+                      )
+                    : spots.filter((s) => spotGuide(s) === kind);
                 const prioritized = focusKinds.includes(kind);
                 return (
                   <section
@@ -1266,17 +1432,44 @@ export default function MishiranuApp({
                         <span className="mishiranu-guide-priority">重点</span>
                       ) : null}
                     </h3>
+                    {kind === "meal" &&
+                    (mealPrefs.solo !== "either" ||
+                      mealPrefs.budget !== "either") ? (
+                      <p className="mishiranu-guide-pref-note">
+                        希望:{" "}
+                        {
+                          SOLO_PREF_OPTIONS.find((o) => o.id === mealPrefs.solo)
+                            ?.label
+                        }
+                        {" · "}
+                        {
+                          BUDGET_PREF_OPTIONS.find(
+                            (o) => o.id === mealPrefs.budget,
+                          )?.label
+                        }
+                      </p>
+                    ) : null}
                     {items.length > 0 ? (
                       <ul className="mishiranu-guide-list">
-                        {items.map((item) => (
+                        {items.map((item) => {
+                          const score =
+                            kind === "meal" ? mealPrefScore(item, mealPrefs) : 0;
+                          const muted = kind === "meal" && score < 0;
+                          const match = kind === "meal" && score > 0;
+                          return (
                           <li key={item.id}>
                             <button
                               type="button"
-                              className={
+                              className={[
+                                "mishiranu-guide-item",
                                 activeSpotId === item.id
-                                  ? "mishiranu-guide-item mishiranu-guide-item--active"
-                                  : "mishiranu-guide-item"
-                              }
+                                  ? "mishiranu-guide-item--active"
+                                  : "",
+                                muted ? "mishiranu-guide-item--muted" : "",
+                                match ? "mishiranu-guide-item--match" : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
                               aria-pressed={activeSpotId === item.id}
                               onClick={() => setActiveSpotId(item.id)}
                             >
@@ -1293,6 +1486,12 @@ export default function MishiranuApp({
                                 徒歩約 {item.walkMinutes} 分
                                 {hoursFor(item) ? ` · ${hoursFor(item)}` : ""}
                               </span>
+                              {kind === "meal" ? (
+                                <span className="mishiranu-guide-item-meal">
+                                  {mealMetaLine(item)}
+                                  {match ? " · 希望に近い" : ""}
+                                </span>
+                              ) : null}
                               <span className="mishiranu-guide-item-blurb">
                                 {item.blurb}
                               </span>
@@ -1303,7 +1502,8 @@ export default function MishiranuApp({
                               ) : null}
                             </button>
                           </li>
-                        ))}
+                          );
+                        })}
                       </ul>
                     ) : (
                       <p className="mishiranu-guide-empty">
@@ -1328,6 +1528,11 @@ export default function MishiranuApp({
                   {activeSpot.walkMinutes} 分
                   {hoursFor(activeSpot) ? ` · ${hoursFor(activeSpot)}` : ""}
                 </p>
+                {spotGuide(activeSpot) === "meal" ? (
+                  <p className="mishiranu-spot-meal-meta">
+                    {mealMetaLine(activeSpot)}
+                  </p>
+                ) : null}
                 <h3 className="mishiranu-spot-name">{activeSpot.name}</h3>
                 <p className="mishiranu-spot-blurb">{activeSpot.blurb}</p>
                 {activeSpot.detail ? (

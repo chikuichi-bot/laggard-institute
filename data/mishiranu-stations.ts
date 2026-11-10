@@ -19,6 +19,10 @@ export type Spot = {
   mealTier?: MealTier;
   /** ご飯向け: 朝 / 昼 / 夜（guide=meal のとき） */
   mealTimes?: MealTime[];
+  /** ご飯向け: 一人で入りやすいか（guide=meal） */
+  soloOk?: boolean;
+  /** ご飯向け: 予算の目安表示（例: 〜¥1,500） */
+  budgetYen?: string;
   /**
    * 営業・開館・見学できる時間（わかるものだけ）。
    * 例: "8:30〜17:30（水曜定休）" / "終日（屋外）"
@@ -172,6 +176,24 @@ export function mealTimesFor(spot: Spot): MealTime[] {
   return ["lunch"];
 }
 
+/** 一人で入りやすいか（未設定は入りやすい寄り） */
+export function soloOkFor(spot: Spot): boolean {
+  if (typeof spot.soloOk === "boolean") return spot.soloOk;
+  return mealTierFor(spot) !== "upscale";
+}
+
+/** 予算表示（未設定は価格帯からの目安） */
+export function budgetYenFor(spot: Spot): string {
+  const custom = spot.budgetYen?.trim();
+  if (custom) return custom;
+  return mealTierFor(spot) === "upscale" ? "¥3,000〜" : "〜¥1,500";
+}
+
+export const SOLO_OK_LABEL = {
+  yes: "一人OK",
+  no: "予約・人数向き",
+} as const;
+
 /** 営業・開館時間（未設定は空） */
 export function hoursFor(spot: Spot): string | undefined {
   const h = spot.hours?.trim();
@@ -276,6 +298,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥600",
         mealTimes: ["morning", "lunch"],
         hours: "8:30〜17:30（火 9:00〜17:00、水曜定休）",
         blurb:
@@ -325,6 +349,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,200",
         mealTimes: ["morning", "lunch"],
         hours: "10:00〜18:00（火曜定休、L.O. 17:45）",
         blurb:
@@ -339,6 +365,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,500",
         mealTimes: ["lunch", "dinner"],
         hours: "11:00〜15:00（売り切れ次第終了・不定休）",
         blurb:
@@ -353,6 +381,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,200",
         mealTimes: ["lunch", "dinner"],
         hours: "11:40〜19:00（売り切れ次第終了）",
         blurb:
@@ -367,6 +397,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "upscale",
+        soloOk: false,
+        budgetYen: "¥8,000〜",
         mealTimes: ["lunch", "dinner"],
         hours: "11:30〜14:30 / 17:00〜21:00（要予約・店休日あり）",
         blurb:
@@ -382,6 +414,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥800",
         mealTimes: ["morning", "lunch"],
         hours: "平日 8:30〜18:00 / 土 10:00〜18:00（日曜定休）",
         blurb:
@@ -559,6 +593,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,200",
         mealTimes: ["lunch", "dinner"],
         hours: "11:00〜15:00（売り切れ次第終了・月曜など定休あり）",
         blurb:
@@ -573,6 +609,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "upscale",
+        soloOk: false,
+        budgetYen: "¥4,000〜",
         mealTimes: ["dinner"],
         hours: "11:00〜22:00（月曜定休・祝日の月曜は営業）",
         blurb:
@@ -587,6 +625,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,000",
         mealTimes: ["morning", "lunch"],
         hours: "9:30〜17:00（年始・盆休みあり）",
         blurb:
@@ -752,6 +792,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥800",
         mealTimes: ["morning", "lunch"],
         hours: "9:00〜17:00（店休日あり）",
         blurb: "石清水八幡宮駅からすぐの門前名物。走井餅とお茶、走井うどんも店内で。",
@@ -765,6 +807,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,000",
         mealTimes: ["lunch", "dinner"],
         hours: "11:00〜16:00（不定休）",
         blurb: "八幡宮山上の参拝者休憩所。厄除うどんや男山からあげで、ケーブル上がりの一休み。",
@@ -929,6 +973,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,500",
         mealTimes: ["morning", "lunch"],
         hours: "11:00〜22:00（月曜は〜17:00・火曜定休）",
         blurb: "阪急大山崎駅すぐのリノベカフェ。パスタと自家製スイーツで門前散策の合間を埋める。",
@@ -942,6 +988,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,200",
         mealTimes: ["lunch", "dinner"],
         hours: "平日 7:00〜19:00 / 日祝 8:00〜18:00（月曜定休）",
         blurb: "JR山崎駅前のカフェ。モーニングのトーストや日替わりランチで駅前の腹ごしらえ。",
@@ -1077,6 +1125,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,000",
         mealTimes: ["lunch", "dinner"],
         hours: "10:00〜14:00（火曜・隔週水曜定休）",
         blurb: "蟹田駅すぐの駅前市場併設食堂。焼干しラーメンやシャモロックラーメンで港への腹ごしらえ。",
@@ -1190,6 +1240,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,200",
         mealTimes: ["lunch"],
         hours: "11:30〜14:00（月曜定休）",
         blurb:
@@ -1258,6 +1310,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,000",
         mealTimes: ["lunch"],
         hours: "10:30〜17:00（水曜定休）",
         blurb: "町屋と蔵を再生した甘味処。ほうじ茶クリームあんみつやかき氷で小野川散策の途中に。",
@@ -1347,6 +1401,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,500",
         mealTimes: ["lunch", "dinner"],
         hours: "11:00〜14:00 / 17:00〜23:00（火曜・第3水曜休）",
         blurb: "真鶴港寄りの魚定食。あら煮と刺身の定食で、港の魚を昼のうちに味わう。",
@@ -1436,6 +1492,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,200",
         mealTimes: ["lunch"],
         hours: "11:00〜17:00（フェリー欠航時は休み）",
         blurb: "金谷フェリーターミナルのめん処。黄金アジや海鮮丼で、乗船待ちの時間を埋める。",
@@ -1527,6 +1585,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,200",
         mealTimes: ["lunch"],
         hours: "10:30〜そば売り切れ次第終了（不定休）",
         blurb: "長瀞駅徒歩すぐの手打ちそば。ざるそばと野菜のかき揚げが、岩畳へ向かう前の定番。",
@@ -1618,6 +1678,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "upscale",
+        soloOk: true,
+        budgetYen: "¥3,000〜",
         mealTimes: ["lunch", "dinner"],
         hours: "9:00〜17:00（年始休みあり・要確認）",
         blurb: "勝沼ぶどう郷駅から歩ける直売店。試飲とボトル選びで、葡萄郷の寄りの窓口になる。",
@@ -1697,6 +1759,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥800",
         mealTimes: ["morning", "lunch"],
         hours: "要確認（朝〜昼の純喫茶・目安 8:00〜15:00）",
         blurb: "深煎りの香ばしさと、トーストの角。地元の朝の文法。",
@@ -1866,6 +1930,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥800",
         mealTimes: ["morning", "lunch"],
         hours: "9:00〜17:30（水曜定休）",
         blurb: "諏訪大社下社秋宮そばの老舗和菓子。塩羊羹ともちまんが、湯上がりの手土産にもなる。",
@@ -1957,6 +2023,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥2,000",
         mealTimes: ["lunch"],
         hours: "11:00〜14:30 / 17:00〜20:00（火曜定休・漁期で混雑）",
         blurb: "由比駅近くの桜えび店。静岡てんこ盛り丼や桜えび定食で、港の味をそのまま置く。",
@@ -2106,6 +2174,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥800",
         mealTimes: ["lunch", "dinner"],
         hours: "9:00〜17:00（季節により前後）",
         blurb: "餘部鉄橋の展望施設にある売店・軽食。橋を見たあとに珈琲と地元のお菓子を置ける。",
@@ -2197,6 +2267,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥800",
         mealTimes: ["morning", "lunch"],
         hours: "8:30〜18:00（元日休み）",
         blurb: "尾道駅から徒歩数分の自家焙煎。窓から尾道水道を見ながら一杯置き、豆も袋で持ち帰れる。",
@@ -2310,6 +2382,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,500",
         mealTimes: ["lunch", "dinner"],
         hours: "11:00〜16:00（店休日あり・要確認）",
         blurb: "三角西港寄りの海辺カフェ。天草五橋を眺めながら定食やパフェで一休み。",
@@ -2401,6 +2475,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,200",
         mealTimes: ["morning", "lunch"],
         hours: "11:00〜18:00（水曜定休）",
         blurb: "二王座の武家屋敷寄りの喫茶。庭を見ながら抹茶セットで、城下町歩きの一休み。",
@@ -2492,6 +2568,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥1,000",
         mealTimes: ["lunch", "dinner"],
         hours: "9:00〜16:30（見学無料・無休）",
         blurb: "人吉駅から徒歩圏の球磨焼酎蔵。試飲室で銘柄を比べてから、瓶を手土産にできる。",
@@ -2652,6 +2730,8 @@ export const STATIONS: StationSeed[] = [
         genre: "gourmet",
         guide: "meal",
         mealTier: "casual",
+        soloOk: true,
+        budgetYen: "〜¥800",
         mealTimes: ["lunch"],
         hours: "10:00〜18:00（月曜定休・祝日は翌日）",
         blurb:
