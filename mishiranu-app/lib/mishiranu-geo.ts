@@ -84,13 +84,14 @@ export function findNearestStation(
 /** Precise pins for 出町柳 (feel-test home station) */
 export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
   "demachi-1": { lat: 35.03055, lng: 135.77115 }, // 鴨川デルタ
-  "demachi-2": { lat: 35.02855, lng: 135.77025 }, // 枡形商店街
-  "demachi-3": { lat: 35.02885, lng: 135.77055 }, // 出町ふたば
-  "demachi-3b": { lat: 35.0289, lng: 135.77065 }, // ふたば土産
+  // 枡形は今出川の北・河原町〜寺町のアーケード（OSM way / ふたば・出町座）
+  "demachi-2": { lat: 35.03029, lng: 135.76886 }, // 出町枡形商店街
+  "demachi-3": { lat: 35.03011, lng: 135.76963 }, // 出町ふたば
+  "demachi-3b": { lat: 35.03015, lng: 135.7697 }, // ふたば土産
   "demachi-4": { lat: 35.02935, lng: 135.77225 }, // 叡電ホーム
-  "demachi-5": { lat: 35.02845, lng: 135.77005 }, // 出町座（枡形）
+  "demachi-5": { lat: 35.0302, lng: 135.76903 }, // 出町座（枡形）
   "demachi-5b": { lat: 35.0289, lng: 135.7804 }, // 進々堂 百万遍
-  "demachi-5c": { lat: 35.0284, lng: 135.77035 }, // 満寿形屋
+  "demachi-5c": { lat: 35.0303, lng: 135.7692 }, // 満寿形屋
   "demachi-5d": { lat: 35.0282, lng: 135.7726 }, // 手打大山そば 響
   "demachi-5e": { lat: 35.0391, lng: 135.7729 }, // 下鴨茶寮
   "demachi-5f": { lat: 35.02955, lng: 135.7729 }, // COYOTE Roastery
@@ -98,9 +99,9 @@ export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
   "demachi-10": { lat: 35.0304, lng: 135.77105 }, // 鴨川デルタの川端（休む）
   "demachi-6": { lat: 35.03205, lng: 135.77045 }, // 下鴨並木入口
   "demachi-9": { lat: 35.0389, lng: 135.7728 }, // 下鴨神社・糺の森
-  "demachi-7": { lat: 35.02705, lng: 135.76855 }, // 河原町今出川
-  "demachi-8": { lat: 35.0287, lng: 135.77015 }, // 紙もの雑貨
-  "demachi-11": { lat: 35.02875, lng: 135.77045 }, // 駅前レンタサイクル
+  "demachi-7": { lat: 35.029, lng: 135.7687 }, // 河原町今出川
+  "demachi-8": { lat: 35.03028, lng: 135.7694 }, // 紙もの雑貨
+  "demachi-11": { lat: 35.03025, lng: 135.7705 }, // 駅前レンタサイクル
 };
 
 export function stationLatLng(station: StationSeed): { lat: number; lng: number } {
