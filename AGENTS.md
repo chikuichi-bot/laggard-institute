@@ -5,12 +5,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 
 <!-- BEGIN:agent-workflow -->
-# Always build before finishing
+# Always build before finishing — including iPhone
 
-After code changes are complete (and before the final summary / PR update), always run a build:
+After code changes are complete (and before the final summary / PR update), always build:
 
-- `mishiranu-app`: `cd mishiranu-app && npm run build`
-- `mishiranu-ios`: on macOS run an Xcode build (`xcodebuild -project mishiranu-ios/MishiranuEki.xcodeproj -scheme MishiranuEki -destination 'generic/platform=iOS' build`). On Linux cloud VMs, Xcode is unavailable — still run the web build if app files changed, and note that the iOS build must be verified in Xcode on a Mac.
+1. `mishiranu-app`: `cd mishiranu-app && npm run build`
+2. **iPhone**: install/run on a connected iPhone (or Simulator if no device). Prefer the self-hosted Mac worker for `chikuichi-bot/laggard-institute` (e.g. `awashimaMacBook` / `~/Projects/laggard-institute`) when available:
+   - `git fetch && git checkout <current-branch> && git pull`
+   - `xcodebuild -project mishiranu-ios/MishiranuEki.xcodeproj -scheme MishiranuEki -destination 'id=<IPHONE_UDID>' build` then install/run, or open Xcode and Run to the device
+   - If no physical device: `-destination 'platform=iOS Simulator,name=iPhone 16' build`
+3. On Linux-only cloud VMs with no Mac worker: still run the web build; report that iPhone install needs the Mac worker / Xcode.
 
 Do not declare the task done if the required build failed; fix or report the failure.
 <!-- END:agent-workflow -->
