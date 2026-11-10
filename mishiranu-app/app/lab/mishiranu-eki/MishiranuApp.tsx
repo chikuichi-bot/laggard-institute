@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -307,15 +308,23 @@ export default function MishiranuApp({
     (activeSpotId ? null : spots[0] ?? null);
   const shownCopy = copy ?? seedTourCopy(station);
 
-  useEffect(() => {
-    if (step !== "pick") return;
+  function scrollChatToLatest() {
     const thread = chatThreadRef.current;
     if (!thread) return;
-    // Scroll only inside the chat pane — never the page (Safari jumps to top otherwise).
-    const id = window.requestAnimationFrame(() => {
-      thread.scrollTo({ top: thread.scrollHeight, behavior: "smooth" });
-    });
-    return () => window.cancelAnimationFrame(id);
+    // Instant jump inside the thread only — smooth + window scrollIntoView hides
+    // the newest bubble under the dock on Safari.
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  useLayoutEffect(() => {
+    if (step !== "pick") return;
+    scrollChatToLatest();
+    const t1 = window.setTimeout(scrollChatToLatest, 40);
+    const t2 = window.setTimeout(scrollChatToLatest, 280);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [messages, showStationSearch, chatPhase, step]);
 
   function tapChoice(action: () => void) {

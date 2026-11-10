@@ -51,22 +51,35 @@
   padding-top: env(safe-area-inset-top);
 }
 
+.mishiranu:has(.mishiranu-shell--chat) {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
 .mishiranu-shell--chat {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   padding-bottom: 0;
 }
 
 .mishiranu-chat {
-  flex: 1;
-  min-height: 100vh;
-  min-height: 100dvh;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 0;
   padding: 0.85rem 0 0;
+  overflow: hidden;
 }
 
 .mishiranu-chat-head {
@@ -254,14 +267,17 @@ a.mishiranu-btn {
 
 .mishiranu-chat-dock {
   flex-shrink: 0;
-  position: sticky;
-  bottom: 0;
+  position: relative;
   z-index: 6;
-  margin-top: auto;
+  margin-top: 0;
   padding: 0.75rem 0 calc(0.85rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--mk-line);
-  background: color-mix(in srgb, var(--mk-canvas) 92%, #fff);
-  backdrop-filter: blur(8px);
+  background: var(--mk-canvas);
+}
+
+.mishiranu-chat-thread .mishiranu-chat-bubble {
+  /* Avoid rise animation fighting scroll-to-latest */
+  animation: none;
 }
 
 .mishiranu-chat-dock .mishiranu-chat-replies {
