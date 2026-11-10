@@ -12,8 +12,9 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           {
+            // Location is core to the arrival flow; allow same-tab and embeds.
             key: "Permissions-Policy",
-            value: "geolocation=(self)",
+            value: "geolocation=*",
           },
         ],
       },
