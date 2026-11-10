@@ -30,6 +30,18 @@ export const STATION_LL: Record<string, { lat: number; lng: number }> = {
 
 const EARTH_KM = 6371;
 
+/**
+ * Coarsen WGS84 coords before any third-party call (~1.1 km at the equator).
+ * Precise GPS stays on-server for curated nearest-station matching only.
+ */
+export function fuzzLatLngForExternal(
+  lat: number,
+  lng: number,
+): { lat: number; lng: number } {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  return { lat: round2(lat), lng: round2(lng) };
+}
+
 export function haversineKm(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number },
@@ -77,7 +89,11 @@ export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
   "demachi-4": { lat: 35.02935, lng: 135.77225 }, // 叡電ホーム
   "demachi-5": { lat: 35.02845, lng: 135.77005 }, // 出町座（枡形）
   "demachi-5b": { lat: 35.0289, lng: 135.7804 }, // 進々堂 百万遍
-  "demachi-5c": { lat: 35.0284, lng: 135.77035 }, // 枡形の揚げもの
+  "demachi-5c": { lat: 35.0284, lng: 135.77035 }, // 満寿形屋
+  "demachi-5d": { lat: 35.0282, lng: 135.7726 }, // 手打大山そば 響
+  "demachi-5e": { lat: 35.0391, lng: 135.7729 }, // 下鴨茶寮
+  "demachi-5f": { lat: 35.02955, lng: 135.7729 }, // COYOTE Roastery
+  "demachi-beans": { lat: 35.0322, lng: 135.7782 }, // WEEKENDERS COFFEE
   "demachi-10": { lat: 35.0304, lng: 135.77105 }, // 鴨川デルタの川端（休む）
   "demachi-6": { lat: 35.03205, lng: 135.77045 }, // 下鴨並木入口
   "demachi-9": { lat: 35.0389, lng: 135.7728 }, // 下鴨神社・糺の森

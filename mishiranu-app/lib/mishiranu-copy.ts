@@ -1,4 +1,5 @@
 import type { StationSeed, Spot } from "@/data/mishiranu-stations";
+import { beginPaidAiCall } from "@/lib/mishiranu-rate-limit";
 
 export type TourCopy = {
   tourTitle: string;
@@ -74,55 +75,67 @@ export async function generateTourCopyWithGemini(
   const url =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
 
-  const res = await fetch(`${url}?key=${encodeURIComponent(apiKey)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.9,
-        maxOutputTokens: 400,
-        responseMimeType: "application/json",
+  const paid = beginPaidAiCall();
+  if (!paid.ok) return null;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
       },
-    }),
-  });
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.9,
+          maxOutputTokens: 400,
+          responseMimeType: "application/json",
+        },
+      }),
+    });
 
-  if (!res.ok) return null;
+    if (!res.ok) return null;
 
-  const data = (await res.json()) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-    }>;
-  };
-  const text = data.candidates?.[0]?.content?.parts
-    ?.map((p) => p.text ?? "")
-    .join("")
-    .trim();
-  if (!text) return null;
+    const data = (await res.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+      }>;
+    };
+    const text = data.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text ?? "")
+      .join("")
+      .trim();
+    if (!text) return null;
 
-  const parsed = extractJsonObject(text);
-  if (!parsed) return null;
+    const parsed = extractJsonObject(text);
+    if (!parsed) return null;
 
-  const tourTitle =
-    typeof parsed.tourTitle === "string" ? parsed.tourTitle.trim() : "";
-  const catchCopy =
-    typeof parsed.catchCopy === "string" ? parsed.catchCopy.trim() : "";
-  if (!tourTitle || !catchCopy) return null;
+    const tourTitle =
+      typeof parsed.tourTitle === "string" ? parsed.tourTitle.trim() : "";
+    const catchCopy =
+      typeof parsed.catchCopy === "string" ? parsed.catchCopy.trim() : "";
+    if (!tourTitle || !catchCopy) return null;
 
-  const emptyHeadline =
-    typeof parsed.emptyHeadline === "string"
-      ? parsed.emptyHeadline.trim()
-      : station.emptyCopy?.headline;
-  const emptyBody =
-    typeof parsed.emptyBody === "string"
-      ? parsed.emptyBody.trim()
-      : station.emptyCopy?.body;
+    const emptyHeadline =
+      typeof parsed.emptyHeadline === "string"
+        ? parsed.emptyHeadline.trim()
+        : station.emptyCopy?.headline;
+    const emptyBody =
+      typeof parsed.emptyBody === "string"
+        ? parsed.emptyBody.trim()
+        : station.emptyCopy?.body;
 
-  return {
-    tourTitle,
-    catchCopy,
-    emptyHeadline,
-    emptyBody,
-    source: "ai",
-  };
+    return {
+      tourTitle,
+      catchCopy,
+      emptyHeadline,
+      emptyBody,
+      source: "ai",
+    };
+  } catch {
+    return null;
+  } finally {
+    paid.release();
+  }
 }

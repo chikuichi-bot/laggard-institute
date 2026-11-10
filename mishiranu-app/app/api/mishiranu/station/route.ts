@@ -1,5 +1,9 @@
 import { STATIONS } from "@/data/mishiranu-stations";
-import { allowViewerRequest } from "@/lib/mishiranu-rate-limit";
+import {
+  allowViewerHourlyBudget,
+  allowViewerRequest,
+} from "@/lib/mishiranu-rate-limit";
+import { requireJsonContentType } from "@/lib/mishiranu-request";
 import { generateStationGuideWithGemini } from "@/lib/mishiranu-station-ai";
 import { requireIdentity } from "../../../../cursor/identity";
 
@@ -13,7 +17,7 @@ type Body = {
 };
 
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 8;
+const RATE_MAX = 3;
 
 const NO_STORE = { "cache-control": "private, no-store" };
 
@@ -31,6 +35,9 @@ function findCuratedByName(name: string) {
 export async function POST(request: Request) {
   const identity = await requireIdentity(request);
   if (identity instanceof Response) return identity;
+
+  const media = requireJsonContentType(request);
+  if (media) return media;
 
   if (!allowViewerRequest(`station:${identity.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
     return Response.json(
@@ -77,6 +84,16 @@ export async function POST(request: Request) {
           "GEMINI_API_KEY が未設定のため、編集リスト外の駅はまだ案内できません。",
       },
       { status: 503, headers: NO_STORE },
+    );
+  }
+
+  if (!allowViewerHourlyBudget(identity.sub)) {
+    return Response.json(
+      {
+        error: "rate_limited",
+        message: "本日の案内回数の上限に近づきました。しばらくしてからどうぞ。",
+      },
+      { status: 429, headers: NO_STORE },
     );
   }
 

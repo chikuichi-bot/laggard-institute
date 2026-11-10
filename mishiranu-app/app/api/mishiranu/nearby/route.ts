@@ -1,6 +1,10 @@
 import { STATIONS } from "@/data/mishiranu-stations";
-import { findNearestStation } from "@/lib/mishiranu-geo";
-import { allowViewerRequest } from "@/lib/mishiranu-rate-limit";
+import { findNearestStation, fuzzLatLngForExternal } from "@/lib/mishiranu-geo";
+import {
+  allowViewerHourlyBudget,
+  allowViewerRequest,
+} from "@/lib/mishiranu-rate-limit";
+import { requireJsonContentType } from "@/lib/mishiranu-request";
 import { generateNearbyStationWithGemini } from "@/lib/mishiranu-station-ai";
 import { requireIdentity } from "../../../../cursor/identity";
 
@@ -14,13 +18,16 @@ type Body = {
 };
 
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 6;
+const RATE_MAX = 3;
 const CURATED_RADIUS_KM = 3.5;
 const NO_STORE = { "cache-control": "private, no-store" };
 
 export async function POST(request: Request) {
   const identity = await requireIdentity(request);
   if (identity instanceof Response) return identity;
+
+  const media = requireJsonContentType(request);
+  if (media) return media;
 
   if (!allowViewerRequest(`nearby:${identity.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
     return Response.json(
@@ -58,6 +65,7 @@ export async function POST(request: Request) {
     );
   }
 
+  // Precise coords stay on-server for curated matching only.
   const nearest = findNearestStation(lat, lng, STATIONS);
   if (nearest && nearest.km <= CURATED_RADIUS_KM) {
     return Response.json(
@@ -92,8 +100,24 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!allowViewerHourlyBudget(identity.sub)) {
+    return Response.json(
+      {
+        error: "rate_limited",
+        message: "本日の案内回数の上限に近づきました。しばらくしてからどうぞ。",
+      },
+      { status: 429, headers: NO_STORE },
+    );
+  }
+
+  const coarse = fuzzLatLngForExternal(lat, lng);
+
   try {
-    const result = await generateNearbyStationWithGemini(lat, lng, apiKey);
+    const result = await generateNearbyStationWithGemini(
+      coarse.lat,
+      coarse.lng,
+      apiKey,
+    );
     if ("error" in result) {
       const status =
         result.error === "not_a_station"

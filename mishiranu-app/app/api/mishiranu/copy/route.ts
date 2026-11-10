@@ -4,7 +4,11 @@ import {
   seedCopy,
   type TourCopy,
 } from "@/lib/mishiranu-copy";
-import { allowViewerRequest } from "@/lib/mishiranu-rate-limit";
+import {
+  allowViewerHourlyBudget,
+  allowViewerRequest,
+} from "@/lib/mishiranu-rate-limit";
+import { requireJsonContentType } from "@/lib/mishiranu-request";
 import { requireIdentity } from "../../../../cursor/identity";
 
 export const runtime = "nodejs";
@@ -16,13 +20,16 @@ type Body = {
 };
 
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 20;
+const RATE_MAX = 8;
 
 const NO_STORE = { "cache-control": "private, no-store" };
 
 export async function POST(request: Request) {
   const identity = await requireIdentity(request);
   if (identity instanceof Response) return identity;
+
+  const media = requireJsonContentType(request);
+  if (media) return media;
 
   if (!allowViewerRequest(`copy:${identity.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
     return Response.json(
@@ -56,6 +63,10 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
+    return Response.json(fallback, { headers: NO_STORE });
+  }
+
+  if (!allowViewerHourlyBudget(identity.sub)) {
     return Response.json(fallback, { headers: NO_STORE });
   }
 

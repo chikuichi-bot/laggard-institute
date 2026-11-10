@@ -9,6 +9,8 @@ import type {
   StationSeed,
 } from "@/data/mishiranu-stations";
 import { GUIDE_ORDER, REGIONS } from "@/data/mishiranu-stations";
+import { fuzzLatLngForExternal } from "@/lib/mishiranu-geo";
+import { beginPaidAiCall } from "@/lib/mishiranu-rate-limit";
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
@@ -83,13 +85,13 @@ const STATION_SCHEMA_BLOCK = [
   '  "sightseeingNotes": [{ "title": "短い見出し", "body": "観光メモ。各2〜4文" }]（必ず3〜4件。まず見る/時間があるとき/食べる休む）,',
   '  "spots": [',
   "    {",
-  '      "name": "場所名",',
+  '      "name": "場所名（meal/souvenir は実在店舗の正式名称）",',
   '      "genre": "history|gourmet|nature|odd",',
   '      "guide": "meal|souvenir|sight|rest|tip",',
   '      "mealTier": "casual|upscale（mealのみ）",',
   '      "mealTimes": ["morning|lunch|dinner"]（mealのみ・1つ以上）,',
   '      "hours": "何時から何時まで。例 10:00〜18:00（火曜定休）。屋外は終日（屋外）",',
-  '      "blurb": "2文",',
+  '      "blurb": "2文。meal/souvenir は店名と看板メニューを含める",',
   '      "detail": "歴史や見方の補足を2文",',
   '      "walkMinutes": 1〜40の整数,',
   '      "lat": 緯度,',
@@ -102,6 +104,12 @@ const STATION_SCHEMA_BLOCK = [
   "制約:",
   "- 日本の実在の鉄道駅でなければ { \"error\": \"not_a_station\", \"message\": \"理由\" } を返す。",
   "- spots は 6〜10件。story のとき guide の meal/souvenir/sight/rest/tip をそれぞれ1件以上。",
+  "- meal と souvenir の name は必ず実在する店・施設の正式名称（例: 「出町ふたば」「石翠亭」）。",
+  "- 禁止の name: 「駅前の定食」「港寄りの食堂」「甘味・茶店まわり」「揚げもの屋台まわり」など総称・曖昧名。",
+  "- meal の blurb には店名と、そこで食べる具体的な料理名を入れる。",
+  "- 徒歩圏に焙煎所・珈琲専門店があり豆を売っているなら、souvenir（または tip）に1件入れ、name に店名、blurb に「豆が買える」と豆の特徴を書く。",
+  "- コーヒー豆の店も総称禁止。実在のロースタリー／専門店名のみ。閉店済みの店は出さない。",
+  "- Google検索で実在を確認できない店は出さない。わからないときは別の実在店に替える。",
   "- empty（本当に何も薄い駅）でも areaAbout と historyNotes は厚く書く（余白の歴史も含めてよい）。",
   "- hours はわかる範囲で具体的な開始〜終了。不明なら「要確認（目安 …）」と書く。",
   "- 駅から徒歩圏のみ。有名すぎる遠方スポットは避ける。",
@@ -131,8 +139,9 @@ function buildNearbyPrompt(lat: number, lng: number): string {
     "観光ガイドの煽りやランキング口調は禁止。Lagadoらしい静かで詩的な日本語。",
     "出力は JSON オブジェクトのみ（前後の説明文なし）。",
     "",
-    `現在地の緯度経度: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-    "この地点から最も近い実在の鉄道駅（新幹線停車駅より、最寄りの在来線・私鉄駅を優先）を特定し、その駅名で徒歩圏案内を返す。",
+    // Coarsened coords only (~1 km). Do not ask the model for finer precision.
+    `現在地（おおよそ）: 緯度 ${lat.toFixed(2)}, 経度 ${lng.toFixed(2)}`,
+    "座標は約1km単位に丸めてあります。この付近で最も近い実在の鉄道駅（新幹線停車駅より、最寄りの在来線・私鉄駅を優先）を特定し、その駅名で徒歩圏案内を返す。",
     "",
     STATION_SCHEMA_BLOCK,
   ].join("\n");
@@ -435,12 +444,24 @@ async function callGeminiGenerate(
   body: Record<string, unknown>,
   timeoutMs: number,
 ): Promise<GeminiCallResult> {
+  const paid = beginPaidAiCall();
+  if (!paid.ok) {
+    return {
+      ok: false,
+      error: "gemini_http",
+      message: "いま混み合っています。少し待ってから、もう一度どうぞ。",
+    };
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
+    const res = await fetch(GEMINI_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -482,6 +503,7 @@ async function callGeminiGenerate(
     };
   } finally {
     clearTimeout(timer);
+    paid.release();
   }
 }
 
@@ -585,9 +607,11 @@ export async function generateNearbyStationWithGemini(
   lng: number,
   apiKey: string,
 ): Promise<AiStationResult | { error: string; message: string }> {
+  // Defensive: always send coarsened coords even if a caller forgot to fuzz.
+  const coarse = fuzzLatLngForExternal(lat, lng);
   return generateFromPrompt(
-    buildNearbyPrompt(lat, lng),
-    `現在地(${lat.toFixed(3)},${lng.toFixed(3)})`,
+    buildNearbyPrompt(coarse.lat, coarse.lng),
+    `現在地(${coarse.lat.toFixed(2)},${coarse.lng.toFixed(2)})`,
     apiKey,
   );
 }
