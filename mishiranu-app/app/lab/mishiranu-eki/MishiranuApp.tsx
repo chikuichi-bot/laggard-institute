@@ -633,8 +633,8 @@ export default function MishiranuApp({
         role: "guide",
         text:
           built.length > 0
-            ? `${dayPartLabel(dayPart)}・${TIME_OPTIONS.find((t) => t.id === timeIdRef.current)?.label ?? ""}・${soloLabel}・${label}向けに、${built.length}つのコースを用意しました。選ぶか、「コースは作らない」でも進めます。`
-            : "この条件ではコースを組めませんでした。滞在時間を変えるか、「コースは作らない」で案内だけ開いてください。",
+            ? `${dayPartLabel(dayPart)}・${TIME_OPTIONS.find((t) => t.id === timeIdRef.current)?.label ?? ""}・${soloLabel}・${label}向けです。まずは「コースは作らない」で自由に歩くか、下の${built.length}つのコースから選んでください。`
+            : "この条件ではコースを組めませんでした。まずは「コースは作らない」で案内を開くか、滞在時間を変えてみてください。",
       },
     );
   }
@@ -1203,6 +1203,14 @@ export default function MishiranuApp({
 
               {chatPhase === "course" ? (
                 <div className="mishiranu-course-picks" aria-label="コースの候補">
+                  <button
+                    type="button"
+                    className="mishiranu-chat-chip mishiranu-chat-chip--primary mishiranu-course-skip"
+                    onClick={tapChoice(() => skipCourse())}
+                  >
+                    <IconWalk />
+                    コースは作らない
+                  </button>
                   {courses.map((course, index) => (
                     <button
                       key={course.id}
@@ -1240,13 +1248,6 @@ export default function MishiranuApp({
                       </ol>
                     </button>
                   ))}
-                  <button
-                    type="button"
-                    className="mishiranu-chat-chip mishiranu-course-skip"
-                    onClick={tapChoice(() => skipCourse())}
-                  >
-                    コースは作らない
-                  </button>
                 </div>
               ) : null}
 
