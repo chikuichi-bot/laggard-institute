@@ -285,11 +285,17 @@ a.mishiranu-btn {
   animation: none;
 }
 
+.mishiranu-chat-dock .mishiranu-course-choose {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
 .mishiranu-chat-dock .mishiranu-course-picks {
-  max-height: min(42vh, 22rem);
+  max-height: min(36vh, 18rem);
   overflow-y: auto;
   overscroll-behavior: contain;
-  margin-bottom: 0.85rem;
+  margin: 0;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -482,17 +488,26 @@ a.mishiranu-btn {
   white-space: nowrap;
 }
 
+.mishiranu-course-choose {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0 0 1.1rem;
+}
+
 .mishiranu-course-picks {
   display: grid;
   gap: 0.85rem;
-  margin: 0 0 1.1rem;
+  margin: 0;
 }
 
 .mishiranu-course-skip {
   justify-self: stretch;
   width: 100%;
   justify-content: center;
-  margin: 0 0 0.15rem;
+  margin: 0;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .mishiranu-course-empty {

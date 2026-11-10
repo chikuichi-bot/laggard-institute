@@ -1202,7 +1202,7 @@ export default function MishiranuApp({
               ) : null}
 
               {chatPhase === "course" ? (
-                <div className="mishiranu-course-picks" aria-label="コースの候補">
+                <div className="mishiranu-course-choose" aria-label="コースの候補">
                   <button
                     type="button"
                     className="mishiranu-chat-chip mishiranu-chat-chip--primary mishiranu-course-skip"
@@ -1211,43 +1211,45 @@ export default function MishiranuApp({
                     <IconWalk />
                     コースは作らない
                   </button>
-                  {courses.map((course, index) => (
-                    <button
-                      key={course.id}
-                      type="button"
-                      className="mishiranu-course-card"
-                      onClick={tapChoice(() => chooseCourse(course))}
-                    >
-                      <span className="mishiranu-course-card-index">
-                        <CourseIcon courseId={course.id} />
-                        コース {index + 1}
-                      </span>
-                      <span className="mishiranu-course-card-title">
-                        {course.title}
-                      </span>
-                      <span className="mishiranu-course-card-sub">
-                        {course.subtitle} · 約{course.totalMinutes}分 ·{" "}
-                        {course.stopCount}か所
-                      </span>
-                      <span className="mishiranu-course-card-vibe">
-                        {course.vibe}
-                      </span>
-                      <ol className="mishiranu-course-card-stops">
-                        {course.stops.map((stop) => (
-                          <li key={stop.spotId}>
-                            <span
-                              className="mishiranu-guide-kind-icon"
-                              style={{ color: GUIDE_COLOR[stop.guide] }}
-                            >
-                              <GuideKindIcon kind={stop.guide} />
-                            </span>
-                            {stop.clockLabel ? `${stop.clockLabel} ` : ""}
-                            {stop.name}
-                          </li>
-                        ))}
-                      </ol>
-                    </button>
-                  ))}
+                  <div className="mishiranu-course-picks">
+                    {courses.map((course, index) => (
+                      <button
+                        key={course.id}
+                        type="button"
+                        className="mishiranu-course-card"
+                        onClick={tapChoice(() => chooseCourse(course))}
+                      >
+                        <span className="mishiranu-course-card-index">
+                          <CourseIcon courseId={course.id} />
+                          コース {index + 1}
+                        </span>
+                        <span className="mishiranu-course-card-title">
+                          {course.title}
+                        </span>
+                        <span className="mishiranu-course-card-sub">
+                          {course.subtitle} · 約{course.totalMinutes}分 ·{" "}
+                          {course.stopCount}か所
+                        </span>
+                        <span className="mishiranu-course-card-vibe">
+                          {course.vibe}
+                        </span>
+                        <ol className="mishiranu-course-card-stops">
+                          {course.stops.map((stop) => (
+                            <li key={stop.spotId}>
+                              <span
+                                className="mishiranu-guide-kind-icon"
+                                style={{ color: GUIDE_COLOR[stop.guide] }}
+                              >
+                                <GuideKindIcon kind={stop.guide} />
+                              </span>
+                              {stop.clockLabel ? `${stop.clockLabel} ` : ""}
+                              {stop.name}
+                            </li>
+                          ))}
+                        </ol>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 
