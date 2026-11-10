@@ -631,8 +631,8 @@ export default function MishiranuApp({
         role: "guide",
         text:
           built.length > 0
-            ? `${dayPartLabel(dayPart)}・${TIME_OPTIONS.find((t) => t.id === timeIdRef.current)?.label ?? ""}・${soloLabel}・${label}向けに、${built.length}つのコースを用意しました。どれにしますか？`
-            : "この条件ではコースを組めませんでした。滞在時間を変えてみてください。",
+            ? `${dayPartLabel(dayPart)}・${TIME_OPTIONS.find((t) => t.id === timeIdRef.current)?.label ?? ""}・${soloLabel}・${label}向けに、${built.length}つのコースを用意しました。選ぶか、「コースは作らない」でも進めます。`
+            : "この条件ではコースを組めませんでした。滞在時間を変えるか、「コースは作らない」で案内だけ開いてください。",
       },
     );
   }
@@ -659,9 +659,42 @@ export default function MishiranuApp({
       },
     );
     window.setTimeout(() => {
-      goTour(nextStationId, nextTimeId, []);
-      setTourTab("course");
+      goTour(nextStationId, nextTimeId, [], "course");
     }, 450);
+  }
+
+  function skipCourse(spoken?: string) {
+    const nextStationId = stationIdRef.current;
+    const nextTimeId = timeIdRef.current;
+    setSelectedCourse(null);
+    setFocusKinds([]);
+    setDraft("");
+    setChatPhase("ready");
+    setTourTab("map");
+    const named =
+      (dynamicStationRef.current?.id === nextStationId
+        ? dynamicStationRef.current.name
+        : null) ??
+      STATIONS.find((s) => s.id === nextStationId)?.name ??
+      station.name;
+    pushMessages(
+      { role: "you", text: spoken ?? "コースは作らない" },
+      {
+        role: "guide",
+        text: `コースなしで、${named}の案内を開きます。地図と観光から、好きなだけ寄り道してください。`,
+      },
+    );
+    window.setTimeout(() => {
+      goTour(nextStationId, nextTimeId, [], "map");
+    }, 450);
+  }
+
+  function matchesSkipCourse(text: string): boolean {
+    const t = text.trim();
+    return (
+      /コース\s*(は)?\s*(作らない|なし|要らない|いらない)/u.test(t) ||
+      /^(なし|作らない|スキップ|フリー|自由に|行程なし)$/u.test(t)
+    );
   }
 
   function stationLookupErrorMessage(
@@ -752,14 +785,15 @@ export default function MishiranuApp({
     nextStationId: string,
     nextTimeId: TimeOptionId = timeIdRef.current,
     kinds: GuideKind[] = focusKinds,
+    openTab?: TourTab,
   ) {
     setStationId(nextStationId);
     setTimeId(nextTimeId);
     setFocusKinds(kinds);
     setActiveSpotId(null);
     setSpotSheetOpen(false);
-    setTourTab(selectedCourse ? "course" : "map");
-    setGuideTab(kinds[0] ?? "meal");
+    setTourTab(openTab ?? "map");
+    setGuideTab(kinds[0] ?? "sight");
     setSecret(null);
     setSecretOpen(false);
     setStep("tour");
@@ -857,6 +891,10 @@ export default function MishiranuApp({
     }
 
     if (chatPhase === "course") {
+      if (matchesSkipCourse(text)) {
+        skipCourse(text);
+        return;
+      }
       const hit = courses.find(
         (c) => text.includes(c.title) || c.title.includes(text),
       );
@@ -865,7 +903,7 @@ export default function MishiranuApp({
           { role: "you", text },
           {
             role: "guide",
-            text: "下の3つのコースから選ぶか、コース名を入力してください。",
+            text: "下のコースから選ぶか、「コースは作らない」と入力してください。",
           },
         );
         setDraft("");
@@ -924,7 +962,7 @@ export default function MishiranuApp({
             : chatPhase === "mealBudget"
               ? "例: 気軽に / 少し奮発"
               : chatPhase === "course"
-                ? "例: ゆる歩きコース"
+                ? "例: ゆる歩きコース / コースは作らない"
                 : "";
 
   return (
@@ -1200,6 +1238,13 @@ export default function MishiranuApp({
                       </ol>
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    className="mishiranu-chat-chip mishiranu-course-skip"
+                    onClick={tapChoice(() => skipCourse())}
+                  >
+                    コースは作らない
+                  </button>
                 </div>
               ) : null}
 
@@ -1379,9 +1424,18 @@ export default function MishiranuApp({
                       </ol>
                     </section>
                   ) : (
-                    <p className="mishiranu-note">
-                      コース未選択です。到着の会話からコースを選ぶと、ここに行程が出ます。
-                    </p>
+                    <section className="mishiranu-course-empty" aria-label="コースなし">
+                      <p className="mishiranu-kicker">
+                        <IconTour />
+                        FREE WALK
+                      </p>
+                      <h3 className="mishiranu-course-itinerary-title">
+                        コースは作っていません
+                      </h3>
+                      <p className="mishiranu-note">
+                        地図と観光から、気になった場所だけ寄り道できます。あとから会話をやり直してコースを選ぶこともできます。
+                      </p>
+                    </section>
                   )}
                 </div>
               ) : null}
