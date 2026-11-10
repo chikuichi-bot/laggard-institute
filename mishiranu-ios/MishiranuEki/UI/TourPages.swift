@@ -37,7 +37,9 @@ private func readingLines(_ text: String?) -> [String] {
 private struct ReadingText: View {
     let lines: [String]
     var size: Font.TextStyle = .body
-    var color: Color = Palette.fog
+    /// 土地案内の本文は薄く見えないよう、ほぼ墨色＋medium。
+    var color: Color = Palette.body
+    var weight: Font.Weight = .medium
     var lineSpacing: CGFloat = 8
     var paragraphSpacing: CGFloat = 14
 
@@ -45,7 +47,7 @@ private struct ReadingText: View {
         VStack(alignment: .leading, spacing: paragraphSpacing) {
             ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                 Text(line)
-                    .font(.mincho(size))
+                    .font(.mincho(size, weight: weight))
                     .lineSpacing(lineSpacing)
                     .foregroundStyle(color)
                     .fixedSize(horizontal: false, vertical: true)
@@ -74,8 +76,8 @@ private struct PlaceBoardNote: View {
                     .fixedSize(horizontal: false, vertical: true)
                 ReadingText(
                     lines: readingLines(note.body),
-                    size: .footnote,
-                    color: Palette.fog,
+                    size: .callout,
+                    color: Palette.body,
                     lineSpacing: 6,
                     paragraphSpacing: 8
                 )
@@ -133,7 +135,7 @@ struct PlacePage: View {
                                     ReadingText(
                                         lines: intro,
                                         size: .body,
-                                        color: Palette.fog,
+                                        color: Palette.body,
                                         lineSpacing: 8,
                                         paragraphSpacing: 12
                                     )
@@ -143,7 +145,7 @@ struct PlacePage: View {
                                         .font(.mincho(.callout, weight: .semibold))
                                         .foregroundStyle(Palette.ink)
                                         .padding(.top, intro.isEmpty ? 0 : 8)
-                                    ReadingText(lines: readingLines(empty.body), size: .footnote, color: Palette.fog)
+                                    ReadingText(lines: readingLines(empty.body), size: .callout, color: Palette.body)
                                 }
                             }
                             .id(PlaceBoardSection.intro)
@@ -159,7 +161,7 @@ struct PlacePage: View {
                                 ReadingText(
                                     lines: walk,
                                     size: .body,
-                                    color: Palette.fog,
+                                    color: Palette.body,
                                     lineSpacing: 8,
                                     paragraphSpacing: 12
                                 )
@@ -178,7 +180,7 @@ struct PlacePage: View {
                                     ReadingText(
                                         lines: area,
                                         size: .body,
-                                        color: Palette.fog,
+                                        color: Palette.body,
                                         lineSpacing: 8,
                                         paragraphSpacing: 12
                                     )

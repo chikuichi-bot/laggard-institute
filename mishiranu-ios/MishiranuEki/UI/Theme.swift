@@ -14,6 +14,8 @@ extension Color {
 
 enum Palette {
     static let ink = Color(hex: 0x1f1b17)
+    /// 土地ページ本文向け。ink より一段濃く、紙面でも薄く見えない。
+    static let body = Color(hex: 0x12100e)
     static let fog = Color(hex: 0x4a433a)
     static let mist = Color(hex: 0x6e675e)
     static let paper = Color(hex: 0xf9f4e6)

@@ -1,6 +1,7 @@
 .mishiranu {
   /* おみくじ文庫と同系：和紙・明朝・落ち着いた藍と朱 */
   --mk-ink: #1f1b17;
+  --mk-body: #12100e;
   --mk-fog: #4a433a;
   --mk-mist: #6e675e;
   --mk-paper: #f9f4e6;
@@ -2171,9 +2172,10 @@ a.mishiranu-btn {
 
 .mishiranu-place-panel > p {
   margin: 0 0 0.65rem;
-  color: var(--mk-fog);
+  color: var(--mk-body);
   line-height: 1.75;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .mishiranu-place-panel > p:last-child {
@@ -2210,7 +2212,8 @@ a.mishiranu-btn {
 
 .mishiranu-place-notes p {
   margin: 0;
-  color: var(--mk-fog);
-  font-size: 0.84rem;
-  line-height: 1.6;
+  color: var(--mk-body);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  font-weight: 500;
 }
