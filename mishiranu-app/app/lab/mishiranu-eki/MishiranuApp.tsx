@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type MouseEvent,
 } from "react";
 import {
   GUIDE_COLOR,
@@ -218,6 +219,7 @@ export default function MishiranuApp({
   const [copyLoading, setCopyLoading] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const chatThreadRef = useRef<HTMLDivElement | null>(null);
   const stationIdRef = useRef(stationId);
   const timeIdRef = useRef(timeId);
   const dynamicStationRef = useRef<StationSeed | null>(null);
@@ -307,8 +309,21 @@ export default function MishiranuApp({
 
   useEffect(() => {
     if (step !== "pick") return;
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, showStationSearch, chatPhase, step, draft]);
+    const thread = chatThreadRef.current;
+    if (!thread) return;
+    // Scroll only inside the chat pane — never the page (Safari jumps to top otherwise).
+    const id = window.requestAnimationFrame(() => {
+      thread.scrollTo({ top: thread.scrollHeight, behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [messages, showStationSearch, chatPhase, step]);
+
+  function tapChoice(action: () => void) {
+    return (event: MouseEvent<HTMLButtonElement>) => {
+      event.currentTarget.blur();
+      action();
+    };
+  }
 
   async function loadCopy(nextStation: StationSeed, nextTimeId: TimeOptionId) {
     setCopyLoading(true);
@@ -898,7 +913,11 @@ export default function MishiranuApp({
 
   return (
     <div className="mishiranu">
-      <div className="mishiranu-shell">
+      <div
+        className={
+          step === "pick" ? "mishiranu-shell mishiranu-shell--chat" : "mishiranu-shell"
+        }
+      >
         {step === "hero" ? (
           <section className="mishiranu-hero" aria-label="見知らぬ駅">
             <div className="mishiranu-hero-copy">
@@ -934,16 +953,20 @@ export default function MishiranuApp({
         ) : null}
 
         {step === "pick" ? (
-          <section className="mishiranu-section mishiranu-chat" aria-labelledby="chat-title">
-            <p className="mishiranu-kicker">ARRIVAL · 編集 {STATIONS.length} 駅</p>
-            <h2 id="chat-title" className="mishiranu-h2">
-              知らない駅から、コースをつくる
-            </h2>
-            <p className="mishiranu-note">
-              現在地で駅を探す → いまの時刻 → 滞在 → 一人可否 → 予算 → 3コース。チップでも入力欄でも進められます。
-            </p>
+          <section className="mishiranu-chat" aria-labelledby="chat-title">
+            <header className="mishiranu-chat-head">
+              <p className="mishiranu-kicker">ARRIVAL · 編集 {STATIONS.length} 駅</p>
+              <h2 id="chat-title" className="mishiranu-h2 mishiranu-h2--chat">
+                知らない駅から、コースをつくる
+              </h2>
+            </header>
 
-            <div className="mishiranu-chat-thread" role="log" aria-live="polite">
+            <div
+              className="mishiranu-chat-thread"
+              role="log"
+              aria-live="polite"
+              ref={chatThreadRef}
+            >
               {messages.map((msg) => (
                 <div
                   key={msg.id}
@@ -962,233 +985,244 @@ export default function MishiranuApp({
               <div ref={chatEndRef} />
             </div>
 
-            {chatPhase === "station" ? (
-              <div className="mishiranu-chat-replies" aria-label="駅の答え">
-                <button
-                  type="button"
-                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                  disabled={geoLoading || stationLoading}
-                  onClick={() => void locateHere()}
-                >
-                  <IconLocate />
-                  {geoLoading ? "現在地を確認中…" : "現在地で駅を探す"}
-                </button>
-                <button
-                  type="button"
-                  className="mishiranu-chat-chip"
-                  onClick={() => setShowStationSearch((v) => !v)}
-                >
-                  <IconSearch />
-                  駅名で探す
-                </button>
-                {showStationSearch ? (
-                  <div className="mishiranu-chat-search">
-                    <label className="mishiranu-search">
-                      <span className="mishiranu-search-label">駅名・路線</span>
-                      <input
-                        type="search"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="例: 出町柳 / 叡山 / 京都"
-                        autoComplete="off"
-                        autoFocus
-                      />
-                    </label>
-                    <ul className="mishiranu-chat-station-list">
-                      {filteredStations.map((s) => (
-                        <li key={s.id}>
-                          <button type="button" onClick={() => chooseStation(s)}>
-                            <span className="mishiranu-station-name">{s.name}</span>
-                            <span className="mishiranu-station-meta">
-                              {s.prefecture} · {s.line}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                    {query.trim() &&
-                    filteredStations.length === 0 &&
-                    !matchStation(query) ? (
-                      <div className="mishiranu-ai-station-ask">
-                        <p className="mishiranu-note">
-                          編集リストにはありません。Gemini に観光案内を頼めます。
-                        </p>
-                        <button
-                          type="button"
-                          className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                          disabled={stationLoading}
-                          onClick={() => void requestAiStation(query.trim())}
-                        >
-                          <IconSpark />
-                          {stationLoading
-                            ? "案内をつくっています…"
-                            : `「${query.trim().replace(/駅$/u, "")}」で案内をつくる`}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {chatPhase === "clock" ? (
-              <div className="mishiranu-chat-replies" aria-label="いまの時間帯">
-                <button
-                  type="button"
-                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                  onClick={() =>
-                    chooseClock(
-                      dayPartFromHour(new Date().getHours()),
-                      "いまの時刻で",
-                    )
-                  }
-                >
-                  <IconClock />
-                  いまの時刻で
-                </button>
-                {DAY_PART_OPTIONS.map((opt) => (
+            <div className="mishiranu-chat-dock">
+              {chatPhase === "station" ? (
+                <div className="mishiranu-chat-replies" aria-label="駅の答え">
                   <button
-                    key={opt.id}
+                    type="button"
+                    className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                    disabled={geoLoading || stationLoading}
+                    onClick={tapChoice(() => void locateHere())}
+                  >
+                    <IconLocate />
+                    {geoLoading ? "現在地を確認中…" : "現在地で駅を探す"}
+                  </button>
+                  <button
                     type="button"
                     className="mishiranu-chat-chip"
-                    onClick={() => chooseClock(opt.id)}
-                    title={opt.hint}
+                    onClick={tapChoice(() => setShowStationSearch((v) => !v))}
                   >
-                    <DayPartIcon part={opt.id} />
-                    {opt.label}
+                    <IconSearch />
+                    駅名で探す
                   </button>
-                ))}
-              </div>
-            ) : null}
-
-            {chatPhase === "stay" ? (
-              <div className="mishiranu-chat-replies" aria-label="滞在時間">
-                {TIME_OPTIONS.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className="mishiranu-chat-chip"
-                    onClick={() => chooseStay(t.id)}
-                  >
-                    <StayIcon id={t.id} />
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {chatPhase === "mealSolo" ? (
-              <div className="mishiranu-chat-replies" aria-label="一人で入れるか">
-                {SOLO_PREF_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    className={
-                      opt.id === "solo"
-                        ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
-                        : "mishiranu-chat-chip"
-                    }
-                    title={opt.hint}
-                    onClick={() => chooseMealSolo(opt.id)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {chatPhase === "mealBudget" ? (
-              <div className="mishiranu-chat-replies" aria-label="予算の目安">
-                {BUDGET_PREF_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    className={
-                      opt.id === "casual"
-                        ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
-                        : "mishiranu-chat-chip"
-                    }
-                    title={opt.hint}
-                    onClick={() => chooseMealBudget(opt.id)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {chatPhase === "course" ? (
-              <div className="mishiranu-course-picks" aria-label="コースの候補">
-                {courses.map((course, index) => (
-                  <button
-                    key={course.id}
-                    type="button"
-                    className="mishiranu-course-card"
-                    onClick={() => chooseCourse(course)}
-                  >
-                    <span className="mishiranu-course-card-index">
-                      <CourseIcon courseId={course.id} />
-                      コース {index + 1}
-                    </span>
-                    <span className="mishiranu-course-card-title">
-                      {course.title}
-                    </span>
-                    <span className="mishiranu-course-card-sub">
-                      {course.subtitle} · 約{course.totalMinutes}分 ·{" "}
-                      {course.stopCount}か所
-                    </span>
-                    <span className="mishiranu-course-card-vibe">{course.vibe}</span>
-                    <ol className="mishiranu-course-card-stops">
-                      {course.stops.map((stop) => (
-                        <li key={stop.spotId}>
-                          <span
-                            className="mishiranu-guide-kind-icon"
-                            style={{ color: GUIDE_COLOR[stop.guide] }}
+                  {showStationSearch ? (
+                    <div className="mishiranu-chat-search">
+                      <label className="mishiranu-search">
+                        <span className="mishiranu-search-label">駅名・路線</span>
+                        <input
+                          type="search"
+                          value={query}
+                          onChange={(e) => setQuery(e.target.value)}
+                          placeholder="例: 出町柳 / 叡山 / 京都"
+                          autoComplete="off"
+                        />
+                      </label>
+                      <ul className="mishiranu-chat-station-list">
+                        {filteredStations.map((s) => (
+                          <li key={s.id}>
+                            <button
+                              type="button"
+                              onClick={tapChoice(() => chooseStation(s))}
+                            >
+                              <span className="mishiranu-station-name">{s.name}</span>
+                              <span className="mishiranu-station-meta">
+                                {s.prefecture} · {s.line}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      {query.trim() &&
+                      filteredStations.length === 0 &&
+                      !matchStation(query) ? (
+                        <div className="mishiranu-ai-station-ask">
+                          <p className="mishiranu-note">
+                            編集リストにはありません。Gemini に観光案内を頼めます。
+                          </p>
+                          <button
+                            type="button"
+                            className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                            disabled={stationLoading}
+                            onClick={tapChoice(() =>
+                              void requestAiStation(query.trim()),
+                            )}
                           >
-                            <GuideKindIcon kind={stop.guide} />
-                          </span>
-                          {stop.clockLabel ? `${stop.clockLabel} ` : ""}
-                          {stop.name}
-                        </li>
-                      ))}
-                    </ol>
+                            <IconSpark />
+                            {stationLoading
+                              ? "案内をつくっています…"
+                              : `「${query.trim().replace(/駅$/u, "")}」で案内をつくる`}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {chatPhase === "clock" ? (
+                <div className="mishiranu-chat-replies" aria-label="いまの時間帯">
+                  <button
+                    type="button"
+                    className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                    onClick={tapChoice(() =>
+                      chooseClock(
+                        dayPartFromHour(new Date().getHours()),
+                        "いまの時刻で",
+                      ),
+                    )}
+                  >
+                    <IconClock />
+                    いまの時刻で
                   </button>
-                ))}
-              </div>
-            ) : null}
+                  {DAY_PART_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className="mishiranu-chat-chip"
+                      onClick={tapChoice(() => chooseClock(opt.id))}
+                      title={opt.hint}
+                    >
+                      <DayPartIcon part={opt.id} />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
-            {chatPhase === "ready" ? (
-              <p className="mishiranu-chat-opening">案内を開いています…</p>
-            ) : (
-              <form className="mishiranu-chat-composer" onSubmit={handleComposerSubmit}>
-                <label className="mishiranu-search">
-                  <span className="mishiranu-search-label">メッセージ</span>
-                  <input
-                    type="text"
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    placeholder={composerPlaceholder}
-                    autoComplete="off"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="mishiranu-btn mishiranu-btn--primary"
-                  disabled={!draft.trim()}
+              {chatPhase === "stay" ? (
+                <div className="mishiranu-chat-replies" aria-label="滞在時間">
+                  {TIME_OPTIONS.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className="mishiranu-chat-chip"
+                      onClick={tapChoice(() => chooseStay(t.id))}
+                    >
+                      <StayIcon id={t.id} />
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {chatPhase === "mealSolo" ? (
+                <div className="mishiranu-chat-replies" aria-label="一人で入れるか">
+                  {SOLO_PREF_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={
+                        opt.id === "solo"
+                          ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
+                          : "mishiranu-chat-chip"
+                      }
+                      title={opt.hint}
+                      onClick={tapChoice(() => chooseMealSolo(opt.id))}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {chatPhase === "mealBudget" ? (
+                <div className="mishiranu-chat-replies" aria-label="予算の目安">
+                  {BUDGET_PREF_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={
+                        opt.id === "casual"
+                          ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
+                          : "mishiranu-chat-chip"
+                      }
+                      title={opt.hint}
+                      onClick={tapChoice(() => chooseMealBudget(opt.id))}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {chatPhase === "course" ? (
+                <div className="mishiranu-course-picks" aria-label="コースの候補">
+                  {courses.map((course, index) => (
+                    <button
+                      key={course.id}
+                      type="button"
+                      className="mishiranu-course-card"
+                      onClick={tapChoice(() => chooseCourse(course))}
+                    >
+                      <span className="mishiranu-course-card-index">
+                        <CourseIcon courseId={course.id} />
+                        コース {index + 1}
+                      </span>
+                      <span className="mishiranu-course-card-title">
+                        {course.title}
+                      </span>
+                      <span className="mishiranu-course-card-sub">
+                        {course.subtitle} · 約{course.totalMinutes}分 ·{" "}
+                        {course.stopCount}か所
+                      </span>
+                      <span className="mishiranu-course-card-vibe">
+                        {course.vibe}
+                      </span>
+                      <ol className="mishiranu-course-card-stops">
+                        {course.stops.map((stop) => (
+                          <li key={stop.spotId}>
+                            <span
+                              className="mishiranu-guide-kind-icon"
+                              style={{ color: GUIDE_COLOR[stop.guide] }}
+                            >
+                              <GuideKindIcon kind={stop.guide} />
+                            </span>
+                            {stop.clockLabel ? `${stop.clockLabel} ` : ""}
+                            {stop.name}
+                          </li>
+                        ))}
+                      </ol>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {chatPhase === "ready" ? (
+                <p className="mishiranu-chat-opening">案内を開いています…</p>
+              ) : (
+                <form
+                  className="mishiranu-chat-composer"
+                  onSubmit={handleComposerSubmit}
                 >
-                  送る
-                </button>
-              </form>
-            )}
+                  <label className="mishiranu-search">
+                    <span className="mishiranu-search-label">メッセージ</span>
+                    <input
+                      type="text"
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      placeholder={composerPlaceholder}
+                      autoComplete="off"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="mishiranu-btn mishiranu-btn--primary"
+                    disabled={!draft.trim()}
+                  >
+                    送る
+                  </button>
+                </form>
+              )}
 
-            <div className="mishiranu-actions">
-              <button
-                type="button"
-                className="mishiranu-btn mishiranu-btn--ghost"
-                onClick={goHero}
-              >
-                はじめに戻る
-              </button>
+              <div className="mishiranu-actions mishiranu-actions--chat">
+                <button
+                  type="button"
+                  className="mishiranu-btn mishiranu-btn--ghost"
+                  onClick={tapChoice(goHero)}
+                >
+                  はじめに戻る
+                </button>
+              </div>
             </div>
           </section>
         ) : null}

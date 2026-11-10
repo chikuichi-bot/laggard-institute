@@ -51,6 +51,34 @@
   padding-top: env(safe-area-inset-top);
 }
 
+.mishiranu-shell--chat {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+.mishiranu-chat {
+  flex: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.85rem 0 0;
+}
+
+.mishiranu-chat-head {
+  flex-shrink: 0;
+  padding-bottom: 0.55rem;
+}
+
+.mishiranu-h2--chat {
+  margin-bottom: 0;
+  font-size: clamp(1.35rem, 4.5vw, 1.7rem);
+}
+
 .mishiranu-hero {
   position: relative;
   min-height: 100vh;
@@ -214,8 +242,53 @@ a.mishiranu-btn {
 .mishiranu-chat-thread {
   display: grid;
   gap: 0.95rem;
-  margin: 0 0 1.4rem;
-  min-height: 12rem;
+  margin: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.35rem 0 1rem;
+  scroll-padding-bottom: 1rem;
+}
+
+.mishiranu-chat-dock {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  margin-top: auto;
+  padding: 0.75rem 0 calc(0.85rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--mk-line);
+  background: color-mix(in srgb, var(--mk-canvas) 92%, #fff);
+  backdrop-filter: blur(8px);
+}
+
+.mishiranu-chat-dock .mishiranu-chat-replies {
+  margin-bottom: 0.85rem;
+  animation: none;
+}
+
+.mishiranu-chat-dock .mishiranu-course-picks {
+  max-height: min(42vh, 22rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-bottom: 0.85rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mishiranu-chat-dock .mishiranu-chat-composer {
+  margin-bottom: 0.35rem;
+}
+
+.mishiranu-actions--chat {
+  margin-top: 0.15rem;
+}
+
+.mishiranu-actions--chat .mishiranu-btn--ghost {
+  width: auto;
+  min-height: 2.5rem;
+  padding: 0.35rem 0;
 }
 
 .mishiranu-chat-bubble {
@@ -1762,16 +1835,11 @@ a.mishiranu-btn {
   }
 
   .mishiranu-chat-composer {
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
-    margin-bottom: 0.75rem;
-    padding: 0.65rem 0 calc(0.35rem + env(safe-area-inset-bottom));
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--mk-canvas) 0%, transparent) 0%,
-      var(--mk-canvas) 28%
-    );
+    margin-bottom: 0.35rem;
+  }
+
+  .mishiranu-chat-dock .mishiranu-chat-chip {
+    flex: 1 1 auto;
   }
 
   .mishiranu-search input {
