@@ -16,6 +16,8 @@ type Props = {
   spots: Spot[];
   radiusKm: number;
   activeSpotId: string | null;
+  /** Ordered spot ids for the chosen walking course */
+  courseStopIds?: string[] | null;
   onSelect: (spotId: string) => void;
 };
 
@@ -33,11 +35,24 @@ function pinIcon(color: string, active: boolean) {
   });
 }
 
+function stepIcon(step: number, color: string, active: boolean) {
+  const size = active ? 26 : 22;
+  return L.divIcon({
+    className: "mishiranu-leaflet-pin",
+    html: `<span class="mishiranu-leaflet-step${active ? " mishiranu-leaflet-step--active" : ""}" style="
+      --step-color:${color};width:${size}px;height:${size}px;font-size:${active ? 12 : 11}px;
+    ">${step}</span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
 export default function StationMap({
   station,
   spots,
   radiusKm,
   activeSpotId,
+  courseStopIds = null,
   onSelect,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -99,18 +114,50 @@ export default function StationMap({
 
     layer.clearLayers();
     const center = stationLatLng(station);
-    map.setView([center.lat, center.lng], radiusKm >= 2.5 ? 14 : 15, {
-      animate: false,
-    });
+    const spotById = new Map<string, Spot>();
+    for (const spot of station.spots) spotById.set(spot.id, spot);
+    for (const spot of spots) spotById.set(spot.id, spot);
 
-    L.circle([center.lat, center.lng], {
-      radius: radiusKm * 1000,
-      color: "#b5493a",
-      weight: 1.5,
-      dashArray: "4 6",
-      fillColor: "#b5493a",
-      fillOpacity: 0.06,
-    }).addTo(layer);
+    const courseIds = (courseStopIds ?? []).filter((id) => spotById.has(id));
+    const courseSet = new Set(courseIds);
+    const path: L.LatLngExpression[] = [[center.lat, center.lng]];
+    for (const id of courseIds) {
+      const spot = spotById.get(id);
+      if (!spot) continue;
+      const ll = spotLatLng(station, spot);
+      path.push([ll.lat, ll.lng]);
+    }
+
+    if (path.length >= 2) {
+      L.polyline(path, {
+        color: "#9a3d31",
+        weight: 4,
+        opacity: 0.88,
+        lineJoin: "round",
+        lineCap: "round",
+        className: "mishiranu-leaflet-course",
+      }).addTo(layer);
+      L.polyline(path, {
+        color: "#f9f4e6",
+        weight: 1.5,
+        opacity: 0.95,
+        lineJoin: "round",
+        lineCap: "round",
+        dashArray: "1 10",
+      }).addTo(layer);
+    } else {
+      L.circle([center.lat, center.lng], {
+        radius: radiusKm * 1000,
+        color: "#b5493a",
+        weight: 1.5,
+        dashArray: "4 6",
+        fillColor: "#b5493a",
+        fillOpacity: 0.06,
+      }).addTo(layer);
+      map.setView([center.lat, center.lng], radiusKm >= 2.5 ? 14 : 15, {
+        animate: false,
+      });
+    }
 
     const stationLabel = document.createElement("span");
     stationLabel.textContent = station.name;
@@ -130,17 +177,44 @@ export default function StationMap({
       .addTo(layer);
 
     for (const spot of spots) {
+      if (courseSet.has(spot.id)) continue;
       const { lat, lng } = spotLatLng(station, spot);
       const marker = L.marker([lat, lng], {
         icon: pinIcon(GUIDE_COLOR[spotGuide(spot)], spot.id === activeSpotId),
         title: spot.name,
+        opacity: courseIds.length > 0 ? 0.45 : 1,
       });
       marker.on("click", () => onSelectRef.current(spot.id));
       marker.addTo(layer);
     }
 
+    courseIds.forEach((id, index) => {
+      const spot = spotById.get(id);
+      if (!spot) return;
+      const { lat, lng } = spotLatLng(station, spot);
+      const marker = L.marker([lat, lng], {
+        icon: stepIcon(
+          index + 1,
+          GUIDE_COLOR[spotGuide(spot)],
+          spot.id === activeSpotId,
+        ),
+        title: `${index + 1}. ${spot.name}`,
+        zIndexOffset: 200 + index,
+      });
+      marker.on("click", () => onSelectRef.current(spot.id));
+      marker.addTo(layer);
+    });
+
+    if (path.length >= 2) {
+      map.fitBounds(L.latLngBounds(path), {
+        padding: [36, 36],
+        maxZoom: 16,
+        animate: false,
+      });
+    }
+
     requestAnimationFrame(() => map.invalidateSize());
-  }, [station, spots, radiusKm, activeSpotId]);
+  }, [station, spots, radiusKm, activeSpotId, courseStopIds]);
 
   return (
     <div className="mishiranu-map mishiranu-map--live" aria-label={`${station.name}駅周辺の地図`}>

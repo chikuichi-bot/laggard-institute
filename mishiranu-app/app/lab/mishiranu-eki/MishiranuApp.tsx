@@ -3,10 +3,12 @@
 import dynamic from "next/dynamic";
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type FormEvent,
+  type MouseEvent,
 } from "react";
 import {
   GUIDE_COLOR,
@@ -53,17 +55,20 @@ import {
   CourseIcon,
   DayPartIcon,
   GuideKindIcon,
-  IconBinoculars,
   IconBike,
+  IconBinoculars,
   IconClock,
   IconHistory,
   IconLocate,
+  IconMapPin,
+  IconMore,
   IconSearch,
   IconSpark,
   IconTour,
   IconWalk,
   StayIcon,
 } from "./MishiranuIcons";
+import { IosInstallCard } from "./IosInstall";
 import "./mishiranu.css";
 
 const StationMap = dynamic(() => import("./StationMap"), {
@@ -84,6 +89,20 @@ type ChatPhase =
   | "mealBudget"
   | "course"
   | "ready";
+
+/** iPhone-friendly tour pages (bottom tabs) */
+type TourTab = "map" | "course" | "guide" | "place" | "more";
+
+const TOUR_TABS: Array<{
+  id: TourTab;
+  label: string;
+}> = [
+  { id: "map", label: "地図" },
+  { id: "place", label: "土地" },
+  { id: "course", label: "歩く" },
+  { id: "guide", label: "案内" },
+  { id: "more", label: "ほか" },
+];
 
 function mealMetaLine(spot: Spot): string {
   const solo = soloOkFor(spot) ? SOLO_OK_LABEL.yes : SOLO_OK_LABEL.no;
@@ -195,12 +214,16 @@ export default function MishiranuApp({
   mealSoloRef.current = mealSolo;
   mealBudgetRef.current = mealBudget;
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
+  const [tourTab, setTourTab] = useState<TourTab>("map");
+  const [guideTab, setGuideTab] = useState<GuideKind>("sight");
+  const [spotSheetOpen, setSpotSheetOpen] = useState(false);
   const [secret, setSecret] = useState<Spot | null>(null);
   const [secretOpen, setSecretOpen] = useState(false);
   const [copy, setCopy] = useState<TourCopy | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const chatThreadRef = useRef<HTMLDivElement | null>(null);
   const stationIdRef = useRef(stationId);
   const timeIdRef = useRef(timeId);
   const dynamicStationRef = useRef<StationSeed | null>(null);
@@ -283,15 +306,43 @@ export default function MishiranuApp({
     for (const rest of byId.values()) ordered.push(rest);
     return ordered;
   }, [station, time.index, selectedCourse]);
+  const courseStopIds = useMemo(
+    () =>
+      selectedCourse && selectedCourse.stops.length > 0
+        ? selectedCourse.stops.map((stop) => stop.spotId)
+        : null,
+    [selectedCourse],
+  );
   const activeSpot =
     spots.find((s) => s.id === activeSpotId) ??
     (activeSpotId ? null : spots[0] ?? null);
   const shownCopy = copy ?? seedTourCopy(station);
 
-  useEffect(() => {
+  function scrollChatToLatest() {
+    const thread = chatThreadRef.current;
+    if (!thread) return;
+    // Instant jump inside the thread only — smooth + window scrollIntoView hides
+    // the newest bubble under the dock on Safari.
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  useLayoutEffect(() => {
     if (step !== "pick") return;
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, showStationSearch, chatPhase, step, draft]);
+    scrollChatToLatest();
+    const t1 = window.setTimeout(scrollChatToLatest, 40);
+    const t2 = window.setTimeout(scrollChatToLatest, 280);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [messages, showStationSearch, chatPhase, step]);
+
+  function tapChoice(action: () => void) {
+    return (event: MouseEvent<HTMLButtonElement>) => {
+      event.currentTarget.blur();
+      action();
+    };
+  }
 
   async function loadCopy(nextStation: StationSeed, nextTimeId: TimeOptionId) {
     setCopyLoading(true);
@@ -415,9 +466,24 @@ export default function MishiranuApp({
     }
   }
 
+  function readDevicePosition(options: PositionOptions) {
+    return new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+  }
+
   async function locateHere() {
     if (geoLoading || stationLoading) return;
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setShowStationSearch(true);
+      pushMessages({
+        role: "guide",
+        text: "位置情報は https か localhost でのみ使えます。Ports の Open in Browser か、駅名で探してください。",
+      });
+      return;
+    }
     if (!navigator.geolocation) {
+      setShowStationSearch(true);
       pushMessages({
         role: "guide",
         text: "この端末では現在地が使えません。駅名を入力するか、「駅名で探す」から選んでください。",
@@ -433,13 +499,21 @@ export default function MishiranuApp({
       },
     );
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
+      let position: GeolocationPosition;
+      try {
+        position = await readDevicePosition({
           enableHighAccuracy: true,
-          timeout: 12000,
-          maximumAge: 30_000,
+          timeout: 10_000,
+          maximumAge: 60_000,
         });
-      });
+      } catch {
+        // Desktop / Preview often reject high-accuracy GPS; retry quietly.
+        position = await readDevicePosition({
+          enableHighAccuracy: false,
+          timeout: 20_000,
+          maximumAge: 120_000,
+        });
+      }
       const { latitude: lat, longitude: lng } = position.coords;
       // Precise GPS never leaves the browser. Only curated matching runs locally.
       const local = findNearestStation(lat, lng, STATIONS);
@@ -463,14 +537,23 @@ export default function MishiranuApp({
           `${nearestHint}位置情報は端末の外に送っていません。駅名を入力するか、「駅名で探す」から選んでください。`.trim(),
       });
     } catch (err) {
-      const denied =
-        err instanceof GeolocationPositionError &&
-        err.code === err.PERMISSION_DENIED;
+      setShowStationSearch(true);
+      const code =
+        err && typeof err === "object" && "code" in err
+          ? Number((err as { code: number }).code)
+          : NaN;
+      const denied = code === 1;
+      const unavailable = code === 2;
+      const timedOut = code === 3;
       pushMessages({
         role: "guide",
         text: denied
-          ? "位置情報の許可が必要です。許可するか、駅名を入力してください。"
-          : "現在地を取得できませんでした。駅名を入力するか、もう一度どうぞ。",
+          ? "位置情報の許可が必要です。ブラウザで許可するか、駅名で探してください。"
+          : timedOut
+            ? "現在地の確認がタイムアウトしました。もう一度試すか、駅名で探してください。"
+            : unavailable
+              ? "このプレビューでは位置が取れないことがあります。Ports の Open in Browser、または実機の Safari で開くか、駅名で探してください。"
+              : "現在地を取得できませんでした。駅名で探すか、もう一度どうぞ。",
       });
     } finally {
       setGeoLoading(false);
@@ -551,8 +634,8 @@ export default function MishiranuApp({
         role: "guide",
         text:
           built.length > 0
-            ? `${dayPartLabel(dayPart)}・${TIME_OPTIONS.find((t) => t.id === timeIdRef.current)?.label ?? ""}・${soloLabel}・${label}向けに、${built.length}つのコースを用意しました。どれにしますか？`
-            : "この条件ではコースを組めませんでした。滞在時間を変えてみてください。",
+            ? `${dayPartLabel(dayPart)}・${TIME_OPTIONS.find((t) => t.id === timeIdRef.current)?.label ?? ""}・${soloLabel}・${label}向けです。まずは「コースは作らない」で自由に歩くか、下の${built.length}つのコースから選んでください。`
+            : "この条件ではコースを組めませんでした。まずは「コースは作らない」で案内を開くか、滞在時間を変えてみてください。",
       },
     );
   }
@@ -564,6 +647,7 @@ export default function MishiranuApp({
     setFocusKinds([]);
     setDraft("");
     setChatPhase("ready");
+    setTourTab("course");
     const named =
       (dynamicStationRef.current?.id === nextStationId
         ? dynamicStationRef.current.name
@@ -578,8 +662,42 @@ export default function MishiranuApp({
       },
     );
     window.setTimeout(() => {
-      goTour(nextStationId, nextTimeId, []);
+      goTour(nextStationId, nextTimeId, [], "course");
     }, 450);
+  }
+
+  function skipCourse(spoken?: string) {
+    const nextStationId = stationIdRef.current;
+    const nextTimeId = timeIdRef.current;
+    setSelectedCourse(null);
+    setFocusKinds([]);
+    setDraft("");
+    setChatPhase("ready");
+    setTourTab("map");
+    const named =
+      (dynamicStationRef.current?.id === nextStationId
+        ? dynamicStationRef.current.name
+        : null) ??
+      STATIONS.find((s) => s.id === nextStationId)?.name ??
+      station.name;
+    pushMessages(
+      { role: "you", text: spoken ?? "コースは作らない" },
+      {
+        role: "guide",
+        text: `コースなしで、${named}の案内を開きます。地図と観光から、好きなだけ寄り道してください。`,
+      },
+    );
+    window.setTimeout(() => {
+      goTour(nextStationId, nextTimeId, [], "map");
+    }, 450);
+  }
+
+  function matchesSkipCourse(text: string): boolean {
+    const t = text.trim();
+    return (
+      /コース\s*(は)?\s*(作らない|なし|要らない|いらない)/u.test(t) ||
+      /^(なし|作らない|スキップ|フリー|自由に|行程なし)$/u.test(t)
+    );
   }
 
   function stationLookupErrorMessage(
@@ -670,16 +788,26 @@ export default function MishiranuApp({
     nextStationId: string,
     nextTimeId: TimeOptionId = timeIdRef.current,
     kinds: GuideKind[] = focusKinds,
+    openTab?: TourTab,
   ) {
     setStationId(nextStationId);
     setTimeId(nextTimeId);
     setFocusKinds(kinds);
     setActiveSpotId(null);
+    setSpotSheetOpen(false);
+    setTourTab(openTab ?? "map");
+    setGuideTab(kinds[0] ?? "sight");
     setSecret(null);
     setSecretOpen(false);
     setStep("tour");
     setChatPhase("ready");
     syncUrl("tour", nextStationId, nextTimeId, kinds);
+  }
+
+  function openSpot(spotId: string, opts?: { tab?: TourTab }) {
+    setActiveSpotId(spotId);
+    setSpotSheetOpen(true);
+    if (opts?.tab) setTourTab(opts.tab);
   }
 
   function handleComposerSubmit(event: FormEvent) {
@@ -766,6 +894,10 @@ export default function MishiranuApp({
     }
 
     if (chatPhase === "course") {
+      if (matchesSkipCourse(text)) {
+        skipCourse(text);
+        return;
+      }
       const hit = courses.find(
         (c) => text.includes(c.title) || c.title.includes(text),
       );
@@ -774,7 +906,7 @@ export default function MishiranuApp({
           { role: "you", text },
           {
             role: "guide",
-            text: "下の3つのコースから選ぶか、コース名を入力してください。",
+            text: "下のコースから選ぶか、「コースは作らない」と入力してください。",
           },
         );
         setDraft("");
@@ -788,7 +920,11 @@ export default function MishiranuApp({
     const next = pickSecret(spots);
     setSecret(next ?? null);
     setSecretOpen(true);
-    if (next) setActiveSpotId(next.id);
+    setTourTab("more");
+    if (next) {
+      setActiveSpotId(next.id);
+      setSpotSheetOpen(true);
+    }
   }
 
   async function shareTour() {
@@ -817,14 +953,6 @@ export default function MishiranuApp({
     setShareNote(text);
   }
 
-  const guideBoardKinds =
-    focusKinds.length > 0
-      ? [
-          ...focusKinds,
-          ...GUIDE_ORDER.filter((k) => !focusKinds.includes(k)),
-        ]
-      : GUIDE_ORDER;
-
   const composerPlaceholder =
     chatPhase === "station"
       ? "例: 中書島にいます"
@@ -837,12 +965,16 @@ export default function MishiranuApp({
             : chatPhase === "mealBudget"
               ? "例: 気軽に / 少し奮発"
               : chatPhase === "course"
-                ? "例: ゆる歩きコース"
+                ? "例: ゆる歩きコース / コースは作らない"
                 : "";
 
   return (
     <div className="mishiranu">
-      <div className="mishiranu-shell">
+      <div
+        className={
+          step === "pick" ? "mishiranu-shell mishiranu-shell--chat" : "mishiranu-shell"
+        }
+      >
         {step === "hero" ? (
           <section className="mishiranu-hero" aria-label="見知らぬ駅">
             <div className="mishiranu-hero-copy">
@@ -873,21 +1005,28 @@ export default function MishiranuApp({
                 {" · "}
                 <a href="?view=tour&station=demachiyanagi&time=1h">出町柳の物語へ</a>
               </p>
+              <div className="mishiranu-hero-install">
+                <IosInstallCard compact />
+              </div>
             </div>
           </section>
         ) : null}
 
         {step === "pick" ? (
-          <section className="mishiranu-section mishiranu-chat" aria-labelledby="chat-title">
-            <p className="mishiranu-kicker">ARRIVAL · 編集 {STATIONS.length} 駅</p>
-            <h2 id="chat-title" className="mishiranu-h2">
-              知らない駅から、コースをつくる
-            </h2>
-            <p className="mishiranu-note">
-              現在地で駅を探す → いまの時刻 → 滞在 → 一人可否 → 予算 → 3コース。チップでも入力欄でも進められます。
-            </p>
+          <section className="mishiranu-chat" aria-labelledby="chat-title">
+            <header className="mishiranu-chat-head">
+              <p className="mishiranu-kicker">ARRIVAL · 編集 {STATIONS.length} 駅</p>
+              <h2 id="chat-title" className="mishiranu-h2 mishiranu-h2--chat">
+                知らない駅から、コースをつくる
+              </h2>
+            </header>
 
-            <div className="mishiranu-chat-thread" role="log" aria-live="polite">
+            <div
+              className="mishiranu-chat-thread"
+              role="log"
+              aria-live="polite"
+              ref={chatThreadRef}
+            >
               {messages.map((msg) => (
                 <div
                   key={msg.id}
@@ -906,240 +1045,264 @@ export default function MishiranuApp({
               <div ref={chatEndRef} />
             </div>
 
-            {chatPhase === "station" ? (
-              <div className="mishiranu-chat-replies" aria-label="駅の答え">
-                <button
-                  type="button"
-                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                  disabled={geoLoading || stationLoading}
-                  onClick={() => void locateHere()}
-                >
-                  <IconLocate />
-                  {geoLoading ? "現在地を確認中…" : "現在地で駅を探す"}
-                </button>
-                <button
-                  type="button"
-                  className="mishiranu-chat-chip"
-                  onClick={() => setShowStationSearch((v) => !v)}
-                >
-                  <IconSearch />
-                  駅名で探す
-                </button>
-                {showStationSearch ? (
-                  <div className="mishiranu-chat-search">
-                    <label className="mishiranu-search">
-                      <span className="mishiranu-search-label">駅名・路線</span>
-                      <input
-                        type="search"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="例: 出町柳 / 叡山 / 京都"
-                        autoComplete="off"
-                        autoFocus
-                      />
-                    </label>
-                    <ul className="mishiranu-chat-station-list">
-                      {filteredStations.map((s) => (
-                        <li key={s.id}>
-                          <button type="button" onClick={() => chooseStation(s)}>
-                            <span className="mishiranu-station-name">{s.name}</span>
-                            <span className="mishiranu-station-meta">
-                              {s.prefecture} · {s.line}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                    {query.trim() &&
-                    filteredStations.length === 0 &&
-                    !matchStation(query) ? (
-                      <div className="mishiranu-ai-station-ask">
-                        <p className="mishiranu-note">
-                          編集リストにはありません。Gemini に観光案内を頼めます。
-                        </p>
-                        <button
-                          type="button"
-                          className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                          disabled={stationLoading}
-                          onClick={() => void requestAiStation(query.trim())}
-                        >
-                          <IconSpark />
-                          {stationLoading
-                            ? "案内をつくっています…"
-                            : `「${query.trim().replace(/駅$/u, "")}」で案内をつくる`}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {chatPhase === "clock" ? (
-              <div className="mishiranu-chat-replies" aria-label="いまの時間帯">
-                <button
-                  type="button"
-                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
-                  onClick={() =>
-                    chooseClock(
-                      dayPartFromHour(new Date().getHours()),
-                      "いまの時刻で",
-                    )
-                  }
-                >
-                  <IconClock />
-                  いまの時刻で
-                </button>
-                {DAY_PART_OPTIONS.map((opt) => (
+            <div className="mishiranu-chat-dock">
+              {chatPhase === "station" ? (
+                <div className="mishiranu-chat-replies" aria-label="駅の答え">
                   <button
-                    key={opt.id}
+                    type="button"
+                    className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                    disabled={geoLoading || stationLoading}
+                    onClick={tapChoice(() => void locateHere())}
+                  >
+                    <IconLocate />
+                    {geoLoading ? "現在地を確認中…" : "現在地で駅を探す"}
+                  </button>
+                  <button
                     type="button"
                     className="mishiranu-chat-chip"
-                    onClick={() => chooseClock(opt.id)}
-                    title={opt.hint}
+                    onClick={tapChoice(() => setShowStationSearch((v) => !v))}
                   >
-                    <DayPartIcon part={opt.id} />
-                    {opt.label}
+                    <IconSearch />
+                    駅名で探す
                   </button>
-                ))}
-              </div>
-            ) : null}
-
-            {chatPhase === "stay" ? (
-              <div className="mishiranu-chat-replies" aria-label="滞在時間">
-                {TIME_OPTIONS.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className="mishiranu-chat-chip"
-                    onClick={() => chooseStay(t.id)}
-                  >
-                    <StayIcon id={t.id} />
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {chatPhase === "mealSolo" ? (
-              <div className="mishiranu-chat-replies" aria-label="一人で入れるか">
-                {SOLO_PREF_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    className={
-                      opt.id === "solo"
-                        ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
-                        : "mishiranu-chat-chip"
-                    }
-                    title={opt.hint}
-                    onClick={() => chooseMealSolo(opt.id)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {chatPhase === "mealBudget" ? (
-              <div className="mishiranu-chat-replies" aria-label="予算の目安">
-                {BUDGET_PREF_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    className={
-                      opt.id === "casual"
-                        ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
-                        : "mishiranu-chat-chip"
-                    }
-                    title={opt.hint}
-                    onClick={() => chooseMealBudget(opt.id)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {chatPhase === "course" ? (
-              <div className="mishiranu-course-picks" aria-label="コースの候補">
-                {courses.map((course, index) => (
-                  <button
-                    key={course.id}
-                    type="button"
-                    className="mishiranu-course-card"
-                    onClick={() => chooseCourse(course)}
-                  >
-                    <span className="mishiranu-course-card-index">
-                      <CourseIcon courseId={course.id} />
-                      コース {index + 1}
-                    </span>
-                    <span className="mishiranu-course-card-title">
-                      {course.title}
-                    </span>
-                    <span className="mishiranu-course-card-sub">
-                      {course.subtitle} · 約{course.totalMinutes}分 ·{" "}
-                      {course.stopCount}か所
-                    </span>
-                    <span className="mishiranu-course-card-vibe">{course.vibe}</span>
-                    <ol className="mishiranu-course-card-stops">
-                      {course.stops.map((stop) => (
-                        <li key={stop.spotId}>
-                          <span
-                            className="mishiranu-guide-kind-icon"
-                            style={{ color: GUIDE_COLOR[stop.guide] }}
+                  {showStationSearch ? (
+                    <div className="mishiranu-chat-search">
+                      <label className="mishiranu-search">
+                        <span className="mishiranu-search-label">駅名・路線</span>
+                        <input
+                          type="search"
+                          value={query}
+                          onChange={(e) => setQuery(e.target.value)}
+                          placeholder="例: 出町柳 / 叡山 / 京都"
+                          autoComplete="off"
+                        />
+                      </label>
+                      <ul className="mishiranu-chat-station-list">
+                        {filteredStations.map((s) => (
+                          <li key={s.id}>
+                            <button
+                              type="button"
+                              onClick={tapChoice(() => chooseStation(s))}
+                            >
+                              <span className="mishiranu-station-name">{s.name}</span>
+                              <span className="mishiranu-station-meta">
+                                {s.prefecture} · {s.line}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      {query.trim() &&
+                      filteredStations.length === 0 &&
+                      !matchStation(query) ? (
+                        <div className="mishiranu-ai-station-ask">
+                          <p className="mishiranu-note">
+                            編集リストにはありません。Gemini に観光案内を頼めます。
+                          </p>
+                          <button
+                            type="button"
+                            className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                            disabled={stationLoading}
+                            onClick={tapChoice(() =>
+                              void requestAiStation(query.trim()),
+                            )}
                           >
-                            <GuideKindIcon kind={stop.guide} />
-                          </span>
-                          {stop.clockLabel ? `${stop.clockLabel} ` : ""}
-                          {stop.name}
-                        </li>
-                      ))}
-                    </ol>
+                            <IconSpark />
+                            {stationLoading
+                              ? "案内をつくっています…"
+                              : `「${query.trim().replace(/駅$/u, "")}」で案内をつくる`}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {chatPhase === "clock" ? (
+                <div className="mishiranu-chat-replies" aria-label="いまの時間帯">
+                  <button
+                    type="button"
+                    className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                    onClick={tapChoice(() =>
+                      chooseClock(
+                        dayPartFromHour(new Date().getHours()),
+                        "いまの時刻で",
+                      ),
+                    )}
+                  >
+                    <IconClock />
+                    いまの時刻で
                   </button>
-                ))}
-              </div>
-            ) : null}
+                  {DAY_PART_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className="mishiranu-chat-chip"
+                      onClick={tapChoice(() => chooseClock(opt.id))}
+                      title={opt.hint}
+                    >
+                      <DayPartIcon part={opt.id} />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
-            {chatPhase === "ready" ? (
-              <p className="mishiranu-chat-opening">案内を開いています…</p>
-            ) : (
-              <form className="mishiranu-chat-composer" onSubmit={handleComposerSubmit}>
-                <label className="mishiranu-search">
-                  <span className="mishiranu-search-label">メッセージ</span>
-                  <input
-                    type="text"
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    placeholder={composerPlaceholder}
-                    autoComplete="off"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="mishiranu-btn mishiranu-btn--primary"
-                  disabled={!draft.trim()}
+              {chatPhase === "stay" ? (
+                <div className="mishiranu-chat-replies" aria-label="滞在時間">
+                  {TIME_OPTIONS.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className="mishiranu-chat-chip"
+                      onClick={tapChoice(() => chooseStay(t.id))}
+                    >
+                      <StayIcon id={t.id} />
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {chatPhase === "mealSolo" ? (
+                <div className="mishiranu-chat-replies" aria-label="一人で入れるか">
+                  {SOLO_PREF_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={
+                        opt.id === "solo"
+                          ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
+                          : "mishiranu-chat-chip"
+                      }
+                      title={opt.hint}
+                      onClick={tapChoice(() => chooseMealSolo(opt.id))}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {chatPhase === "mealBudget" ? (
+                <div className="mishiranu-chat-replies" aria-label="予算の目安">
+                  {BUDGET_PREF_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={
+                        opt.id === "casual"
+                          ? "mishiranu-chat-chip mishiranu-chat-chip--primary"
+                          : "mishiranu-chat-chip"
+                      }
+                      title={opt.hint}
+                      onClick={tapChoice(() => chooseMealBudget(opt.id))}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {chatPhase === "course" ? (
+                <div className="mishiranu-course-choose" aria-label="コースの候補">
+                  <button
+                    type="button"
+                    className="mishiranu-chat-chip mishiranu-chat-chip--primary mishiranu-course-skip"
+                    onClick={tapChoice(() => skipCourse())}
+                  >
+                    <IconWalk />
+                    コースは作らない
+                  </button>
+                  <div className="mishiranu-course-picks">
+                    {courses.map((course, index) => (
+                      <button
+                        key={course.id}
+                        type="button"
+                        className="mishiranu-course-card"
+                        onClick={tapChoice(() => chooseCourse(course))}
+                      >
+                        <span className="mishiranu-course-card-index">
+                          <CourseIcon courseId={course.id} />
+                          コース {index + 1}
+                        </span>
+                        <span className="mishiranu-course-card-title">
+                          {course.title}
+                        </span>
+                        <span className="mishiranu-course-card-sub">
+                          {course.subtitle} · 約{course.totalMinutes}分 ·{" "}
+                          {course.stopCount}か所
+                        </span>
+                        <span className="mishiranu-course-card-vibe">
+                          {course.vibe}
+                        </span>
+                        <ol className="mishiranu-course-card-stops">
+                          {course.stops.map((stop) => (
+                            <li key={stop.spotId}>
+                              <span
+                                className="mishiranu-guide-kind-icon"
+                                style={{ color: GUIDE_COLOR[stop.guide] }}
+                              >
+                                <GuideKindIcon kind={stop.guide} />
+                              </span>
+                              {stop.clockLabel ? `${stop.clockLabel} ` : ""}
+                              {stop.name}
+                            </li>
+                          ))}
+                        </ol>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {chatPhase === "ready" ? (
+                <p className="mishiranu-chat-opening">案内を開いています…</p>
+              ) : (
+                <form
+                  className="mishiranu-chat-composer"
+                  onSubmit={handleComposerSubmit}
                 >
-                  送る
-                </button>
-              </form>
-            )}
+                  <label className="mishiranu-search">
+                    <span className="mishiranu-search-label">メッセージ</span>
+                    <input
+                      type="text"
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      placeholder={composerPlaceholder}
+                      autoComplete="off"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="mishiranu-btn mishiranu-btn--primary"
+                    disabled={!draft.trim()}
+                  >
+                    送る
+                  </button>
+                </form>
+              )}
 
-            <div className="mishiranu-actions">
-              <button
-                type="button"
-                className="mishiranu-btn mishiranu-btn--ghost"
-                onClick={goHero}
-              >
-                はじめに戻る
-              </button>
+              <div className="mishiranu-actions mishiranu-actions--chat">
+                <button
+                  type="button"
+                  className="mishiranu-btn mishiranu-btn--ghost"
+                  onClick={tapChoice(goHero)}
+                >
+                  はじめに戻る
+                </button>
+              </div>
             </div>
           </section>
         ) : null}
 
         {step === "tour" ? (
-          <section className="mishiranu-section" aria-labelledby="tour-title">
-            <div className="mishiranu-tour-nav">
+          <section
+            className="mishiranu-section mishiranu-tour-app"
+            aria-labelledby="tour-title"
+          >
+            <header className="mishiranu-tour-top">
               <button
                 type="button"
                 className="mishiranu-tour-back"
@@ -1147,468 +1310,580 @@ export default function MishiranuApp({
               >
                 ← 駅を探し直す
               </button>
-            </div>
-            {messages.length > 1 ? (
-              <details className="mishiranu-chat-summary">
-                <summary>これまでの会話</summary>
-                <div className="mishiranu-chat-thread mishiranu-chat-thread--compact">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={
-                        msg.role === "guide"
-                          ? "mishiranu-chat-bubble mishiranu-chat-bubble--guide"
-                          : "mishiranu-chat-bubble mishiranu-chat-bubble--you"
-                      }
-                    >
-                      <span className="mishiranu-chat-role">
-                        {msg.role === "guide" ? "案内" : "あなた"}
-                      </span>
-                      <p>{msg.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ) : null}
-
-            <p className="mishiranu-kicker">
-              {station.prefecture} · {station.line} · {dayPartLabel(dayPart)} ·{" "}
-              {time.label}
-              {selectedCourse ? ` · ${selectedCourse.title}` : ""}
-              {copyLoading
-                ? " · コピー生成中"
-                : shownCopy.source === "ai"
-                  ? " · Gemini 3.1 Flash-Lite"
-                  : " · 編集コピー"}
-            </p>
-
-            <StationMap
-              station={station}
-              spots={spots}
-              radiusKm={station.radiiKm[time.index]}
-              activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
-              onSelect={setActiveSpotId}
-            />
-
-            <ul className="mishiranu-legend">
-              {guideBoardKinds.map((kind) => (
-                <li key={kind}>
-                  <span
-                    className="mishiranu-legend-icon"
-                    style={{ color: GUIDE_COLOR[kind] }}
-                  >
-                    <GuideKindIcon kind={kind} />
-                  </span>
-                  {GUIDE_LABEL[kind]}
-                </li>
-              ))}
-            </ul>
-
-            <div className="mishiranu-tour">
-              <p className="mishiranu-guide-eyebrow">{station.name}駅 · 観光案内</p>
-              <h2
-                id="tour-title"
-                className={`mishiranu-tour-title${copyLoading ? " mishiranu-tour-title--loading" : ""}`}
-              >
-                {shownCopy.tourTitle}
-              </h2>
-              <p className="mishiranu-tour-catch">{shownCopy.catchCopy}</p>
-              {station.stationIntro ? (
-                <p className="mishiranu-station-intro">{station.stationIntro}</p>
-              ) : null}
-              <p className="mishiranu-radius">
-                徒歩圏 約 {station.radiiKm[time.index]} km · 案内ピン{" "}
-                {spots.length} 件
-              </p>
-              {station.walkGuide ? (
-                <div className="mishiranu-walk-guide">
-                  <h3 className="mishiranu-walk-guide-title">
-                    <IconWalk />
-                    歩き方の目安
-                  </h3>
-                  <p>{station.walkGuide}</p>
-                </div>
-              ) : null}
-            </div>
-
-            {station.mood === "empty" &&
-            (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (
-              <div className="mishiranu-empty">
-                {shownCopy.emptyHeadline ? (
-                  <h3>{shownCopy.emptyHeadline}</h3>
-                ) : null}
-                {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
-              </div>
-            ) : null}
-
-            {areaParagraphs.length > 0 ||
-            (station.historyNotes && station.historyNotes.length > 0) ? (
-              <section
-                className="mishiranu-area-story"
-                aria-labelledby="area-story-title"
-              >
-                <p className="mishiranu-kicker">
-                  <IconHistory />
-                  AREA · HISTORY
+              <div className="mishiranu-tour-top-copy">
+                <p className="mishiranu-kicker mishiranu-tour-top-kicker">
+                  {station.prefecture} · {station.line} · {dayPartLabel(dayPart)} ·{" "}
+                  {time.label}
                 </p>
-                <h3 id="area-story-title" className="mishiranu-area-story-title">
-                  <IconHistory />
-                  このエリアのこと・歴史
-                </h3>
-                {areaParagraphs.map((para) => (
-                  <p key={para.slice(0, 24)} className="mishiranu-area-about">
-                    {para}
-                  </p>
-                ))}
-                {station.historyNotes && station.historyNotes.length > 0 ? (
-                  <ol className="mishiranu-history-list">
-                    {station.historyNotes.map((note) => (
-                      <li key={note.title}>
-                        <h4>{note.title}</h4>
-                        <p>{note.body}</p>
+                <h2 id="tour-title" className="mishiranu-tour-top-title">
+                  {station.name}
+                </h2>
+                <p className="mishiranu-tour-top-sub">
+                  {selectedCourse ? selectedCourse.title : shownCopy.tourTitle}
+                </p>
+              </div>
+            </header>
+
+            <div className="mishiranu-tour-pages">
+              {tourTab === "map" ? (
+                <div className="mishiranu-tour-page" role="tabpanel" aria-label="地図">
+                  <div className="mishiranu-tour">
+                    <p className="mishiranu-guide-eyebrow">{station.name}駅 · 観光案内</p>
+                    <h3
+                      className={`mishiranu-tour-title${copyLoading ? " mishiranu-tour-title--loading" : ""}`}
+                    >
+                      {shownCopy.tourTitle}
+                    </h3>
+                    <p className="mishiranu-tour-catch">{shownCopy.catchCopy}</p>
+                    <p className="mishiranu-radius">
+                      徒歩圏 約 {station.radiiKm[time.index]} km · 案内ピン{" "}
+                      {spots.length} 件
+                    </p>
+                  </div>
+                  <StationMap
+                    station={station}
+                    spots={spots}
+                    radiusKm={station.radiiKm[time.index]}
+                    activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
+                    courseStopIds={courseStopIds}
+                    onSelect={(id) => openSpot(id)}
+                  />
+                  {selectedCourse ? (
+                    <p className="mishiranu-map-course-note">
+                      地図の線は「{selectedCourse.title}」の歩き順（駅→
+                      {selectedCourse.stopCount}か所）です。
+                    </p>
+                  ) : null}
+                  <ul className="mishiranu-legend">
+                    {GUIDE_ORDER.map((kind) => (
+                      <li key={kind}>
+                        <span
+                          className="mishiranu-legend-icon"
+                          style={{ color: GUIDE_COLOR[kind] }}
+                        >
+                          <GuideKindIcon kind={kind} />
+                        </span>
+                        {GUIDE_LABEL[kind]}
                       </li>
                     ))}
-                  </ol>
-                ) : null}
-              </section>
-            ) : null}
+                  </ul>
+                </div>
+              ) : null}
 
-            {station.sightseeingNotes && station.sightseeingNotes.length > 0 ? (
-              <section
-                className="mishiranu-sight-notes"
-                aria-labelledby="sight-notes-title"
-              >
-                <p className="mishiranu-kicker">
-                  <IconBinoculars />
-                  SIGHTSEEING
-                </p>
-                <h3 id="sight-notes-title" className="mishiranu-sight-notes-title">
-                  <IconBinoculars />
-                  観光案内メモ
-                </h3>
-                <ol className="mishiranu-history-list">
-                  {station.sightseeingNotes.map((note) => (
-                    <li key={note.title}>
-                      <h4>{note.title}</h4>
-                      <p>{note.body}</p>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ) : null}
-
-            {selectedCourse ? (
-              <section
-                className="mishiranu-course-itinerary"
-                aria-labelledby="course-itinerary-title"
-              >
-                <p className="mishiranu-kicker">
-                  <IconTour />
-                  COURSE
-                </p>
-                <h3
-                  id="course-itinerary-title"
-                  className="mishiranu-course-itinerary-title"
-                >
-                  <CourseIcon courseId={selectedCourse.id} />
-                  {selectedCourse.title}
-                </h3>
-                <p className="mishiranu-course-itinerary-meta">
-                  {selectedCourse.subtitle} · {dayPartLabel(dayPart)}スタート · 約
-                  {selectedCourse.totalMinutes}分 · {selectedCourse.stopCount}
-                  か所
-                </p>
-                <p className="mishiranu-course-itinerary-vibe">
-                  {selectedCourse.vibe}
-                </p>
-                <ol className="mishiranu-course-itinerary-list">
-                  {selectedCourse.stops.map((stop, index) => (
-                    <li key={stop.spotId}>
-                      <button
-                        type="button"
-                        className={
-                          activeSpotId === stop.spotId
-                            ? "mishiranu-course-stop mishiranu-course-stop--active"
-                            : "mishiranu-course-stop"
-                        }
-                        onClick={() => setActiveSpotId(stop.spotId)}
-                      >
-                        <span className="mishiranu-course-stop-index">
-                          {index + 1}
-                        </span>
-                        <span className="mishiranu-course-stop-body">
-                          <span className="mishiranu-course-stop-name">
-                            {stop.clockLabel ? `${stop.clockLabel} · ` : ""}
-                            {stop.name}
-                          </span>
-                          <span className="mishiranu-course-stop-meta">
-                            <span
-                              className="mishiranu-guide-kind-icon"
-                              style={{ color: GUIDE_COLOR[stop.guide] }}
-                            >
-                              <GuideKindIcon kind={stop.guide} />
-                            </span>
-                            {GUIDE_LABEL[stop.guide]} · 徒歩約 {stop.walkMinutes}{" "}
-                            分 · 滞在目安 {stop.dwellMinutes} 分
-                          </span>
-                          <span className="mishiranu-course-stop-blurb">
-                            {stop.blurb}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ) : null}
-
-            <div className="mishiranu-guide-board">
-              {guideBoardKinds.map((kind) => {
-                const items =
-                  kind === "meal"
-                    ? [...spots.filter((s) => spotGuide(s) === kind)].sort(
-                        (a, b) =>
-                          mealPrefScore(b, mealPrefs) - mealPrefScore(a, mealPrefs),
-                      )
-                    : spots.filter((s) => spotGuide(s) === kind);
-                const prioritized = focusKinds.includes(kind);
-                return (
-                  <section
-                    key={kind}
-                    className={
-                      prioritized
-                        ? "mishiranu-guide-col mishiranu-guide-col--priority"
-                        : "mishiranu-guide-col"
-                    }
-                    aria-labelledby={`guide-${kind}`}
-                  >
-                    <h3 id={`guide-${kind}`} className="mishiranu-guide-col-title">
-                      <span
-                        className="mishiranu-guide-kind-icon"
-                        style={{ color: GUIDE_COLOR[kind] }}
-                      >
-                        <GuideKindIcon kind={kind} />
-                      </span>
-                      {GUIDE_LABEL[kind]}
-                      {prioritized ? (
-                        <span className="mishiranu-guide-priority">重点</span>
-                      ) : null}
-                    </h3>
-                    {kind === "meal" &&
-                    (mealPrefs.solo !== "either" ||
-                      mealPrefs.budget !== "either") ? (
-                      <p className="mishiranu-guide-pref-note">
-                        希望:{" "}
-                        {
-                          SOLO_PREF_OPTIONS.find((o) => o.id === mealPrefs.solo)
-                            ?.label
-                        }
-                        {" · "}
-                        {
-                          BUDGET_PREF_OPTIONS.find(
-                            (o) => o.id === mealPrefs.budget,
-                          )?.label
-                        }
+              {tourTab === "course" ? (
+                <div className="mishiranu-tour-page" role="tabpanel" aria-label="歩く">
+                  {selectedCourse ? (
+                    <section
+                      className="mishiranu-course-itinerary"
+                      aria-labelledby="course-itinerary-title"
+                    >
+                      <p className="mishiranu-kicker">
+                        <IconTour />
+                        COURSE
                       </p>
-                    ) : null}
-                    {items.length > 0 ? (
-                      <ul className="mishiranu-guide-list">
-                        {items.map((item) => {
-                          const score =
-                            kind === "meal" ? mealPrefScore(item, mealPrefs) : 0;
-                          const muted = kind === "meal" && score < 0;
-                          const match = kind === "meal" && score > 0;
-                          return (
-                          <li key={item.id}>
+                      <h3
+                        id="course-itinerary-title"
+                        className="mishiranu-course-itinerary-title"
+                      >
+                        <CourseIcon courseId={selectedCourse.id} />
+                        {selectedCourse.title}
+                      </h3>
+                      <p className="mishiranu-course-itinerary-meta">
+                        {selectedCourse.subtitle} · {dayPartLabel(dayPart)}スタート · 約
+                        {selectedCourse.totalMinutes}分 · {selectedCourse.stopCount}
+                        か所
+                      </p>
+                      <p className="mishiranu-course-itinerary-vibe">
+                        {selectedCourse.vibe}
+                      </p>
+                      <ol className="mishiranu-course-itinerary-list">
+                        {selectedCourse.stops.map((stop, index) => (
+                          <li key={stop.spotId}>
                             <button
                               type="button"
-                              className={[
-                                "mishiranu-guide-item",
-                                activeSpotId === item.id
-                                  ? "mishiranu-guide-item--active"
-                                  : "",
-                                muted ? "mishiranu-guide-item--muted" : "",
-                                match ? "mishiranu-guide-item--match" : "",
-                              ]
-                                .filter(Boolean)
-                                .join(" ")}
-                              aria-pressed={activeSpotId === item.id}
-                              onClick={() => setActiveSpotId(item.id)}
+                              className={
+                                activeSpotId === stop.spotId
+                                  ? "mishiranu-course-stop mishiranu-course-stop--active"
+                                  : "mishiranu-course-stop"
+                              }
+                              onClick={() => openSpot(stop.spotId)}
                             >
-                              <span className="mishiranu-guide-item-name">
-                                <span
-                                  className="mishiranu-guide-kind-icon"
-                                  style={{ color: GUIDE_COLOR[kind] }}
-                                >
-                                  <GuideKindIcon kind={kind} />
-                                </span>
-                                {item.name}
+                              <span className="mishiranu-course-stop-index">
+                                {index + 1}
                               </span>
-                              <span className="mishiranu-guide-item-meta">
-                                徒歩約 {item.walkMinutes} 分
-                                {hoursFor(item) ? ` · ${hoursFor(item)}` : ""}
-                              </span>
-                              {kind === "meal" ? (
-                                <span className="mishiranu-guide-item-meal">
-                                  {mealMetaLine(item)}
-                                  {match ? " · 希望に近い" : ""}
+                              <span className="mishiranu-course-stop-body">
+                                <span className="mishiranu-course-stop-name">
+                                  {stop.clockLabel ? `${stop.clockLabel} · ` : ""}
+                                  {stop.name}
                                 </span>
-                              ) : null}
-                              <span className="mishiranu-guide-item-blurb">
-                                {item.blurb}
-                              </span>
-                              {item.detail ? (
-                                <span className="mishiranu-guide-item-detail">
-                                  {item.detail}
+                                <span className="mishiranu-course-stop-meta">
+                                  <span
+                                    className="mishiranu-guide-kind-icon"
+                                    style={{ color: GUIDE_COLOR[stop.guide] }}
+                                  >
+                                    <GuideKindIcon kind={stop.guide} />
+                                  </span>
+                                  {GUIDE_LABEL[stop.guide]} · 徒歩約 {stop.walkMinutes}{" "}
+                                  分 · 滞在目安 {stop.dwellMinutes} 分
                                 </span>
-                              ) : null}
+                              </span>
                             </button>
                           </li>
+                        ))}
+                      </ol>
+                    </section>
+                  ) : (
+                    <section className="mishiranu-course-empty" aria-label="コースなし">
+                      <p className="mishiranu-kicker">
+                        <IconTour />
+                        FREE WALK
+                      </p>
+                      <h3 className="mishiranu-course-itinerary-title">
+                        コースは作っていません
+                      </h3>
+                      <p className="mishiranu-note">
+                        地図と観光から、気になった場所だけ寄り道できます。あとから会話をやり直してコースを選ぶこともできます。
+                      </p>
+                    </section>
+                  )}
+                </div>
+              ) : null}
+
+              {tourTab === "guide" ? (
+                <div className="mishiranu-tour-page" role="tabpanel" aria-label="案内">
+                  <div
+                    className="mishiranu-guide-segments"
+                    role="tablist"
+                    aria-label="案内の種類"
+                  >
+                    {GUIDE_ORDER.map((kind) => (
+                      <button
+                        key={kind}
+                        type="button"
+                        role="tab"
+                        aria-selected={guideTab === kind}
+                        className={
+                          guideTab === kind
+                            ? "mishiranu-guide-segment mishiranu-guide-segment--active"
+                            : "mishiranu-guide-segment"
+                        }
+                        style={{
+                          color:
+                            guideTab === kind ? GUIDE_COLOR[kind] : undefined,
+                        }}
+                        onClick={() => setGuideTab(kind)}
+                      >
+                        <GuideKindIcon kind={kind} />
+                        {GUIDE_LABEL[kind]}
+                      </button>
+                    ))}
+                  </div>
+                  {guideTab === "meal" &&
+                  (mealPrefs.solo !== "either" ||
+                    mealPrefs.budget !== "either") ? (
+                    <p className="mishiranu-guide-pref-note">
+                      希望:{" "}
+                      {
+                        SOLO_PREF_OPTIONS.find((o) => o.id === mealPrefs.solo)
+                          ?.label
+                      }
+                      {" · "}
+                      {
+                        BUDGET_PREF_OPTIONS.find((o) => o.id === mealPrefs.budget)
+                          ?.label
+                      }
+                    </p>
+                  ) : null}
+                  {(() => {
+                    const items =
+                      guideTab === "meal"
+                        ? [...spots.filter((s) => spotGuide(s) === guideTab)].sort(
+                            (a, b) =>
+                              mealPrefScore(b, mealPrefs) -
+                              mealPrefScore(a, mealPrefs),
+                          )
+                        : spots.filter((s) => spotGuide(s) === guideTab);
+                    if (items.length === 0) {
+                      return (
+                        <p className="mishiranu-guide-empty">
+                          この徒歩圏・時間ではまだ少なめです。時間を延ばすと増えることがあります。
+                        </p>
+                      );
+                    }
+                    return (
+                      <ul className="mishiranu-guide-list mishiranu-guide-list--compact">
+                        {items.map((item) => {
+                          const score =
+                            guideTab === "meal"
+                              ? mealPrefScore(item, mealPrefs)
+                              : 0;
+                          const muted = guideTab === "meal" && score < 0;
+                          const match = guideTab === "meal" && score > 0;
+                          return (
+                            <li key={item.id}>
+                              <button
+                                type="button"
+                                className={[
+                                  "mishiranu-guide-item",
+                                  "mishiranu-guide-item--compact",
+                                  activeSpotId === item.id
+                                    ? "mishiranu-guide-item--active"
+                                    : "",
+                                  muted ? "mishiranu-guide-item--muted" : "",
+                                  match ? "mishiranu-guide-item--match" : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                                aria-pressed={activeSpotId === item.id}
+                                onClick={() => openSpot(item.id)}
+                              >
+                                <span className="mishiranu-guide-item-name">
+                                  <span
+                                    className="mishiranu-guide-kind-icon"
+                                    style={{ color: GUIDE_COLOR[guideTab] }}
+                                  >
+                                    <GuideKindIcon kind={guideTab} />
+                                  </span>
+                                  {item.name}
+                                </span>
+                                <span className="mishiranu-guide-item-meta">
+                                  徒歩約 {item.walkMinutes} 分
+                                  {hoursFor(item) ? ` · ${hoursFor(item)}` : ""}
+                                </span>
+                                {guideTab === "meal" ? (
+                                  <span className="mishiranu-guide-item-meal">
+                                    {mealMetaLine(item)}
+                                    {match ? " · 希望に近い" : ""}
+                                  </span>
+                                ) : null}
+                              </button>
+                            </li>
                           );
                         })}
                       </ul>
-                    ) : (
-                      <p className="mishiranu-guide-empty">
-                        この徒歩圏・時間ではまだ少なめです。時間を延ばすと増えることがあります。
-                      </p>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
-
-            {activeSpot ? (
-              <div className="mishiranu-spot-panel">
-                <p className="mishiranu-spot-genre">
-                  <span
-                    className="mishiranu-guide-kind-icon"
-                    style={{ color: GUIDE_COLOR[spotGuide(activeSpot)] }}
-                  >
-                    <GuideKindIcon kind={spotGuide(activeSpot)} />
-                  </span>
-                  {GUIDE_LABEL[spotGuide(activeSpot)]} · 徒歩約{" "}
-                  {activeSpot.walkMinutes} 分
-                  {hoursFor(activeSpot) ? ` · ${hoursFor(activeSpot)}` : ""}
-                </p>
-                {spotGuide(activeSpot) === "meal" ? (
-                  <p className="mishiranu-spot-meal-meta">
-                    {mealMetaLine(activeSpot)}
-                  </p>
-                ) : null}
-                <h3 className="mishiranu-spot-name">{activeSpot.name}</h3>
-                <p className="mishiranu-spot-blurb">{activeSpot.blurb}</p>
-                {activeSpot.detail ? (
-                  <p className="mishiranu-spot-detail">{activeSpot.detail}</p>
-                ) : null}
-              </div>
-            ) : null}
-
-            <section
-              className="mishiranu-bike-rental"
-              aria-labelledby="bike-rental-title"
-            >
-              <p className="mishiranu-kicker">
-                <IconBike />
-                MOBILITY
-              </p>
-              <h3 id="bike-rental-title" className="mishiranu-bike-rental-title">
-                <IconBike />
-                レンタサイクル
-              </h3>
-              <p
-                className={
-                  bikeRental.available
-                    ? "mishiranu-bike-rental-status mishiranu-bike-rental-status--yes"
-                    : "mishiranu-bike-rental-status"
-                }
-              >
-                {bikeRental.available
-                  ? "駅周辺で借りられます"
-                  : "いまは未確認／少なめ"}
-              </p>
-              <p className="mishiranu-bike-rental-summary">{bikeRental.summary}</p>
-              {bikeRental.places && bikeRental.places.length > 0 ? (
-                <ul className="mishiranu-bike-rental-places">
-                  {bikeRental.places.map((place) => (
-                    <li key={place.name}>
-                      <span className="mishiranu-bike-rental-place-name">
-                        {place.name}
-                      </span>
-                      {typeof place.walkMinutes === "number" ? (
-                        <span className="mishiranu-bike-rental-place-meta">
-                          徒歩約 {place.walkMinutes} 分
-                        </span>
-                      ) : null}
-                      {place.note ? (
-                        <span className="mishiranu-bike-rental-place-note">
-                          {place.note}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
+                    );
+                  })()}
+                </div>
               ) : null}
-            </section>
 
-            <div className="mishiranu-actions">
-              <button
-                type="button"
-                className="mishiranu-btn mishiranu-btn--primary"
-                onClick={drawSecret}
-              >
-                とりあえずここに行け
-              </button>
-              <button
-                type="button"
-                className="mishiranu-btn"
-                disabled={copyLoading}
-                onClick={() => void loadCopy(station, timeId)}
-              >
-                コピーを引き直す
-              </button>
-              <button
-                type="button"
-                className="mishiranu-btn"
-                onClick={() => void shareTour()}
-              >
-                物語をコピー
-              </button>
-              <button
-                type="button"
-                className="mishiranu-btn mishiranu-btn--ghost"
-                onClick={() => goChat(true)}
-              >
-                駅を探し直す
-              </button>
+              {tourTab === "place" ? (
+                <div className="mishiranu-tour-page" role="tabpanel" aria-label="土地">
+                  {station.stationIntro ? (
+                    <p className="mishiranu-station-intro">{station.stationIntro}</p>
+                  ) : null}
+                  {station.walkGuide ? (
+                    <div className="mishiranu-walk-guide">
+                      <h3 className="mishiranu-walk-guide-title">
+                        <IconWalk />
+                        歩き方の目安
+                      </h3>
+                      <p>{station.walkGuide}</p>
+                    </div>
+                  ) : null}
+                  {station.mood === "empty" &&
+                  (shownCopy.emptyHeadline || shownCopy.emptyBody) ? (
+                    <div className="mishiranu-empty">
+                      {shownCopy.emptyHeadline ? (
+                        <h3>{shownCopy.emptyHeadline}</h3>
+                      ) : null}
+                      {shownCopy.emptyBody ? <p>{shownCopy.emptyBody}</p> : null}
+                    </div>
+                  ) : null}
+                  {areaParagraphs.length > 0 ||
+                  (station.historyNotes && station.historyNotes.length > 0) ? (
+                    <section
+                      className="mishiranu-area-story"
+                      aria-labelledby="area-story-title"
+                    >
+                      <p className="mishiranu-kicker">
+                        <IconHistory />
+                        AREA · HISTORY
+                      </p>
+                      <h3
+                        id="area-story-title"
+                        className="mishiranu-area-story-title"
+                      >
+                        <IconHistory />
+                        このエリアのこと・歴史
+                      </h3>
+                      {areaParagraphs.map((para) => (
+                        <p key={para.slice(0, 24)} className="mishiranu-area-about">
+                          {para}
+                        </p>
+                      ))}
+                      {station.historyNotes && station.historyNotes.length > 0 ? (
+                        <ol className="mishiranu-history-list">
+                          {station.historyNotes.map((note) => (
+                            <li key={note.title}>
+                              <h4>{note.title}</h4>
+                              <p>{note.body}</p>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : null}
+                    </section>
+                  ) : null}
+                  {station.sightseeingNotes &&
+                  station.sightseeingNotes.length > 0 ? (
+                    <section
+                      className="mishiranu-sight-notes"
+                      aria-labelledby="sight-notes-title"
+                    >
+                      <p className="mishiranu-kicker">
+                        <IconBinoculars />
+                        SIGHTSEEING
+                      </p>
+                      <h3
+                        id="sight-notes-title"
+                        className="mishiranu-sight-notes-title"
+                      >
+                        <IconBinoculars />
+                        観光案内メモ
+                      </h3>
+                      <ol className="mishiranu-history-list">
+                        {station.sightseeingNotes.map((note) => (
+                          <li key={note.title}>
+                            <h4>{note.title}</h4>
+                            <p>{note.body}</p>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
+                  ) : null}
+                  {!station.stationIntro &&
+                  areaParagraphs.length === 0 &&
+                  !(station.historyNotes && station.historyNotes.length) &&
+                  !(station.sightseeingNotes && station.sightseeingNotes.length) ? (
+                    <p className="mishiranu-note">この駅の土地メモはまだ少なめです。</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {tourTab === "more" ? (
+                <div className="mishiranu-tour-page" role="tabpanel" aria-label="ほか">
+                  <IosInstallCard />
+
+                  <section
+                    className="mishiranu-bike-rental"
+                    aria-labelledby="bike-rental-title"
+                  >
+                    <p className="mishiranu-kicker">
+                      <IconBike />
+                      MOBILITY
+                    </p>
+                    <h3
+                      id="bike-rental-title"
+                      className="mishiranu-bike-rental-title"
+                    >
+                      <IconBike />
+                      レンタサイクル
+                    </h3>
+                    <p
+                      className={
+                        bikeRental.available
+                          ? "mishiranu-bike-rental-status mishiranu-bike-rental-status--yes"
+                          : "mishiranu-bike-rental-status"
+                      }
+                    >
+                      {bikeRental.available
+                        ? "駅周辺で借りられます"
+                        : "いまは未確認／少なめ"}
+                    </p>
+                    <p className="mishiranu-bike-rental-summary">
+                      {bikeRental.summary}
+                    </p>
+                    {bikeRental.places && bikeRental.places.length > 0 ? (
+                      <ul className="mishiranu-bike-rental-places">
+                        {bikeRental.places.map((place) => (
+                          <li key={place.name}>
+                            <span className="mishiranu-bike-rental-place-name">
+                              {place.name}
+                            </span>
+                            {typeof place.walkMinutes === "number" ? (
+                              <span className="mishiranu-bike-rental-place-meta">
+                                徒歩約 {place.walkMinutes} 分
+                              </span>
+                            ) : null}
+                            {place.note ? (
+                              <span className="mishiranu-bike-rental-place-note">
+                                {place.note}
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </section>
+
+                  <div className="mishiranu-actions mishiranu-actions--stack">
+                    <button
+                      type="button"
+                      className="mishiranu-btn mishiranu-btn--primary"
+                      onClick={drawSecret}
+                    >
+                      とりあえずここに行け
+                    </button>
+                    <button
+                      type="button"
+                      className="mishiranu-btn"
+                      disabled={copyLoading}
+                      onClick={() => void loadCopy(station, timeId)}
+                    >
+                      コピーを引き直す
+                    </button>
+                    <button
+                      type="button"
+                      className="mishiranu-btn"
+                      onClick={() => void shareTour()}
+                    >
+                      物語をコピー
+                    </button>
+                    <button
+                      type="button"
+                      className="mishiranu-btn mishiranu-btn--ghost"
+                      onClick={() => goChat(true)}
+                    >
+                      駅を探し直す
+                    </button>
+                  </div>
+
+                  {shareNote ? (
+                    <p className="mishiranu-share-note" aria-live="polite">
+                      {shareNote}
+                    </p>
+                  ) : null}
+
+                  {secretOpen && secret ? (
+                    <div className="mishiranu-secret" aria-live="polite">
+                      <p className="mishiranu-secret-label">SECRET DESTINATION</p>
+                      <h3 className="mishiranu-spot-name">{secret.name}</h3>
+                      <p className="mishiranu-spot-blurb">{secret.blurb}</p>
+                      <div className="mishiranu-actions">
+                        <button
+                          type="button"
+                          className="mishiranu-btn"
+                          onClick={drawSecret}
+                        >
+                          もう一回ひく
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {messages.length > 1 ? (
+                    <details className="mishiranu-chat-summary">
+                      <summary>これまでの会話</summary>
+                      <div className="mishiranu-chat-thread mishiranu-chat-thread--compact">
+                        {messages.map((msg) => (
+                          <div
+                            key={msg.id}
+                            className={
+                              msg.role === "guide"
+                                ? "mishiranu-chat-bubble mishiranu-chat-bubble--guide"
+                                : "mishiranu-chat-bubble mishiranu-chat-bubble--you"
+                            }
+                          >
+                            <span className="mishiranu-chat-role">
+                              {msg.role === "guide" ? "案内" : "あなた"}
+                            </span>
+                            <p>{msg.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  ) : null}
+
+                  <p className="mishiranu-foot">
+                    地図は OpenStreetMap。出町柳ピンは実座標寄り。
+                    ピクトグラム素材提供：日本デザインセンター／
+                    <a
+                      href="https://experience-japan.info/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      EXPERIENCE JAPAN PICTOGRAMS
+                    </a>
+                    。GEMINI_API_KEY があれば Gemini 3.1 Flash-Lite、なければ編集文です。
+                  </p>
+                </div>
+              ) : null}
             </div>
 
-            {shareNote ? (
-              <p className="mishiranu-share-note" aria-live="polite">
-                {shareNote}
-              </p>
-            ) : null}
-
-            {secretOpen && secret ? (
-              <div className="mishiranu-secret" aria-live="polite">
-                <p className="mishiranu-secret-label">SECRET DESTINATION</p>
-                <h3 className="mishiranu-spot-name">{secret.name}</h3>
-                <p className="mishiranu-spot-blurb">{secret.blurb}</p>
-                <div className="mishiranu-actions">
+            {spotSheetOpen && activeSpot ? (
+              <div className="mishiranu-spot-sheet" role="dialog" aria-modal="true">
+                <button
+                  type="button"
+                  className="mishiranu-spot-sheet-backdrop"
+                  aria-label="詳細を閉じる"
+                  onClick={() => setSpotSheetOpen(false)}
+                />
+                <div className="mishiranu-spot-sheet-panel">
+                  <div className="mishiranu-spot-sheet-handle" aria-hidden="true" />
+                  <p className="mishiranu-spot-genre">
+                    <span
+                      className="mishiranu-guide-kind-icon"
+                      style={{ color: GUIDE_COLOR[spotGuide(activeSpot)] }}
+                    >
+                      <GuideKindIcon kind={spotGuide(activeSpot)} />
+                    </span>
+                    {GUIDE_LABEL[spotGuide(activeSpot)]} · 徒歩約{" "}
+                    {activeSpot.walkMinutes} 分
+                    {hoursFor(activeSpot) ? ` · ${hoursFor(activeSpot)}` : ""}
+                  </p>
+                  {spotGuide(activeSpot) === "meal" ? (
+                    <p className="mishiranu-spot-meal-meta">
+                      {mealMetaLine(activeSpot)}
+                    </p>
+                  ) : null}
+                  <h3 className="mishiranu-spot-name">{activeSpot.name}</h3>
+                  <p className="mishiranu-spot-blurb">{activeSpot.blurb}</p>
+                  {activeSpot.detail ? (
+                    <p className="mishiranu-spot-detail">{activeSpot.detail}</p>
+                  ) : null}
                   <button
                     type="button"
-                    className="mishiranu-btn"
-                    onClick={drawSecret}
+                    className="mishiranu-btn mishiranu-btn--primary mishiranu-spot-sheet-close"
+                    onClick={() => setSpotSheetOpen(false)}
                   >
-                    もう一回ひく
+                    閉じる
                   </button>
                 </div>
               </div>
             ) : null}
 
-            <p className="mishiranu-foot">
-              地図は OpenStreetMap。出町柳ピンは実座標寄り。
-              GEMINI_API_KEY があれば Gemini 3.1 Flash-Lite、なければ編集文です。
-            </p>
+            <nav className="mishiranu-tour-tabs" aria-label="案内のページ">
+              {TOUR_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={
+                    tourTab === tab.id
+                      ? "mishiranu-tour-tab mishiranu-tour-tab--active"
+                      : "mishiranu-tour-tab"
+                  }
+                  aria-current={tourTab === tab.id ? "page" : undefined}
+                  onClick={() => {
+                    setTourTab(tab.id);
+                    setSpotSheetOpen(false);
+                  }}
+                >
+                  <span className="mishiranu-tour-tab-icon" aria-hidden="true">
+                    {tab.id === "map" ? (
+                      <IconMapPin />
+                    ) : tab.id === "course" ? (
+                      <IconTour />
+                    ) : tab.id === "guide" ? (
+                      <IconBinoculars />
+                    ) : tab.id === "place" ? (
+                      <IconHistory />
+                    ) : (
+                      <IconMore />
+                    )}
+                  </span>
+                  <span className="mishiranu-tour-tab-label">{tab.label}</span>
+                </button>
+              ))}
+            </nav>
           </section>
         ) : null}
       </div>

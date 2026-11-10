@@ -51,6 +51,47 @@
   padding-top: env(safe-area-inset-top);
 }
 
+.mishiranu:has(.mishiranu-shell--chat) {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.mishiranu-shell--chat {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.mishiranu-chat {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.85rem 0 0;
+  overflow: hidden;
+}
+
+.mishiranu-chat-head {
+  flex-shrink: 0;
+  padding-bottom: 0.55rem;
+}
+
+.mishiranu-h2--chat {
+  margin-bottom: 0;
+  font-size: clamp(1.35rem, 4.5vw, 1.7rem);
+}
+
 .mishiranu-hero {
   position: relative;
   min-height: 100vh;
@@ -214,8 +255,62 @@ a.mishiranu-btn {
 .mishiranu-chat-thread {
   display: grid;
   gap: 0.95rem;
-  margin: 0 0 1.4rem;
-  min-height: 12rem;
+  margin: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.35rem 0 1rem;
+  scroll-padding-bottom: 1rem;
+}
+
+.mishiranu-chat-dock {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 6;
+  margin-top: 0;
+  padding: 0.75rem 0 calc(0.85rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--mk-line);
+  background: var(--mk-canvas);
+}
+
+.mishiranu-chat-thread .mishiranu-chat-bubble {
+  /* Avoid rise animation fighting scroll-to-latest */
+  animation: none;
+}
+
+.mishiranu-chat-dock .mishiranu-chat-replies {
+  margin-bottom: 0.85rem;
+  animation: none;
+}
+
+.mishiranu-chat-dock .mishiranu-course-choose {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.mishiranu-chat-dock .mishiranu-course-picks {
+  max-height: min(36vh, 18rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mishiranu-chat-dock .mishiranu-chat-composer {
+  margin-bottom: 0.35rem;
+}
+
+.mishiranu-actions--chat {
+  margin-top: 0.15rem;
+}
+
+.mishiranu-actions--chat .mishiranu-btn--ghost {
+  width: auto;
+  min-height: 2.5rem;
+  padding: 0.35rem 0;
 }
 
 .mishiranu-chat-bubble {
@@ -260,12 +355,18 @@ a.mishiranu-btn {
 }
 
 .mishiranu-icon {
-  width: 1.05em;
-  height: 1.05em;
+  width: 1.15em;
+  height: 1.15em;
   flex-shrink: 0;
   display: inline-block;
-  vertical-align: -0.15em;
-  stroke-width: 1.5;
+  vertical-align: -0.2em;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .mishiranu-chat-chip .mishiranu-icon {
@@ -387,10 +488,74 @@ a.mishiranu-btn {
   white-space: nowrap;
 }
 
+.mishiranu-course-choose {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0 0 1.1rem;
+}
+
 .mishiranu-course-picks {
   display: grid;
   gap: 0.85rem;
-  margin: 0 0 1.1rem;
+  margin: 0;
+}
+
+.mishiranu-course-skip {
+  justify-self: stretch;
+  width: 100%;
+  justify-content: center;
+  margin: 0;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.mishiranu-course-empty {
+  padding: 0.35rem 0 1rem;
+}
+
+.mishiranu-hero-install {
+  margin-top: 2rem;
+  max-width: 26rem;
+}
+
+.mishiranu-ios-install {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.05rem 1.1rem;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-radius);
+  background: color-mix(in srgb, var(--mk-paper) 88%, #fff);
+}
+
+.mishiranu-ios-install--ready {
+  border-color: color-mix(in srgb, var(--mk-moss) 35%, var(--mk-line));
+}
+
+.mishiranu-ios-install-title {
+  margin: 0 0 0.55rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+
+.mishiranu-ios-install-steps {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--mk-fog);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+@media (display-mode: standalone) {
+  .mishiranu-shell {
+    padding-top: max(0.35rem, env(safe-area-inset-top));
+  }
+
+  .mishiranu-tour-tabs {
+    padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
+  }
 }
 
 .mishiranu-course-card {
@@ -1189,6 +1354,34 @@ a.mishiranu-btn {
   border: none !important;
 }
 
+.mishiranu-leaflet-step {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--step-color, #b5493a);
+  color: #fffaf2;
+  font-family: var(--mk-sans), sans-serif;
+  font-weight: 600;
+  letter-spacing: 0;
+  border: 2px solid #fffaf2;
+  box-shadow: 0 1px 0 rgba(31, 27, 23, 0.18);
+  line-height: 1;
+}
+
+.mishiranu-leaflet-step--active {
+  box-shadow:
+    0 0 0 3px rgba(181, 73, 58, 0.35),
+    0 1px 0 rgba(31, 27, 23, 0.18);
+}
+
+.mishiranu-map-course-note {
+  margin: -0.85rem 0 1.1rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--mk-fog);
+  letter-spacing: 0.04em;
+}
+
 .mishiranu-leaflet-tooltip {
   background: transparent !important;
   border: none !important;
@@ -1517,6 +1710,205 @@ a.mishiranu-btn {
   color: var(--mk-fog);
 }
 
+/* —— Tour tabs (iPhone-friendly pages) —— */
+.mishiranu-tour-app {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  min-height: 70vh;
+}
+
+.mishiranu-tour-top {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.mishiranu-tour-top-kicker {
+  margin: 0;
+}
+
+.mishiranu-tour-top-title {
+  margin: 0;
+  font-family: var(--mk-display);
+  font-size: clamp(1.55rem, 5vw, 1.9rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.mishiranu-tour-top-sub {
+  margin: 0;
+  color: var(--mk-fog);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.mishiranu-tour-pages {
+  animation: mk-rise 0.45s ease-out both;
+}
+
+.mishiranu-tour-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.mishiranu-tour-tabs {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 40;
+  transform: translateX(-50%);
+  width: min(760px, 100%);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.15rem;
+  padding: 0.45rem 0.55rem calc(0.45rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--mk-paper) 92%, white);
+  border-top: 1px solid var(--mk-line);
+  backdrop-filter: blur(10px);
+}
+
+.mishiranu-tour-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--mk-mist);
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  padding: 0.45rem 0.2rem;
+  min-height: 52px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: var(--mk-sans);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.mishiranu-tour-tab--active {
+  color: var(--mk-ink);
+  background: var(--mk-warm-soft);
+}
+
+.mishiranu-tour-tab-icon {
+  display: inline-flex;
+  color: inherit;
+}
+
+.mishiranu-tour-tab-icon .mishiranu-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.mishiranu-guide-segments {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mishiranu-guide-segments::-webkit-scrollbar {
+  display: none;
+}
+
+.mishiranu-guide-segment {
+  appearance: none;
+  flex: 0 0 auto;
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  color: var(--mk-fog);
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--mk-sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.mishiranu-guide-segment--active {
+  border-color: color-mix(in srgb, currentColor 45%, var(--mk-line));
+  background: color-mix(in srgb, currentColor 8%, var(--mk-paper));
+  font-weight: 600;
+}
+
+.mishiranu-guide-item--compact {
+  padding: 0.8rem 0.95rem;
+}
+
+.mishiranu-guide-item--compact .mishiranu-guide-item-blurb,
+.mishiranu-guide-item--compact .mishiranu-guide-item-detail {
+  display: none;
+}
+
+.mishiranu-actions--stack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mishiranu-spot-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  align-items: end;
+}
+
+.mishiranu-spot-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(31, 27, 23, 0.35);
+  cursor: pointer;
+}
+
+.mishiranu-spot-sheet-panel {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  margin: 0 auto;
+  max-height: min(72vh, 560px);
+  overflow: auto;
+  padding: 0.65rem 1.15rem calc(1.25rem + env(safe-area-inset-bottom));
+  background: var(--mk-paper);
+  border-radius: 18px 18px 0 0;
+  border: 1px solid var(--mk-line);
+  border-bottom: 0;
+  box-shadow: 0 -10px 40px rgba(31, 27, 23, 0.12);
+  animation: mk-sheet-up 0.28s ease-out both;
+}
+
+.mishiranu-spot-sheet-handle {
+  width: 2.5rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--mk-taupe);
+  margin: 0.15rem auto 0.85rem;
+}
+
+.mishiranu-spot-sheet-close {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+@keyframes mk-sheet-up {
+  from {
+    transform: translateY(18%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.mishiranu-shell:has(.mishiranu-tour-app) {
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+
 @media (max-width: 480px) {
   .mishiranu-time-row {
     grid-template-columns: 1fr;
@@ -1563,16 +1955,11 @@ a.mishiranu-btn {
   }
 
   .mishiranu-chat-composer {
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
-    margin-bottom: 0.75rem;
-    padding: 0.65rem 0 calc(0.35rem + env(safe-area-inset-bottom));
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--mk-canvas) 0%, transparent) 0%,
-      var(--mk-canvas) 28%
-    );
+    margin-bottom: 0.35rem;
+  }
+
+  .mishiranu-chat-dock .mishiranu-chat-chip {
+    flex: 1 1 auto;
   }
 
   .mishiranu-search input {
