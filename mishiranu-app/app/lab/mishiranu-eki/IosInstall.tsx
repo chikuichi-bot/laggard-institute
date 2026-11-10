@@ -33,9 +33,12 @@ export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
     const id = window.setTimeout(() => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
-        // Ignore registration failures in preview / insecure contexts.
-      });
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => reg.update())
+        .catch(() => {
+          // Ignore registration failures in preview / insecure contexts.
+        });
     }, 800);
     return () => window.clearTimeout(id);
   }, []);
@@ -56,7 +59,8 @@ export function IosInstallCard({ compact = false }: Props) {
         <h3 className="mishiranu-ios-install-title">ホーム画面アプリで表示中</h3>
         {!compact ? (
           <p className="mishiranu-note">
-            Safari の枠なしで開いています。オフラインでも、さきほど見た案内の殻は残せます。
+            Safari の枠なしで開いています。画面が古いときは、一度ホーム画面のアイコンを消してから、Safari
+            で開き直して「ホーム画面に追加」し直してください。
           </p>
         ) : null}
       </section>
