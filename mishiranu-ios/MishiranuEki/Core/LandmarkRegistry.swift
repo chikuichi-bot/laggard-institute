@@ -102,20 +102,23 @@ enum LandmarkRegistry {
             guard !already else { continue }
             let isSouvenir = lock.kind == "souvenir"
                 || lock.keywords.contains { $0.contains("餅") || $0.contains("菓子") || $0.contains("土産") }
+            let isRiver = lock.kind == "river"
             spots.append(
                 Spot(
                     id: "lock-\(lock.id)",
                     name: label,
                     genre: isSouvenir ? "gourmet" : "history",
-                    guide: isSouvenir ? .souvenir : .sight,
+                    guide: isSouvenir ? .souvenir : (isRiver ? .rest : .sight),
                     mealTier: .casual,
                     mealTimes: [.morning, .lunch],
                     soloOk: true,
                     budgetYen: isSouvenir ? "〜¥1,000" : "—",
-                    hours: isSouvenir ? "9:00〜17:00（店休日あり・要確認）" : "境内自由（時間は現地掲示）",
+                    hours: isSouvenir ? "9:00〜17:00（店休日あり・要確認）" : nil,
                     blurb: isSouvenir
                         ? "\(label)。門前の手土産・名物。軽い包みで駅からの帰りにも向きやすい。"
-                        : "\(label)。この駅の土地の顔になる名所。",
+                        : (isRiver
+                            ? SpotCopy.compose(name: label, guide: .rest, address: lock.address)
+                            : "\(label)。この駅の土地の顔になる名所。"),
                     detail: lock.address,
                     walkMinutes: lock.walkMinutes,
                     secretWorthy: false,

@@ -79,6 +79,9 @@ enum SpotCopy {
             }
             return "\(n)\(paren(whereText))。手土産や買い物の候補。"
         case .rest:
+            if n.contains("喫茶") || n.contains("カフェ") || n.contains("茶房") || n.contains("珈琲") || n.contains("コーヒー") {
+                return "\(n)\(paren(whereText))。歩いたあとに腰を下ろせる喫茶。"
+            }
             return "\(n)\(paren(whereText))。歩いたあとに腰を下ろせる場所。"
         case .tip:
             return "\(n)\(paren(whereText))。予定にない寄り道向き。"

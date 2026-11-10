@@ -5,7 +5,8 @@
       "id": "demachi-delta",
       "station": "出町柳",
       "kind": "river",
-      "keywords": ["デルタ", "河川敷", "三角州"],
+      "canonical": "鴨川デルタ",
+      "keywords": ["鴨川デルタ", "デルタ", "河川敷", "三角州"],
       "address": "鴨川と高野川の合流（鴨川デルタ）",
       "osm": "nominatim:鴨川デルタ",
       "lat": 35.0301227,
@@ -105,6 +106,18 @@
       "lat": 34.8784038,
       "lng": 135.7000068,
       "walkMinutes": 5
+    },
+    {
+      "id": "fujinomori-shrine",
+      "station": "藤森",
+      "kind": "keyword",
+      "keywords": ["藤森神社"],
+      "canonical": "藤森神社",
+      "address": "京都市伏見区深草鳥居崎町609",
+      "osm": "nominatim:藤森神社 京都",
+      "lat": 34.9501837,
+      "lng": 135.7717009,
+      "walkMinutes": 6
     }
   ]
 }

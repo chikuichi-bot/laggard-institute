@@ -19,7 +19,7 @@ enum MealStapleCatcher {
 
     private static let foodOnlyTokens: Set<String> = [
         "おにぎり", "おむすび", "パン", "うどん", "そば", "蕎麦", "食堂", "定食",
-        "寿司", "すし", "ラーメン", "中華", "カフェ", "喫茶", "茶房", "ご飯", "食事",
+        "寿司", "すし", "ラーメン", "中華", "ご飯", "食事",
     ]
 
     private static let softNoise = [

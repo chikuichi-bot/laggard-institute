@@ -270,6 +270,7 @@ export function isLikelyOpen(spot: Spot, dayPart: DayPart): boolean {
   if (spotGuide(spot) === "meal") {
     return mealFits(spot, dayPart);
   }
+  // 時間が無い土産は落とさない（表示にも営業時間は書かない）
   return true;
 }
 
@@ -485,6 +486,14 @@ function pickStops(
     pushStop(best);
   }
 
+  if (timeId === "half") {
+    const extra = pool.find((s) => s.id.startsWith("reach-"));
+    if (extra && !used.has(extra.id)) {
+      if (stops.length >= maxStops) stops.pop();
+      pushStop(extra);
+    }
+  }
+
   return stops;
 }
 
@@ -537,18 +546,22 @@ function ensureLocalMajors(station: StationSeed): StationSeed {
     })
     .sort((a, b) => b.score - a.score || a.s.walkMinutes - b.s.walkMinutes);
 
-  // 名所2＋名物1
+  // 名所・景色3＋名物2（合計5）
+  const MAJOR_TOTAL = 5;
+  const MAJOR_SIGHT = 3;
+  const MAJOR_FOOD = 2;
   const must = working.spots.find((s) => s.name.includes("ふたば"));
   const landmarkRows = scored.filter(
     (x) =>
       x.s.guide === "sight" ||
+      x.s.guide === "rest" ||
       /大社|神宮|八幡|下鴨|賀茂|デルタ|城|宮|公園|商店街|市場|橋/.test(x.s.name) ||
         (/寺$|神社/.test(x.s.name) &&
           /大社|神宮|八幡|下鴨|賀茂|清水|浅草|平等院|善光|飛行|総本山|大本山/.test(x.s.name)),
   );
   if (
-    marked.length >= 3 &&
-    marked.filter((m) => m.guide === "sight").length >= 2 &&
+    marked.length >= MAJOR_TOTAL &&
+    marked.filter((m) => m.guide === "sight" || m.guide === "rest").length >= 2 &&
     (!must || marked.some((m) => m.id === must.id))
   ) {
     return working;
@@ -556,18 +569,25 @@ function ensureLocalMajors(station: StationSeed): StationSeed {
 
   const picked: Spot[] = [];
   for (const row of landmarkRows) {
-    if (picked.length >= 2) break;
+    if (picked.length >= MAJOR_SIGHT) break;
     picked.push(row.s);
   }
-  if (must && picked.length < 3) picked.push(must);
+  if (must && picked.length < MAJOR_TOTAL) picked.push(must);
+  let foodCount = picked.filter((p) => isFoodGuide(spotGuide(p))).length;
   for (const row of scored) {
-    if (picked.length >= 3) break;
-    if (isFoodGuide(spotGuide(row.s)) && picked.some((p) => isFoodGuide(spotGuide(p)))) {
-      continue;
+    if (picked.length >= MAJOR_TOTAL) break;
+    if (!isFoodGuide(spotGuide(row.s))) continue;
+    if (foodCount >= MAJOR_FOOD) continue;
+    if (!picked.some((p) => p.id === row.s.id)) {
+      picked.push(row.s);
+      foodCount += 1;
     }
+  }
+  for (const row of scored) {
+    if (picked.length >= MAJOR_TOTAL) break;
     if (!picked.some((p) => p.id === row.s.id)) picked.push(row.s);
   }
-  const ids = new Set(picked.slice(0, 3).map((p) => p.id));
+  const ids = new Set(picked.slice(0, MAJOR_TOTAL).map((p) => p.id));
   return {
     ...working,
     spots: working.spots.map((s) => ({

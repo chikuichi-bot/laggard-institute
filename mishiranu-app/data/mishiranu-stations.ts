@@ -38,7 +38,7 @@ export type Spot = {
   secretWorthy?: boolean;
   /**
    * 散歩中心などで先に出す「その駅の顔」になる定番。
-   * 各駅ちょうど3件を目安（有名社寺・目印の景色・土地を代表する店など）。
+   * 各駅ちょうど5件を目安（名所・景色と名物店の合計）。
    */
   majorWorthy?: boolean;
   /** Optional WGS84 (AI / precise pins) */
@@ -216,7 +216,7 @@ export const SOLO_OK_LABEL = {
   no: "予約・人数向き",
 } as const;
 
-/** 営業・開館時間（未設定は空） */
+/** 営業・開館時間。分かっているときだけ返す（無いときは書かない）。 */
 export function hoursFor(spot: Spot): string | undefined {
   const h = spot.hours?.trim();
   return h ? h : undefined;
@@ -306,9 +306,14 @@ export function spotsForTime(
   station: StationSeed,
   timeIndex: 0 | 1 | 2,
 ): Spot[] {
-  // 徒歩圏 約1km（道なり込みの徒歩分）
+  // 徒歩圏 約1km。半日（index 2）だけ reach- の1件を円の外に足す。
   const maxMinutes = [16, 18, 22][timeIndex];
-  return station.spots.filter((s) => s.walkMinutes <= maxMinutes);
+  const inner = station.spots.filter(
+    (s) => !s.id.startsWith("reach-") && s.walkMinutes <= maxMinutes,
+  );
+  if (timeIndex !== 2) return inner;
+  const reach = station.spots.find((s) => s.id.startsWith("reach-"));
+  return reach ? [...inner, reach] : inner;
 }
 
 export function pickSecret(spots: Spot[]): Spot | undefined {

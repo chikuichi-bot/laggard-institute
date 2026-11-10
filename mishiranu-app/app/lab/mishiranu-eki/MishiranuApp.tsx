@@ -65,6 +65,7 @@ import {
   findSavedStation,
   loadStationLibrary,
   mergeCatalog,
+  removeStationFromLibrary,
   saveStationToLibrary,
   stableStationId,
 } from "@/lib/mishiranu-station-library";
@@ -542,7 +543,7 @@ export default function MishiranuApp({
       ? [
           {
             role: "guide" as const,
-            text: `この駅のひとかけら — ${fragment.title}\n${fragment.line}`,
+            text: fragment.line,
           },
         ]
       : [];
@@ -890,6 +891,30 @@ export default function MishiranuApp({
     setStep("tour");
     setChatPhase("ready");
     syncUrl("tour", nextStationId, nextTimeId, kinds);
+  }
+
+  /** 設定の「調べた駅」から、保存済みの案内を思い出す。 */
+  function recallSavedStation(next: StationSeed) {
+    const sealed = {
+      ...next,
+      id: stableStationId(next.name, next.id),
+      source: next.source ?? "ai",
+    };
+    setDynamicStation(sealed);
+    setSavedStations(saveStationToLibrary(sealed));
+    setCourses([]);
+    setSelectedCourse(null);
+    goTour(sealed.id, timeId, focusKinds, "map");
+  }
+
+  function forgetSavedStation(id: string) {
+    const next = removeStationFromLibrary(id);
+    setSavedStations(next);
+    if (stationId === id) {
+      const fallback = next[0]?.id ?? "";
+      setStationId(fallback);
+      if (fallback) goTour(fallback, timeId, focusKinds, "more");
+    }
   }
 
   function openSpot(spotId: string, opts?: { tab?: TourTab }) {
@@ -1846,10 +1871,12 @@ export default function MishiranuApp({
                                     </span>
                                     <span className="mishiranu-guide-item-meta">
                                       徒歩約 {item.walkMinutes} 分
-                                      {hoursFor(item)
-                                        ? ` · ${hoursFor(item)}`
-                                        : ""}
                                     </span>
+                                    {hoursFor(item) ? (
+                                      <span className="mishiranu-guide-item-hours">
+                                        営業 {hoursFor(item)}
+                                      </span>
+                                    ) : null}
                                     {kind === "meal" ? (
                                       <span className="mishiranu-guide-item-meal">
                                         {mealMetaLine(item)}
@@ -1875,6 +1902,11 @@ export default function MishiranuApp({
                     tourTitle={
                       selectedCourse ? selectedCourse.title : shownCopy.tourTitle
                     }
+                    onOpenVisit={(spot) => {
+                      setActiveSpotId(spot.id);
+                      setTourTab("map");
+                      setSpotSheetOpen(true);
+                    }}
                   />
                 </div>
               ) : null}
@@ -1911,6 +1943,66 @@ export default function MishiranuApp({
                       >
                         駅を探し直す
                       </button>
+                    </div>
+                  </section>
+
+                  <section
+                    className="mishiranu-settings-group"
+                    aria-label="調べた駅"
+                  >
+                    <p className="mishiranu-settings-group-label">調べた駅</p>
+                    <div className="mishiranu-settings-card">
+                      {savedStations.length === 0 ? (
+                        <p className="mishiranu-settings-empty">
+                          まだありません。駅を調べると、ここに残ります。あとから思い出して開けます。
+                        </p>
+                      ) : (
+                        <>
+                          <div className="mishiranu-settings-row">
+                            <span>{savedStations.length}駅</span>
+                            <span className="mishiranu-settings-detail">
+                              新しいものが上
+                            </span>
+                          </div>
+                          {savedStations.map((saved) => {
+                            const on = saved.id === station.id;
+                            const bare = saved.name.replace(/駅$/u, "");
+                            return (
+                              <div
+                                key={saved.id}
+                                className={
+                                  on
+                                    ? "mishiranu-saved-station mishiranu-saved-station--on"
+                                    : "mishiranu-saved-station"
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  className="mishiranu-saved-station-open"
+                                  onClick={() => recallSavedStation(saved)}
+                                  aria-current={on ? "true" : undefined}
+                                >
+                                  <span className="mishiranu-saved-station-name">
+                                    {bare}
+                                    {on ? " · いま" : ""}
+                                  </span>
+                                  <span className="mishiranu-settings-detail">
+                                    {saved.prefecture} · {saved.line}
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="mishiranu-saved-station-forget"
+                                  onClick={() => forgetSavedStation(saved.id)}
+                                  aria-label={`${bare}をリストから外す`}
+                                >
+                                  外す
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
                     </div>
                   </section>
 
@@ -2091,8 +2183,12 @@ export default function MishiranuApp({
                     </span>
                     {GUIDE_LABEL[spotGuide(activeSpot)]} · 徒歩約{" "}
                     {activeSpot.walkMinutes} 分
-                    {hoursFor(activeSpot) ? ` · ${hoursFor(activeSpot)}` : ""}
                   </p>
+                  {hoursFor(activeSpot) ? (
+                    <p className="mishiranu-spot-hours">
+                      営業 {hoursFor(activeSpot)}
+                    </p>
+                  ) : null}
                   {spotGuide(activeSpot) === "meal" ? (
                     <p className="mishiranu-spot-meal-meta">
                       {mealMetaLine(activeSpot)}

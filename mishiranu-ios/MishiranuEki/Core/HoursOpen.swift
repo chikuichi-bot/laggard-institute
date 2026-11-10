@@ -17,13 +17,13 @@ enum HoursOpen {
         if let hours, let open = parseOpen(hours: hours, atHour: h) {
             return open
         }
-        // hours が無い食事は mealTimes でざっくり
+        // 時間が無い食事は mealTimes で切る
         if guide == .meal {
             let allowed = Set(dayPartMealTimes(forHour: h))
             let times = mealTimes.isEmpty ? [MealTime.lunch] : mealTimes
             return times.contains(where: { allowed.contains($0) })
         }
-        // お土産・休みどころで時間が無いものは屋外・不定として残す
+        // 時間が無い土産・休みどころは落とさない（表示にも営業時間は書かない）
         return true
     }
 

@@ -156,7 +156,9 @@ struct SpotSheet: View {
 
     private var metaLine: String {
         var parts = ["\(spot.guide.label)", "徒歩約 \(spot.walkMinutes) 分"]
-        if let hours = spot.hours { parts.append(hours) }
+        if let hours = SpotHours.display(for: spot) {
+            parts.append("営業 \(hours)")
+        }
         return parts.joined(separator: " · ")
     }
 }

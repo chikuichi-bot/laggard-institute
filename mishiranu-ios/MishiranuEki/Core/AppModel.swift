@@ -113,6 +113,12 @@ final class AppModel {
 
     var savedCount: Int { savedStationIds.count }
 
+    /// 設定画面用。調べた順（新しいものが先）。
+    var savedStations: [Station] {
+        let order = SavedStationStore.load().map(\.id)
+        return order.compactMap { id in stations.first { $0.id == id } }
+    }
+
     // MARK: - Derived
 
     var station: Station? {
@@ -121,11 +127,10 @@ final class AppModel {
 
     var radiusKm: Double { station?.radiusKm(for: stay) ?? 1 }
 
-    /// 徒歩圏のスポット。コースを選んだときは立ち寄り順を先に。
+    /// 徒歩圏のスポット。土地紹介で触れた場所だけを地図に出し、コース順があれば先に。
     var tourSpots: [Spot] {
         guard let station else { return [] }
-        let base = CourseBuilder.snapLandmarkPins(CourseBuilder.normalizeEdibleSouvenirs(station))
-            .spots(for: stay)
+        let base = StationLore.introducedVisitSpots(in: station)
         guard let course = selectedCourse, !course.stops.isEmpty else { return base }
         let stopIds = course.stops.map(\.spot.id)
         let ordered = stopIds.compactMap { id in base.first { $0.id == id } }
@@ -150,11 +155,19 @@ final class AppModel {
                 BikeRentalSeal.ensure(CourseBuilder.normalizeEdibleSouvenirs(station))
             )
         )
-        // 観光も近所の寺は出さない（保存済みの長徳寺・法性寺・西園寺など）
+        let introducedIds = Set(StationLore.introducedVisitSpots(in: normalized).map(\.id))
+        // 観光は土地紹介で触れた場所だけ。ご飯・土産・休みも、紹介に出たもの優先。
         var items = normalized.spots.filter { $0.guide == kind }
         if kind == .sight {
             items = items.filter {
-                !FirstVisitFaces.isNeighborhoodWorship($0.name, stationName: station.name)
+                !$0.name.hasSuffix("駅")
+                    && !FirstVisitFaces.isNeighborhoodWorship($0.name, stationName: station.name)
+                    && introducedIds.contains($0.id)
+            }
+        } else {
+            let mentioned = items.filter { introducedIds.contains($0.id) }
+            if !mentioned.isEmpty {
+                items = mentioned
             }
         }
         if kind == .meal {
@@ -166,14 +179,9 @@ final class AppModel {
                 stationName: station.name
             ).filter { $0.guide == .meal }
         }
-        // その時間帯に閉まっている店は案内から外す（ふたばの夜など）
-        // お土産は「閉まっていると分かるとき」だけ外す。空にするより、名物を見せる。
-        if kind == .meal || kind == .rest {
+        // ご飯・土産は、その時間に開いているものだけ。閉まっている名物は出さない。
+        if kind == .meal || kind == .rest || kind == .souvenir {
             items = items.filter { HoursOpen.isLikelyOpen($0, dayPart: dayPart) }
-        } else if kind == .souvenir {
-            let open = items.filter { HoursOpen.isLikelyOpen($0, dayPart: dayPart) }
-            // 全部落ちるなら時間帯フィルタを外して名物を残す
-            if !open.isEmpty { items = open }
         }
         if kind == .meal {
             let ids = Set(items.map(\.id))
@@ -192,7 +200,9 @@ final class AppModel {
         // 名物菓子は meal 扱いでもお土産タブに出す（ふたば・走井餅等）
         if kind == .souvenir {
             let extras = normalized.spots.filter {
-                $0.guide != .souvenir && CourseBuilder.isEdibleOmiyage($0)
+                $0.guide != .souvenir
+                    && CourseBuilder.isEdibleOmiyage($0)
+                    && HoursOpen.isLikelyOpen($0, dayPart: dayPart)
             }
             for spot in extras where !items.contains(where: {
                 $0.id == spot.id || NameMatch.score($0.name, spot.name) >= 85
@@ -323,7 +333,7 @@ final class AppModel {
             push(ChatMessage(role: .you, text: spoken ?? "\(sealed.name)駅です"))
         }
         if let fragment = StationLore.arrivalFragment(for: sealed) {
-            push(ChatMessage(role: .guide, text: "この駅のひとかけら — \(fragment.title)\n\(fragment.line)"))
+            push(ChatMessage(role: .guide, text: fragment.line))
         }
         push(ChatMessage(role: .guide, text: guideText))
         relocateIfNeeded(sealed)
@@ -587,6 +597,34 @@ final class AppModel {
         }
     }
 
+    /// 設定の「調べた駅」から、保存済みの案内を思い出す。
+    func recallSavedStation(_ next: Station) {
+        let sealed = CourseBuilder.ensureLocalMajors(CourseBuilder.snapLandmarkPins(next))
+        remember(sealed, persist: true)
+        stationId = sealed.id
+        selectedCourse = nil
+        courses = CourseBuilder.courses(
+            for: sealed, stay: stay, dayPart: dayPart, prefs: mealPrefs
+        )
+        secret = nil
+        activeSpot = nil
+        guideKind = .sight
+        guideShowsBike = false
+        tourTab = .map
+        phase = .ready
+        screen = .tour
+    }
+
+    /// 調べた駅リストから外す（端末の保存も消す）。
+    func forgetSavedStation(_ next: Station) {
+        let saved = SavedStationStore.remove(id: next.id)
+        savedStationIds = Set(saved.map(\.id))
+        stations = SavedStationStore.merge(bundled: StationStore.loadBundled(), saved: saved)
+        if stationId == next.id {
+            stationId = saved.first?.id ?? stations.first?.id ?? ""
+        }
+    }
+
     func submitDraft() {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, phase != .ready else { return }
@@ -640,8 +678,12 @@ final class AppModel {
     // MARK: - Tour
 
     /// コースに焼き付いた古い座標ではなく、正本レジストリ＋現在の案内から開く。
+    /// 土地ページから選んだときは地図へ移して、その場所へ行く。
     func openSpot(_ spot: Spot) {
         activeSpot = resolvedSpot(spot)
+        if tourTab == .place || tourTab == .walk || tourTab == .guide {
+            tourTab = .map
+        }
     }
 
     func resolvedSpot(_ spot: Spot) -> Spot {

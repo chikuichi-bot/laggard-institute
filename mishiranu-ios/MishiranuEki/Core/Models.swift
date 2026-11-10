@@ -120,7 +120,7 @@ struct Spot: Codable, Hashable, Identifiable {
     let detail: String?
     let walkMinutes: Int
     let secretWorthy: Bool
-    /// その駅の顔になる定番（散歩中心などで先に出す。駅ごとにだいたい3件）
+    /// その駅の顔になる定番（散歩中心などで先に出す。名所・景色と名物店の合計だいたい5件）
     let majorWorthy: Bool
     let lat: Double
     let lng: Double
@@ -290,9 +290,15 @@ struct Station: Codable, Hashable, Identifiable {
         stay.walkRadiusKm
     }
 
-    /// 滞在時間で歩ける範囲のスポット（spotsForTime）。
+    /// 滞在時間で歩ける範囲。半日だけ、徒歩圏の外の1件（id が reach-）を足す。
     func spots(for stay: StayOption) -> [Spot] {
-        spots.filter { $0.walkMinutes <= stay.maxWalkMinutes }
+        let inner = spots.filter {
+            !$0.id.hasPrefix("reach-") && $0.walkMinutes <= stay.maxWalkMinutes
+        }
+        guard stay == .halfDay, let reach = spots.first(where: { $0.id.hasPrefix("reach-") }) else {
+            return inner
+        }
+        return inner + [reach]
     }
 }
 

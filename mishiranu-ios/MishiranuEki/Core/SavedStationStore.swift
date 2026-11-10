@@ -95,6 +95,11 @@ enum SavedStationStore {
         return write(next)
     }
 
+    @discardableResult
+    static func remove(id: String) -> [Station] {
+        write(load().filter { $0.id != id })
+    }
+
     /// バンドル種＋保存済み。同じ id / 駅名は保存側を優先。保存済みが先頭。
     static func merge(bundled: [Station], saved: [Station]) -> [Station] {
         var byId: [String: Station] = [:]

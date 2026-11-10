@@ -118,6 +118,11 @@ struct TourMapPage: View {
                 Text("徒歩圏 約 \(formatKm(model.radiusKm)) km")
                     .font(.caption)
                     .foregroundStyle(Palette.river)
+                if model.stay == .halfDay {
+                    Text("半日は、この円の外に1か所だけ足します。")
+                        .font(.caption)
+                        .foregroundStyle(Palette.fog)
+                }
                 if let course = model.selectedCourse {
                     Text("線は「\(course.title)」の徒歩ルート（道なり・駅→\(course.stops.count)か所）")
                         .font(.caption)

@@ -22,6 +22,11 @@ import {
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
 
+/** 土地の顔（majorWorthy）。名所・景色と名物店の合計。 */
+const MAJOR_FACE_TOTAL = 5;
+const MAJOR_SIGHT_TARGET = 3;
+const MAJOR_FOOD_TARGET = 2;
+
 const REGION_SET = new Set<string>(REGIONS);
 const GUIDE_SET = new Set<GuideKind>(GUIDE_ORDER);
 const GENRE_SET = new Set<SpotGenre>(["history", "gourmet", "nature", "odd"]);
@@ -92,7 +97,7 @@ const STATION_SCHEMA_BLOCK = [
   "- bikeRental.places の name は総称禁止（「駅前のレンタサイクル店」不可）。CLEW/クルー、HELLO CYCLING、えむじか など実在名。",
   "- 例（出町柳）: CLEW（クルー）京阪出町柳駅前（app）、レンタサイクルえむじか 出町柳店（local）。",
   '  "historyNotes": [{ "title": "短い見出し", "body": "歴史メモ。各3〜5文・80字以上" }]（必ず4〜6件。地名由来・産業/信仰・交通・災害や町の変遷など具体的に）,',
-  '  "sightseeingNotes": [{ "title": "短い見出し", "body": "観光メモ。各2〜4文" }]（必ず3〜4件。まず見る/時間があるとき/食べる休む）,',
+  '  "sightseeingNotes": [{ "title": "短い見出し", "body": "観光メモ。各2〜4文。spots の name を本文に必ず出す" }]（必ず3〜4件。まず見る/時間があるとき/食べる休む）,',
   '  "spots": [',
   "    {",
   '      "name": "場所名（meal/souvenir は実在店舗の正式名称）",',
@@ -109,7 +114,7 @@ const STATION_SCHEMA_BLOCK = [
   '      "lat": 緯度,',
   '      "lng": 経度,',
   '      "secretWorthy": boolean,',
-  '      "majorWorthy": boolean（その駅の顔＝散歩中心でまず行く定番なら true。駅ごとにちょうど3件）',
+  '      "majorWorthy": boolean（その駅の顔＝散歩中心でまず行く定番なら true。名所・景色と名物店の合計ちょうど5件）',
   "    }",
   "  ]",
   "}",
@@ -119,13 +124,13 @@ const STATION_SCHEMA_BLOCK = [
   "- spots は 12〜18件。story のとき meal は必ず5〜7件（いずれも駅から徒歩18分以内）、souvenir は必ず3〜5件、sight/rest/tip は各2件以上。",
   "- sight は、初めて駅を降りた人が通るメジャーな普通のところだけ。川の合流・橋・商店街・港・市場・公園・ガイドブック級の名社寺。近所の無名な寺・小社は禁止。",
   "- sight に入れない例: 長徳寺・法性寺・西園寺のような、土地の顔ではない近所の寺。近いだけでは出さない。",
-  "- rest は「腰を下ろして休む場所」を必ず2〜4件。内訳はAIが選ぶ。景色で座る場所（川の合流・三角州・公園・橋のたもと）を1件以上、長居できる喫茶を1件以上。食事目的の定食屋は meal のまま。寺社そのものは sight。",
+  "- rest は「腰を下ろして休む場所」を必ず2〜4件。景色で座る場所（川の合流・三角州・公園・橋のたもと）を1件以上、長居できる喫茶・カフェ・茶房を1件以上。喫茶店は必ず rest（meal に入れない）。定食屋・食堂・ラーメンは meal。寺社は sight。",
   "- meal と souvenir の name は必ず実在する店・施設の正式名称（Google検索で確認できるものだけ）。",
-  "- majorWorthy は駅ごとにちょうど3件だけ true。「初めてその駅に降りた人が必ず見るべき土地の顔」（ガイドブック1ページ目級）。",
-  "- majorWorthy の内訳は必ず: 名所・景色・社寺 2件 + 名物店 1件。甘味屋を2件以上 major にしない。",
+  "- majorWorthy は駅ごとにちょうど5件だけ true。「初めてその駅に降りた人が必ず見るべき土地の顔」（ガイドブック1ページ目級）。",
+  "- majorWorthy の内訳の目安: 名所・景色・社寺 3件 + 名物店 2件（合計5）。近所の無名店で埋めない。",
   "- majorWorthy の選び方: その駅名と結びついて誰もが挙げる場所。世界遺産・名社寺・川の合流・港・城・土地の銘菓を優先。",
   "- majorWorthy に入れない: 近所の無名カフェ、近所の無名な寺・小社、多目的スペース、コワーキング、知る・感じる系の屋号、近いだけの個人店。",
-  "- 例（出町柳の考え方）: 下鴨神社・鴨川デルタ・出町ふたばが顔。長徳寺・法性寺・西園寺は出さない。みたらしをふたばと同時 major にしない。かぜのね等の近所カフェは major にしない。",
+  "- 例（出町柳の考え方）: 鴨川デルタ・下鴨神社を必ず入れ、名物は出町ふたばなど。長徳寺・法性寺・西園寺は出さない。かぜのね等の近所カフェは major にしない。",
   "- 「近い」より「その土地の名前と結びついた有名どころ」。徒歩圏なら12〜15分の名社寺を、2分の無名寺・無名カフェより優先する。",
   "- secretWorthy は穴場向け。majorWorthy と同時 true にしない。",
   "- meal / souvenir は駅から徒歩18分以内（約1.3km）の店だけ。今出川・丸太町・銀閣寺エリアなど、駅名の土地ではない店は入れない。",
@@ -140,6 +145,7 @@ const STATION_SCHEMA_BLOCK = [
   "- souvenir の blurb/detail を短くしない。何が買えるか・包みの軽さ・駅からの帰りやすさ。",
   "- sight の blurb には地名と、そこで見る具体的な風景・建築・展示を入れる。",
   "- meal には必ず soloOk と budgetYen を入れる。一人席・カウンター・気軽な食堂は soloOk true。会席・要予約・酒席主体は false。",
+  "- meal と souvenir の hours は分かるときだけ書く（例 10:00〜18:00（火曜定休））。不明なら hours を空にする。目安で埋めない。",
   "- budgetYen は実際の一人あたり目安（税込ざっくり）。casual はだいたい 〜¥1,500、upscale は ¥3,000〜 を目安に具体化する。",
   "- 徒歩圏に焙煎所・珈琲専門店があり豆を売っているなら、souvenir（または tip）に1件入れ、name に店名、blurb に「豆が買える」と豆の特徴を書く。",
   "- コーヒー豆の店も総称禁止。実在のロースタリー／専門店名のみ。閉店済みの店は出さない。",
@@ -152,6 +158,7 @@ const STATION_SCHEMA_BLOCK = [
   "- 例の禁止: 「古書・茶房 ことばのはおと」は堀川・御所寄り。出町柳・下鴨の案内に入れない・デルタ座標に置かない。",
   "- 例の禁止: 「迷子」（喫茶・古本、浄土寺上南田町）は銀閣寺近く。出町柳の案内に入れない。座標を田中や今出川に寄せない。",
   "- 同様に、駅名と結びつきやすい有名店でも Google で「駅名＋店名＋徒歩」を確認し、届かない店は別の実在店に替える。",
+  "- sightseeingNotes と areaAbout では、majorWorthy のスポット名を本文に必ず書く（読んだ場所＝訪れる場所にする）。",
   "- いちばん重要: stationIntro / areaAbout / historyNotes を短くしない。読者が歴史を知れる分量にする。",
   "- historyNotes の本文には、spots の sight と majorWorthy の場所を正式名称のまま登場させ、その場所で目で確かめられる痕跡（石碑・地名・川筋・社殿・古い看板など）を1文ずつ書く。歩く途中に、その一文だけを手渡すため。",
   "- 禁止: 1文だけの areaAbout、2件以下の historyNotes、抽象語だけの紹介。",
@@ -559,6 +566,16 @@ async function expandShopSpots(
 
 const MIN_REST_SPOTS = 2;
 
+function isSitDownCafeName(name: string): boolean {
+  if (/多目的|つながる|知る、感じる|コワーキング|レンタルスペース|シェアキッチン/.test(name)) {
+    return false;
+  }
+  if (/食堂|定食|レストラン|ラーメン|うどん|そば|寿司|すし|焼肉|居酒屋/.test(name)) {
+    return false;
+  }
+  return /喫茶|純喫茶|茶房|カフェ|珈琲|コーヒー/.test(name);
+}
+
 function buildRestExpandPrompt(station: StationSeed): string {
   const rests = station.spots
     .filter((s) => s.guide === "rest")
@@ -581,11 +598,15 @@ function buildRestExpandPrompt(station: StationSeed): string {
     "制約:",
     `- rest が合計${MIN_REST_SPOTS}件以上になるまで追加する。返すのは追加分だけ。`,
     "- 腰を下ろせる景色を1件以上（川の合流、三角州、公園、橋のたもと、並木）。固有名詞にする。",
-    "- 長居できる喫茶を1件以上。定食屋・食堂は入れない（それらはご飯）。",
+    "- 長居できる喫茶・カフェ・茶房を1件以上（guide は rest）。定食屋・食堂は入れない（それらはご飯）。",
     "- 寺・神社そのものは入れない（観光）。",
     "- 駅から徒歩18分以内。座標を駅へ寄せない。確認できない場所は出さない。",
     "- blurb と detail は各3文以上。そこでどう休むかを書く。",
   ].join("\n");
+}
+
+function hasSitDownCafeRest(station: StationSeed): boolean {
+  return station.spots.some((s) => s.guide === "rest" && isSitDownCafeName(s.name));
 }
 
 async function expandRestSpots(
@@ -593,7 +614,9 @@ async function expandRestSpots(
   apiKey: string,
   viewerSub: string,
 ): Promise<StationSeed> {
-  if (countGuide(station, "rest") >= MIN_REST_SPOTS) return station;
+  if (countGuide(station, "rest") >= MIN_REST_SPOTS && hasSitDownCafeRest(station)) {
+    return station;
+  }
   const expanded = await callGeminiGenerate(
     apiKey,
     viewerSub,
@@ -918,7 +941,7 @@ function applyMajorNames(
 
 /** AI が major を付け損ねたときのヒューリスティック（名所・近い・有名店っぽさ） */
 function promoteMajorHeuristic(station: StationSeed): StationSeed {
-  if (countMajor(station) === 3) return station;
+  if (countMajor(station) === MAJOR_FACE_TOTAL) return station;
   const scored = station.spots.map((s) => {
     let score = 0;
     if (s.majorWorthy) score += 100;
@@ -939,30 +962,23 @@ function promoteMajorHeuristic(station: StationSeed): StationSeed {
     return { s, score };
   });
   scored.sort((a, b) => b.score - a.score || a.s.walkMinutes - b.s.walkMinutes);
-  // ガイド種別を散らす: sight を優先しつつ meal/souvenir を1つは入れる
   const picked: Spot[] = [];
-  const hasGuide = (g: string) => picked.some((p) => p.guide === g);
+  const isFood = (g?: string) => g === "meal" || g === "souvenir";
   for (const row of scored) {
-    if (picked.length >= 3) break;
-    if (picked.some((p) => p.id === row.s.id)) continue;
-    if (picked.length === 2 && !hasGuide("sight") && row.s.guide !== "sight") {
-      const sight = scored.find(
-        (x) => x.s.guide === "sight" && !picked.some((p) => p.id === x.s.id),
-      );
-      if (sight) {
-        picked.push(sight.s);
-        continue;
-      }
-    }
-    picked.push(row.s);
+    if (picked.length >= MAJOR_SIGHT_TARGET) break;
+    if (isFood(row.s.guide)) continue;
+    if (!picked.some((p) => p.id === row.s.id)) picked.push(row.s);
   }
-  if (picked.length < 3) {
-    for (const row of scored) {
-      if (picked.length >= 3) break;
-      if (!picked.some((p) => p.id === row.s.id)) picked.push(row.s);
-    }
+  for (const row of scored) {
+    if (picked.filter((p) => isFood(p.guide)).length >= MAJOR_FOOD_TARGET) break;
+    if (!isFood(row.s.guide)) continue;
+    if (!picked.some((p) => p.id === row.s.id)) picked.push(row.s);
   }
-  const ids = new Set(picked.slice(0, 3).map((p) => p.id));
+  for (const row of scored) {
+    if (picked.length >= MAJOR_FACE_TOTAL) break;
+    if (!picked.some((p) => p.id === row.s.id)) picked.push(row.s);
+  }
+  const ids = new Set(picked.slice(0, MAJOR_FACE_TOTAL).map((p) => p.id));
   return {
     ...station,
     spots: station.spots.map((s) => ({
@@ -975,8 +991,8 @@ function promoteMajorHeuristic(station: StationSeed): StationSeed {
 
 /**
  * どの駅でも「ガイドブック級のメジャーどころ」を必ず足す。
- * - landmarks: 一番有名な名所・景色 2
- * - omiyage: 手土産になる名物菓子・名産 2（お土産タブ用。1件目は初心者コースの名物枠）
+ * - landmarks: 一番有名な名所・景色（合計5の名所側）
+ * - omiyage: 手土産になる名物菓子・名産（名物側）
  */
 /** 出町柳のレンタは CLEW（クルー）とえむじかを正式名で残す。総称行は落とす。 */
 function sealDemachiBikeRentals(station: StationSeed): StationSeed {
@@ -1177,7 +1193,7 @@ async function ensureMajorSpotEntries(
     "どの駅でも同じ基準で「メジャーどころ」を出してください。穴場・マニア向けは禁止。",
     "",
     "必ず返すもの:",
-    "1) landmarks ちょうど2件 … その駅でいちばん有名な観光名所・景色（名社寺・川の合流・橋・商店街・城・市場の顔など）。近所の無名な寺・脇社・小さな祠・マイナー店は禁止。",
+    "1) landmarks ちょうど3件 … その駅でいちばん有名な観光名所・景色（名社寺・川の合流・橋・商店街・城・市場の顔など）。近所の無名な寺・脇社・小さな祠・マイナー店は禁止。",
     "2) omiyage ちょうど2件 … 手土産になる名物（菓子・銘菓・土地の顔になる甘いお土産を優先）。一般の漬物屋・鰹節屋・雑貨より、ガイドブックに載る名物菓子を優先。",
     "",
     "例:",
@@ -1284,24 +1300,24 @@ async function ensureMajorSpotEntries(
     }
   };
 
-  // 名所2 + 名物土産の1件目 = 初心者コースのメジャー3
-  for (let i = 0; i < Math.min(2, rawLandmarks.length); i++) {
+  // 名所・景色 + 名物 = 合計5の材料
+  for (let i = 0; i < Math.min(MAJOR_SIGHT_TARGET, rawLandmarks.length); i++) {
     upsertIcon(rawLandmarks[i], {
       forceGuide: "sight",
       idPrefix: "ai-landmark",
       asMajor: true,
     });
   }
-  for (let i = 0; i < Math.min(2, rawOmiyage.length); i++) {
+  for (let i = 0; i < Math.min(MAJOR_FOOD_TARGET, rawOmiyage.length); i++) {
     upsertIcon(rawOmiyage[i], {
       forceGuide: "souvenir",
       idPrefix: "ai-omiyage",
-      asMajor: i === 0, // 1件目だけ major（名所2＋名物1）
+      asMajor: true,
     });
   }
 
   if (majorIds.length >= 2) {
-    const idSet = new Set(majorIds.slice(0, 3));
+    const idSet = new Set(majorIds.slice(0, MAJOR_FACE_TOTAL));
     next = {
       ...next,
       spots: next.spots.map((s) => ({
@@ -1387,8 +1403,8 @@ function sealIconicMajors(station: StationSeed): StationSeed {
 
   const majors = station.spots.filter((s) => s.majorWorthy);
   if (majors.some((m) => m.id === must.id)) {
-    // 余分な一般土産 major を外し、必ず3件に整える
-    return trimMajorsToThree(station, must.id);
+    // 余分な一般土産 major を外し、合計5件に整える
+    return trimMajorsToLimit(station, must.id);
   }
 
   const drop =
@@ -1414,7 +1430,7 @@ function sealIconicMajors(station: StationSeed): StationSeed {
     majors.filter((m) => !drop || m.id !== drop.id).map((m) => m.id),
   );
   nextIds.add(must.id);
-  while (nextIds.size > 3) {
+  while (nextIds.size > MAJOR_FACE_TOTAL) {
     const removable = [...nextIds].find((id) => id !== must.id);
     if (!removable) break;
     nextIds.delete(removable);
@@ -1430,12 +1446,15 @@ function sealIconicMajors(station: StationSeed): StationSeed {
   };
 }
 
-function trimMajorsToThree(
+function trimMajorsToLimit(
   station: StationSeed,
   keepShopId: string,
 ): StationSeed {
   const majors = station.spots.filter((s) => s.majorWorthy);
-  if (majors.length <= 3 && majors.some((m) => m.id === keepShopId)) {
+  if (
+    majors.length <= MAJOR_FACE_TOTAL &&
+    majors.some((m) => m.id === keepShopId)
+  ) {
     return station;
   }
   const keep: Spot[] = [];
@@ -1444,14 +1463,14 @@ function trimMajorsToThree(
   for (const m of majors
     .filter((m) => /神社|寺|デルタ|城|宮/.test(m.name))
     .sort((a, b) => a.walkMinutes - b.walkMinutes)) {
-    if (keep.length >= 3) break;
+    if (keep.length >= MAJOR_FACE_TOTAL) break;
     if (!keep.some((k) => k.id === m.id)) keep.push(m);
   }
   for (const m of majors.sort((a, b) => a.walkMinutes - b.walkMinutes)) {
-    if (keep.length >= 3) break;
+    if (keep.length >= MAJOR_FACE_TOTAL) break;
     if (!keep.some((k) => k.id === m.id)) keep.push(m);
   }
-  const ids = new Set(keep.slice(0, 3).map((k) => k.id));
+  const ids = new Set(keep.slice(0, MAJOR_FACE_TOTAL).map((k) => k.id));
   return {
     ...station,
     spots: station.spots.map((s) => ({
@@ -1488,7 +1507,7 @@ async function finalizeAiStation(
   // 土地の定番めし（パン・おにぎり・食堂など）を先に確保
   station = await ensureStapleMealEntries(station, apiKey, viewerSub);
   station = sealDemachiBikeRentals(station);
-  // 初心者コース用のメジャー3つを必ず用意（名所2＋名物1）
+  // 初心者コース用のメジャー5つを必ず用意（名所・景色＋名物店）
   station = await ensureMajorSpotEntries(station, apiKey, viewerSub);
   station = sealIconicMajors(station);
   station = balanceMajorsSightseeing(station);
@@ -1571,9 +1590,12 @@ function isEdibleOmiyage(spot: Spot): boolean {
   return EDIBLE_OMIYAGE_RE.test(spot.name);
 }
 
-/** 名物菓子・銘菓を souvenir に寄せる（どの駅でも） */
+/** 名物菓子・銘菓を souvenir に寄せる（どの駅でも）。喫茶は休むところへ。 */
 function normalizeEdibleSouvenirs(station: StationSeed): StationSeed {
   const spots: Spot[] = station.spots.map((s) => {
+    if (isSitDownCafeName(s.name) && (s.guide === "meal" || s.guide === "tip")) {
+      return { ...s, guide: "rest" as const, genre: "nature", majorWorthy: false };
+    }
     // 銘菓だけ souvenir へ。majorWorthy の定食・食堂は meal のまま（ご飯や最低5件を守る）
     if (s.guide === "meal" && isEdibleOmiyage(s)) {
       return { ...s, guide: "souvenir" as const };
@@ -1590,45 +1612,73 @@ function landmarkFameScore(spot: Spot, stationName?: string): number {
   if (spot.majorWorthy) score += 40;
   if (spot.guide === "sight") score += 8;
   if (isGuidebookWorship(n, stationName)) score += 55;
+  if (/デルタ|三角州/.test(n)) score += 70;
   if (isOrdinaryPublicFace(n) || /合流/.test(n)) score += 45;
   if (/城|金閣|清水|浅草/.test(n)) score += 35;
-  if (/世界遺産|参道/.test(blob)) score += 20;
+  if (/世界遺産/.test(blob)) score += 20;
+  if (/城跡|復元|参道|楼門/.test(n)) score -= 20;
   if (isNeighborhoodWorship(n, stationName)) score -= 80;
   if (/幸神社|境内社|摂社/.test(n)) score -= 60;
   score += Math.max(0, 8 - spot.walkMinutes * 0.2);
   return score;
 }
 
+function sealDemachiMustFaces(station: StationSeed): StationSeed {
+  if (!/出町柳/.test(station.name)) return station;
+  let spots = [...station.spots];
+  if (!spots.some((s) => /デルタ|三角州/.test(s.name))) {
+    spots.push({
+      id: "lock-demachi-delta",
+      name: "鴨川デルタ",
+      genre: "history",
+      guide: "rest",
+      blurb: "鴨川と高野川の合流。飛び石が並び、多くの人が川辺で憩う町の顔。",
+      detail: "鴨川と高野川の合流（鴨川デルタ）",
+      walkMinutes: 3,
+      x: 0.42,
+      y: 0.55,
+      majorWorthy: true,
+      secretWorthy: false,
+      lat: 35.0301227,
+      lng: 135.7717415,
+    });
+  } else {
+    spots = spots.map((s) => {
+      if (!/デルタ|三角州/.test(s.name)) return s;
+      return {
+        ...s,
+        name: s.name.includes("鴨川") ? s.name : "鴨川デルタ",
+        majorWorthy: true,
+        walkMinutes: Math.min(s.walkMinutes, 5),
+        lat: 35.0301227,
+        lng: 135.7717415,
+      };
+    });
+  }
+  if (!spots.some((s) => /下鴨|賀茂御祖/.test(s.name))) {
+    spots.push({
+      id: "ai-major-shimogamo",
+      name: "下鴨神社（賀茂御祖神社）",
+      genre: "history",
+      guide: "sight",
+      blurb: "世界遺産の社。糺の森を抜けて本殿へ。出町柳の顔になる名所。",
+      detail: "駅から北東へ。デルタを経由すると道がわかりやすい。",
+      hours: "6:30〜17:00（季節により変動）",
+      walkMinutes: 12,
+      x: 0.55,
+      y: 0.35,
+      majorWorthy: true,
+      secretWorthy: false,
+      lat: 35.0387,
+      lng: 135.7727,
+    });
+  }
+  return { ...station, spots };
+}
+
 /** major を観光2＋名物1に整える（ベタな名所優先。小社で埋めない） */
 function balanceMajorsSightseeing(station: StationSeed): StationSeed {
-  let working = station;
-  if (
-    /出町柳/.test(working.name) &&
-    !working.spots.some((s) => /下鴨|賀茂御祖/.test(s.name))
-  ) {
-    working = {
-      ...working,
-      spots: [
-        ...working.spots,
-        {
-          id: "ai-major-shimogamo",
-          name: "下鴨神社（賀茂御祖神社）",
-          genre: "history",
-          guide: "sight",
-          blurb: "世界遺産の社。糺の森を抜けて本殿へ。出町柳の顔になる名所。",
-          detail: "駅から北東へ。デルタを経由すると道がわかりやすい。",
-          hours: "6:30〜17:00（季節により変動）",
-          walkMinutes: 12,
-          x: 0.55,
-          y: 0.35,
-          majorWorthy: true,
-          secretWorthy: false,
-          lat: 35.0387,
-          lng: 135.7727,
-        },
-      ],
-    };
-  }
+  let working = sealDemachiMustFaces(station);
 
   working = {
     ...working,
@@ -1639,9 +1689,10 @@ function balanceMajorsSightseeing(station: StationSeed): StationSeed {
   const isFood = (s: Spot) => s.guide === "meal" || s.guide === "souvenir";
   const isSightish = (s: Spot) =>
     s.guide === "sight" ||
+    s.guide === "rest" ||
     isGuidebookWorship(s.name, working.name) ||
     isOrdinaryPublicFace(s.name) ||
-    /城|宮/.test(s.name);
+    /城|宮|デルタ/.test(s.name);
 
   const landmarkPool = [...majors, ...working.spots]
     .filter(isSightish)
@@ -1663,25 +1714,50 @@ function balanceMajorsSightseeing(station: StationSeed): StationSeed {
     foodMajors[0] ||
     null;
 
-  // 有名度で名所2 + 名物1（駅固有の固定ではなくスコアで土地の顔を決める）
+  // 出町柳は鴨川デルタ＋下鴨を名所枠に優先。合計5（名所3＋名物2目安）
   const keep: Spot[] = [];
   const isSoftCafe = (s: Spot) =>
     /多目的|つながる|知る、感じる|コワーキング|レンタルスペース/.test(
       `${s.name}${s.blurb ?? ""}`,
     );
+  if (/出町柳/.test(working.name)) {
+    const delta = landmarkPool.find((s) => /デルタ|三角州/.test(s.name));
+    const shrine = landmarkPool.find((s) => /下鴨|賀茂御祖/.test(s.name));
+    if (delta) keep.push(delta);
+    if (shrine && !keep.some((k) => k.id === shrine.id)) keep.push(shrine);
+  }
   for (const s of landmarkPool) {
-    if (keep.length >= 2) break;
+    if (keep.length >= MAJOR_SIGHT_TARGET) break;
+    if (isSoftCafe(s)) continue;
+    if (/城跡|復元|参道|楼門/.test(s.name)) continue;
+    if (!keep.some((k) => k.id === s.id)) keep.push(s);
+  }
+  for (const s of landmarkPool) {
+    if (keep.length >= MAJOR_SIGHT_TARGET) break;
     if (isSoftCafe(s)) continue;
     if (!keep.some((k) => k.id === s.id)) keep.push(s);
   }
-  if (iconicFood && keep.length < 3 && !isSoftCafe(iconicFood)) keep.push(iconicFood);
+  const foodPool = [
+    ...(iconicFood ? [iconicFood] : []),
+    ...foodMajors,
+    ...working.spots.filter(isFood),
+  ].filter((s, i, arr) => arr.findIndex((x) => x.id === s.id) === i);
+  let foodAdded = 0;
+  for (const food of foodPool) {
+    if (foodAdded >= MAJOR_FOOD_TARGET || keep.length >= MAJOR_FACE_TOTAL) break;
+    if (isSoftCafe(food)) continue;
+    if (!keep.some((k) => k.id === food.id)) {
+      keep.push(food);
+      foodAdded += 1;
+    }
+  }
   for (const s of landmarkPool) {
-    if (keep.length >= 3) break;
+    if (keep.length >= MAJOR_FACE_TOTAL) break;
     if (isSoftCafe(s)) continue;
     if (!keep.some((k) => k.id === s.id)) keep.push(s);
   }
 
-  const ids = new Set(keep.slice(0, 3).map((k) => k.id));
+  const ids = new Set(keep.slice(0, MAJOR_FACE_TOTAL).map((k) => k.id));
   if (ids.size === 0) return working;
   return {
     ...working,

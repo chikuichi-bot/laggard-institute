@@ -7,6 +7,8 @@ import {
   stationBaseName,
   stationNameReading,
 } from "@/data/mishiranu-station-readings";
+import type { Spot } from "@/data/mishiranu-stations";
+import { introducedVisitSpots, spotTrace } from "@/lib/mishiranu-lore";
 import { IconBinoculars, IconHistory, IconWalk } from "./MishiranuIcons";
 
 function readingLines(text?: string | null): string[] {
@@ -55,9 +57,10 @@ function placeScript(station: StationSeed, tourTitle: string): string {
 type Props = {
   station: StationSeed;
   tourTitle: string;
+  onOpenVisit?: (spot: Spot) => void;
 };
 
-export function PlaceBoard({ station, tourTitle }: Props) {
+export function PlaceBoard({ station, tourTitle, onOpenVisit }: Props) {
   const [speaking, setSpeaking] = useState(false);
   const intro = useMemo(() => readingLines(station.stationIntro), [station.stationIntro]);
   const walk = useMemo(() => readingLines(station.walkGuide), [station.walkGuide]);
@@ -67,10 +70,12 @@ export function PlaceBoard({ station, tourTitle }: Props) {
   const indexStationLabel = stationBaseName(station.name);
   const history = station.historyNotes ?? [];
   const sight = station.sightseeingNotes ?? [];
+  const visitSpots = useMemo(() => introducedVisitSpots(station), [station]);
   const hasIntro = intro.length > 0;
   const hasWalk = walk.length > 0;
   const hasHistory = area.length > 0 || history.length > 0;
   const hasSight = sight.length > 0;
+  const hasVisit = visitSpots.length > 0;
 
   useEffect(() => {
     return () => {
@@ -133,6 +138,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
               ["place-walk", "02", "歩き方", hasWalk],
               ["place-history", "03", "歴史", hasHistory],
               ["place-sight", "04", "観光", hasSight],
+              ["place-visit", "05", "訪れる", hasVisit],
             ] as const
           ).map(([id, num, label, on]) => (
             <button
@@ -228,7 +234,51 @@ export function PlaceBoard({ station, tourTitle }: Props) {
           </section>
         ) : null}
 
-        {!hasIntro && !hasWalk && !hasHistory && !hasSight ? (
+        {hasVisit ? (
+          <section id="place-visit" className="mishiranu-place-panel">
+            <div className="mishiranu-place-panel-head">
+              <span>{hasSight ? "05" : "04"}</span>
+              <IconWalk />
+              <h3>訪れる場所</h3>
+            </div>
+            <p className="mishiranu-note">土地の文章で触れた場所です。押すと地図で開けます。</p>
+            <ol className="mishiranu-place-notes">
+              {visitSpots.map((spot, i) => {
+                const trace = spotTrace(spot, station);
+                return (
+                  <li key={spot.id}>
+                    <b>{String(i + 1).padStart(2, "0")}</b>
+                    <div>
+                      {onOpenVisit ? (
+                        <button
+                          type="button"
+                          className="mishiranu-place-visit-open"
+                          onClick={() => onOpenVisit(spot)}
+                        >
+                          <h4>{spot.name}</h4>
+                          <p>
+                            徒歩約{spot.walkMinutes}分
+                            {trace ? ` · ${trace}` : ""}
+                          </p>
+                        </button>
+                      ) : (
+                        <>
+                          <h4>{spot.name}</h4>
+                          <p>
+                            徒歩約{spot.walkMinutes}分
+                            {trace ? ` · ${trace}` : ""}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ) : null}
+
+        {!hasIntro && !hasWalk && !hasHistory && !hasSight && !hasVisit ? (
           <p className="mishiranu-note">この駅の土地メモはまだ少なめです。</p>
         ) : null}
       </div>

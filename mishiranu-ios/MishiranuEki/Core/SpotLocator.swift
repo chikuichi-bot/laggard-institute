@@ -13,7 +13,7 @@ enum SpotLocator {
     private static let maxSightSpots = 4
     private static let maxMealSpots = 3
     private static let maxSouvenirSpots = 4
-    private static let maxRestSpots = 2
+    private static let maxRestSpots = 4
     private static let maxTipSpots = 1
 
     static func refine(_ station: Station) async -> Station {
@@ -29,10 +29,16 @@ enum SpotLocator {
         }
 
         // 1) Apple マップから周辺を採取し、メジャー度で絞る
+        // 駅名門前の「○○神社」も必ず探す（藤森→藤森神社）。駅舎自体は名所にしない。
+        let bare = SavedStationStore.bareName(station.name)
+        var preferred = station.spots.filter(\.majorWorthy).map(\.name).filter { !$0.hasSuffix("駅") }
+        for seed in ["\(bare)神社", "\(bare)神宮", "\(bare)大社"] where !preferred.contains(seed) {
+            preferred.insert(seed, at: 0)
+        }
         let appleSpots = await harvestApplePlaces(
             around: center,
             stationName: station.name,
-            preferredMajors: station.spots.filter(\.majorWorthy).map(\.name)
+            preferredMajors: preferred
         )
         // 2) AI 文案は、地図上の同名へだけ載せる
         let blended = blendAICopy(aiSpots: station.spots, appleSpots: appleSpots, stationName: station.name)
@@ -117,6 +123,9 @@ enum SpotLocator {
             "\(bare) 商店街",
             "\(bare) 市場",
             "\(bare) 橋",
+            "\(bare) 喫茶",
+            "\(bare) カフェ",
+            "\(bare) 茶房",
         ] + stapleQueries + preferredMajors.prefix(5).map { "\($0)" }
         if bare.contains("八幡") {
             queries.append(contentsOf: [
@@ -138,7 +147,8 @@ enum SpotLocator {
             guard let guide = guide(for: place) else { continue }
             let limit = (guide == .meal || guide == .souvenir) ? shopWalkRadiusKm : walkRadiusKm
             guard place.km <= limit else { continue }
-            if place.name.hasSuffix("駅"), guide != .sight { continue }
+            // 駅舎そのものは観光スポットにしない（藤森駅 ≠ 藤森神社）
+            if place.name.hasSuffix("駅") { continue }
 
             let walk = max(1, min(90, Int((place.km * 1.3 / 4.5 * 60).rounded())))
             if guide == .meal || guide == .souvenir, walk > shopMaxWalkMinutes { continue }
@@ -187,7 +197,67 @@ enum SpotLocator {
             pickMajorFaces(scored),
             stationName: stationName
         )
+        if let reach = await halfDayReach(
+            around: center,
+            stationName: stationName,
+            preferredMajors: preferredMajors,
+            already: majorsOnly
+        ) {
+            return majorsOnly + [reach]
+        }
         return majorsOnly
+    }
+
+    /// 半日のときだけ使う、徒歩圏（約1km）の外の名所1件。
+    private static func halfDayReach(
+        around center: CLLocationCoordinate2D,
+        stationName: String,
+        preferredMajors: [String],
+        already: [Spot]
+    ) async -> Spot? {
+        let bare = SavedStationStore.bareName(stationName)
+        var places: [ApplePlace] = []
+        let queries = ["\(bare) 名所", "\(bare) 観光", "\(bare) 神社"] + preferredMajors.prefix(3).map { "\($0)" }
+        for query in queries {
+            if Task.isCancelled { break }
+            places.append(contentsOf: await searchQuery(query, around: center, maxKm: 2.4))
+        }
+        var best: (ApplePlace, Double)?
+        for place in places {
+            guard place.km >= 1.15, place.km <= 2.4 else { continue }
+            if isNoisePlace(place.name) { continue }
+            if FirstVisitFaces.isNeighborhoodWorship(place.name, stationName: stationName) { continue }
+            if already.contains(where: { NameMatch.score($0.name, place.name) >= 78 }) { continue }
+            let guidebook = FirstVisitFaces.isGuidebookWorship(place.name, stationName: stationName)
+                || FirstVisitFaces.isOrdinaryPublicFace(place.name)
+            let named = preferredMajors.contains { NameMatch.score($0, place.name) >= 80 }
+            guard guidebook || named else { continue }
+            var fame = 50.0 - place.km * 8
+            if guidebook { fame += 30 }
+            if named { fame += 24 }
+            if best == nil || fame > best!.1 { best = (place, fame) }
+        }
+        guard let place = best?.0 else { return nil }
+        let walk = max(20, min(40, Int((place.km * 1.3 / 4.5 * 60).rounded())))
+        let key = NameMatch.normalize(place.name)
+        return Spot(
+            id: "reach-\(key.prefix(24))",
+            name: place.name,
+            genre: "history",
+            guide: .sight,
+            mealTier: .casual,
+            mealTimes: [],
+            soloOk: true,
+            budgetYen: "—",
+            hours: "終日（屋外）",
+            blurb: SpotCopy.compose(name: place.name, guide: .sight, address: place.address),
+            detail: "半日のときに、徒歩圏の外へ一箇所だけ足す場所。",
+            walkMinutes: walk,
+            secretWorthy: false,
+            majorWorthy: false,
+            lat: place.coordinate.latitude,
+            lng: place.coordinate.longitude
+        )
     }
 
     /// 製作所・薬局など、初めての土地案内に載せないもの。
@@ -216,7 +286,7 @@ enum SpotLocator {
             case .museum, .park, .theater, .aquarium, .zoo: score += 28
             case .bakery: score += 28
             case .restaurant: score += 18
-            case .cafe: score += 6
+            case .cafe: score += guide == .rest ? 24 : 6
             case .brewery, .foodMarket: score += 10
             case .store: score -= 8
             case .pharmacy: score -= 40
@@ -237,7 +307,8 @@ enum SpotLocator {
             score += 26
         }
         if n.contains("パン") || n.contains("進々堂") || n.contains("新進堂") || n.contains("満寿形") { score += 30 }
-        if n.contains("カフェ") || n.contains("茶房") || n.contains("喫茶") { score += 6 }
+        if guide == .rest, CourseBuilder.isSitDownCafe(n) { score += 22 }
+        else if n.contains("カフェ") || n.contains("茶房") || n.contains("喫茶") { score += 6 }
         if n.contains("餅") || n.contains("菓子") || n.contains("和菓子") || n.contains("銘菓") { score += 24 }
         if n.contains("料理") { score += 8 }
         if n.hasSuffix("駅") { score += 8 }
@@ -274,7 +345,7 @@ enum SpotLocator {
         return out
     }
 
-    /// 土地の顔3つ（名所寄り2 + 名物1）に major 印。近さより有名度。
+    /// 土地の顔5つ（名所・景色3 + 名物2 目安）に major 印。近さより有名度。
     private static func markMajorFaces(_ spots: [Spot]) -> [Spot] {
         func faceScore(_ spot: Spot) -> Double {
             let n = spot.name
@@ -289,7 +360,11 @@ enum SpotLocator {
             }
             if FirstVisitFaces.isGuidebookWorship(n) { score += 42 }
             else if n.contains("城") { score += 28 }
+            if n.contains("デルタ") || n.contains("三角州") { score += 55 }
             if FirstVisitFaces.isOrdinaryPublicFace(n) || blob.contains("合流") { score += 48 }
+            if n.contains("城跡") || n.contains("復元") || n.contains("参道") || n.contains("楼門") {
+                score -= 25
+            }
             if blob.contains("世界遺産") || blob.contains("名物") || blob.contains("銘菓") { score += 28 }
             if CourseBuilder.isEdibleOmiyage(spot) { score += 40 }
             if n.contains("ふたば") || n.contains("赤福") || n.contains("もみじ饅頭") { score += 30 }
@@ -310,12 +385,13 @@ enum SpotLocator {
             !isSoft($0) && ($0.guide == .meal || $0.guide == .souvenir)
         }
         var ids = Set<String>()
-        for s in sights.prefix(2) { ids.insert(s.id) }
-        if let food = foodFaces.first(where: { CourseBuilder.isEdibleOmiyage($0) || $0.guide == .souvenir })
-            ?? foodFaces.first {
-            ids.insert(food.id)
+        for s in sights.prefix(MajorFaces.sightTarget) { ids.insert(s.id) }
+        var foodAdded = 0
+        for s in foodFaces {
+            if foodAdded >= MajorFaces.foodTarget { break }
+            if ids.insert(s.id).inserted { foodAdded += 1 }
         }
-        for s in ranked where ids.count < 3 {
+        for s in ranked where ids.count < MajorFaces.total {
             if isSoft(s) { continue }
             ids.insert(s.id)
         }
@@ -393,16 +469,21 @@ enum SpotLocator {
     }
 
     private static func guide(for place: ApplePlace) -> GuideKind? {
+        let n = place.name
+        // 喫茶・カフェは休むところ（ご飯の定食屋と混ぜない）
+        if CourseBuilder.isSitDownCafe(n) { return .rest }
         if let category = place.category {
             switch category {
-            case .restaurant, .cafe, .bakery, .brewery, .foodMarket:
+            case .cafe:
+                return .rest
+            case .restaurant, .bakery, .brewery, .foodMarket:
                 return .meal
             case .museum, .theater, .aquarium, .zoo:
                 return .sight
             case .park, .beach, .marina:
                 return .rest
             case .publicTransport:
-                return place.name.hasSuffix("駅") ? .sight : nil
+                return nil
             case .store, .pharmacy, .library, .nightlife:
                 break
             default:
@@ -412,8 +493,7 @@ enum SpotLocator {
                 break
             }
         }
-        let n = place.name
-        if n.hasSuffix("駅") { return .sight }
+        if n.hasSuffix("駅") { return nil }
         if FirstVisitFaces.isGuidebookWorship(n)
             || n.contains("庭園") || n.contains("城")
             || FirstVisitFaces.isOrdinaryPublicFace(n) {
@@ -424,9 +504,9 @@ enum SpotLocator {
             return nil
         }
         if n.contains("園"), !n.contains("保育園"), !n.contains("幼稚園") { return .sight }
-        if n.contains("カフェ") || n.contains("食堂") || n.contains("レストラン") || n.contains("ラーメン")
+        if n.contains("食堂") || n.contains("レストラン") || n.contains("ラーメン")
             || n.contains("うどん") || n.contains("そば") || n.contains("寿司") || n.contains("パン")
-            || n.contains("茶房") || n.contains("料理") {
+            || n.contains("料理") {
             return .meal
         }
         if n.contains("餅") || n.contains("菓子") || n.contains("和菓子") || n.contains("銘菓")
@@ -434,7 +514,7 @@ enum SpotLocator {
             || n.contains("走井") || n.contains("授与") || n.contains("お守り") {
             return .souvenir
         }
-        if n.contains("公園") || n.contains("河川敷") || n.contains("喫茶") {
+        if n.contains("公園") || n.contains("河川敷") {
             return .rest
         }
         // 初めての案内に、分類不明の店は載せない
@@ -460,6 +540,7 @@ enum SpotLocator {
         var result = appleSpots
         let bare = SavedStationStore.bareName(stationName)
         let preferred = aiSpots.filter {
+            if $0.name.hasSuffix("駅") { return false }
             if FirstVisitFaces.isNeighborhoodWorship($0.name, stationName: stationName) { return false }
             return $0.majorWorthy
                 || LandmarkRegistry.isLocked($0, stationName: stationName)
@@ -467,6 +548,8 @@ enum SpotLocator {
                 || NameMatch.score($0.name, bare) >= 78
         }
         for ai in preferred + aiSpots {
+            // 駅舎を名所として残さない／駅に神社を吸収させない
+            if ai.name.hasSuffix("駅") { continue }
             if FirstVisitFaces.isNeighborhoodWorship(ai.name, stationName: stationName) {
                 continue
             }
@@ -482,7 +565,9 @@ enum SpotLocator {
                 }
                 continue
             }
-            if let idx = result.firstIndex(where: { NameMatch.score($0.name, ai.name) >= 82 }) {
+            if let idx = result.firstIndex(where: {
+                !$0.name.hasSuffix("駅") && NameMatch.score($0.name, ai.name) >= 82
+            }) {
                 let apple = result[idx]
                 result[idx] = apple.withCopy(from: ai).moved(
                     to: CLLocationCoordinate2D(latitude: apple.lat, longitude: apple.lng),
@@ -493,7 +578,7 @@ enum SpotLocator {
             // Apple に無い名所・名物土産でも、土地の顔は残す（近所の寺は除く）
             let keep = ai.majorWorthy
                 || isLandmarkish(ai.name)
-                || NameMatch.score(ai.name, bare) >= 78
+                || (!ai.name.hasSuffix("駅") && NameMatch.score(ai.name, bare) >= 78)
                 || ai.guide == .souvenir
                 || CourseBuilder.isEdibleOmiyage(ai)
             if keep, !result.contains(where: { NameMatch.score($0.name, ai.name) >= 85 }) {
@@ -588,11 +673,27 @@ enum NameMatch {
 
     /// 0–100。完全一致 100、包含 70–95、それ以外は最長共通部分の割合。
     static func score(_ a: String, _ b: String) -> Double {
+        // 藤森駅 ≠ 藤森神社。駅舎と門前の社寺・名所は別物として扱う。
+        let aSta = a.hasSuffix("駅")
+        let bSta = b.hasSuffix("駅")
+        if aSta != bSta {
+            let aWorship = FirstVisitFaces.isWorshipName(a) || FirstVisitFaces.isOrdinaryPublicFace(a)
+            let bWorship = FirstVisitFaces.isWorshipName(b) || FirstVisitFaces.isOrdinaryPublicFace(b)
+            if (aSta && bWorship) || (bSta && aWorship) {
+                return 40
+            }
+        }
         let x = normalize(a), y = normalize(b)
         if x.isEmpty || y.isEmpty { return 0 }
-        if x == y { return 100 }
+        if x == y {
+            // 正規化後だけ一致（藤森駅→藤森 と 藤森）は駅マッチ用。名所マージには使わせない。
+            if aSta != bSta { return 72 }
+            return 100
+        }
         if x.contains(y) || y.contains(x) {
-            return 70 + 25 * Double(min(x.count, y.count)) / Double(max(x.count, y.count))
+            let raw = 70 + 25 * Double(min(x.count, y.count)) / Double(max(x.count, y.count))
+            if aSta != bSta { return min(raw, 70) }
+            return raw
         }
         let xs = Array(x)
         var longest = 0
@@ -603,7 +704,9 @@ enum NameMatch {
                 j += 1
             }
         }
-        return 65 * Double(longest) / Double(max(xs.count, y.count))
+        let raw = 65 * Double(longest) / Double(max(xs.count, y.count))
+        if aSta != bSta { return min(raw, 70) }
+        return raw
     }
 }
 

@@ -73,6 +73,23 @@ export function saveStationToLibrary(station: StationSeed): StationSeed[] {
   return next;
 }
 
+/** 調べた駅リストから外す。 */
+export function removeStationFromLibrary(id: string): StationSeed[] {
+  if (!canUseStorage()) return [];
+  const next = loadStationLibrary().filter((s) => s.id !== id);
+  const file: LibraryFile = {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    stations: next,
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(file));
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
+
 /** 駅名で保存済みを探す。 */
 export function findSavedStation(
   name: string,

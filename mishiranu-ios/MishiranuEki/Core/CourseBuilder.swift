@@ -1,6 +1,15 @@
 import CoreLocation
 import Foundation
 
+/// 土地の顔（majorWorthy）。名所・景色と名物店の合計。
+enum MajorFaces {
+    static let total = 5
+    /// 名所・景色の目安
+    static let sightTarget = 3
+    /// 名物店の目安
+    static let foodTarget = 2
+}
+
 struct CourseStop: Hashable, Identifiable {
     let spot: Spot
     let walkMinutes: Int
@@ -320,6 +329,23 @@ enum CourseBuilder {
             )
             prefer = Array(prefer.dropFirst()) + [prefer[0]]
         }
+        // 半日だけ、徒歩圏の外の1件を最後に足す（1時間・3時間には入っていない）
+        if stay == .halfDay,
+           let extra = pool.first(where: { $0.id.hasPrefix("reach-") }),
+           !used.contains(extra.id) {
+            if stops.count >= maxStops, !stops.isEmpty {
+                stops.removeLast()
+            }
+            appendStop(
+                extra,
+                stops: &stops,
+                used: &used,
+                elapsed: &elapsed,
+                cursorHour: &cursorHour,
+                cursorMinute: &cursorMinute,
+                stay: stay
+            )
+        }
         return stops
     }
 
@@ -339,6 +365,18 @@ enum CourseBuilder {
         return soft.contains { n.contains($0) }
     }
 
+    /// 腰を下ろす喫茶・カフェ（ご飯の定食屋ではない）。休むところへ。
+    static func isSitDownCafe(_ name: String) -> Bool {
+        let n = name
+        let soft = ["多目的", "つながる", "知る、感じる", "コワーキング", "レンタルスペース", "シェアキッチン"]
+        if soft.contains(where: { n.contains($0) }) { return false }
+        let mealOnly = ["食堂", "定食", "レストラン", "ラーメン", "うどん", "そば", "寿司", "すし", "焼肉", "居酒屋"]
+        if mealOnly.contains(where: { n.contains($0) }) { return false }
+        return n.contains("喫茶") || n.contains("純喫茶") || n.contains("茶房")
+            || n.contains("カフェ") || n.contains("珈琲") || n.contains("コーヒー")
+            || n.contains("喫茶店")
+    }
+
     /// 散歩中心向けの「ベタさ」。近いだけの小社より、土地の顔になる名所を上げる。
     private static func landmarkFameScore(_ spot: Spot) -> Double {
         let n = spot.name
@@ -348,9 +386,14 @@ enum CourseBuilder {
         if spot.guide == .sight { score += 8 }
         // ガイドブック級の社寺・普通の公共の顔
         if FirstVisitFaces.isGuidebookWorship(n) { score += 55 }
+        // 鴨川デルタは出町柳で必ず行く顔（城跡・参道より先）
+        if n.contains("デルタ") || n.contains("三角州") { score += 70 }
         if FirstVisitFaces.isOrdinaryPublicFace(n) || n.contains("合流") { score += 45 }
         if n.contains("城") || n.contains("金閣") || n.contains("清水") || n.contains("浅草") { score += 35 }
-        if blob.contains("世界遺産") || blob.contains("観光の") || blob.contains("参道") { score += 20 }
+        if blob.contains("世界遺産") || blob.contains("観光の") { score += 20 }
+        if n.contains("城跡") || n.contains("復元") || n.contains("参道") || n.contains("楼門") {
+            score -= 20
+        }
         if blob.contains("名物") || blob.contains("銘菓") || blob.contains("顔") { score += 16 }
         if isIconicShop(spot) || (isEdibleOmiyage(spot) && spot.guide == .souvenir) { score += 38 }
         // 近所の寺・小社・脇社・近所カフェは出さない
@@ -410,9 +453,22 @@ enum CourseBuilder {
         return LandmarkRegistry.apply(to: filtered)
     }
 
-    /// 名物菓子を souvenir に寄せる（ご飯だけに閉じない）
+    /// 名物菓子を souvenir に寄せる（ご飯だけに閉じない）。喫茶は休むところへ。
     static func normalizeEdibleSouvenirs(_ station: Station) -> Station {
         var spots = station.spots.map { spot -> Spot in
+            if isSitDownCafe(spot.name), spot.guide == .meal || spot.guide == .tip {
+                let blurb = spot.blurb.contains("食事") || spot.blurb.contains("観光の目印")
+                    ? SpotCopy.compose(name: spot.name, guide: .rest, address: spot.detail)
+                    : spot.blurb
+                return Spot(
+                    id: spot.id, name: spot.name, genre: "nature", guide: .rest,
+                    mealTier: spot.mealTier, mealTimes: spot.mealTimes, soloOk: spot.soloOk,
+                    budgetYen: spot.budgetYen, hours: spot.hours, blurb: blurb,
+                    detail: spot.detail, walkMinutes: spot.walkMinutes,
+                    secretWorthy: spot.secretWorthy, majorWorthy: false,
+                    lat: spot.lat, lng: spot.lng
+                )
+            }
             if isWorshipPlace(spot), spot.guide == .souvenir || spot.guide == .meal {
                 return Spot(
                     id: spot.id, name: spot.name, genre: spot.genre, guide: .sight,
@@ -578,68 +634,152 @@ enum CourseBuilder {
         )
     }
 
-    /// major を名所2＋名物1に整える（ベタな名所を優先）
+    /// major を名所・景色＋名物店の合計5件に整える（目安: 名所3＋名物2）
     static func balanceMajorsSightseeing(_ station: Station) -> Station {
-        var base = station
-        // 出町柳は下鴨神社を名所枠に必ず入れる
-        if base.name.contains("出町柳"),
-           !base.spots.contains(where: { $0.name.contains("下鴨") || $0.name.contains("賀茂御祖") }) {
-            let shrine = Spot(
-                id: "ai-major-shimogamo",
-                name: "下鴨神社（賀茂御祖神社）",
-                genre: "history",
-                guide: .sight,
-                mealTier: .casual,
-                mealTimes: [.lunch],
-                soloOk: true,
-                budgetYen: "",
-                hours: "6:30〜17:00（季節により変動）",
-                blurb: "世界遺産の社。糺の森を抜けて本殿へ。出町柳の顔になる名所。",
-                detail: "駅から北東へ。デルタを経由すると道がわかりやすい。",
-                walkMinutes: 12,
-                secretWorthy: false,
-                majorWorthy: true,
-                lat: 35.0387,
-                lng: 135.7727
-            )
-            base = Station(
-                id: base.id, name: base.name, nameReading: base.nameReading,
-                line: base.line, prefecture: base.prefecture, region: base.region,
-                mood: base.mood, radiiKm: base.radiiKm, stationIntro: base.stationIntro,
-                areaAbout: base.areaAbout, walkGuide: base.walkGuide,
-                historyNotes: base.historyNotes, sightseeingNotes: base.sightseeingNotes,
-                bikeRental: base.bikeRental, tourTitle: base.tourTitle,
-                catchCopy: base.catchCopy, emptyCopy: base.emptyCopy,
-                lat: base.lat, lng: base.lng, spots: base.spots + [shrine]
-            )
-        }
+        var base = sealDemachiMustFaces(station)
 
         let majors = base.spots.filter(\.majorWorthy)
-        let landmarks = (majors.filter { $0.guide == .sight || isLandmarkName($0.name) }
-            + base.spots.filter { $0.guide == .sight || isLandmarkName($0.name) })
+        let landmarks = (majors.filter {
+            $0.guide == .sight || $0.guide == .rest || isLandmarkName($0.name)
+        }
+            + base.spots.filter {
+                $0.guide == .sight || $0.guide == .rest || isLandmarkName($0.name)
+            })
             .reduce(into: [Spot]()) { acc, s in
                 if !acc.contains(where: { $0.id == s.id }) { acc.append(s) }
             }
             .sorted { landmarkFameScore($0) > landmarkFameScore($1) }
         let foods = base.spots.filter { isFoodGuide($0.guide) }
-        let iconic = base.spots.first(where: { $0.name.contains("ふたば") })
-            ?? foods.first(where: isIconicShop)
-            ?? majors.first(where: { isFoodGuide($0.guide) })
+            .sorted { landmarkFameScore($0) > landmarkFameScore($1) }
+        let iconicFoods: [Spot] = {
+            var list: [Spot] = []
+            if let futaba = base.spots.first(where: { $0.name.contains("ふたば") }) {
+                list.append(futaba)
+            }
+            for s in foods where list.count < MajorFaces.foodTarget {
+                if isGenericNeighborhoodCafe(s) { continue }
+                if list.contains(where: { $0.id == s.id }) { continue }
+                if isIconicShop(s) || isEdibleOmiyage(s) || s.majorWorthy {
+                    list.append(s)
+                }
+            }
+            for s in foods where list.count < MajorFaces.foodTarget {
+                if isGenericNeighborhoodCafe(s) { continue }
+                if !list.contains(where: { $0.id == s.id }) { list.append(s) }
+            }
+            return list
+        }()
 
-        // 有名度で名所2 + 名物1（駅固有の固定リストではなくスコアで土地の顔を決める）
+        // 出町柳の名所は「鴨川デルタ＋下鴨」を先に（城跡・参道で埋めない）
         var keep: [Spot] = []
-        for s in landmarks where keep.count < 2 {
+        if base.name.contains("出町柳") {
+            if let delta = landmarks.first(where: { $0.name.contains("デルタ") || $0.name.contains("三角州") }) {
+                keep.append(delta)
+            }
+            if let shrine = landmarks.first(where: {
+                $0.name.contains("下鴨") || $0.name.contains("賀茂御祖")
+            }) {
+                if !keep.contains(where: { $0.id == shrine.id }) { keep.append(shrine) }
+            }
+        }
+        for s in landmarks where keep.count < MajorFaces.sightTarget {
+            if s.name.contains("幸神社") || isGenericNeighborhoodCafe(s) { continue }
+            if s.name.contains("城跡") || s.name.contains("復元") || s.name.contains("参道") || s.name.contains("楼門") {
+                continue
+            }
+            if !keep.contains(where: { $0.id == s.id }) { keep.append(s) }
+        }
+        // 枝葉でも枠が空いていれば名所を足す
+        for s in landmarks where keep.count < MajorFaces.sightTarget {
             if s.name.contains("幸神社") || isGenericNeighborhoodCafe(s) { continue }
             if !keep.contains(where: { $0.id == s.id }) { keep.append(s) }
         }
-        if let iconic, keep.count < 3, !isGenericNeighborhoodCafe(iconic) {
-            keep.append(iconic)
+        for food in iconicFoods where keep.count < MajorFaces.total {
+            if !keep.contains(where: { $0.id == food.id }) { keep.append(food) }
         }
-        for s in landmarks where keep.count < 3 {
+        for s in landmarks where keep.count < MajorFaces.total {
             if s.name.contains("幸神社") || isGenericNeighborhoodCafe(s) { continue }
             if !keep.contains(where: { $0.id == s.id }) { keep.append(s) }
         }
-        return withMajorFlags(base, ids: Set(keep.prefix(3).map(\.id)))
+        return withMajorFlags(base, ids: Set(keep.prefix(MajorFaces.total).map(\.id)))
+    }
+
+    /// 出町柳で初めて必ず行く顔（鴨川デルタ・下鴨）をスポットに確保する。
+    private static func sealDemachiMustFaces(_ station: Station) -> Station {
+        guard station.name.contains("出町柳") else { return station }
+        var spots = station.spots
+        if !spots.contains(where: { $0.name.contains("デルタ") || $0.name.contains("三角州") }) {
+            spots.append(
+                Spot(
+                    id: "lock-demachi-delta",
+                    name: "鴨川デルタ",
+                    genre: "history",
+                    guide: .rest,
+                    mealTier: .casual,
+                    mealTimes: [.lunch],
+                    soloOk: true,
+                    budgetYen: "—",
+                    hours: nil,
+                    blurb: SpotCopy.compose(name: "鴨川デルタ", guide: .rest, address: "鴨川と高野川の合流"),
+                    detail: "鴨川と高野川の合流（鴨川デルタ）",
+                    walkMinutes: 3,
+                    secretWorthy: false,
+                    majorWorthy: true,
+                    lat: LandmarkRegistry.demachiDelta.latitude,
+                    lng: LandmarkRegistry.demachiDelta.longitude
+                )
+            )
+        } else {
+            spots = spots.map { spot in
+                guard spot.name.contains("デルタ") || spot.name.contains("三角州") else { return spot }
+                let named = spot.name.contains("鴨川") ? spot.name : "鴨川デルタ"
+                return Spot(
+                    id: spot.id, name: named, genre: spot.genre,
+                    guide: spot.guide == .tip ? .rest : spot.guide,
+                    mealTier: spot.mealTier, mealTimes: spot.mealTimes, soloOk: spot.soloOk,
+                    budgetYen: spot.budgetYen, hours: spot.hours,
+                    blurb: spot.blurb.contains("観光の目印")
+                        ? SpotCopy.compose(name: named, guide: .rest, address: spot.detail)
+                        : spot.blurb,
+                    detail: spot.detail, walkMinutes: min(spot.walkMinutes, 5),
+                    secretWorthy: false, majorWorthy: true,
+                    lat: LandmarkRegistry.demachiDelta.latitude,
+                    lng: LandmarkRegistry.demachiDelta.longitude
+                )
+            }
+        }
+        if !spots.contains(where: { $0.name.contains("下鴨") || $0.name.contains("賀茂御祖") }) {
+            spots.append(
+                Spot(
+                    id: "ai-major-shimogamo",
+                    name: "下鴨神社（賀茂御祖神社）",
+                    genre: "history",
+                    guide: .sight,
+                    mealTier: .casual,
+                    mealTimes: [.lunch],
+                    soloOk: true,
+                    budgetYen: "—",
+                    hours: "6:30〜17:00（季節により変動）",
+                    blurb: "世界遺産の社。糺の森を抜けて本殿へ。出町柳の顔になる名所。",
+                    detail: "駅から北東へ。デルタを経由すると道がわかりやすい。",
+                    walkMinutes: 12,
+                    secretWorthy: false,
+                    majorWorthy: true,
+                    lat: 35.0387,
+                    lng: 135.7727
+                )
+            )
+        }
+        return Station(
+            id: station.id, name: station.name, nameReading: station.nameReading,
+            line: station.line, prefecture: station.prefecture, region: station.region,
+            mood: station.mood, radiiKm: station.radiiKm, stationIntro: station.stationIntro,
+            areaAbout: station.areaAbout, walkGuide: station.walkGuide,
+            historyNotes: station.historyNotes, sightseeingNotes: station.sightseeingNotes,
+            bikeRental: station.bikeRental, tourTitle: station.tourTitle,
+            catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
+            lat: station.lat, lng: station.lng, spots: spots
+        )
     }
 
     private static func withMajorFlags(_ station: Station, ids: Set<String>) -> Station {
@@ -714,7 +854,7 @@ enum CourseBuilder {
 
         var majors = station.spots.filter(\.majorWorthy)
         if majors.contains(where: { $0.id == must.id }) {
-            if majors.count <= 3 { return station }
+            if majors.count <= MajorFaces.total { return station }
         }
 
         if let drop = majors.first(where: {
@@ -726,7 +866,7 @@ enum CourseBuilder {
             $0.guide == .souvenir && $0.id != must.id && !isIconicShop($0)
         }) {
             majors.removeAll { $0.id == drop.id }
-        } else if majors.count >= 3, !majors.contains(where: { $0.id == must.id }) {
+        } else if majors.count >= MajorFaces.total, !majors.contains(where: { $0.id == must.id }) {
             if let far = majors.filter({ !isLandmarkName($0.name) }).max(by: { $0.walkMinutes < $1.walkMinutes }) {
                 majors.removeAll { $0.id == far.id }
             }
@@ -735,12 +875,12 @@ enum CourseBuilder {
             majors.append(must)
         }
         var ids = Set(majors.map(\.id))
-        // landmark を優先して3件に
+        // landmark を優先して合計5件に
         var keep: [String] = [must.id]
-        for m in majors where isLandmarkName(m.name) && keep.count < 3 {
+        for m in majors where isLandmarkName(m.name) && keep.count < MajorFaces.total {
             if !keep.contains(m.id) { keep.append(m.id) }
         }
-        for m in majors.sorted(by: { $0.walkMinutes < $1.walkMinutes }) where keep.count < 3 {
+        for m in majors.sorted(by: { $0.walkMinutes < $1.walkMinutes }) where keep.count < MajorFaces.total {
             if !keep.contains(m.id) { keep.append(m.id) }
         }
         ids = Set(keep)
@@ -751,7 +891,7 @@ enum CourseBuilder {
     static func ensureLocalMajors(_ station: Station) -> Station {
         let sealed = balanceMajorsSightseeing(sealIconicMajors(station))
         let marked = sealed.spots.filter(\.majorWorthy)
-        if marked.count >= 3 { return sealed }
+        if marked.count >= MajorFaces.total { return sealed }
         let scored: [(Spot, Double)] = sealed.spots.map { spot in
             var score = 0.0
             if spot.majorWorthy { score += 100 }
@@ -782,12 +922,12 @@ enum CourseBuilder {
         })?.0 ?? scored.first(where: { $0.0.guide == .meal })?.0 {
             if !picked.contains(where: { $0.id == shop.id }) { picked.append(shop) }
         }
-        for row in scored where picked.count < 3 {
+        for row in scored where picked.count < MajorFaces.total {
             if !picked.contains(where: { $0.id == row.0.id }) {
                 picked.append(row.0)
             }
         }
-        return balanceMajorsSightseeing(withMajorFlags(sealed, ids: Set(picked.prefix(3).map(\.id))))
+        return balanceMajorsSightseeing(withMajorFlags(sealed, ids: Set(picked.prefix(MajorFaces.total).map(\.id))))
     }
 
     static func courses(
@@ -799,16 +939,21 @@ enum CourseBuilder {
         let prepared = snapLandmarkPins(
             BikeRentalSeal.ensure(ensureLocalMajors(normalizeEdibleSouvenirs(station)))
         )
-        let walkPool = prepared.spots(for: stay)
+        // 土地紹介で触れた場所だけをまわり方の正本にする
+        let introduced = StationLore.introducedVisitSpots(in: prepared)
+        let introducedIds = Set(introduced.map(\.id))
+        let walkPool = prepared.spots(for: stay).filter { introducedIds.contains($0.id) }
+        let fallbackPool = prepared.spots(for: stay)
+        let landPool = walkPool.count >= 2 ? walkPool : (introduced.isEmpty ? fallbackPool : introduced)
         // コース用は朝でもランチを残す。案内タブの全件表示とは別。閉店店は入れない。
-        let pool = walkPool.filter {
+        let pool = landPool.filter {
             mealFitsForCourse($0, dayPart: dayPart)
                 && (!isFoodGuide($0.guide) || HoursOpen.isLikelyOpen($0, dayPart: dayPart))
         }
-        let openWalk = walkPool.filter {
+        let openWalk = landPool.filter {
             !isFoodGuide($0.guide) || HoursOpen.isLikelyOpen($0, dayPart: dayPart)
         }
-        let source = pool.count >= 3 ? pool : openWalk
+        let source = pool.count >= 2 ? pool : openWalk
         let budget = stay.budgetMinutes
         let startHour = dayPart.defaultClockHour
 
