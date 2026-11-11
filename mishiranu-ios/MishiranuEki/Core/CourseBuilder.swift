@@ -429,8 +429,15 @@ enum CourseBuilder {
         return score
     }
 
+    /// 出町ふたばそのもの。注釈の「ふたば以外」は含めない。
+    private static func isFutabaShop(_ name: String) -> Bool {
+        !LandmarkRegistry.isEditorialName(name)
+            && LandmarkRegistry.placeTitle(name).contains("ふたば")
+    }
+
     /// 手土産になる名物菓子（お土産タブ／定番名物枠）
     static func isEdibleOmiyage(_ spot: Spot) -> Bool {
+        if LandmarkRegistry.isEditorialName(spot.name) { return false }
         // 店名だけで判定する。blurb の「銘菓」「饅頭」まで拾うと定食屋が土産に化け、ご飯が3件に減る
         let n = spot.name
         return n.contains("ふたば") || n.contains("みたらし") || n.contains("だんご")
@@ -443,8 +450,9 @@ enum CourseBuilder {
     }
 
     private static func isIconicShop(_ spot: Spot) -> Bool {
+        if LandmarkRegistry.isEditorialName(spot.name) { return false }
         // 土地を代表する一軒（出町柳ならふたば）。みたらしは土産リストには出すが定番枠の主ではない
-        let blob = spot.name + spot.blurb
+        let blob = LandmarkRegistry.placeTitle(spot.name) + spot.blurb
         if blob.contains("ふたば") || blob.contains("最中") || blob.contains("羊羹")
             || blob.contains("赤福") || blob.contains("もみじ饅頭") {
             return true
@@ -472,6 +480,7 @@ enum CourseBuilder {
     /// ロック以外で駅直上に置かれた AI 仮座標は地図に出さない（Apple refine 待ち）。
     static func snapLandmarkPins(_ station: Station) -> Station {
         let faces = FirstVisitFaces.filterSpots(station.spots, stationName: station.name)
+            .filter { !LandmarkRegistry.isEditorialName($0.name) }
         let scrubbed = faces.filter { spot in
             if LandmarkRegistry.isLocked(spot, stationName: station.name) { return true }
             let km = Geo.haversineKm(
@@ -540,7 +549,7 @@ enum CourseBuilder {
         spots = MealStapleCatcher.keepMajorMealsOnly(spots, stationName: station.name)
         // 出町柳: ふたば・みたらしが無ければ土産として足す
         if station.name.contains("出町柳") {
-            if !spots.contains(where: { $0.name.contains("ふたば") }) {
+            if !spots.contains(where: { isFutabaShop($0.name) }) {
                 spots.append(
                     Spot(
                         id: "ai-major-futaba",
@@ -690,7 +699,7 @@ enum CourseBuilder {
             .sorted { landmarkFameScore($0) > landmarkFameScore($1) }
         let iconicFoods: [Spot] = {
             var list: [Spot] = []
-            if let futaba = base.spots.first(where: { $0.name.contains("ふたば") }) {
+            if let futaba = base.spots.first(where: { isFutabaShop($0.name) }) {
                 list.append(futaba)
             }
             for s in foods where list.count < MajorFaces.foodTarget {
@@ -847,7 +856,7 @@ enum CourseBuilder {
     static func sealIconicMajors(_ station: Station) -> Station {
         var base = station
         if station.name.contains("出町柳"),
-           !station.spots.contains(where: { $0.name.contains("ふたば") }) {
+           !station.spots.contains(where: { isFutabaShop($0.name) }) {
             let futaba = Spot(
                 id: "ai-major-futaba",
                 name: "出町ふたば",
@@ -881,7 +890,7 @@ enum CourseBuilder {
 
         let shops = base.spots.filter { $0.guide == .meal || $0.guide == .souvenir }
         let demachiFutaba = base.name.contains("出町柳")
-            ? base.spots.first(where: { $0.name.contains("ふたば") })
+            ? base.spots.first(where: { isFutabaShop($0.name) })
             : nil
         let iconic = demachiFutaba
             ?? shops.first(where: isIconicShop)
@@ -946,7 +955,10 @@ enum CourseBuilder {
             case .tip: score += 6
             }
             if isLandmarkName(spot.name) { score += 28 }
-            if spot.name.contains("ふたば") { score += 40 }
+            if LandmarkRegistry.placeTitle(spot.name).contains("ふたば"),
+               !LandmarkRegistry.isEditorialName(spot.name) {
+                score += 40
+            }
             score += max(0, 22 - Double(spot.walkMinutes))
             if spot.secretWorthy { score -= 35 }
             return (spot, score)
@@ -960,7 +972,7 @@ enum CourseBuilder {
             picked.append(sight)
         }
         if let shop = scored.first(where: {
-            ($0.0.guide == .meal || $0.0.guide == .souvenir) && (isIconicShop($0.0) || $0.0.name.contains("ふたば"))
+            ($0.0.guide == .meal || $0.0.guide == .souvenir) && (isIconicShop($0.0) || isFutabaShop($0.0.name))
         })?.0 ?? scored.first(where: { $0.0.guide == .meal })?.0 {
             if !picked.contains(where: { $0.id == shop.id }) { picked.append(shop) }
         }
@@ -1304,8 +1316,10 @@ enum CourseBuilder {
         stay: StayOption,
         startHour: Int
     ) -> WalkCourse? {
-        guard !spots.isEmpty else { return nil }
-        let provisional = spots.map {
+        // 最後の関所: 出町の固有名がコースに残っていたら落とす
+        let clean = DemachiTemplate.filterWalkSpots(spots, station: station)
+        guard !clean.isEmpty else { return nil }
+        let provisional = clean.map {
             CourseStop(
                 spot: $0,
                 walkMinutes: $0.walkMinutes,

@@ -161,6 +161,10 @@ export function IconTrain(props: IconProps) {
   return <EjPict id="train" {...props} />;
 }
 
+export function IconAtm(props: IconProps) {
+  return <EjPict id="atm" {...props} />;
+}
+
 export function IconArrival(props: IconProps) {
   return <EjPict id="arrival" {...props} />;
 }

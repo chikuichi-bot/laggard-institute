@@ -29,12 +29,8 @@ function readingLines(text?: string | null): string[] {
 function placeScript(station: StationSeed, tourTitle: string): string {
   const parts: string[] = [`${station.name}の、土地案内です。`];
   if (station.stationIntro) parts.push(station.stationIntro);
-  if (station.walkGuide) {
-    parts.push("歩き方の目安。");
-    parts.push(station.walkGuide);
-  }
   if (station.areaAbout) {
-    parts.push("このエリアのこと（いまと歴史）。");
+    parts.push("このエリアのこと。");
     parts.push(station.areaAbout);
   }
   for (const note of station.historyNotes ?? []) {
@@ -47,6 +43,10 @@ function placeScript(station: StationSeed, tourTitle: string): string {
       parts.push(note.title);
       parts.push(note.body);
     }
+  }
+  if (station.walkGuide) {
+    parts.push("歩き方の目安。");
+    parts.push(station.walkGuide);
   }
   if (parts.length === 1) parts.push("この駅の土地メモは、まだ少なめです。");
   return parts.filter(Boolean).join("\n\n");
@@ -130,9 +130,9 @@ export function PlaceBoard({ station, tourTitle }: Props) {
           {(
             [
               ["place-intro", "01", indexStationLabel, hasIntro],
-              ["place-walk", "02", "歩き方", hasWalk],
-              ["place-history", "03", "いまと歴史", hasHistory],
-              ["place-sight", "04", "観光", hasSight],
+              ["place-history", "02", "このエリア", hasHistory],
+              ["place-sight", "03", "観光案内", hasSight],
+              ["place-walk", "04", "歩き方", hasWalk],
             ] as const
           ).map(([id, num, label, on]) => (
             <button
@@ -165,28 +165,12 @@ export function PlaceBoard({ station, tourTitle }: Props) {
           </section>
         ) : null}
 
-        {hasWalk ? (
-          <section
-            id="place-walk"
-            className="mishiranu-place-panel mishiranu-place-panel--moss"
-          >
-            <div className="mishiranu-place-panel-head">
-              <span>02</span>
-              <IconWalk />
-              <h3>歩き方の目安</h3>
-            </div>
-            {walk.map((line) => (
-              <p key={line}>{line}</p>
-            ))}
-          </section>
-        ) : null}
-
         {hasHistory ? (
           <section id="place-history" className="mishiranu-place-panel">
             <div className="mishiranu-place-panel-head">
-              <span>03</span>
+              <span>02</span>
               <IconHistory />
-              <h3>このエリアのこと（いまと歴史）</h3>
+              <h3>このエリアのこと</h3>
             </div>
             {area.map((line) => (
               <p key={line}>{line}</p>
@@ -210,7 +194,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
         {hasSight ? (
           <section id="place-sight" className="mishiranu-place-panel">
             <div className="mishiranu-place-panel-head">
-              <span>04</span>
+              <span>03</span>
               <IconBinoculars />
               <h3>観光案内メモ</h3>
             </div>
@@ -225,6 +209,22 @@ export function PlaceBoard({ station, tourTitle }: Props) {
                 </li>
               ))}
             </ol>
+          </section>
+        ) : null}
+
+        {hasWalk ? (
+          <section
+            id="place-walk"
+            className="mishiranu-place-panel mishiranu-place-panel--moss"
+          >
+            <div className="mishiranu-place-panel-head">
+              <span>04</span>
+              <IconWalk />
+              <h3>歩き方の目安</h3>
+            </div>
+            {walk.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
           </section>
         ) : null}
 

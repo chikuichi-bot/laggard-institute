@@ -89,7 +89,7 @@ export function bikePlacesByKind(
 export const BIKE_RENTAL_UNKNOWN: BikeRentalInfo = {
   available: false,
   summary:
-    "この駅周辺のレンタサイクルは、まだ編集確認中です。現地の観光案内所や駅掲示もあわせて見てください。",
+    "この駅で確認できたレンタサイクルは、いまのところありません。観光案内所や駅掲示も見てください。",
 };
 
 export type StationSeed = {
@@ -144,7 +144,35 @@ export type StationSeed = {
 };
 
 export function bikeRentalFor(station: StationSeed): BikeRentalInfo {
-  return station.bikeRental ?? BIKE_RENTAL_UNKNOWN;
+  const raw = station.bikeRental;
+  if (!raw) return BIKE_RENTAL_UNKNOWN;
+  const places = (raw.places ?? []).filter((p) => {
+    if (!p.name) return false;
+    if (
+      /^(駅前のレンタ|周辺のレンタ|レンタサイクル店|貸自転車|シェアサイクル|レンタサイクル)$/.test(
+        p.name,
+      )
+    ) {
+      return false;
+    }
+    if (typeof p.walkMinutes === "number" && p.walkMinutes > 8) return false;
+    if (!/出町柳/.test(station.name) && /出町柳|京阪出町柳/.test(p.name)) {
+      return false;
+    }
+    return true;
+  });
+  if (places.length === 0) {
+    return {
+      available: false,
+      summary:
+        "この駅で確認できたレンタサイクルは、いまのところありません。観光案内所や駅掲示も見てください。",
+    };
+  }
+  return {
+    available: true,
+    summary: raw.summary,
+    places,
+  };
 }
 
 export const GENRE_LABEL: Record<SpotGenre, string> = {

@@ -42,7 +42,11 @@ enum StationAPIClient {
         return URL(string: "https://mishiranu-eki.apps.grok.bot")!
     }
 
-    static func lookupStation(name: String) async throws -> Station {
+    /// - Parameter userAi: 買い切り BYOK のときだけ渡す。ホストの Gemini は使わない。
+    static func lookupStation(
+        name: String,
+        userAi: BillingStore.UserAiPayload? = nil
+    ) async throws -> Station {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw StationAPIError.emptyName }
 
@@ -51,7 +55,17 @@ enum StationAPIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 120
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["name": trimmed])
+        var payload: [String: Any] = ["name": trimmed]
+        if let userAi {
+            var ai: [String: Any] = [
+                "provider": userAi.provider,
+                "apiKey": userAi.apiKey,
+            ]
+            if let baseUrl = userAi.baseUrl { ai["baseUrl"] = baseUrl }
+            if let model = userAi.model { ai["model"] = model }
+            payload["userAi"] = ai
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)

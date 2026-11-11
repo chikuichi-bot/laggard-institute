@@ -1,0 +1,33 @@
+.da10-fig .bank--heavy {
+  stroke-width: 2.1;
+}
+
+.da10-fig .bank--light {
+  stroke-width: 0.85;
+  stroke: color-mix(in srgb, var(--ink) 28%, transparent);
+}
+
+.da10-fig .bank--twin {
+  stroke-width: 0.95;
+  stroke: color-mix(in srgb, var(--ink) 36%, transparent);
+}
+
+.da10-fig .hatch--dense {
+  stroke-width: 0.45;
+  stroke: color-mix(in srgb, var(--river) 42%, transparent);
+}
+
+.da10-fig .hatch--sparse {
+  stroke-width: 0.7;
+  stroke: color-mix(in srgb, var(--river) 30%, transparent);
+}
+
+.da10-fig .hatch--cross {
+  stroke-width: 0.5;
+  stroke: color-mix(in srgb, var(--river) 32%, transparent);
+}
+
+.da10-fig .hatch--soft {
+  stroke: color-mix(in srgb, var(--mist) 55%, transparent);
+  stroke-width: 0.5;
+}

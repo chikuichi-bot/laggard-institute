@@ -23,17 +23,13 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         if let intro = station.stationIntro, !intro.isEmpty {
             parts.append(intro)
         }
-        if let walk = station.walkGuide, !walk.isEmpty {
-            parts.append("歩き方の目安。")
-            parts.append(walk)
-        }
         if station.mood == .empty, let empty = station.emptyCopy {
             parts.append(empty.headline)
             parts.append(empty.body)
         }
         let area = paragraphs(station.areaAbout)
         if !area.isEmpty || !station.historyNotes.isEmpty {
-            parts.append("このエリアのこと（いまと歴史）。")
+            parts.append("このエリアのこと。")
             parts.append(contentsOf: area)
             for note in station.historyNotes {
                 parts.append(note.title)
@@ -46,6 +42,10 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
                 parts.append(note.title)
                 parts.append(note.body)
             }
+        }
+        if let walk = station.walkGuide, !walk.isEmpty {
+            parts.append("歩き方の目安。")
+            parts.append(walk)
         }
         if parts.count == 1 {
             parts.append("この駅の土地メモは、まだ少なめです。")

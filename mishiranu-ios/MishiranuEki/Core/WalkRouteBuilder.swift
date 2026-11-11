@@ -25,7 +25,13 @@ enum WalkRouteBuilder {
                 segment = await walkingSegment(from: a, to: b, preferAlternates: false)
             }
 
-            if let segment, segment.count >= 2 {
+            if var segment, segment.count >= 2 {
+                if let first = segment.first, !near(first, a, meters: 18) {
+                    segment.insert(a, at: 0)
+                }
+                if let last = segment.last, !near(last, b, meters: 18) {
+                    segment.append(b)
+                }
                 if path.isEmpty {
                     path.append(contentsOf: segment)
                 } else {

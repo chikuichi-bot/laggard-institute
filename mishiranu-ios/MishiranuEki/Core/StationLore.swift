@@ -195,8 +195,14 @@ enum StationLore {
         // 1) 文章から抜き出した場所名 → 既存スポット or シード
         for mention in LandMentionSeeder.extractMentions(from: corpus) {
             if PlaceNoise.isNoise(mention.phrase) { continue }
+            if DemachiTemplate.isForeignDemachiPlace(mention.phrase, stationName: sealed.name) {
+                continue
+            }
             guard let spot = resolveSpot(mention.phrase, in: sealed.spots, claimed: &claimed)
             else { continue }
+            if DemachiTemplate.isForeignDemachiPlace(spot.name, stationName: sealed.name) {
+                continue
+            }
             ranked.append((mention.offset, withLandVoice(spot, corpus: corpus)))
         }
 

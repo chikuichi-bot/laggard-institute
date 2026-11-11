@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// 見た目の方向。設定で A / C を選べる。
+/// 見た目の方向。設定で選べる。既定はトップと同じ文庫の紙。
 enum AppSkin: String, CaseIterable, Identifiable, Hashable {
+    case ma
     case board
     case topo
 
@@ -9,6 +10,7 @@ enum AppSkin: String, CaseIterable, Identifiable, Hashable {
 
     var label: String {
         switch self {
+        case .ma: return "文庫の紙"
         case .board: return "ホームの時刻表"
         case .topo: return "ポケット地形図"
         }
@@ -16,6 +18,7 @@ enum AppSkin: String, CaseIterable, Identifiable, Hashable {
 
     var codeLabel: String {
         switch self {
+        case .ma: return "本"
         case .board: return "A"
         case .topo: return "C"
         }
@@ -23,6 +26,7 @@ enum AppSkin: String, CaseIterable, Identifiable, Hashable {
 
     var blurb: String {
         switch self {
+        case .ma: return "トップと同じ余白。小説の紙。"
         case .board: return "暗い電光掲示。到着の情報板。"
         case .topo: return "折り畳み地図。歩くための帳面。"
         }
@@ -30,24 +34,35 @@ enum AppSkin: String, CaseIterable, Identifiable, Hashable {
 
     var preferredColorScheme: ColorScheme {
         switch self {
+        case .ma, .topo: return .light
         case .board: return .dark
-        case .topo: return .light
         }
     }
 
     private static let storageKey = "mishiranu.skin"
+    private static let pickedKey = "mishiranu.skin.picked"
 
     static func load() -> AppSkin {
-        if let raw = UserDefaults.standard.string(forKey: storageKey),
+        let defaults = UserDefaults.standard
+        let picked = defaults.bool(forKey: pickedKey)
+        if let raw = defaults.string(forKey: storageKey),
            let skin = AppSkin(rawValue: raw)
         {
+            // 旧既定の board は、トップ（文庫の余白）に寄せる
+            if skin == .board, !picked {
+                save(.ma, markPicked: false)
+                return .ma
+            }
             return skin
         }
-        return .board
+        return .ma
     }
 
-    static func save(_ skin: AppSkin) {
+    static func save(_ skin: AppSkin, markPicked: Bool = true) {
         UserDefaults.standard.set(skin.rawValue, forKey: storageKey)
+        if markPicked {
+            UserDefaults.standard.set(true, forKey: pickedKey)
+        }
     }
 }
 
@@ -82,6 +97,22 @@ struct SkinTokens {
 
     static func tokens(for skin: AppSkin) -> SkinTokens {
         switch skin {
+        case .ma:
+            return SkinTokens(
+                ink: Color(hex: 0x2a241c),
+                body: Color(hex: 0x3d362c),
+                fog: Color(hex: 0x5c5348),
+                mist: Color(hex: 0x8a7d6b),
+                paper: Color(hex: 0xf8f5ee),
+                canvas: Color(hex: 0xf8f5ee),
+                warm: Color(hex: 0x2a241c),
+                warmDeep: Color(hex: 0x1a1612),
+                river: Color(hex: 0x6b7c8a),
+                moss: Color(hex: 0x5f6b58),
+                taupe: Color(hex: 0xc9c0b0),
+                gold: Color(hex: 0x8a7d6b),
+                line: Color(hex: 0xddd4c4)
+            )
         case .board:
             return SkinTokens(
                 ink: Color(hex: 0xe8edf5),

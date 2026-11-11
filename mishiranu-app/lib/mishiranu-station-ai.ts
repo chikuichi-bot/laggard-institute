@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import type {
   BikeRentalInfo,
   GuideKind,
@@ -13,7 +14,11 @@ import { fuzzLatLngForExternal } from "@/lib/mishiranu-geo";
 import { beginPaidAiCall } from "@/lib/mishiranu-rate-limit";
 import landmarkLocks from "@/data/landmark-locks.json";
 import { withAreaDepth } from "@/lib/mishiranu-area-depth";
-import { sealMapCoordinates } from "@/lib/mishiranu-map-trust";
+import {
+  isEditorialPlaceName,
+  placeTitle,
+  sealMapCoordinates,
+} from "@/lib/mishiranu-map-trust";
 import {
   filterFirstVisitSpots,
   isGuidebookWorship,
@@ -35,13 +40,18 @@ import {
   refineLandProse,
 } from "@/lib/mishiranu-land-prose";
 import { ensureLandMentions } from "@/lib/mishiranu-lore";
+import type { UserAiConfig } from "@/lib/mishiranu-billing";
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
 
-/** 土地の顔（majorWorthy）。名所・景色と名物店の合計。 */
+/** 買い切り BYOK の実行時設定（同時リクエストでも混線しない） */
+const byokRuntime = new AsyncLocalStorage<UserAiConfig>();
+
+/** 土地の顔（majorWorthy）。名所優先。名物店は確実なときだけ足す。 */
 const MAJOR_FACE_TOTAL = 5;
 const MAJOR_SIGHT_TARGET = 3;
+/** 名物店の major は最大この数。0件でもよい（信頼優先）。 */
 const MAJOR_FOOD_TARGET = 2;
 
 const REGION_SET = new Set<string>(REGIONS);
@@ -104,36 +114,61 @@ const STATION_SCHEMA_BLOCK = [
   '  "lat": 駅の緯度(number),',
   '  "lng": 駅の経度(number),',
   '  "stationIntro": "観光案内の導入。必ず5〜8文・合計220字以上。地名の由来・路線の接続・駅前の空気・いまの人の流れ・半日と1時間の両方の見え方を含める",',
-  '  "areaAbout": "界隈の説明。必ず空行区切りの2段落。各段落4文以上・合計360字以上。1段落目＝地形と由来、2段落目＝いまの姿（生活・通学・店の気配）。近くに大学・キャンパス・学生街があれば正式名称で必ず触れる",',
+  '  "areaAbout": "界隈の説明。必ず空行区切りの2段落。各段落4文以上・合計360字以上。各段落のなかで地形・由来といまの生活（通学・店の気配）を結び、段落を由来だけ／いまだけに分けない。近くに大学・キャンパス・学生街があれば正式名称で必ず触れる",',
   '  "walkGuide": "徒歩圏の回り方。必ず5〜7文・160字以上。出方・方角・時間があるとき／短いときの分岐。大学・キャンパスが近いならその方角も書く",',
   '  "tourTitle": "28字以内",',
   '  "catchCopy": "40字以内",',
   '  "emptyHeadline": "emptyのときだけ20字以内",',
   '  "emptyBody": "emptyのときだけ80字以内",',
-  '  "bikeRental": { "available": boolean, "summary": "2〜3文。地元店とアプリ型の両方に触れる", "places": [ { "kind": "local|app", "name": "実在サービス・店の正式名", "walkMinutes": 5, "note": "使い方1文" } ] },',
-  "- bikeRental.places の name は総称禁止（「駅前のレンタサイクル店」不可）。CLEW/クルー、HELLO CYCLING、えむじか など実在名。",
-  "- 例（出町柳）: CLEW（クルー）京阪出町柳駅前（app）、レンタサイクルえむじか 出町柳店（local）。",
-  '  "historyNotes": [{ "title": "短い見出し", "body": "土地メモ。各3〜5文・80字以上" }]（必ず6〜8件。歴史だけでなくいまの姿も。地名由来・産業/信仰・交通に加え、近くの大学・学校・学生街・いまの生活があれば正式名称で1件以上）,',
+  '  "bikeRental": { "available": boolean, "summary": "1〜2文", "places": [ { "kind": "local|app", "name": "その駅にある実在サービス・店の正式名", "walkMinutes": 5, "note": "使い方1文" } ] },',
+  "- bikeRental は入力駅の徒歩圏（目安8分以内）で実在確認できたものだけ。無ければ available:false・places:[]。推測で埋めない。",
+  "- places の name は総称禁止（「駅前のレンタサイクル店」不可）。他駅の店名・ポート名を混ぜない。",
+  "- 例（出町柳だけ）: CLEW（クルー）京阪出町柳駅前（app）、レンタサイクルえむじか 出町柳店（local）。出町柳以外にこの2つを書かない。",
+  '  "historyNotes": [{ "title": "短い見出し", "body": "土地メモ。各3〜5文・80字以上。各件で由来・地層といまの見え方を同じ本文で結ぶ" }]（必ず6〜8件。歴史件といま件を分けない。地名由来・産業/信仰・交通に加え、近くの大学・学校・学生街・いまの生活があれば正式名称で1件以上）,',
   '  "firstVisitFaces": [',
   '    { "role": "landform", "name": "正式名", "where": "位置", "why": "なぜ土地の骨格か1文", "present": "いまどう見えるか1文", "walkMinutes": 5, "lat": 0, "lng": 0 },',
   '    { "role": "landmark", "name": "正式名", "where": "位置", "why": "なぜ名所か1文", "present": "いまどう見えるか1文", "walkMinutes": 10, "lat": 0, "lng": 0 },',
   '    { "role": "town", "name": "正式名", "where": "位置", "why": "なぜ町場の顔か1文", "present": "いまどう見えるか1文", "walkMinutes": 5, "lat": 0, "lng": 0 }',
   "  ]（必須・ちょうど3件。出町柳雛形の役割どおり。ショートコースの正本）,",
-  '  "sightseeingNotes": [{ "title": "見出し", "body": "観光メモ。各2〜4文" }]（必ず6〜7件。先頭3件は firstVisitFaces と同名・同順。続けて実用メモを3〜4件: 短い滞在の回り方・食べる休む・季節や注意・駅からの帰り方。別邸・二番手の名所だけで埋めない）',
+  '  "sightseeingNotes": [{ "title": "見出し", "body": "観光メモ。各2〜4文" }]（必ず6〜7件。先頭3件は firstVisitFaces と同名・同順。続けて実用メモを3〜4件: 短い滞在の回り方・食べる休む・季節や注意・駅からの帰り方。別邸・二番手の名所だけで埋めない）,',
+  '  "spots": [',
+  "    {",
+  '      "name": "土地文に出た正式名称、または徒歩圏の実在店名",',
+  '      "genre": "history|gourmet|nature|odd",',
+  '      "guide": "meal|souvenir|sight|rest|tip",',
+  '      "mealTier": "casual|upscale（mealのみ）",',
+  '      "mealTimes": ["morning|lunch|dinner"]（mealのみ）,',
+  '      "soloOk": true|false（mealのみ）,',
+  '      "budgetYen": "例 〜¥1,200",',
+  '      "hours": "営業時間。屋外は終日（屋外）",',
+  '      "blurb": "3〜4文",',
+  '      "detail": "3〜4文",',
+  '      "walkMinutes": 1〜40,',
+  '      "lat": 緯度,',
+  '      "lng": 経度,',
+  '      "secretWorthy": boolean,',
+  '      "majorWorthy": boolean',
+  "    }",
+  "  ]",
   "}",
   "",
-  "制約（この段階は土地の文章だけ。spots 配列は出さない）:",
+  "制約（土地の文章と案内スポットを一度に返す）:",
   "- 日本の実在の鉄道駅でなければ { \"error\": \"not_a_station\", \"message\": \"理由\" } を返す。",
   "- 【出町柳雛形】役割の構成だけ借りる。固有名は出町柳のときだけ出町の名前。",
   "- firstVisitFaces 必須: landform / landmark / town を1件ずつ。本文にも同じ正式名称を書く。",
   "- 【固有名の取り違え禁止】入力駅が出町柳以外なら、鴨川デルタ・下鴨神社・枡形商店街・出町ふたば・同志社大学・京都大学を本文に入れない。",
   "- empty（本当に何も薄い駅）でも areaAbout と historyNotes は厚く書く。",
-  "- 歴史だけで終わらせない。いまの姿も書く。",
+  "- 歴史だけで終わらせない。いまの姿も、同じ段落・同じメモの中で結んで書く。",
   "- 駅の徒歩圏に大学があれば正式名称で触れる（遠い大学は寄せない）。",
   "- 出町柳の川名（必須）: 上流は賀茂川と高野川。合流点から南は鴨川。",
   "- いちばん重要: stationIntro / areaAbout / historyNotes を短くしない。",
   "- 禁止: 1文だけの areaAbout、2件以下の historyNotes、抽象語だけの紹介。",
-  "- spots は書かない（次の段階で土地文から起こす）。",
+  "- 【名所と店を分ける】名所・地形・町場（sight/tip と firstVisitFaces）は土地文の正式名称＋検索。meal/souvenir は別枠で、検索で実在を確認できた店だけ。",
+  "- spots の名所側: 土地文に出た正式名称を先に全部起こす（sight 中心）。件数は名所が足りていればよい。",
+  "- spots の店側: meal は 0〜4件、souvenir は 0〜3件。件数を埋めるための推測・総称・「駅前の食堂」は禁止。不確かなら 0件でよい。",
+  "- rest は景色の休みを優先。喫茶は検索で実在確認できたときだけ（無理に埋めない）。",
+  "- firstVisitFaces の3点は majorWorthy true。major は名所を優先（目安3）。名物店の major は検索で確実なときだけ最大2。合計5未満でも名所が確かならよい。",
+  "- meal/souvenir は駅から徒歩18分以内・正式店名のみ。lat/lng は本物。駅へ寄せない。閉店・別駅の店は出さない。",
 ].join("\n");
 
 const PLACES_FROM_LAND_SCHEMA = [
@@ -161,11 +196,10 @@ const PLACES_FROM_LAND_SCHEMA = [
   "}",
   "",
   "制約:",
-  "- 【最重要】spots の名所・地形・町場は、渡した土地の文章に登場する正式名称を先に全部起こす。",
-  "- 文章に無い名所を先にリストしない。食事・土産は文章の生活感に合う実在店を足してよい。",
-  "- spots は 14〜20件。meal 6〜8、souvenir 4〜6、sight 3以上、rest/tip 各2以上。",
-  "- firstVisitFaces の3点は majorWorthy true。名所3＋名物店2で major はちょうど5。",
-  "- meal/souvenir は駅から徒歩18分以内の実在店のみ。総称名禁止。",
+  "- 【最重要・名所】spots の名所・地形・町場は、渡した土地の文章に登場する正式名称を先に全部起こす。文章に無い名所を先にリストしない。",
+  "- 【最重要・店】meal/souvenir は Google検索で実在確認できた正式店名だけ。生活感に合わせて推測で埋めない。不確かなら 0件でよい。",
+  "- spots: 名所（sight 等）を厚く。meal 0〜4、souvenir 0〜3。rest/tip は無理に増やさない。",
+  "- firstVisitFaces の3点は majorWorthy true。major は名所優先。名物店 major は確実なときだけ。",
   "- 出町柳以外で鴨川デルタ・下鴨・枡形・ふたば等を出さない。",
   "- lat/lng は本物。駅へ寄せない。徒歩25分超は出さない。",
 ].join("\n");
@@ -174,9 +208,10 @@ function buildStationPrompt(rawName: string): string {
   const name = rawName.replace(/駅$/u, "").trim() || rawName.trim();
   return [
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
-    "Google検索の結果を優先し、実在する駅・名所だけを使ってください。",
+    "Google検索の結果を優先し、実在する駅・名所・店だけを使ってください。",
+    "【信頼】名所は土地文の正式名称から。店（meal/souvenir）は検索で確かめたものだけ。不確かな店は件数を埋めずに出さない。",
     "観光ガイドの煽りやランキング口調は禁止。Lagadoらしい静かで詩的な日本語。",
-    "【この段階】土地の文章だけを厚く書く。地図・案内の spots はまだ書かない。",
+    "【この段階】土地の文章と、地図・案内の spots（名所を厚く、店は確かなものだけ）を一度に返す。",
     "出力は JSON オブジェクトのみ（前後の説明文なし）。",
     "",
     DEMACHI_TEMPLATE_PROMPT,
@@ -233,7 +268,7 @@ function buildNearbyPrompt(lat: number, lng: number): string {
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
     "Google検索の結果を優先し、実在する駅・名所だけを使ってください。",
     "観光ガイドの煽りやランキング口調は禁止。Lagadoらしい静かで詩的な日本語。",
-    "【この段階】最寄り駅を特定し、土地の文章だけを厚く書く。spots は書かない。",
+    "【この段階】最寄り駅を特定し、土地の文章と案内 spots（名所・ご飯・土産・休む）を一度に返す。",
     "出力は JSON オブジェクトのみ（前後の説明文なし）。",
     "",
     DEMACHI_TEMPLATE_PROMPT,
@@ -319,6 +354,14 @@ function parseBike(raw: unknown): BikeRentalInfo | undefined {
       const p = row as Record<string, unknown>;
       const name = asString(p.name);
       if (!name) return null;
+      if (
+        /^(駅前のレンタ|周辺のレンタ|レンタサイクル店|貸自転車|シェアサイクル|レンタサイクル)/.test(
+          name,
+        ) &&
+        name.length < 14
+      ) {
+        return null;
+      }
       const kindRaw = asString(p.kind);
       const kind =
         kindRaw === "app" || kindRaw === "local"
@@ -330,14 +373,18 @@ function parseBike(raw: unknown): BikeRentalInfo | undefined {
         typeof p.walkMinutes === "number" && Number.isFinite(p.walkMinutes)
           ? Math.round(p.walkMinutes)
           : undefined;
+      if (typeof walk === "number" && walk > 8) return null;
       const note = asString(p.note) || undefined;
       return { name, kind, walkMinutes: walk, note };
     })
     .filter((p): p is NonNullable<typeof p> => !!p)
     .slice(0, 6);
+  const available = places.length > 0 && o.available === true;
   return {
-    available: o.available === true,
-    summary,
+    available,
+    summary: available
+      ? summary
+      : "この駅で確認できたレンタサイクルは、いまのところありません。",
     places: places.length > 0 ? places : undefined,
   };
 }
@@ -464,7 +511,7 @@ const GEMINI_GROUNDED_MS = 32_000;
 const GEMINI_EXPAND_MS = 28_000;
 
 function isNarrativeThin(station: StationSeed): boolean {
-  // spots は土地文のあとに起こすので、薄さ判定に入れない。
+  // 足りていれば追加呼び出ししない（以前より緩め＝スキップしやすい）。
   const intro = (station.stationIntro ?? "").length;
   const about = (station.areaAbout ?? "").length;
   const walk = (station.walkGuide ?? "").length;
@@ -472,12 +519,12 @@ function isNarrativeThin(station: StationSeed): boolean {
   const histChars = notes.reduce((n, h) => n + h.body.length, 0);
   const sight = station.sightseeingNotes ?? [];
   return (
-    intro < 240 ||
-    about < 380 ||
-    walk < 160 ||
-    notes.length < 6 ||
-    histChars < 560 ||
-    sight.length < 5
+    intro < 160 ||
+    about < 240 ||
+    walk < 100 ||
+    notes.length < 4 ||
+    histChars < 320 ||
+    sight.length < 3
   );
 }
 
@@ -627,14 +674,14 @@ function buildNarrativeExpandPrompt(station: StationSeed): string {
     "スキーマ:",
     "{",
     '  "stationIntro": "5〜8文・220字以上。いまの人の流れも含める",',
-    '  "areaAbout": "空行区切り2段落・合計360字以上。1段落目＝由来、2段落目＝いまの姿。大学があれば正式名称を出す",',
+    '  "areaAbout": "空行区切り2段落・合計360字以上。各段落で由来といまを結ぶ（段落分割で分けない）。大学があれば正式名称を出す",',
     '  "walkGuide": "5〜7文・160字以上。大学が近いなら正式名称と方角",',
     '  "bikeRentalSummary": "2〜3文",',
-    '  "historyNotes": [{ "title": "...", "body": "3〜5文" }]（6〜8件。歴史といまの半々くらい。必須の大学名は各1件）,',
+    '  "historyNotes": [{ "title": "...", "body": "3〜5文。各件で由来といまを結ぶ" }]（6〜8件。歴史件／いま件の分業禁止。必須の大学名は各1件）,',
     '  "sightseeingNotes": [{ "title": "...", "body": "2〜4文" }]（6〜7件。先頭は土地の顔3点、続きは実用メモ）',
     "}",
     "",
-    "短い一文で終わらせないこと。読者が歴史といまの姿の両方を知れる分量にする。必須の具体名は省略しない。",
+    "短い一文で終わらせないこと。読者が歴史といまの姿を一本の糸で知れる分量にする。必須の具体名は省略しない。",
   ].join("\n");
 }
 
@@ -643,10 +690,9 @@ function countGuide(station: StationSeed, guide: GuideKind): number {
 }
 
 function isShopThin(station: StationSeed): boolean {
-  // ご飯・土産は件数不足なら必ず補完。文言が短くても件数優先で足す。
+  // 信頼優先: 件数不足では薄扱いにしない。完全に0のときだけ任意補完の候補。
   return (
-    countGuide(station, "meal") < MIN_MEAL_SPOTS ||
-    countGuide(station, "souvenir") < MIN_SOUVENIR_SPOTS
+    countGuide(station, "meal") === 0 && countGuide(station, "souvenir") === 0
   );
 }
 
@@ -661,7 +707,7 @@ function buildShopExpandPrompt(station: StationSeed): string {
     .join("、");
   return [
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
-    "Google検索で実在を確認できる店だけを使い、ご飯屋とお土産屋を厚く補完してください。",
+    "Google検索で実在を確認できる店だけを使う。件数より確かさを優先する。",
     "観光ランキング口調は禁止。Lagadoらしい静かで具体的な日本語。",
     "出力は JSON のみ。",
     "",
@@ -692,14 +738,12 @@ function buildShopExpandPrompt(station: StationSeed): string {
     "}",
     "",
     "制約:",
-    `- いま meal ${countGuide(station, "meal")}件 / souvenir ${countGuide(station, "souvenir")}件。meal は合計少なくとも6件、souvenir は合計少なくとも4件になるまで追加する。`,
-    "- 可能なら meal 7〜8件・souvenir 5件まで足す。既存と同名は出さない。名物菓子は souvenir 側。",
-    "- meal は土地の定番めし優先: 地元パン屋・おにぎり・商店街の食堂・うどん・そば・定食。多目的カフェ・コワーキング・知る感じる系は足さない。",
-    "- 返す spots 配列には「追加する店だけ」を入れる（既存の再掲は不要）。",
-    "- meal / souvenir は駅から徒歩18分以内（約1.3km）だけ。遠い店・別エリアの店は入れない。座標を駅へ寄せない。",
-    "- ことばのはおと・今出川〜丸太町の鴨川沿いなど、堀川・御所寄りの店を出町柳に足さない。",
-    "- 閉店・確認できない店は出さない。",
-    "- blurb と detail は各3文以上。短い一行は禁止。",
+    `- いま meal ${countGuide(station, "meal")} / souvenir ${countGuide(station, "souvenir")}。検索で確実な店だけ追加（目安 meal 合計≤${PREFERRED_MEAL_SPOTS}、souvenir≤${PREFERRED_SOUVENIR_SPOTS}）。件数を埋めるための推測は禁止。見つからなければ spots: []。`,
+    "- 既存と同名は出さない。名物菓子は souvenir 側。",
+    "- meal は土地の定番めし優先: 地元パン屋・おにぎり・商店街の食堂・うどん・そば・定食。多目的カフェ・コワーキングは足さない。",
+    "- 返す spots は追加する店だけ。",
+    "- 徒歩18分以内のみ。遠い店・別エリア・閉店・確認できない店は出さない。座標を駅へ寄せない。",
+    "- blurb と detail は各3文以上。",
   ].join("\n");
 }
 
@@ -910,8 +954,25 @@ async function expandStationNarrative(
   };
 }
 
-async function callGeminiGenerate(
-  apiKey: string,
+function extractPromptTextFromGeminiBody(body: Record<string, unknown>): string {
+  const contents = body.contents;
+  if (!Array.isArray(contents)) return "";
+  const chunks: string[] = [];
+  for (const item of contents) {
+    if (!item || typeof item !== "object") continue;
+    const parts = (item as { parts?: Array<{ text?: string }> }).parts;
+    if (!Array.isArray(parts)) continue;
+    for (const part of parts) {
+      if (typeof part?.text === "string" && part.text.trim()) {
+        chunks.push(part.text);
+      }
+    }
+  }
+  return chunks.join("\n\n").trim();
+}
+
+async function callOpenAiCompatibleGenerate(
+  config: UserAiConfig,
   viewerSub: string,
   body: Record<string, unknown>,
   timeoutMs: number,
@@ -925,14 +986,114 @@ async function callGeminiGenerate(
     };
   }
 
+  const prompt = extractPromptTextFromGeminiBody(body);
+  if (!prompt) {
+    paid.release();
+    return {
+      ok: false,
+      error: "empty_response",
+      message: "案内の入力を組み立てられませんでした。もう一度どうぞ。",
+    };
+  }
+
+  const base = (config.baseUrl || "https://api.openai.com/v1").replace(
+    /\/$/,
+    "",
+  );
+  const model = config.model || "gpt-4o-mini";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const res = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.45,
+        max_tokens: 8192,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "あなたは日本の駅の徒歩圏案内の編集者です。出力は JSON オブジェクトのみ。前後に説明文を付けない。",
+          },
+          { role: "user", content: prompt },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      return {
+        ok: false,
+        error: "gemini_http",
+        message: `AI API への接続に失敗しました（${res.status}）。${detail.slice(0, 120)}`,
+      };
+    }
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const text = data.choices?.[0]?.message?.content?.trim() ?? "";
+    if (!text) {
+      return {
+        ok: false,
+        error: "empty_response",
+        message: "AI から案内が返りませんでした。もう一度どうぞ。",
+      };
+    }
+    return { ok: true, text };
+  } catch (err) {
+    const aborted =
+      err instanceof Error &&
+      (err.name === "AbortError" || /aborted/i.test(err.message));
+    return {
+      ok: false,
+      error: aborted ? "timeout" : "network",
+      message: aborted
+        ? "案内の生成が時間切れになりました。もう一度どうぞ。"
+        : "AI API への通信に失敗しました。もう一度どうぞ。",
+    };
+  } finally {
+    clearTimeout(timer);
+    paid.release();
+  }
+}
+
+async function callGeminiGenerate(
+  apiKey: string,
+  viewerSub: string,
+  body: Record<string, unknown>,
+  timeoutMs: number,
+): Promise<GeminiCallResult> {
+  const byok = byokRuntime.getStore();
+  if (byok?.provider === "openai") {
+    // OpenAI 互換には Google Search grounding が無いので、プロンプト本文だけで JSON を返す。
+    return callOpenAiCompatibleGenerate(byok, viewerSub, body, timeoutMs);
+  }
+
+  const key = byok?.provider === "gemini" ? byok.apiKey : apiKey;
+  const paid = beginPaidAiCall(viewerSub);
+  if (!paid.ok) {
+    return {
+      ok: false,
+      error: "gemini_http",
+      message: "いま混み合っています。少し待ってから、もう一度どうぞ。",
+    };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    // BYOK の Gemini でも Search は使える（ユーザー課金）。ホスト経路と同じ。
     const res = await fetch(GEMINI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
+        "x-goog-api-key": key,
       },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -1015,8 +1176,12 @@ function haversineKm(
   return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-const MIN_MEAL_SPOTS = 6;
-const MIN_SOUVENIR_SPOTS = 4;
+/** 信頼優先の目安（強制しない）。件数を埋める下限には使わない。 */
+const PREFERRED_MEAL_SPOTS = 3;
+const PREFERRED_SOUVENIR_SPOTS = 2;
+/** 後方互換: 古い「件数床」呼び出しは目安に読み替え。 */
+const MIN_MEAL_SPOTS = PREFERRED_MEAL_SPOTS;
+const MIN_SOUVENIR_SPOTS = PREFERRED_SOUVENIR_SPOTS;
 
 function isShopGuide(s: Spot): boolean {
   return s.guide === "meal" || s.guide === "souvenir";
@@ -1054,7 +1219,10 @@ function filterFarSpots(station: StationSeed): StationSeed {
   return { ...station, spots: spots.length > 0 ? spots : station.spots.slice(0, 1) };
 }
 
-/** 遠距離フィルタ後、圏内の候補だけでご飯・土産の下限を満たす */
+/**
+ * 遠距離フィルタ後、圏内に戻せる店だけを控えめに足す（目安まで）。
+ * 信頼のため、件数床まで無理に戻さない。総称・弱い店名は戻さない。
+ */
 function ensureShopGuideFloor(
   station: StationSeed,
   original: StationSeed,
@@ -1070,28 +1238,54 @@ function ensureShopGuideFloor(
   const center = { lat: station.lat, lng: station.lng };
   const ids = new Set(station.spots.map((s) => s.id));
   const next = [...station.spots];
-  const need = (guide: "meal" | "souvenir", min: number) => {
+  const soft = (guide: "meal" | "souvenir", preferred: number) => {
     let n = next.filter((s) => s.guide === guide).length;
-    if (n >= min) return;
+    if (n >= preferred) return;
     const pool = original.spots
       .filter(
         (s) =>
           s.guide === guide &&
           !ids.has(s.id) &&
+          !isWeakShopName(s.name) &&
           shopWithinStationArea(center, s),
       )
       .sort((a, b) => a.walkMinutes - b.walkMinutes);
     for (const s of pool) {
-      if (n >= min) break;
+      if (n >= preferred) break;
       next.push(s);
       ids.add(s.id);
       n += 1;
     }
   };
-  need("meal", MIN_MEAL_SPOTS);
-  need("souvenir", MIN_SOUVENIR_SPOTS);
+  soft("meal", PREFERRED_MEAL_SPOTS);
+  soft("souvenir", PREFERRED_SOUVENIR_SPOTS);
   if (next.length === station.spots.length) return station;
   return { ...station, spots: next };
+}
+
+/** 総称・メモ混入・弱すぎる店名（meal/souvenir から落とす） */
+function isWeakShopName(name: string): boolean {
+  if (isEditorialPlaceName(name)) return true;
+  const title = placeTitle(name);
+  if (title.length < 3) return true;
+  if (
+    /^(駅前の|周辺の|近くの|あたりの|おすすめの|地元の)/.test(title) ||
+    /の(食堂|カフェ|パン屋|和菓子屋|お土産屋|商店|定食屋)$/.test(title) ||
+    /^(食堂|カフェ|パン屋|お土産屋|商店|喫茶店)$/.test(title)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** 不確かな店名の meal/souvenir を落とす。名所（sight 等）は残す。 */
+function stripUntrustedShops(station: StationSeed): StationSeed {
+  const spots = station.spots.filter((s) => {
+    if (s.guide !== "meal" && s.guide !== "souvenir") return true;
+    return !isWeakShopName(s.name);
+  });
+  if (spots.length === station.spots.length) return station;
+  return { ...station, spots };
 }
 
 function countMajor(station: StationSeed): number {
@@ -1183,69 +1377,92 @@ function promoteMajorHeuristic(station: StationSeed): StationSeed {
  * - landmarks: 一番有名な名所・景色（合計5の名所側）
  * - omiyage: 手土産になる名物菓子・名産（名物側）
  */
-/** 出町柳のレンタは CLEW（クルー）とえむじかを正式名で残す。総称行は落とす。 */
-function sealDemachiBikeRentals(station: StationSeed): StationSeed {
-  if (!/出町柳/.test(station.name)) return station;
-  const must = [
-    {
-      kind: "app" as const,
-      name: "CLEW（クルー）京阪出町柳駅前",
-      walkMinutes: 1,
-      note: "京阪7番出口付近のポート。アプリ登録のあとQRで解錠。",
-    },
-    {
-      kind: "local" as const,
-      name: "レンタサイクルえむじか 出町柳店",
-      walkMinutes: 2,
-      note: "駅すぐの店頭貸出。半日〜長期向き。",
-    },
-  ];
+const BIKE_GENERIC =
+  /^(駅前のレンタサイクル|枡形・駅前のレンタサイクル店|レンタサイクル店|周辺のレンタサイクル|貸自転車|シェアサイクル|レンタサイクル)$/;
+
+const BIKE_FOREIGN_HINTS = [
+  "出町柳",
+  "三条",
+  "四条",
+  "宇治",
+  "伏見",
+  "嵐山",
+  "奈良",
+  "大阪",
+  "神戸",
+] as const;
+
+/** その駅にある実在貸出だけ残す。他駅名・総称・遠すぎる徒歩は落とす。 */
+function sanitizeBikeRentals(station: StationSeed): StationSeed {
+  const isDemachi = /出町柳/.test(station.name);
   const generics = /駅前のレンタ|枡形・駅前のレンタ|周辺のレンタ|貸自転車$/;
-  let places = [...(station.bikeRental?.places ?? [])].filter(
-    (p) => !generics.test(p.name),
-  );
-  for (const m of must) {
-    if (
-      !places.some(
-        (p) =>
-          p.name.includes("CLEW") ||
-          p.name.includes("クルー") ||
-          p.name.includes("えむじか") ||
-          p.name === m.name,
-      ) ||
-      (m.name.includes("CLEW") &&
-        !places.some((p) => /CLEW|クルー|CREW/i.test(p.name))) ||
-      (m.name.includes("えむじか") &&
-        !places.some((p) => p.name.includes("えむじか")))
-    ) {
-      // 系統ごとに不足分だけ足す
+  let places = [...(station.bikeRental?.places ?? [])].filter((p) => {
+    if (!p.name || BIKE_GENERIC.test(p.name) || generics.test(p.name)) {
+      return false;
+    }
+    if (typeof p.walkMinutes === "number" && p.walkMinutes > 8) return false;
+    if (!isDemachi && /出町柳|京阪出町柳/.test(p.name)) return false;
+    if (!isDemachi && /えむじか/.test(p.name) && /出町/.test(p.name)) {
+      return false;
+    }
+    for (const hint of BIKE_FOREIGN_HINTS) {
+      if (p.name.includes(hint) && !station.name.includes(hint)) return false;
+    }
+    return true;
+  });
+
+  if (isDemachi) {
+    const must = [
+      {
+        kind: "app" as const,
+        name: "CLEW（クルー）京阪出町柳駅前",
+        walkMinutes: 1,
+        note: "京阪7番出口付近のポート。アプリ登録のあとQRで解錠。",
+      },
+      {
+        kind: "local" as const,
+        name: "レンタサイクルえむじか 出町柳店",
+        walkMinutes: 2,
+        note: "駅すぐの店頭貸出。半日〜長期向き。",
+      },
+    ];
+    if (!places.some((p) => /CLEW|クルー|CREW/i.test(p.name))) {
+      places.push(must[0]!);
+    }
+    if (!places.some((p) => p.name.includes("えむじか"))) {
+      places.push(must[1]!);
     }
   }
-  if (!places.some((p) => /CLEW|クルー|CREW/i.test(p.name))) {
-    places.push(must[0]!);
-  }
-  if (!places.some((p) => p.name.includes("えむじか"))) {
-    places.push(must[1]!);
-  }
-  // 重複整理
+
   const seen = new Set<string>();
   places = places.filter((p) => {
     const key = /CLEW|クルー|CREW/i.test(p.name)
-      ? "clew"
+      ? `clew:${isDemachi ? "demachi" : p.name}`
       : p.name.includes("えむじか")
-        ? "emusica"
+        ? `emusica:${isDemachi ? "demachi" : p.name}`
         : p.name;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  const available = places.length > 0;
+  const summary = available
+    ? isDemachi
+      ? "駅すぐには CLEW（クルー）のポートと、店頭貸出のえむじかがあります。短い移動はアプリ、半日たっぷりなら店頭が向きます。"
+      : station.bikeRental?.summary &&
+          station.bikeRental.summary.length >= 12 &&
+          !/未確認|使えることがあります/.test(station.bikeRental.summary)
+        ? station.bikeRental.summary
+        : `この駅で確認できた貸出は次のとおりです（${places.map((p) => p.name).join("、")}）。`
+    : "この駅で確認できたレンタサイクルは、いまのところありません。観光案内所や駅掲示も見てください。";
+
   return {
     ...station,
     bikeRental: {
-      available: true,
-      summary:
-        "駅すぐには CLEW（クルー）のポートと、店頭貸出のえむじかがあります。短い移動はアプリ、半日たっぷりなら店頭が向きます。",
-      places,
+      available,
+      summary,
+      places: available ? places : undefined,
     },
   };
 }
@@ -1259,6 +1476,8 @@ async function ensureStapleMealEntries(
   apiKey: string,
   viewerSub: string,
 ): Promise<StationSeed> {
+  // 条件スキップ: ご飯が下限に達していれば追加呼び出ししない
+  if (countGuide(station, "meal") >= MIN_MEAL_SPOTS) return station;
   const catalog = station.spots
     .filter((s) => s.guide === "meal")
     .map((s) => `- ${s.name}（徒歩${s.walkMinutes}分）`)
@@ -1374,6 +1593,8 @@ async function ensureMajorSpotEntries(
   apiKey: string,
   viewerSub: string,
 ): Promise<StationSeed> {
+  // 条件スキップ: 土地の顔が揃っていれば API せずヒューリスティックも不要
+  if (countMajor(station) >= MAJOR_FACE_TOTAL) return station;
   const catalog = station.spots
     .map((s) => `- ${s.name}（${s.guide ?? "?"} / 徒歩${s.walkMinutes}分）`)
     .join("\n");
@@ -1529,11 +1750,15 @@ const ICONIC_SHOP_RE =
  * 例: 出町柳で野呂本店が major になり出町ふたばが落ちる、を防ぐ。
  */
 function sealIconicMajors(station: StationSeed): StationSeed {
-  let working = station;
+  let working = {
+    ...station,
+    spots: station.spots.filter((s) => !isEditorialPlaceName(s.name)),
+  };
   // 出町柳は豆餅のふたばをスポット自体として必ず持たせる
+  // 注釈の「ふたば以外」は店そのものではない
   if (
     /出町柳/.test(working.name) &&
-    !working.spots.some((s) => s.name.includes("ふたば"))
+    !working.spots.some((s) => placeTitle(s.name).includes("ふたば"))
   ) {
     working = {
       ...working,
@@ -1584,7 +1809,7 @@ function sealIconicMajors(station: StationSeed): StationSeed {
 
   // 出町柳は豆餅のふたばを欠かさない
   const demachiFutaba = /出町柳/.test(working.name)
-    ? working.spots.find((s) => s.name.includes("ふたば"))
+    ? working.spots.find((s) => placeTitle(s.name).includes("ふたば"))
     : null;
   const must = demachiFutaba || iconic;
   if (!must) return working;
@@ -1676,7 +1901,9 @@ async function expandPlacesFromLand(
   apiKey: string,
   viewerSub: string,
 ): Promise<StationSeed> {
-  if ((station.spots?.length ?? 0) >= 12) return station;
+  // 条件スキップ強化: 件数と店が足りていれば起こし直ししない
+  const spotCount = station.spots?.length ?? 0;
+  if (spotCount >= 12 || (spotCount >= 8 && !isShopThin(station))) return station;
 
   const expanded = await callGeminiGenerate(
     apiKey,
@@ -1744,6 +1971,166 @@ function mergePlacesFromLandText(
   return { ...station, spots: existing.slice(0, 22) };
 }
 
+/** 1回目で足りていれば 2 回目（穴埋め）を打たない。店の件数不足だけでは打たない。 */
+function needsGapFill(station: StationSeed): boolean {
+  const spotCount = station.spots?.length ?? 0;
+  if (spotCount < 6) return true;
+  // 名所（sight）がほぼ無いときだけ穴埋め（店の枚数合わせはしない）
+  if (countGuide(station, "sight") < 2) return true;
+  if (countMajor(station) < 3) return true;
+  if (isNarrativeThin(station)) return true;
+  // 休みは景色が1つも無いときだけ（喫茶を無理に埋めない）
+  if (countGuide(station, "rest") === 0) return true;
+  return false;
+}
+
+function buildGapFillPrompt(station: StationSeed): string {
+  const meals = station.spots
+    .filter((s) => s.guide === "meal")
+    .map((s) => s.name)
+    .join("、");
+  const souvenirs = station.spots
+    .filter((s) => s.guide === "souvenir")
+    .map((s) => s.name)
+    .join("、");
+  const rests = station.spots
+    .filter((s) => s.guide === "rest")
+    .map((s) => s.name)
+    .join("、");
+  const majors = station.spots
+    .filter((s) => s.majorWorthy)
+    .map((s) => s.name)
+    .join("、");
+  const names = station.spots.map((s) => s.name).join("、");
+  const hist = (station.historyNotes ?? [])
+    .slice(0, 6)
+    .map((n) => `【${n.title}】${n.body}`)
+    .join("\n");
+  const sight = (station.sightseeingNotes ?? [])
+    .slice(0, 6)
+    .map((n) => `【${n.title}】${n.body}`)
+    .join("\n");
+  return [
+    "あなたは日本の駅の徒歩圏案内の編集者です。Google検索で実在を確認してください。",
+    "【目的】足りない穴だけを一度で埋める。優先は名所（土地文）と土地文の厚さ。店は確かなときだけ。",
+    "既にある名前の再掲は禁止。観光ランキング口調は禁止。件数を埋めるための推測は禁止。",
+    "出力は JSON のみ。",
+    "",
+    `駅名: ${station.name}（${station.prefecture} · ${station.line}）`,
+    `駅座標: ${station.lat}, ${station.lng}`,
+    `いま meal ${countGuide(station, "meal")} / souvenir ${countGuide(station, "souvenir")} / rest ${countGuide(station, "rest")} / sight ${countGuide(station, "sight")} / major ${countMajor(station)} / spots ${station.spots.length}`,
+    `既存めし: ${meals || "（なし）"}`,
+    `既存土産: ${souvenirs || "（なし）"}`,
+    `既存休み: ${rests || "（なし）"}`,
+    `既存 major: ${majors || "（なし）"}`,
+    `既存すべての名前（再掲禁止）: ${names || "（なし）"}`,
+    "",
+    "—— 土地文（正本・名所はここから起こす）——",
+    `stationIntro: ${station.stationIntro ?? ""}`,
+    `areaAbout: ${station.areaAbout ?? ""}`,
+    `walkGuide: ${station.walkGuide ?? ""}`,
+    "historyNotes:",
+    hist || "（なし）",
+    "sightseeingNotes:",
+    sight || "（なし）",
+    "",
+    landAnchorPromptBlock(station.name),
+    "",
+    "スキーマ:",
+    "{",
+    '  "stationIntro": "薄いときだけ書き直し（十分な長さなら省略可）",',
+    '  "areaAbout": "薄いときだけ",',
+    '  "walkGuide": "薄いときだけ",',
+    '  "historyNotes": [{ "title", "body" }]（薄いときだけ追加・厚く）,',
+    '  "sightseeingNotes": [{ "title", "body" }]（薄いときだけ）,',
+    '  "spots": [ { "name", "guide":"meal|souvenir|sight|rest|tip", "genre", "blurb", "detail", "walkMinutes", "lat", "lng", "hours", "budgetYen", "mealTier", "mealTimes", "soloOk", "majorWorthy", "secretWorthy" } ]',
+    "}",
+    "",
+    "制約:",
+    "- spots は追加分だけ。",
+    "- 【名所】土地文に出た正式名称でまだspotsに無いものは必ず起こす（sight 優先）。",
+    "- 【店】meal/souvenir は検索で確実なときだけ追加（目安 合計 meal≤3 / souvenir≤2）。不確かなら足さない。0件のままでよい。",
+    "- 【休み】景色の休みが無ければ足す。喫茶は検索で確実なときだけ。",
+    "- majorWorthy は名所を優先。名物店 major は確実なときだけ。合計5未満でも名所が確かならよい。",
+    "- 出町柳以外で鴨川デルタ・下鴨・枡形・ふたば等を出さない。",
+    "- blurb/detail は各3文以上。確認できない店・総称名は出さない。",
+  ].join("\n");
+}
+
+function mergeGapFillIntoStation(
+  station: StationSeed,
+  text: string,
+): StationSeed {
+  const parsed = extractJsonObject(text);
+  if (!parsed) return station;
+
+  let next = station;
+  if (isNarrativeThin(next)) {
+    const historyNotes =
+      parseNoteList(parsed.historyNotes, 9) ?? next.historyNotes;
+    const sightseeingNotes =
+      parseNoteList(parsed.sightseeingNotes, 8) ?? next.sightseeingNotes;
+    const stationIntro = asString(parsed.stationIntro) || next.stationIntro;
+    const areaAbout = asString(parsed.areaAbout) || next.areaAbout;
+    const walkGuide = asString(parsed.walkGuide) || next.walkGuide;
+    next = {
+      ...next,
+      stationIntro,
+      areaAbout,
+      walkGuide,
+      historyNotes,
+      sightseeingNotes,
+    };
+  }
+
+  if (!Array.isArray(parsed.spots)) return next;
+  const existing = new Set(
+    next.spots.map((s) => s.name.replace(/\s+/g, "")),
+  );
+  const extras = parsed.spots
+    .map((raw, i) => parseSpot(raw, next.spots.length + i))
+    .filter((s): s is Spot => !!s)
+    .filter((s) => !isForeignDemachiPlace(s.name, next.name))
+    .filter((s) => !existing.has(s.name.replace(/\s+/g, "")));
+  if (!extras.length) return next;
+  return {
+    ...next,
+    spots: [...next.spots, ...extras].slice(0, 22),
+  };
+}
+
+/** 足りない穴を 1 回の Gemini 呼び出しで埋める（店・名所・休み・薄い土地文）。 */
+async function fillStationGapsOnce(
+  station: StationSeed,
+  apiKey: string,
+  viewerSub: string,
+): Promise<StationSeed> {
+  const filled = await callGeminiGenerate(
+    apiKey,
+    viewerSub,
+    {
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: buildGapFillPrompt(station) }],
+        },
+      ],
+      tools: [{ google_search: {} }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 8192,
+      },
+    },
+    GEMINI_GROUNDED_MS,
+  );
+  if (!filled.ok) return station;
+  return mergeGapFillIntoStation(station, filled.text);
+}
+
+/**
+ * 後処理。Gemini は最大もう 1 回（穴埋め）だけ。
+ * 以前の多段 expand（店・定番・名所・休みを別々）は打たない。
+ */
 async function finalizeAiStation(
   result: AiStationResult | { error: string; message: string },
   apiKey: string,
@@ -1751,19 +2138,18 @@ async function finalizeAiStation(
 ): Promise<AiStationResult | { error: string; message: string }> {
   if ("error" in result) return result;
 
-  // 1) 土地の文章を厚くする（正本）
-  let station = await expandStationNarrative(
-    result.station,
-    apiKey,
-    viewerSub,
-  );
+  let station = result.station;
   // 収録ノート（二ノ瀬・出町など）があれば土地文を正本で上書き
   station = withAreaDepth(station);
   station = refineLandProse(ensureLandPresentAnchors(station));
-
-  // 2) 土地文に出た名前から場所を起こす（地図・案内の正本）
   station = ensureLandMentions(station);
-  station = await expandPlacesFromLand(station, apiKey, viewerSub);
+
+  // 1回目で薄ければ、店・名所・休み・土地文をまとめて 1 回だけ穴埋め
+  if (needsGapFill(station)) {
+    station = await fillStationGapsOnce(station, apiKey, viewerSub);
+    station = ensureLandMentions(station);
+  }
+
   if ((station.spots?.length ?? 0) < 3) {
     return {
       error: "empty_spots",
@@ -1771,42 +2157,27 @@ async function finalizeAiStation(
     };
   }
 
-  // 3) ご飯・土産など実用の店を足す（土地文の生活感に沿う）
-  station = await expandShopSpots(station, apiKey, viewerSub);
   const shopsBeforeFar = station;
   station = filterFarSpots(station);
+  station = stripUntrustedShops(station);
   station = ensureShopGuideFloor(station, shopsBeforeFar);
-  if (isShopThin(station)) {
-    station = await expandShopSpots(station, apiKey, viewerSub);
-    const beforeFar2 = station;
-    station = filterFarSpots(station);
-    station = ensureShopGuideFloor(station, beforeFar2);
+  station = stripUntrustedShops(station);
+  station = sanitizeBikeRentals(station);
+  // major 不足は API せずヒューリスティックで印を付ける（名所優先）
+  if (countMajor(station) < MAJOR_FACE_TOTAL) {
+    station = promoteMajorHeuristic(station);
   }
-  station = await ensureStapleMealEntries(station, apiKey, viewerSub);
-  station = sealDemachiBikeRentals(station);
-  station = await ensureMajorSpotEntries(station, apiKey, viewerSub);
   station = sealIconicMajors(station);
   station = balanceMajorsSightseeing(station);
   station = normalizeEdibleSouvenirs(station);
-  if (countGuide(station, "meal") < MIN_MEAL_SPOTS) {
-    station = await expandShopSpots(station, apiKey, viewerSub);
-    const beforeFar3 = station;
-    station = filterFarSpots(station);
-    station = ensureShopGuideFloor(station, beforeFar3);
-    station = normalizeEdibleSouvenirs(station);
-    if (countGuide(station, "meal") < MIN_MEAL_SPOTS) {
-      station = ensureShopGuideFloor(station, beforeFar3);
-    }
-  }
   station = reclassifyWorshipPlaces(station);
+  station = stripUntrustedShops(station);
   station = {
     ...station,
     spots: filterFirstVisitSpots(station.spots, station.name),
   };
-  station = await expandRestSpots(station, apiKey, viewerSub);
   station = snapLandmarkCoordinates(station);
   station = balanceMajorsSightseeing(station);
-  // 土地文をもう一度アンカー仕訳（名所名を落とさない）
   station = refineLandProse(ensureLandPresentAnchors(station));
   station = snapLandmarkCoordinates(station);
   return { station, source: "ai" };
@@ -1824,12 +2195,15 @@ type LandmarkLock = {
 };
 
 function lockMatches(name: string, lock: LandmarkLock): boolean {
+  if (name.includes("※") || name.includes("以外")) return false;
+  const title = name.replace(/[（(][^）)]*[）)]/g, "").trim();
   if (lock.kind === "river") {
+    if (title.includes("公園")) return false;
     const river =
-      /デルタ|河川敷|三角州/.test(name) || (/鴨川/.test(name) && /川端|川沿い/.test(name));
-    return river && !/カフェ|茶房|ふたば/.test(name) && !name.endsWith("店");
+      /デルタ|河川敷|三角州/.test(title) || (/鴨川/.test(title) && /川端|川沿い/.test(title));
+    return river && !/カフェ|茶房|ふたば/.test(title) && !title.endsWith("店");
   }
-  return lock.keywords.some((k) => name.includes(k));
+  return lock.keywords.some((k) => title.includes(k));
 }
 
 function isLockedSpot(name: string, stationName: string): boolean {
@@ -2123,6 +2497,22 @@ export async function generateStationGuideWithGemini(
     rawName,
     apiKey,
     viewerSub,
+  );
+}
+
+/** 買い切りユーザーの自分の AI（Gemini / OpenAI 互換）で駅案内を作る。 */
+export async function generateStationGuideWithUserAi(
+  rawName: string,
+  config: UserAiConfig,
+  viewerSub: string,
+): Promise<AiStationResult | { error: string; message: string }> {
+  return byokRuntime.run(config, () =>
+    generateFromPrompt(
+      buildStationPrompt(rawName),
+      rawName,
+      config.apiKey,
+      viewerSub,
+    ),
   );
 }
 

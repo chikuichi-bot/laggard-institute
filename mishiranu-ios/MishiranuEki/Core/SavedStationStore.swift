@@ -96,29 +96,31 @@ enum SavedStationStore {
     /// 保存用に id を安定化し、旧種駅 id も ai- 名に寄せる。
     static func sealedForLibrary(_ station: Station) -> Station {
         let id = stableId(forName: station.name)
-        if station.id == id { return station }
-        return Station(
-            id: id,
-            name: bareName(station.name),
-            nameReading: station.nameReading,
-            line: station.line,
-            prefecture: station.prefecture,
-            region: station.region,
-            mood: station.mood,
-            radiiKm: station.radiiKm,
-            stationIntro: station.stationIntro,
-            areaAbout: station.areaAbout,
-            walkGuide: station.walkGuide,
-            historyNotes: station.historyNotes,
-            sightseeingNotes: station.sightseeingNotes,
-            bikeRental: station.bikeRental,
-            tourTitle: station.tourTitle,
-            catchCopy: station.catchCopy,
-            emptyCopy: station.emptyCopy,
-            lat: station.lat,
-            lng: station.lng,
-            spots: station.spots
+        let cleaned = BikeRentalSeal.ensure(
+            Station(
+                id: id,
+                name: bareName(station.name),
+                nameReading: station.nameReading,
+                line: station.line,
+                prefecture: station.prefecture,
+                region: station.region,
+                mood: station.mood,
+                radiiKm: station.radiiKm,
+                stationIntro: station.stationIntro,
+                areaAbout: station.areaAbout,
+                walkGuide: station.walkGuide,
+                historyNotes: station.historyNotes,
+                sightseeingNotes: station.sightseeingNotes,
+                bikeRental: station.bikeRental,
+                tourTitle: station.tourTitle,
+                catchCopy: station.catchCopy,
+                emptyCopy: station.emptyCopy,
+                lat: station.lat,
+                lng: station.lng,
+                spots: station.spots
+            )
         )
+        return cleaned
     }
 
     @discardableResult

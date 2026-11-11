@@ -127,7 +127,7 @@ function SampleBoard() {
           <div className="ps-a-panel-head">
             <span className="ps-a-num">03</span>
             <img src="/ejp/B_history.svg" alt="" width={18} height={18} />
-            <h2>このエリアのこと・歴史</h2>
+            <h2>このエリアのこと</h2>
           </div>
           {s.areaAbout.map((p) => (
             <p key={p.slice(0, 12)}>{p}</p>

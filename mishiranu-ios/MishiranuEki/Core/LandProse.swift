@@ -53,7 +53,8 @@ enum LandProse {
 
     /// 01 駅のこと / 02 歩き方 / 03 エリア+メモ / 04 観光メモ
     static func refine(_ station: Station) -> Station {
-        let station = fixRiverFields(station)
+        // 正本の厚み（いまと歴史を結んだ文）を先に載せ、川名修正へ進む。
+        let station = fixRiverFields(AreaDepth.overlay(on: station))
         var claimed: [String] = []
 
         let intro = takeUnique(sentences(station.stationIntro), claimed: &claimed)
@@ -104,7 +105,7 @@ enum LandProse {
             sight.append(HistoryNote(title: title, body: join(kept)))
         }
 
-        return Station(
+        let refined = Station(
             id: station.id,
             name: station.name,
             nameReading: station.nameReading,
@@ -126,6 +127,8 @@ enum LandProse {
             lng: station.lng,
             spots: station.spots
         )
+        // AreaDepth 誤適用や AI コピーで出町の固有名が残らないように最後にもう一度落とす
+        return DemachiTemplate.scrubContamination(on: refined)
     }
 
     private static func sentences(_ text: String?) -> [String] {

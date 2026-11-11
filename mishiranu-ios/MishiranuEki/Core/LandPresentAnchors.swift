@@ -48,9 +48,9 @@ enum LandPresentAnchors {
         let key = SavedStationStore.bareName(rowStation)
         guard !bare.isEmpty, !key.isEmpty else { return false }
         if bare == key { return true }
-        // 「京阪出町柳」など。短いキーでの誤爆を防ぐ（3文字以上）。
-        if key.count >= 3, bare.contains(key) { return true }
-        if bare.count >= 3, key.contains(bare) { return true }
+        // 「京阪出町柳」など。駅名がキーを含むときだけ（キーが駅名に含まれる逆方向は禁止）。
+        // ※ `key.contains(bare)` は「墨染」→別駅や出町柳への誤爆の温床。
+        if key.count >= 2, bare.count >= key.count, bare.contains(key) { return true }
         return false
     }
 

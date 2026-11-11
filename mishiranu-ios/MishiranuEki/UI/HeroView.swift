@@ -9,48 +9,54 @@ struct HeroView: View {
     private let heroInk = Color(hex: 0x2a241c)
     private let heroFog = Color(hex: 0x5c5348)
     private let heroMist = Color(hex: 0x8a7d6b)
-    private let heroPaper = Color(hex: 0xf6f1e6)
+    private let heroPaper = Color(hex: 0xf8f5ee)
 
     var body: some View {
         @Bindable var model = model
         GeometryReader { geo in
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .center, spacing: 12) {
-                    Spacer(minLength: 0)
-                    Rectangle()
-                        .fill(heroInk)
-                        .frame(width: 1)
-                    VStack(spacing: 7) {
+                // 題字と地図は別レイヤー。地図は題字の下ではなく、同じ面の全域に置ける。
+                ZStack(alignment: .topTrailing) {
+                    HeroRoadMap()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .frame(minHeight: 180)
+                    VStack(spacing: 8) {
                         ForEach(Array(brandChars.enumerated()), id: \.offset) { _, ch in
                             Text(String(ch))
-                                .font(.system(size: 27, weight: .semibold, design: .serif))
+                                .font(.system(size: 25, weight: .medium, design: .serif))
                                 .foregroundStyle(heroInk)
                         }
                     }
+                    .allowsHitTesting(false)
+                    .padding(.top, 36)
                 }
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 28)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .layoutPriority(-1)
 
-                Spacer(minLength: 48)
-
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 16) {
                     Button {
                         locateHere()
                     } label: {
-                        Text(model.geoLoading ? "調べています…" : "この場所")
-                            .font(.system(.body, design: .serif).weight(.semibold))
+                        Text(
+                            model.geoLoading
+                                ? "調べています…"
+                                : model.stationLoading
+                                    ? "案内をつくっています…"
+                                    : "この駅について"
+                        )
+                            .font(.system(.body, design: .serif).weight(.medium))
                             .tracking(3)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 15)
+                            .padding(.vertical, 13)
                             .foregroundStyle(heroInk)
                             .background {
                                 Capsule()
-                                    .fill(heroInk.opacity(0.07))
-                                    .shadow(color: heroInk.opacity(0.12), radius: 10, y: 4)
+                                    .fill(heroInk.opacity(0.04))
                             }
                             .overlay {
-                                Capsule().stroke(heroInk, lineWidth: 1.5)
+                                Capsule()
+                                    .stroke(heroInk.opacity(0.55), lineWidth: 1)
                             }
                     }
                     .buttonStyle(PlainHapticButtonStyle())

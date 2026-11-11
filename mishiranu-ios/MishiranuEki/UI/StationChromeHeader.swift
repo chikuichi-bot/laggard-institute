@@ -6,30 +6,57 @@ struct StationChromeHeader: View {
     @Environment(ThemeStore.self) private var theme
     let station: Station
 
-    private var pillCorner: CGFloat { theme.skin == .board ? 4 : 2 }
+    private var quietPaper: Bool { theme.skin == .ma }
+
+    private var pillCorner: CGFloat {
+        switch theme.skin {
+        case .ma: return 0
+        case .board: return 4
+        case .topo: return 2
+        }
+    }
 
     private var pillFill: Color {
-        theme.skin == .board ? Palette.warm : Palette.ink
+        switch theme.skin {
+        case .ma: return .clear
+        case .board: return Palette.warm
+        case .topo: return Palette.ink
+        }
     }
 
     private var pillText: Color {
-        theme.skin == .board ? Palette.canvas : Palette.paper
+        switch theme.skin {
+        case .ma: return Palette.ink
+        case .board: return Palette.canvas
+        case .topo: return Palette.paper
+        }
     }
 
     var body: some View {
         ZStack {
             Text(station.chromeStationLabel)
-                .font(.system(.subheadline, design: .default).weight(.bold))
+                .font(
+                    quietPaper
+                        ? .system(.subheadline, design: .serif).weight(.medium)
+                        : .system(.subheadline, design: .default).weight(.bold)
+                )
                 .foregroundStyle(pillText)
-                .tracking(0.6)
+                .tracking(quietPaper ? 1.2 : 0.6)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
+                .padding(.horizontal, quietPaper ? 4 : 12)
+                .padding(.vertical, quietPaper ? 4 : 5)
                 .background(
                     RoundedRectangle(cornerRadius: pillCorner, style: .continuous)
                         .fill(pillFill)
                 )
+                .overlay(alignment: .bottom) {
+                    if quietPaper {
+                        Rectangle()
+                            .fill(Palette.ink.opacity(0.35))
+                            .frame(height: 1)
+                    }
+                }
                 .padding(.horizontal, 44)
                 .frame(maxWidth: .infinity)
                 .multilineTextAlignment(.center)

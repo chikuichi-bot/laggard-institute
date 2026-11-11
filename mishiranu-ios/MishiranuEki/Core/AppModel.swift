@@ -94,7 +94,6 @@ final class AppModel {
     /// 案内タブでレンタサイクルを選んでいるとき true。
     var guideShowsBike = false
     var activeSpot: Spot?
-    var secret: Spot?
     /// トップページの短い案内・エラー（到着チャットは使わない）。
     var heroNote: String?
 
@@ -109,7 +108,9 @@ final class AppModel {
         // 土地文の川名逆転なども refine で直してから端末へ書き戻す。
         let scrubbed = stations.map {
             LandProse.refine(
-                CourseBuilder.ensureLocalMajors(CourseBuilder.snapLandmarkPins($0))
+                CourseBuilder.ensureLocalMajors(
+                    CourseBuilder.snapLandmarkPins(LandmarkRegistry.applyingStationCenter($0))
+                )
             )
         }
         self.stations = scrubbed
@@ -273,9 +274,6 @@ final class AppModel {
         if let course = selectedCourse {
             lines.append("まわり方: \(course.title)（\(course.stops.map(\.spot.name).joined(separator: " → "))）")
         }
-        if let secret {
-            lines.append("シークレット: \(secret.name)")
-        }
         return lines.joined(separator: "\n")
     }
 
@@ -305,7 +303,6 @@ final class AppModel {
         dayPart = DayPart.from(hour: Calendar.current.component(.hour, from: now()))
         query = ""
         draft = ""
-        secret = nil
         activeSpot = nil
         heroNote = nil
         messages = [ChatMessage(role: .guide, text: openingGuide)]
@@ -357,20 +354,42 @@ final class AppModel {
     }
 
     /// 歩くタブ＝ショート／ロング（道なり最適化）。既定はショート。
+    /// 前の駅のコースは絶対に残さない（墨染の画面に出町の3点が残る事故）。
     private func applyOrdinaryWalk(for station: Station) {
+        let bare = SavedStationStore.bareName(station.name)
         let ordinary = CourseBuilder.firstVisitOrdinaryCourses(
             for: station, dayPart: dayPart, stay: stay
-        )
+        ).filter { course in
+            course.id.contains(bare) && courseFitsStation(course, station: station)
+        }
         let ordinaryIds = Set(ordinary.map(\.id))
         let others = CourseBuilder.courses(
             for: station, stay: stay, dayPart: dayPart, prefs: mealPrefs
-        ).filter { !ordinaryIds.contains($0.id) }
+        ).filter { course in
+            !ordinaryIds.contains(course.id) && courseFitsStation(course, station: station)
+        }
         courses = ordinary + others
-        // 選択中が残っていれば維持（ショート↔ロング切替後の再構築でも）
-        if let current = selectedCourse, courses.contains(where: { $0.id == current.id }) {
-            selectedCourse = courses.first { $0.id == current.id }
-        } else {
-            selectedCourse = ordinary.first
+        selectedCourse = ordinary.first ?? others.first
+    }
+
+    /// 表示中の駅とコースが食い違っていたら組み直す。
+    func syncWalkCourse() {
+        guard let station else {
+            selectedCourse = nil
+            courses = []
+            return
+        }
+        if let course = selectedCourse, courseFitsStation(course, station: station),
+           course.id.contains(SavedStationStore.bareName(station.name)) {
+            return
+        }
+        applyOrdinaryWalk(for: station)
+    }
+
+    private func courseFitsStation(_ course: WalkCourse, station: Station) -> Bool {
+        !course.stops.contains {
+            DemachiTemplate.isForeignDemachiPlace($0.spot.name, stationName: station.name)
+                || !DemachiTemplate.spotNearStation($0.spot, station: station)
         }
     }
 
@@ -455,6 +474,15 @@ final class AppModel {
             }
         }
 
+        if let coinError = BillingStore.shared.tryConsumeGenerationCoin() {
+            heroNote = coinError
+            tourTab = .more
+            if station != nil {
+                screen = .tour
+            }
+            return
+        }
+
         stationLoading = true
         phase = .station
         query = name
@@ -464,20 +492,26 @@ final class AppModel {
         if screen != .tour {
             screen = .hero
         }
+
         pendingStationLookup?.cancel()
         pendingStationLookup = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let station = try await StationAPIClient.lookupStation(name: bare)
+                let station = try await StationAPIClient.lookupStation(
+                    name: bare,
+                    userAi: BillingStore.shared.userAiPayload
+                )
                 guard !Task.isCancelled else { return }
                 self.stationLoading = false
                 self.heroNote = nil
                 // 調べた結果は必ず端末へ残す
                 self.chooseStation(station, omitYou: true, persist: true)
             } catch is CancellationError {
+                BillingStore.shared.refundGenerationCoin()
                 self.stationLoading = false
                 self.heroNote = nil
             } catch {
+                BillingStore.shared.refundGenerationCoin()
                 self.stationLoading = false
                 let message = (error as? LocalizedError)?.errorDescription?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -522,7 +556,6 @@ final class AppModel {
 
     func openTour(tab: TourTab) {
         activeSpot = nil
-        secret = nil
         tourTab = tab
         guideKind = .sight
         guideShowsBike = false
@@ -554,8 +587,10 @@ final class AppModel {
     /// 設定の「調べた駅」から、保存済みの案内を思い出す。
     /// 駅名スタートと同じく、最初は土地ページを開く（地図は土地の次）。
     func recallSavedStation(_ next: Station) {
-        let sealed = DemachiTemplate.scrubContamination(
-            on: CourseBuilder.ensureLocalMajors(CourseBuilder.snapLandmarkPins(next))
+        let sealed = BikeRentalSeal.ensure(
+            DemachiTemplate.scrubContamination(
+                on: CourseBuilder.ensureLocalMajors(CourseBuilder.snapLandmarkPins(next))
+            )
         )
         // ほぼ空のときだけ作り直し。一度調べた内容は消さない。
         if Self.isUnusableSaved(sealed) {
@@ -616,13 +651,6 @@ final class AppModel {
         return LandmarkRegistry.apply(spot, stationName: name)
     }
 
-    func drawSecret() {
-        secret = CourseBuilder.pickSecret(tourSpots)
-        tourTab = .more
-        if let secret {
-            activeSpot = resolvedSpot(secret)
-        }
-    }
 }
 
 func formatKm(_ km: Double) -> String {

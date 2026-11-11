@@ -13,7 +13,7 @@ extension Color {
 }
 
 enum Palette {
-    /// 設定の見た目（A/C）に追従。切替時は RootView の .id(skin) で再描画。
+    /// 設定の見た目（A/C）に追従。切替時は ThemeStore を読む View が再描画される。
     @MainActor private static var tokens: SkinTokens {
         SkinTokens.tokens(for: ThemeStore.shared.skin)
     }
@@ -80,14 +80,18 @@ extension TourTab {
 }
 
 extension Font {
-    /// A/C ともゴシック（交通・地図の顔）。
+    /// 文庫の紙は明朝寄り。時刻表はゴシック。
+    @MainActor
     static func mincho(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
-        .system(style, design: .default).weight(weight)
+        let design: Font.Design = ThemeStore.shared.skin == .board ? .default : .serif
+        return .system(style, design: design).weight(weight)
     }
 
-    /// ゴシックの意味階層を保ったまま Dynamic Type に追従する。
+    /// 意味階層を保ったまま Dynamic Type に追従する。
+    @MainActor
     static func readable(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
-        .system(style).weight(weight)
+        let design: Font.Design = ThemeStore.shared.skin == .ma ? .serif : .default
+        return .system(style, design: design).weight(weight)
     }
 }
 

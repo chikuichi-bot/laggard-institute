@@ -17,14 +17,28 @@ type LandmarkLock = {
   walkMinutes: number;
 };
 
+/** 括弧の注釈を外した店名。ロック判定はここだけ。 */
+export function placeTitle(name: string): string {
+  return name.replace(/[（(][^）)]*[）)]/g, "").trim();
+}
+
+/** 生成メモが店名に混ざったもの（「※…以外」）。場所として扱わない。 */
+export function isEditorialPlaceName(name: string): boolean {
+  return name.includes("※") || name.includes("以外");
+}
+
 function lockMatches(name: string, lock: LandmarkLock): boolean {
+  if (isEditorialPlaceName(name)) return false;
+  const title = placeTitle(name);
   if (lock.kind === "river") {
+    // 「鴨川公園」はデルタ正本（合流点）に吸わせない
+    if (title.includes("公園")) return false;
     const river =
-      /デルタ|河川敷|三角州/.test(name) ||
-      (/鴨川/.test(name) && /川端|川沿い/.test(name));
-    return river && !/カフェ|茶房|ふたば/.test(name) && !name.endsWith("店");
+      /デルタ|河川敷|三角州/.test(title) ||
+      (/鴨川/.test(title) && /川端|川沿い/.test(title));
+    return river && !/カフェ|茶房|ふたば/.test(title) && !title.endsWith("店");
   }
-  return lock.keywords.some((k) => name.includes(k));
+  return lock.keywords.some((k) => title.includes(k));
 }
 
 export function isLockedSpotName(name: string, stationName: string): boolean {
@@ -82,7 +96,9 @@ export function sealMapCoordinates(station: StationSeed): StationSeed {
       ? { lat: station.lat, lng: station.lng }
       : null;
 
-  let spots: Spot[] = (station.spots ?? []).map((s) => {
+  let spots: Spot[] = (station.spots ?? [])
+    .filter((s) => !isEditorialPlaceName(s.name))
+    .map((s) => {
     const hit = pins.find((p) => lockMatches(s.name, p));
     if (hit) {
       return {

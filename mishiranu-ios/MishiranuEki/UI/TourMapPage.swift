@@ -12,6 +12,8 @@ struct TourMapPage: View {
     /// 徒歩の道なり座標（直線は川の上を横切るので使わない）
     @State private var walkingPath: [CLLocationCoordinate2D] = []
     @State private var routeTaskId: String = ""
+    /// MapPolyline が初回描画されない癖への再マウント用
+    @State private var pathRenderEpoch = 0
     @State private var focusingHere = false
     @State private var focusGeneration = 0
     @State private var locator = LocationService()
@@ -36,19 +38,123 @@ struct TourMapPage: View {
         return "\(station.id)|\(course.id)|\(ids)"
     }
 
-    /// 地図に出すピン。コース選択中は番号付きの立ち寄りだけ（信頼ピンが無くても道順は出す）。
+    /// 地図に出すピン。コースの立ち寄り（番号）に加え、徒歩圏の信頼ピン（ご飯・土産など）も出す。
     private var mapSpots: [Spot] {
-        let numbers = model.courseNumbers
-        if !numbers.isEmpty, let course = model.selectedCourse {
-            // tourSpots は信頼ピンのみなので、コース立ち寄りを正本にする
-            return course.stops.map { model.resolvedSpot($0.spot) }
+        if let course = model.selectedCourse, !course.stops.isEmpty {
+            let coursePins = course.stops.map { model.resolvedSpot($0.spot) }
+            let courseIds = Set(coursePins.map(\.id))
+            let extras = model.tourSpots.map(model.resolvedSpot).filter { extra in
+                if courseIds.contains(extra.id) { return false }
+                // id が違っても同名の立ち寄りは二重にしない
+                return !coursePins.contains {
+                    NameMatch.score($0.name, extra.name) >= 85
+                }
+            }
+            return coursePins + extras
         }
         return model.tourSpots.map(model.resolvedSpot)
     }
 
-    /// 近いピンの表示座標だけずらす（道なりルートの実座標は変えない）。
+    /// ピン表示用座標。線の経由点は実座標のまま。コース番号同士が近いときだけ表示を少し扇状に広げる。
     private var displayCoordinates: [String: CLLocationCoordinate2D] {
-        Self.spreadDisplayCoordinates(mapSpots)
+        var coords = Dictionary(uniqueKeysWithValues: mapSpots.map {
+            ($0.id, CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng))
+        })
+        guard let course = model.selectedCourse, course.stops.count >= 2 else { return coords }
+        let resolved = course.stops.map { model.resolvedSpot($0.spot) }
+        let order = resolved.map(\.id)
+        // ロック座標（鴨川デルタ等）は動かさない。重なりはそれ以外をずらす。
+        let anchored = Set(
+            resolved
+                .filter { $0.coordTrust == .lock || Self.isFixedLandmarkName($0.name) }
+                .map(\.id)
+        )
+        coords = Self.spreadNearbyCoursePins(
+            order: order,
+            coordinates: coords,
+            anchoredIds: anchored
+        )
+        return coords
+    }
+
+    private static func isFixedLandmarkName(_ name: String) -> Bool {
+        name.contains("デルタ") || name.contains("三角州") || name.contains("下鴨神社")
+            || name.contains("賀茂御祖")
+    }
+
+    /// 約40m以内の重なりを解消。`anchoredIds`（デルタ等の正本）は動かさず、相手側をずらす。
+    private static func spreadNearbyCoursePins(
+        order: [String],
+        coordinates: [String: CLLocationCoordinate2D],
+        anchoredIds: Set<String>
+    ) -> [String: CLLocationCoordinate2D] {
+        var result = coordinates
+        let thresholdMeters = 40.0
+        let stepMeters = 24.0
+
+        func clashes(_ id: String, _ coord: CLLocationCoordinate2D) -> String? {
+            for otherId in order where otherId != id {
+                guard let other = result[otherId] else { continue }
+                if metersBetween(coord, other) < thresholdMeters { return otherId }
+            }
+            return nil
+        }
+
+        // 1) 正本ピンは実座標のまま確定
+        for id in order where anchoredIds.contains(id) {
+            if let c = coordinates[id] { result[id] = c }
+        }
+
+        // 2) 正本以外だけずらす（正本と重なっても正本は動かない）
+        for (index, id) in order.enumerated() where !anchoredIds.contains(id) {
+            guard var coord = result[id] else { continue }
+            let origin = coordinates[id] ?? coord
+            for attempt in 0 ..< 10 {
+                if clashes(id, coord) == nil { break }
+                let angle = Double(index) * 55 + Double(attempt) * 36
+                coord = offsetMeters(origin, distance: stepMeters + Double(attempt) * 6, degrees: angle)
+            }
+            result[id] = coord
+        }
+
+        // 3) 正本同士が稀に近いときだけ、後の方を最小限ずらす
+        for (index, id) in order.enumerated() where anchoredIds.contains(id) {
+            guard var coord = result[id], let origin = coordinates[id] else { continue }
+            for attempt in 0 ..< 4 {
+                guard let otherId = clashes(id, coord), anchoredIds.contains(otherId) else { break }
+                let otherIndex = order.firstIndex(of: otherId) ?? 0
+                if index <= otherIndex { break }
+                let angle = Double(index) * 40 + Double(attempt) * 50
+                coord = offsetMeters(origin, distance: 18 + Double(attempt) * 6, degrees: angle)
+            }
+            result[id] = coord
+        }
+        return result
+    }
+
+    private static func metersBetween(
+        _ a: CLLocationCoordinate2D,
+        _ b: CLLocationCoordinate2D
+    ) -> Double {
+        CLLocation(latitude: a.latitude, longitude: a.longitude)
+            .distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
+    }
+
+    private static func offsetMeters(
+        _ origin: CLLocationCoordinate2D,
+        distance: Double,
+        degrees: Double
+    ) -> CLLocationCoordinate2D {
+        let rad = degrees * .pi / 180
+        let north = distance * cos(rad)
+        let east = distance * sin(rad)
+        let dLat = north / 111_320
+        let cosLat = cos(origin.latitude * .pi / 180)
+        let dLng = east / (111_320 * max(cosLat, 0.2))
+        return CLLocationCoordinate2D(
+            latitude: origin.latitude + dLat,
+            longitude: origin.longitude + dLng
+        )
     }
 
     var body: some View {
@@ -104,6 +210,8 @@ struct TourMapPage: View {
                         HereYouAreMarker(emphasized: focusingHere)
                     }
                 }
+                // path が入ったあとタップしないと線が出ない MapKit 癖 → epoch で中身を載せ直す
+                .id("tour-map-\(routeKey)-\(pathRenderEpoch)")
                 .mapStyle(.standard(pointsOfInterest: .excludingAll))
                 .mapControls {
                     MapCompass()
@@ -193,23 +301,59 @@ struct TourMapPage: View {
         }
         .onAppear {
             position = camera()
+            // 道なり待ちでも、経由点の仮線をすぐ出す（空のまま待たない）
+            publishPath(waypointCoordinates, key: routeKey, bumpRender: true)
             refreshWalkingPath()
         }
         .onChange(of: station.id) {
             position = camera()
+            publishPath(waypointCoordinates, key: routeKey, bumpRender: true)
             refreshWalkingPath()
         }
         .onChange(of: model.stay) { position = camera() }
-        .onChange(of: routeKey) { refreshWalkingPath() }
+        .onChange(of: routeKey) {
+            publishPath(waypointCoordinates, key: routeKey, bumpRender: true)
+            refreshWalkingPath()
+        }
         .task(id: routeKey) {
             await loadWalkingPath()
         }
     }
 
     private func refreshWalkingPath() {
-        // task(id:) が走るまでのあいだ、古い線を消す
-        if routeKey != routeTaskId {
+        // task(id:) が走るまでのあいだ、古い線を消すのはやめる。
+        // 代わりに経由点仮線を残し、道なりが来たら差し替える。
+        if routeKey != routeTaskId, walkingPath.isEmpty {
+            let points = waypointCoordinates
+            if points.count >= 2 {
+                walkingPath = points
+            }
+        }
+    }
+
+    /// 線を載せ、必要なら Map を再マウントして初回描画を確実にする。
+    private func publishPath(
+        _ path: [CLLocationCoordinate2D],
+        key: String,
+        bumpRender: Bool
+    ) {
+        guard path.count >= 2 else {
             walkingPath = []
+            routeTaskId = key
+            if bumpRender { pathRenderEpoch += 1 }
+            return
+        }
+        let changed = walkingPath.count != path.count
+            || zip(walkingPath, path).contains {
+                abs($0.latitude - $1.latitude) > 0.00001
+                    || abs($0.longitude - $1.longitude) > 0.00001
+            }
+        walkingPath = path
+        routeTaskId = key
+        if bumpRender, changed {
+            pathRenderEpoch += 1
+            // カメラを一度載せ直すと polyline が乗る（タップ相当）
+            position = camera()
         }
     }
 
@@ -247,14 +391,14 @@ struct TourMapPage: View {
         let key = routeKey
         let points = waypointCoordinates
         guard points.count >= 2 else {
-            walkingPath = []
-            routeTaskId = key
+            publishPath([], key: key, bumpRender: true)
             return
         }
-        routeTaskId = key
+        // 先に経由点線 → 道なり算出後に差し替え（地図タブを開いた瞬間から線が見える）
+        publishPath(points, key: key, bumpRender: walkingPath.count < 2)
         let path = await WalkRouteBuilder.walkingPath(through: points)
         guard !Task.isCancelled, routeTaskId == key else { return }
-        walkingPath = path
+        publishPath(path, key: key, bumpRender: true)
     }
 
     /// 駅とピンが収まる範囲。ピンが少ないときは徒歩圏の円を目安にする。
@@ -404,34 +548,3 @@ struct SpotPin: View {
     }
 }
 
-extension TourMapPage {
-    /// 約70m以内のピンを扇状に少しずらして、番号が重ならないようにする。
-    fileprivate static func spreadDisplayCoordinates(
-        _ spots: [Spot]
-    ) -> [String: CLLocationCoordinate2D] {
-        let minKm = 0.07
-        var placed: [(id: String, lat: Double, lng: Double)] = []
-        for (index, spot) in spots.enumerated() {
-            var lat = spot.lat
-            var lng = spot.lng
-            for step in 0..<8 {
-                let clashes = placed.contains {
-                    Geo.haversineKm(
-                        lat1: lat, lng1: lng,
-                        lat2: $0.lat, lng2: $0.lng
-                    ) < minKm
-                }
-                if !clashes { break }
-                let angle = Double(index) * 2.2 + Double(step) * 1.1
-                lat += 0.00032 * cos(angle) // ~35m
-                lng += 0.00038 * sin(angle)
-            }
-            placed.append((spot.id, lat, lng))
-        }
-        return Dictionary(
-            uniqueKeysWithValues: placed.map {
-                ($0.id, CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng))
-            }
-        )
-    }
-}

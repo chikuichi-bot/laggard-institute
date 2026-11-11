@@ -9,7 +9,7 @@ import {
   type Spot,
   type StationSeed,
 } from "@/data/mishiranu-stations";
-import { spotLatLng, stationLatLng } from "@/lib/mishiranu-geo";
+import { haversineKm, spotLatLng, stationLatLng } from "@/lib/mishiranu-geo";
 
 type Props = {
   station: StationSeed;
@@ -20,6 +20,53 @@ type Props = {
   courseStopIds?: string[] | null;
   onSelect: (spotId: string) => void;
 };
+
+function isFixedLandmarkName(name: string): boolean {
+  return /デルタ|三角州|下鴨神社|賀茂御祖/.test(name);
+}
+
+/** コース番号の重なり解消。デルタ等の正本は動かさず、相手側だけずらす。 */
+function spreadNearbyCoursePins(
+  points: Array<{ id: string; lat: number; lng: number; name?: string }>,
+): Map<string, { lat: number; lng: number }> {
+  const result = new Map<string, { lat: number; lng: number }>();
+  const thresholdKm = 0.04;
+  const anchored = new Set(
+    points
+      .filter((p) => p.name && isFixedLandmarkName(p.name))
+      .map((p) => p.id),
+  );
+  for (const p of points) {
+    if (anchored.has(p.id)) result.set(p.id, { lat: p.lat, lng: p.lng });
+  }
+  const clashes = (id: string, lat: number, lng: number) =>
+    points.some((other) => {
+      if (other.id === id) return false;
+      const shown = result.get(other.id) ?? other;
+      return haversineKm({ lat, lng }, shown) < thresholdKm;
+    });
+
+  points.forEach((point, index) => {
+    if (anchored.has(point.id)) return;
+    let { lat, lng } = point;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      if (!clashes(point.id, lat, lng)) break;
+      const angle = ((index * 55 + attempt * 36) * Math.PI) / 180;
+      const dist = 24 + attempt * 6;
+      const north = dist * Math.cos(angle);
+      const east = dist * Math.sin(angle);
+      lat = point.lat + north / 111_320;
+      lng =
+        point.lng +
+        east / (111_320 * Math.max(Math.cos((point.lat * Math.PI) / 180), 0.2));
+    }
+    result.set(point.id, { lat, lng });
+  });
+  for (const p of points) {
+    if (!result.has(p.id)) result.set(p.id, { lat: p.lat, lng: p.lng });
+  }
+  return result;
+}
 
 function pinIcon(color: string, active: boolean) {
   const size = active ? 16 : 12;
@@ -234,11 +281,19 @@ export default function StationMap({
       marker.addTo(layer);
     }
 
+    // コース番号ピンが近いときだけ表示をずらす（線の経由点は上の実座標のまま）
+    const courseDisplay = spreadNearbyCoursePins(
+      courseIds.map((id) => {
+        const spot = spotById.get(id)!;
+        const ll = spotLatLng(station, spot);
+        return { id, lat: ll.lat, lng: ll.lng, name: spot.name };
+      }),
+    );
     courseIds.forEach((id, index) => {
       const spot = spotById.get(id);
       if (!spot) return;
-      const { lat, lng } = spotLatLng(station, spot);
-      const marker = L.marker([lat, lng], {
+      const shown = courseDisplay.get(id) ?? spotLatLng(station, spot);
+      const marker = L.marker([shown.lat, shown.lng], {
         icon: stepIcon(
           index + 1,
           GUIDE_COLOR[spotGuide(spot)],

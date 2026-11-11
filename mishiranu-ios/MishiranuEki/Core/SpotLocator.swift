@@ -19,7 +19,8 @@ enum SpotLocator {
     private static let maxTipSpots = 1
 
     static func refine(_ station: Station) async -> Station {
-        var center = CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng)
+        var center = LandmarkRegistry.lockedStationCenter(name: station.name)
+            ?? CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng)
         // AI が出町座標を他駅に貼ると 8km では駅本体に届かない（二ノ瀬は出町から約8.5km）。
         let want = "\(SavedStationStore.bareName(station.name))駅"
         let queries = stationQueries(station.name)
@@ -28,18 +29,20 @@ enum SpotLocator {
             want: want,
             around: center,
             maxKm: 18,
-            stationOnly: true
+            stationOnly: true,
+            minimumScore: 92
         )
         if stationHit == nil {
             stationHit = await bestMatch(
                 queries: queries,
                 want: want,
                 around: center,
-                maxKm: 80,
-                stationOnly: true
-            )
+            maxKm: 80,
+            stationOnly: true,
+            minimumScore: 92
+        )
         }
-        if let hit = stationHit {
+        if LandmarkRegistry.lockedStationCenter(name: station.name) == nil, let hit = stationHit {
             center = hit.coordinate
         }
 
@@ -81,6 +84,8 @@ enum SpotLocator {
         stationName: String
     ) async -> [(name: String, walk: Int)] {
         let bare = SavedStationStore.bareName(stationName)
+        // 駅そのものに付く貸出だけ。遠い別駅ポートを拾わない。
+        let bikeRadiusKm = 0.5
         let queries = [
             "CLEW \(bare)",
             "クルー \(bare)",
@@ -92,12 +97,14 @@ enum SpotLocator {
         var seen = Set<String>()
         for query in queries {
             if Task.isCancelled { break }
-            for place in await searchQuery(query, around: center, maxKm: shopWalkRadiusKm) {
+            for place in await searchQuery(query, around: center, maxKm: bikeRadiusKm) {
                 guard BikeRentalSeal.looksLikeBike(place.name) || place.name.uppercased().contains("CLEW")
                     || place.name.contains("クルー") || place.name.contains("えむじか") else { continue }
+                guard BikeRentalSeal.belongs(to: stationName, placeName: place.name) else { continue }
                 let key = NameMatch.normalize(place.name)
                 guard seen.insert(key).inserted else { continue }
-                let walk = max(1, min(30, Int((place.km * 1.3 / 4.5 * 60).rounded())))
+                let walk = max(1, min(BikeRentalSeal.maxWalkMinutes, Int((place.km * 1.3 / 4.5 * 60).rounded())))
+                guard walk <= BikeRentalSeal.maxWalkMinutes else { continue }
                 hits.append((place.name, walk))
             }
         }
@@ -619,7 +626,7 @@ enum SpotLocator {
                 continue
             }
             if let idx = result.firstIndex(where: {
-                !$0.name.hasSuffix("駅") && NameMatch.score($0.name, ai.name) >= 82
+                !$0.name.hasSuffix("駅") && NameMatch.score($0.name, ai.name) >= 92
             }) {
                 let apple = result[idx]
                 result[idx] = apple.withCopy(from: ai).moved(
@@ -670,7 +677,7 @@ enum SpotLocator {
                 around: center,
                 maxKm: stapleSearchMaxKm,
                 stationOnly: false,
-                minimumScore: 72
+                minimumScore: 90
             )
             if let hit {
                 let walk = max(1, min(90, Int((hit.kmFromCenter * 1.3 / 4.5 * 60).rounded())))
@@ -724,8 +731,13 @@ enum SpotLocator {
                     let ok = item.pointOfInterestCategory == .publicTransport || name.hasSuffix("駅")
                     guard ok else { continue }
                 }
-                let score = max(NameMatch.score(want, name), NameMatch.score(query, name) - 4)
+                // 検索文（店名＋駅名）ではなく、欲しい店名だけで採点する。
+                // 駅名が入ったクエリだと、結果が駅や別の短い地名に吸われる。
+                let score = NameMatch.score(want, name)
                 guard score >= minimumScore else { continue }
+                let wantN = NameMatch.normalize(want)
+                let nameN = NameMatch.normalize(name)
+                if nameN.count * 2 < wantN.count, score < 98 { continue }
                 let rank = score * 10 - km * 20
                 if best == nil || rank > best!.score * 10 - best!.kmFromCenter * 20 {
                     best = Hit(coordinate: coordinate, kmFromCenter: km, score: score)

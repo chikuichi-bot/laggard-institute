@@ -5,10 +5,19 @@ import type { AreaHistoryNote, StationSeed } from "@/data/mishiranu-stations";
  *
  * 01 stationIntro … 路線・乗り換え・駅前の空気（名所の「なぜ」は書かない）
  * 02 walkGuide   … 寄る順番と方角だけ（歴史・由来は書かない）
- * 03 areaAbout   … 地形といまの概観（個別の詳説は書かない）
- * 03 historyNotes… 1トピック1件。なぜ／いまの詳説はここだけ
+ * 03 areaAbout   … 地形・由来・いまを同じ段落で結ぶ概観（個別の詳説は書かない）
+ * 03 historyNotes… 1トピック1件。各件で「昔の層→いまの見え方」を一本の糸で結ぶ
  * 04 sightseeing … 寄る・食べる・休むの実用（歴史の再説はしない）
  */
+
+/** areaAbout / historyNotes の「いま↔歴史」結び方（生成・正本の共通ルール）。 */
+export const AREA_PRESENT_HISTORY_WEAVE = [
+  "【このエリアのこと · いまと歴史の結び方】",
+  "- 禁: 1段落目＝由来だけ／2段落目＝いまだけ、の二分割。禁: 歴史メモと現在メモを別件に分ける。",
+  "- areaAbout: 各段落のなかで、目の前の風景（いま）から地層（由来・地形・信仰・交通）へ触れ、またいまの生活の気配へ戻す。空行区切り2段落・合計360字以上。",
+  "- historyNotes: 1件につき3〜5文。必ず『なぜそうなったか』と『いま歩くとどう残っているか』を同じ本文で結ぶ。どちらか片方だけの件は不可。",
+  "- 見出しは地名・事物の名でよい。本文が橋になる。大学・学生街があれば正式名称で、いまの通学・店の気配までつなぐ。",
+].join("\n");
 
 function sentencesOf(text: string): string[] {
   const out: string[] = [];
@@ -213,8 +222,9 @@ export const LAND_PROSE_ROLE_RULES = [
   "土地文の役割を分け、同じ説明を繰り返さない:",
   "- stationIntro: 路線・乗り換え・駅前の空気だけ。名所や大学の詳しい由来は書かない。",
   "- walkGuide: 寄る順番と方角だけ（例: 枡形→デルタ→北へ下鴨）。歴史や『なぜ有名か』は書かない。",
-  "- areaAbout: 地形といまの生活の概観。個別スポットの詳説は historyNotes へ。",
-  "- historyNotes: 1見出し1トピック。由来・いまの詳説はここだけ。",
+  "- areaAbout: 地形・由来・いまの生活を同じ段落で結ぶ概観。個別スポットの詳説は historyNotes へ。",
+  "- historyNotes: 1見出し1トピック。各件で由来といまを結び、詳説はここだけ。",
   "- sightseeingNotes: 先頭は土地の顔3点。続けて短い滞在・食べる休む・季節や注意など実用メモを足し、合計6〜7件。historyNotes の再掲は禁止。",
   "- 出町柳・鴨川デルタの川名（必須・逆転禁止）: 上流は賀茂川と高野川。合流点から南は鴨川。『合流し賀茂川へ名を変える』は誤り。",
+  AREA_PRESENT_HISTORY_WEAVE,
 ].join("\n");

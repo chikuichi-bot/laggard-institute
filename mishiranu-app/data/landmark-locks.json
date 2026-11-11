@@ -14,6 +14,18 @@
       "walkMinutes": 3
     },
     {
+      "id": "demachi-kamogawa-park",
+      "station": "出町柳",
+      "kind": "keyword",
+      "canonical": "鴨川公園",
+      "keywords": ["鴨川公園", "出町公園"],
+      "address": "鴨川沿い（出町柳駅南側・合流点の南）",
+      "osm": "nominatim:出町公園",
+      "lat": 35.02955,
+      "lng": 135.77188,
+      "walkMinutes": 4
+    },
+    {
       "id": "demachi-futaba",
       "station": "出町柳",
       "kind": "keyword",
@@ -184,12 +196,36 @@
       "station": "藤森",
       "kind": "keyword",
       "canonical": "墨染寺",
-      "keywords": ["墨染寺", "墨染"],
-      "address": "京都市伏見区墨染町",
+      "keywords": ["墨染寺"],
+      "address": "京都市伏見区墨染町741",
       "osm": "nominatim:墨染寺 京都",
       "lat": 34.947759,
       "lng": 135.7671697,
       "walkMinutes": 10
+    },
+    {
+      "id": "sumizome-bokusenji",
+      "station": "墨染",
+      "kind": "keyword",
+      "canonical": "墨染寺",
+      "keywords": ["墨染寺"],
+      "address": "京都市伏見区墨染町741",
+      "osm": "nominatim:墨染寺 京都",
+      "lat": 34.947759,
+      "lng": 135.7671697,
+      "walkMinutes": 3
+    },
+    {
+      "id": "sumizome-biwako-sosui",
+      "station": "墨染",
+      "kind": "keyword",
+      "canonical": "琵琶湖疏水",
+      "keywords": ["琵琶湖疏水", "琵琶湖疎水", "鴨川運河", "墨染橋"],
+      "address": "京都市伏見区墨染町（墨染橋付近）",
+      "osm": "nominatim:墨染橋 京都",
+      "lat": 34.94815,
+      "lng": 135.76835,
+      "walkMinutes": 2
     },
     {
       "id": "hachiman-cable",

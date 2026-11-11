@@ -4,7 +4,11 @@ import {
   hasViewerHourlyBudget,
 } from "@/lib/mishiranu-rate-limit";
 import { requireJsonContentType } from "@/lib/mishiranu-request";
-import { generateStationGuideWithGemini } from "@/lib/mishiranu-station-ai";
+import type { UserAiConfig } from "@/lib/mishiranu-billing";
+import {
+  generateStationGuideWithGemini,
+  generateStationGuideWithUserAi,
+} from "@/lib/mishiranu-station-ai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +17,15 @@ export const maxDuration = 120;
 
 type Body = {
   name?: string;
+  /** @deprecated userAi を優先 */
+  userApiKey?: string;
+  /** 買い切りユーザーの自分の AI（端末から送る。サーバーに保存しない） */
+  userAi?: {
+    provider?: string;
+    apiKey?: string;
+    baseUrl?: string;
+    model?: string;
+  };
 };
 
 const RATE_WINDOW_MS = 60_000;
@@ -22,6 +35,36 @@ const NO_STORE = { "cache-control": "private, no-store" };
 
 function normalizeName(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
+}
+
+function parseUserAi(body: Body): UserAiConfig | null {
+  const raw = body.userAi;
+  if (raw && typeof raw === "object") {
+    const apiKey = typeof raw.apiKey === "string" ? raw.apiKey.trim() : "";
+    if (apiKey.length < 8) return null;
+    const provider = raw.provider === "openai" ? "openai" : "gemini";
+    if (provider === "openai") {
+      const baseUrl =
+        typeof raw.baseUrl === "string" && raw.baseUrl.trim()
+          ? raw.baseUrl.trim().replace(/\/$/, "")
+          : "https://api.openai.com/v1";
+      if (!/^https?:\/\//i.test(baseUrl)) return null;
+      const model =
+        typeof raw.model === "string" && raw.model.trim()
+          ? raw.model.trim()
+          : "gpt-4o-mini";
+      return { provider: "openai", apiKey, baseUrl, model };
+    }
+    return { provider: "gemini", apiKey };
+  }
+
+  // 後方互換: 旧クライアントの userApiKey のみ
+  const legacy =
+    typeof body.userApiKey === "string" ? body.userApiKey.trim() : "";
+  if (legacy.length >= 8) {
+    return { provider: "gemini", apiKey: legacy };
+  }
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -59,7 +102,39 @@ export async function POST(request: Request) {
     );
   }
 
-  // 収録シードは使わない。毎回 Gemini 解析。
+  const userAi = parseUserAi(body);
+  const usingByok = !!userAi;
+
+  if (usingByok && userAi) {
+    const viewerKey = `byok:${viewer.sub}`;
+    try {
+      const result = await generateStationGuideWithUserAi(
+        name,
+        userAi,
+        viewerKey,
+      );
+      if ("error" in result) {
+        const status =
+          result.error === "not_a_station"
+            ? 404
+            : result.error === "gemini_http"
+              ? 502
+              : 422;
+        return Response.json(result, { status, headers: NO_STORE });
+      }
+      return Response.json(result, { headers: NO_STORE });
+    } catch {
+      return Response.json(
+        {
+          error: "unexpected",
+          message: "案内の生成中にエラーが起きました。もう一度どうぞ。",
+        },
+        { status: 500, headers: NO_STORE },
+      );
+    }
+  }
+
+  // 収録シードは使わない。ホストの Gemini 解析。
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     return Response.json(
@@ -72,7 +147,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Soft peek only — each Gemini HTTP call charges the hourly budget itself.
   if (!hasViewerHourlyBudget(viewer.sub)) {
     return Response.json(
       {

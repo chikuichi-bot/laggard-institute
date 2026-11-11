@@ -39,15 +39,27 @@ try {
   fs.mkdirSync(path.join(tmp, "data"), { recursive: true });
   fs.mkdirSync(path.join(tmp, "lib"), { recursive: true });
   fs.copyFileSync(coordsFile, path.join(tmp, "data/mishiranu-coordinates.json"));
+  fs.copyFileSync(
+    path.join(webRoot, "data/land-present-anchors.json"),
+    path.join(tmp, "data/land-present-anchors.json"),
+  );
 
   for (const [mod, rel] of Object.entries({
     "data/mishiranu-stations": "data/mishiranu-stations.ts",
     "data/mishiranu-station-readings": "data/mishiranu-station-readings.ts",
     "lib/mishiranu-area-depth": "lib/mishiranu-area-depth.ts",
+    "lib/mishiranu-land-prose": "lib/mishiranu-land-prose.ts",
+    "lib/mishiranu-land-anchors": "lib/mishiranu-land-anchors.ts",
+    "lib/mishiranu-demachi-template": "lib/mishiranu-demachi-template.ts",
+    "lib/mishiranu-lore": "lib/mishiranu-lore.ts",
+    "lib/mishiranu-first-visit-faces": "lib/mishiranu-first-visit-faces.ts",
   })) {
     const js = transpileTo(tmp, rel).replace(
       /require\("@\/(data|lib)\/([^"]+)"\)/g,
-      (_m, dir, name) => `require(${JSON.stringify(path.join(tmp, dir, `${name}.js`))})`,
+      (_m, dir, name) => {
+        const file = name.endsWith(".json") ? name : `${name}.js`;
+        return `require(${JSON.stringify(path.join(tmp, dir, file))})`;
+      },
     );
     fs.writeFileSync(path.join(tmp, `${mod}.js`), js);
   }

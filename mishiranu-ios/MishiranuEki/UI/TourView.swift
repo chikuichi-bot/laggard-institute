@@ -3,28 +3,60 @@ import SwiftUI
 
 struct TourView: View {
     @Environment(AppModel.self) private var model
+    @Environment(ThemeStore.self) private var theme
 
     var body: some View {
         @Bindable var model = model
+        // skin を読んで Palette を追従（Root の .id(skin) なしでも色が変わる）
+        let _ = theme.skin
         VStack(spacing: 0) {
             if let station = model.station {
                 StationChromeHeader(station: station)
-                Group {
-                    switch model.tourTab {
-                    case .map: TourMapPage(station: station)
-                    case .place: PlacePage(station: station)
-                    case .walk: WalkPage()
-                    case .guide: GuidePage(station: station)
-                    case .more: SettingsPage(station: station)
+                // 地図はタブ切替で破棄しない（導線の MKDirections を先に走らせ、polyline の初回描画欠けも避ける）
+                ZStack {
+                    TourMapPage(station: station)
+                        .opacity(model.tourTab == .map ? 1 : 0)
+                        .allowsHitTesting(model.tourTab == .map)
+                        .accessibilityHidden(model.tourTab != .map)
+                        .zIndex(model.tourTab == .map ? 1 : 0)
+
+                    Group {
+                        switch model.tourTab {
+                        case .map:
+                            EmptyView()
+                        case .place:
+                            PlacePage(station: station)
+                        case .walk:
+                            WalkPage()
+                        case .guide:
+                            GuidePage(station: station)
+                        case .more:
+                            SettingsPage(station: station)
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .id(model.tourTab == .map ? "map-slot" : model.tourTab.rawValue)
+                    .opacity(model.tourTab == .map ? 0 : 1)
+                    .allowsHitTesting(model.tourTab != .map)
+                    .accessibilityHidden(model.tourTab == .map)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .id(model.tourTab)
             }
         }
         .background(Palette.canvas.ignoresSafeArea())
         .safeAreaInset(edge: .bottom, spacing: 0) {
             TourTabBar(selection: $model.tourTab)
+        }
+        .onChange(of: model.station?.id) { _, _ in
+            model.syncWalkCourse()
+        }
+        .onChange(of: model.tourTab) { _, tab in
+            if tab == .walk || tab == .map {
+                model.syncWalkCourse()
+            }
+        }
+        .onAppear {
+            model.syncWalkCourse()
         }
         .sheet(item: $model.activeSpot) { spot in
             SpotSheet(spot: spot)
@@ -62,10 +94,10 @@ struct TourTabBar: View {
                     .background {
                         if active {
                             RoundedRectangle(
-                                cornerRadius: theme.skin == .board ? 10 : 8,
+                                cornerRadius: theme.skin == .ma ? 4 : (theme.skin == .board ? 10 : 8),
                                 style: .continuous
                             )
-                            .stroke(Palette.warm, lineWidth: 2)
+                            .stroke(Palette.warm, lineWidth: theme.skin == .ma ? 1.5 : 2)
                             .padding(.horizontal, 3)
                             .padding(.vertical, 2)
                             .matchedGeometryEffect(id: "tour-tab-frame", in: tabFrame)

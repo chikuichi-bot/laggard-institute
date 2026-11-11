@@ -9,6 +9,7 @@ struct MishiranuEkiApp: App {
             RootView()
                 .environment(model)
                 .environment(ThemeStore.shared)
+                .environment(BillingStore.shared)
                 #if DEBUG
                 .onAppear { model.applyLaunchDemo() }
                 #endif
@@ -44,7 +45,8 @@ struct RootView: View {
         }
         .tint(Palette.warm)
         .preferredColorScheme(theme.skin.preferredColorScheme)
-        .id(theme.skin)
+        // skin 切替で .id を付けない（設定のスクロール位置が先頭へ戻るため）
+        .animation(.easeInOut(duration: 0.2), value: theme.skin)
         .animation(.easeInOut(duration: 0.25), value: model.screen)
         .animation(.easeInOut(duration: 0.2), value: model.stationLoading)
         .buttonStyle(PlainHapticButtonStyle())

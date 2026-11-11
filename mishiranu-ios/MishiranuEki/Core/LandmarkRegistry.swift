@@ -26,6 +26,25 @@ enum LandmarkRegistry {
         let locks: [Lock]
     }
 
+    /// 京阪・叡電の出町柳。川端通の南へずらさない（徒歩ルートが橋で切れる）。
+    /// 出町柳駅（京阪・叡電）。35°01′50.3″N 135°46′21.6″E。川端通の南には置かない。
+    static let demachiStation = CLLocationCoordinate2D(latitude: 35.030639, longitude: 135.772667)
+
+    /// 駅ピンの正本。Apple 検索が南の道路に吸う駅だけ固定する。
+    static func lockedStationCenter(name: String) -> CLLocationCoordinate2D? {
+        let bare = SavedStationStore.bareName(name)
+        if bare.contains("出町柳") { return demachiStation }
+        return nil
+    }
+
+    static func applyingStationCenter(_ station: Station) -> Station {
+        guard let center = lockedStationCenter(name: station.name) else { return station }
+        let moved = abs(station.lat - center.latitude) > 0.00005
+            || abs(station.lng - center.longitude) > 0.00005
+        guard moved else { return station }
+        return station.relocated(center: center, spots: station.spots)
+    }
+
     /// OSM node/1774463562。京都市左京区北白川追分町88（今出川通の店舗）。キャンパス内ではない。
     static let demachiShinshindo = CLLocationCoordinate2D(latitude: 35.028684, longitude: 135.7819409)
     /// OSM node/4374432589。出町桝形商店街の店先。
@@ -49,15 +68,33 @@ enum LandmarkRegistry {
         return file.locks
     }()
 
+    /// 括弧の注釈（「※出町ふたば以外…」など）を外した店名。ロックはここだけ見る。
+    static func placeTitle(_ name: String) -> String {
+        name.replacingOccurrences(
+            of: "[（(][^）)]*[）)]",
+            with: "",
+            options: .regularExpression
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 生成メモが店名に混ざったもの。場所として扱わない。
+    static func isEditorialName(_ name: String) -> Bool {
+        name.contains("※") || name.contains("以外")
+    }
+
     private static func matches(_ name: String, lock: LockFile.Lock) -> Bool {
+        if isEditorialName(name) { return false }
+        let title = placeTitle(name)
         if lock.kind == "river" {
-            let river = name.contains("デルタ") || name.contains("河川敷") || name.contains("三角州")
-                || (name.contains("鴨川") && (name.contains("川端") || name.contains("川沿い")))
+            // 「鴨川公園」はデルタ正本に吸わせない（合流点の座標はデルタ専用）
+            if title.contains("公園") { return false }
+            let river = title.contains("デルタ") || title.contains("河川敷") || title.contains("三角州")
+                || (title.contains("鴨川") && (title.contains("川端") || title.contains("川沿い")))
             return river
-                && !name.contains("カフェ") && !name.contains("茶房")
-                && !name.hasSuffix("店") && !name.contains("ふたば")
+                && !title.contains("カフェ") && !title.contains("茶房")
+                && !title.hasSuffix("店") && !title.contains("ふたば")
         }
-        return lock.keywords.contains { name.contains($0) }
+        return lock.keywords.contains { title.contains($0) }
     }
 
     private static func pin(for spotName: String, stationName: String) -> Pin? {
@@ -113,7 +150,8 @@ enum LandmarkRegistry {
            matchesLockedBranch(spotName, canonical: "進々堂 京大北門前") {
             return Pin(id: "demachi-shinshindo", coordinate: demachiShinshindo, walkMinutes: 12, address: "京都市左京区北白川追分町88")
         }
-        if spotName.contains("ふたば") {
+        let title = placeTitle(spotName)
+        if !isEditorialName(spotName), title.contains("ふたば") {
             return Pin(id: "demachi-futaba", coordinate: demachiFutaba, walkMinutes: 3, address: "京都市上京区出町桝形商店街")
         }
         if spotName.contains("枡形商店街") || spotName.contains("桝形商店街")
@@ -130,6 +168,17 @@ enum LandmarkRegistry {
         }
         if spotName.contains("みたらし") {
             return Pin(id: "demachi-mitarashi", coordinate: demachiMitarashi, walkMinutes: 15, address: "京都市左京区下鴨松ノ木町53")
+        }
+        if spotName.contains("公園") {
+            // 出町の川沿い公園はデルタ先端より南。デルタ正本と重ねない。
+            if stationName.contains("出町柳"), spotName.contains("鴨川") || spotName.contains("出町") {
+                return Pin(
+                    id: "demachi-kamogawa-park",
+                    coordinate: CLLocationCoordinate2D(latitude: 35.02955, longitude: 135.77188),
+                    walkMinutes: 4,
+                    address: "鴨川沿い（出町柳駅南側）"
+                )
+            }
         }
         if spotName.contains("デルタ") || spotName.contains("河川敷") || spotName.contains("三角州") {
             return Pin(id: "demachi-delta", coordinate: demachiDelta, walkMinutes: 3, address: "鴨川デルタ")
