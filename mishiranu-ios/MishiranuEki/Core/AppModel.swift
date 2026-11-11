@@ -168,15 +168,24 @@ final class AppModel {
     /// 案内タブは実用一覧。土地文に名前が無くても、AIが拾った店・名所を出す。
     /// （歩くコースは土地文寄り。案内は件数を厚くする）
     /// 並びは駅から近い順（信頼ピンは座標、未確定は徒歩分）。
-    func guideSpots(_ kind: GuideKind) -> [Spot] {
+    /// 案内のご飯・お土産・休むところ。本番の地図にも同じ店を出す。
+    var guideShopSpots: [Spot] {
         guard let station else { return [] }
+        let kinds: Set<GuideKind> = [.meal, .souvenir, .rest]
+        return guidePool(for: station).filter { spot in
+            kinds.contains(spot.guide)
+                && !(spot.lat == 0 && spot.lng == 0)
+                && !DemachiTemplate.isForeignDemachiPlace(spot.name, stationName: station.name)
+        }
+    }
+
+    private func guidePool(for station: Station) -> [Spot] {
         let sealed = CourseBuilder.snapLandmarkPins(
             LandMentionSeeder.ensure(
                 on: CourseBuilder.normalizeEdibleSouvenirs(station)
             )
         )
-        // 楼門・参拝記念は本体に畳む。近所の無名寺は落とす。
-        let pool = FirstVisitFaces.collapseWorshipDuplicates(
+        return FirstVisitFaces.collapseWorshipDuplicates(
             sealed.spots.filter {
                 !$0.name.hasSuffix("駅")
                     && !PlaceNoise.isNoise($0.name)
@@ -186,6 +195,11 @@ final class AppModel {
             },
             stationName: station.name
         )
+    }
+
+    func guideSpots(_ kind: GuideKind) -> [Spot] {
+        guard let station else { return [] }
+        let pool = guidePool(for: station)
         var items = pool.filter { $0.guide == kind }
         // 名物菓子は meal でもお土産タブに出す（地図上のふたば等）
         if kind == .souvenir {

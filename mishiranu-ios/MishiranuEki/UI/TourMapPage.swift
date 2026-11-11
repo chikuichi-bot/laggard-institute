@@ -29,7 +29,9 @@ struct TourMapPage: View {
             let pin = model.resolvedSpot($0.spot)
             return CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng)
         }
-        return [stationCoordinate] + mid + [stationCoordinate]
+        let near = mid.filter { isNearStation($0.latitude, $0.longitude) }
+        guard near.count >= 1 else { return [] }
+        return [stationCoordinate] + near + [stationCoordinate]
     }
 
     private var routeKey: String {
@@ -38,21 +40,46 @@ struct TourMapPage: View {
         return "\(station.id)|\(course.id)|\(ids)"
     }
 
-    /// 地図に出すピン。コースの立ち寄り（番号）に加え、徒歩圏の信頼ピン（ご飯・土産など）も出す。
+    /// この駅の地図に載せてよい距離。出町柳のピン（約15km北）を八幡の画面へ入れない。
+    private var maxPinKm: Double { 8 }
+
+    private func isNearStation(_ lat: Double, _ lng: Double) -> Bool {
+        Geo.haversineKm(
+            lat1: station.lat, lng1: station.lng,
+            lat2: lat, lng2: lng
+        ) <= maxPinKm
+    }
+
+    /// 地図に出すピン。コースの立ち寄り、信頼ピンに加え、案内の店も出す。駅から遠すぎる点は捨てる。
     private var mapSpots: [Spot] {
-        if let course = model.selectedCourse, !course.stops.isEmpty {
-            let coursePins = course.stops.map { model.resolvedSpot($0.spot) }
-            let courseIds = Set(coursePins.map(\.id))
-            let extras = model.tourSpots.map(model.resolvedSpot).filter { extra in
-                if courseIds.contains(extra.id) { return false }
-                // id が違っても同名の立ち寄りは二重にしない
-                return !coursePins.contains {
-                    NameMatch.score($0.name, extra.name) >= 85
-                }
-            }
-            return coursePins + extras
+        let shops = model.guideShopSpots.map(model.resolvedSpot).filter {
+            isNearStation($0.lat, $0.lng)
         }
-        return model.tourSpots.map(model.resolvedSpot)
+        let trusted = model.tourSpots.map(model.resolvedSpot).filter {
+            isNearStation($0.lat, $0.lng)
+        }
+        if let course = model.selectedCourse, !course.stops.isEmpty {
+            let coursePins = course.stops.map { model.resolvedSpot($0.spot) }.filter {
+                isNearStation($0.lat, $0.lng)
+            }
+            let extras = (trusted + shops).filter { extra in
+                !coursePins.contains { sameMapPin($0, extra) }
+            }
+            return coursePins + deduped(extras)
+        }
+        return deduped(trusted + shops)
+    }
+
+    private func sameMapPin(_ a: Spot, _ b: Spot) -> Bool {
+        a.id == b.id || NameMatch.score(a.name, b.name) >= 85
+    }
+
+    private func deduped(_ spots: [Spot]) -> [Spot] {
+        var kept: [Spot] = []
+        for spot in spots where !kept.contains(where: { sameMapPin($0, spot) }) {
+            kept.append(spot)
+        }
+        return kept
     }
 
     /// ピン表示用座標。線の経由点は実座標のまま。コース番号同士が近いときだけ表示を少し扇状に広げる。
@@ -306,6 +333,7 @@ struct TourMapPage: View {
             refreshWalkingPath()
         }
         .onChange(of: station.id) {
+            model.syncWalkCourse()
             position = camera()
             publishPath(waypointCoordinates, key: routeKey, bumpRender: true)
             refreshWalkingPath()
@@ -332,12 +360,15 @@ struct TourMapPage: View {
     }
 
     /// 線を載せ、必要なら Map を再マウントして初回描画を確実にする。
+    /// 前の駅（出町柳など）の計算が遅れて戻ってきたときは、今の駅の線を上書きしない。
     private func publishPath(
         _ path: [CLLocationCoordinate2D],
         key: String,
         bumpRender: Bool
     ) {
-        guard path.count >= 2 else {
+        guard key == routeKey else { return }
+        let near = path.allSatisfy { isNearStation($0.latitude, $0.longitude) }
+        guard path.count >= 2, near else {
             walkingPath = []
             routeTaskId = key
             if bumpRender { pathRenderEpoch += 1 }
@@ -352,8 +383,6 @@ struct TourMapPage: View {
         routeTaskId = key
         if bumpRender, changed {
             pathRenderEpoch += 1
-            // カメラを一度載せ直すと polyline が乗る（タップ相当）
-            position = camera()
         }
     }
 
