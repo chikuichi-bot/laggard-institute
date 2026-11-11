@@ -31,6 +31,14 @@ enum LandmarkRegistry {
     /// OSM node/4374432589。出町桝形商店街の店先。
     static let demachiFutaba = CLLocationCoordinate2D(latitude: 35.0301072, longitude: 135.7696274)
     static let demachiDelta = CLLocationCoordinate2D(latitude: 35.0301227, longitude: 135.7717415)
+    /// Apple Maps「満寿形屋」。枡形商店街（二神町179）。川端通ではない。
+    static let demachiMasugataya = CLLocationCoordinate2D(latitude: 35.030249, longitude: 135.769436)
+    /// Apple Maps「加茂みたらし茶屋」。下鴨本通の西側・松ノ木町53（境内ではない）。
+    static let demachiMitarashi = CLLocationCoordinate2D(latitude: 35.039632, longitude: 135.770796)
+    /// 吉田キャンパス（百万遍方面）。駅やデルタに寄せない。
+    static let demachiKyotoUniversity = CLLocationCoordinate2D(latitude: 35.0272, longitude: 135.7808)
+    /// 今出川キャンパス。駅やデルタに寄せない。
+    static let demachiDoshisha = CLLocationCoordinate2D(latitude: 35.029714, longitude: 135.760715)
 
     private static let locks: [LockFile.Lock] = {
         guard let url = Bundle.main.url(forResource: "landmark-locks", withExtension: "json"),
@@ -53,7 +61,9 @@ enum LandmarkRegistry {
     }
 
     private static func pin(for spotName: String, stationName: String) -> Pin? {
-        if let lock = locks.first(where: { stationName.contains($0.station) && matches(spotName, lock: $0) }) {
+        if let lock = locks.first(where: {
+            stationName.contains($0.station) && matches(spotName, lock: $0) && branchAllowed(spotName, lock: $0)
+        }) {
             return Pin(
                 id: lock.id,
                 coordinate: CLLocationCoordinate2D(latitude: lock.lat, longitude: lock.lng),
@@ -64,31 +74,96 @@ enum LandmarkRegistry {
         return fallback(for: spotName, stationName: stationName)
     }
 
+    /// 「進々堂 京大北門前」ロックに寺町店・飛鳥井を当てない。
+    private static func branchAllowed(_ spotName: String, lock: LockFile.Lock) -> Bool {
+        let canonical = lock.canonical ?? lock.keywords.first ?? ""
+        guard !canonical.isEmpty else { return true }
+        if lock.kind == "meal" || lock.kind == "souvenir" {
+            return matchesLockedBranch(spotName, canonical: canonical)
+        }
+        return true
+    }
+
+    /// 正式名（屋号＋支店）に合うか。屋号だけの一致では支店を拾わない。
+    static func matchesLockedBranch(_ name: String, canonical: String) -> Bool {
+        if NameMatch.score(name, canonical) >= 78 { return true }
+        let parts = canonical
+            .split(whereSeparator: { $0 == " " || $0 == "　" })
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard let brand = parts.first else { return false }
+        let brandHit = name.contains(brand)
+            || (brand.contains("進々堂") && (name.contains("進々堂") || name.contains("新進堂")))
+        guard brandHit else { return false }
+        let branch = parts.dropFirst()
+        if branch.isEmpty {
+            // 「満寿形屋」のように一語なら屋号一致でよい
+            return true
+        }
+        // 「京大北門前」→ 北門 / 京大 など支店語が名前に要る
+        return branch.contains { bit in
+            bit.count >= 2 && name.contains(bit)
+        }
+    }
+
     /// JSON が読めないときも、確認済みノードには戻す。
     private static func fallback(for spotName: String, stationName: String) -> Pin? {
         guard stationName.contains("出町柳") else { return nil }
-        if spotName.contains("進々堂") || spotName.contains("新進堂") {
+        if (spotName.contains("進々堂") || spotName.contains("新進堂")),
+           matchesLockedBranch(spotName, canonical: "進々堂 京大北門前") {
             return Pin(id: "demachi-shinshindo", coordinate: demachiShinshindo, walkMinutes: 12, address: "京都市左京区北白川追分町88")
         }
         if spotName.contains("ふたば") {
             return Pin(id: "demachi-futaba", coordinate: demachiFutaba, walkMinutes: 3, address: "京都市上京区出町桝形商店街")
         }
+        if spotName.contains("枡形商店街") || spotName.contains("桝形商店街")
+            || spotName.contains("出町枡形") || spotName.contains("出町桝形") {
+            return Pin(
+                id: "demachi-masugata-arcade",
+                coordinate: demachiMasugataya,
+                walkMinutes: 3,
+                address: "京都市上京区出町桝形商店街"
+            )
+        }
+        if spotName.contains("満寿形") || spotName.contains("ますがた") {
+            return Pin(id: "demachi-masugataya", coordinate: demachiMasugataya, walkMinutes: 4, address: "京都市上京区桝形通出町西入ル二神町179")
+        }
+        if spotName.contains("みたらし") {
+            return Pin(id: "demachi-mitarashi", coordinate: demachiMitarashi, walkMinutes: 15, address: "京都市左京区下鴨松ノ木町53")
+        }
         if spotName.contains("デルタ") || spotName.contains("河川敷") || spotName.contains("三角州") {
             return Pin(id: "demachi-delta", coordinate: demachiDelta, walkMinutes: 3, address: "鴨川デルタ")
+        }
+        if spotName.contains("京都大学") {
+            return Pin(
+                id: "demachi-kyoto-u",
+                coordinate: demachiKyotoUniversity,
+                walkMinutes: 14,
+                address: "京都市左京区吉田本町（吉田キャンパス・百万遍方面）"
+            )
+        }
+        if spotName.contains("同志社大学") {
+            return Pin(
+                id: "demachi-doshisha",
+                coordinate: demachiDoshisha,
+                walkMinutes: 15,
+                address: "京都市上京区今出川通烏丸東入（今出川キャンパス）"
+            )
         }
         return nil
     }
 
     static func apply(_ spot: Spot, stationName: String) -> Spot {
         guard let pin = pin(for: spot.name, stationName: stationName) else { return spot }
-        return spot.moved(to: pin.coordinate, walkMinutes: pin.walkMinutes)
+        return spot.moved(to: pin.coordinate, walkMinutes: pin.walkMinutes, coordTrust: .lock)
     }
 
     static func apply(to station: Station) -> Station {
         var spots = station.spots.map { apply($0, stationName: station.name) }
         // ロックされた名所がスポットに無いときは、正本から足す（石清水八幡宮・飛行神社など）
         for lock in locks where station.name.contains(lock.station) {
-            guard lock.kind == "keyword" || lock.kind == "river" || lock.kind == "souvenir" else { continue }
+            // meal も足す（満寿形屋など。無いと AI の仮座標のまま川端に残ることがある）
+            guard lock.kind == "keyword" || lock.kind == "river" || lock.kind == "souvenir" || lock.kind == "meal" else { continue }
             let label = lock.canonical ?? lock.keywords.first ?? lock.id
             let already = spots.contains { spot in
                 // 「石清水八幡宮駅」は社殿ではない
@@ -101,30 +176,35 @@ enum LandmarkRegistry {
             }
             guard !already else { continue }
             let isSouvenir = lock.kind == "souvenir"
-                || lock.keywords.contains { $0.contains("餅") || $0.contains("菓子") || $0.contains("土産") }
+                || lock.keywords.contains { $0.contains("餅") || $0.contains("菓子") || $0.contains("土産") || $0.contains("みたらし") }
+            let isMeal = lock.kind == "meal"
             let isRiver = lock.kind == "river"
+            let guide: GuideKind = isMeal ? .meal : (isSouvenir ? .souvenir : (isRiver ? .rest : .sight))
             spots.append(
                 Spot(
                     id: "lock-\(lock.id)",
                     name: label,
-                    genre: isSouvenir ? "gourmet" : "history",
-                    guide: isSouvenir ? .souvenir : (isRiver ? .rest : .sight),
+                    genre: (isSouvenir || isMeal) ? "gourmet" : "history",
+                    guide: guide,
                     mealTier: .casual,
                     mealTimes: [.morning, .lunch],
                     soloOk: true,
-                    budgetYen: isSouvenir ? "〜¥1,000" : "—",
-                    hours: isSouvenir ? "9:00〜17:00（店休日あり・要確認）" : nil,
-                    blurb: isSouvenir
-                        ? "\(label)。門前の手土産・名物。軽い包みで駅からの帰りにも向きやすい。"
-                        : (isRiver
-                            ? SpotCopy.compose(name: label, guide: .rest, address: lock.address)
-                            : "\(label)。この駅の土地の顔になる名所。"),
+                    budgetYen: isMeal ? "〜¥1,500" : (isSouvenir ? "〜¥1,000" : "—"),
+                    hours: isSouvenir || isMeal ? "要確認" : nil,
+                    blurb: isMeal
+                        ? "\(label)。この駅の定番めし。"
+                        : (isSouvenir
+                            ? "\(label)。門前の手土産・名物。軽い包みで駅からの帰りにも向きやすい。"
+                            : (isRiver
+                                ? SpotCopy.compose(name: label, guide: .rest, address: lock.address)
+                                : "\(label)。この駅の土地の顔になる名所。")),
                     detail: lock.address,
                     walkMinutes: lock.walkMinutes,
                     secretWorthy: false,
                     majorWorthy: true,
                     lat: lock.lat,
-                    lng: lock.lng
+                    lng: lock.lng,
+                    coordTrust: .lock
                 )
             )
         }
@@ -135,7 +215,25 @@ enum LandmarkRegistry {
     }
 
     static func isLocked(_ spot: Spot, stationName: String) -> Bool {
-        pin(for: spot.name, stationName: stationName) != nil
+        isLocked(name: spot.name, stationName: stationName)
+    }
+
+    static func isLocked(name: String, stationName: String) -> Bool {
+        pin(for: name, stationName: stationName) != nil
+    }
+
+    /// Apple 名検索用。ロックされた正式名・キーワード（みたらし・神社含む）。
+    static func appleSearchNames(for stationName: String) -> [String] {
+        var names: [String] = []
+        for lock in locks where stationName.contains(lock.station) {
+            if let canonical = lock.canonical, !canonical.isEmpty {
+                names.append(canonical)
+            }
+            for key in lock.keywords where key.count >= 3 {
+                names.append(key)
+            }
+        }
+        return Array(Set(names))
     }
 
     /// ご飯の定番として検索する正式名（canonical または meal ロック）。
@@ -162,17 +260,16 @@ enum LandmarkRegistry {
     }
 
     /// 弱い業態名を、ロックされた正式屋号へ寄せる。
+    /// 寺町店など別支店は正式名に寄せず、nil（後でライバルとして落とす）。
     static func canonicalizeMealName(_ name: String, stationName: String) -> String? {
         for lock in locks where stationName.contains(lock.station) {
             guard lock.kind == "meal" || lock.canonical != nil else { continue }
             let canonical = lock.canonical ?? lock.keywords.first
             guard let canonical else { continue }
-            if NameMatch.score(name, canonical) >= 72 { return canonical }
-            if lock.keywords.contains(where: { name.contains($0) || $0.contains(name) }) {
-                // 「おにぎり屋」だけ等の弱い名は、正式 canonical へ昇格
-                if MealStapleCatcher.isWeakCategoryName(name) || NameMatch.score(name, canonical) >= 55 {
-                    return canonical
-                }
+            if matchesLockedBranch(name, canonical: canonical) { return canonical }
+            if MealStapleCatcher.isWeakCategoryName(name),
+               lock.keywords.contains(where: { name.contains($0) || $0.contains(name) }) {
+                return canonical
             }
         }
         return nil

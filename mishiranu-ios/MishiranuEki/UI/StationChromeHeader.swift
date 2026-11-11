@@ -1,18 +1,10 @@
 import SwiftUI
 
-/// 駅名ピル。地図・土地・歩く／案内／設定で共通。見た目は A/C に追従。
+/// 駅ヘッド。地図・土地・歩く／案内／設定で共通。「京阪電車　出町柳駅」を画面中央に。
 struct StationChromeHeader: View {
     @Environment(AppModel.self) private var model
     @Environment(ThemeStore.self) private var theme
     let station: Station
-
-    private var courseTitle: String {
-        model.selectedCourse?.title ?? station.tourTitle
-    }
-
-    private var metaLine: String {
-        "\(model.dayPart.label) · \(model.stay.label)"
-    }
 
     private var pillCorner: CGFloat { theme.skin == .board ? 4 : 2 }
 
@@ -25,10 +17,26 @@ struct StationChromeHeader: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .center, spacing: 8) {
+        ZStack {
+            Text(station.chromeStationLabel)
+                .font(.system(.subheadline, design: .default).weight(.bold))
+                .foregroundStyle(pillText)
+                .tracking(0.6)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: pillCorner, style: .continuous)
+                        .fill(pillFill)
+                )
+                .padding(.horizontal, 44)
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
+
+            HStack {
                 Button {
-                    model.startArrival()
+                    model.goHero()
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.body.weight(.semibold))
@@ -36,37 +44,15 @@ struct StationChromeHeader: View {
                         .frame(width: 32, height: 32)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PlainHapticButtonStyle())
                 .accessibilityLabel("駅を探し直す")
-
-                Text(station.name)
-                    .font(.system(.subheadline, design: .default).weight(.bold))
-                    .foregroundStyle(pillText)
-                    .tracking(0.8)
-                    .lineLimit(1)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(
-                        RoundedRectangle(cornerRadius: pillCorner, style: .continuous)
-                            .fill(pillFill)
-                    )
-
-                Text(courseTitle)
-                    .font(.system(.footnote))
-                    .foregroundStyle(Palette.fog)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer(minLength: 0)
             }
-
-            Text(metaLine)
-                .font(.caption2)
-                .foregroundStyle(Palette.mist)
-                .padding(.leading, 40)
         }
         .padding(.horizontal, 14)
         .padding(.top, 8)
         .padding(.bottom, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .background(Palette.paper)
         .overlay(alignment: .bottom) { Divider().overlay(Palette.line) }
     }

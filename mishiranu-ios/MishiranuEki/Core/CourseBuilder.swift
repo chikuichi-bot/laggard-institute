@@ -27,6 +27,30 @@ struct WalkCourse: Hashable, Identifiable {
     let vibe: String
     let totalMinutes: Int
     let stops: [CourseStop]
+    /// 最後の立ち寄りから駅へ戻る徒歩分（終点＝駅）。
+    let returnWalkMinutes: Int
+    /// 駅に戻る目安時刻。
+    let returnClockLabel: String
+
+    init(
+        id: String,
+        title: String,
+        subtitle: String,
+        vibe: String,
+        totalMinutes: Int,
+        stops: [CourseStop],
+        returnWalkMinutes: Int = 0,
+        returnClockLabel: String = ""
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.vibe = vibe
+        self.totalMinutes = totalMinutes
+        self.stops = stops
+        self.returnWalkMinutes = returnWalkMinutes
+        self.returnClockLabel = returnClockLabel
+    }
 }
 
 /// 難易度ではなく、まわり方の切り口。
@@ -445,10 +469,21 @@ enum CourseBuilder {
 
     /// 正本レジストリで誤ピンを上書き（表示・コース・保存の直前に必ず通す）
     /// 近所の無名寺もここで落とし、保存済みデータにも後から効く。
+    /// ロック以外で駅直上に置かれた AI 仮座標は地図に出さない（Apple refine 待ち）。
     static func snapLandmarkPins(_ station: Station) -> Station {
+        let faces = FirstVisitFaces.filterSpots(station.spots, stationName: station.name)
+        let scrubbed = faces.filter { spot in
+            if LandmarkRegistry.isLocked(spot, stationName: station.name) { return true }
+            let km = Geo.haversineKm(
+                lat1: station.lat, lng1: station.lng,
+                lat2: spot.lat, lng2: spot.lng
+            )
+            // 駅から 80m 以内＝AI 欠落フォールバックや適当寄せ。誤ピンの温床なので外す。
+            return km >= 0.08
+        }
         let filtered = station.relocated(
             center: CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng),
-            spots: FirstVisitFaces.filterSpots(station.spots, stationName: station.name)
+            spots: scrubbed
         )
         return LandmarkRegistry.apply(to: filtered)
     }
@@ -527,7 +562,9 @@ enum CourseBuilder {
                     )
                 )
             }
-            if !spots.contains(where: { $0.name.contains("進々堂") || $0.name.contains("新進堂") }) {
+            if !spots.contains(where: {
+                LandmarkRegistry.matchesLockedBranch($0.name, canonical: "進々堂 京大北門前")
+            }) {
                 spots.append(
                     Spot(
                         id: "ai-meal-shinshindo",
@@ -590,12 +627,12 @@ enum CourseBuilder {
                         budgetYen: "〜¥1,500",
                         hours: "12:00〜15:00（売切次第終了）",
                         blurb: "枡形商店街のうどんと鯖寿司。出町で腹ごしらえするときの定番食堂。",
-                        detail: "京阪出町柳から枡形へ徒歩数分。昼だけ・売り切れ次第終了。",
+                        detail: "京都市上京区桝形通出町西入ル二神町179",
                         walkMinutes: 4,
                         secretWorthy: false,
                         majorWorthy: false,
-                        lat: 35.03005,
-                        lng: 135.76985
+                        lat: LandmarkRegistry.demachiMasugataya.latitude,
+                        lng: LandmarkRegistry.demachiMasugataya.longitude
                     )
                 )
             }
@@ -612,12 +649,12 @@ enum CourseBuilder {
                         budgetYen: "〜¥700",
                         hours: "10:00〜17:00（季節により変動）",
                         blurb: "下鴨神社近くのみたらし団子。香ばしいタレが手土産にも人気。",
-                        detail: "参道まわり。神社とセットで寄るとわかりやすい。",
+                        detail: "京都市左京区下鴨松ノ木町53（下鴨本通の西側・境内ではない）",
                         walkMinutes: 15,
                         secretWorthy: false,
                         majorWorthy: false,
-                        lat: 35.0392,
-                        lng: 135.7715
+                        lat: LandmarkRegistry.demachiMitarashi.latitude,
+                        lng: LandmarkRegistry.demachiMitarashi.longitude
                     )
                 )
             }
@@ -889,7 +926,12 @@ enum CourseBuilder {
 
     /// 保存データに major 印が無いとき、名所・近い店を定番候補にする（サーバ再生成前の保険）
     static func ensureLocalMajors(_ station: Station) -> Station {
-        let sealed = balanceMajorsSightseeing(sealIconicMajors(station))
+        // 土地文の商店街・橋などをスポット化、大学など具体名を確保してから顔を整える。
+        // シーダー後にロック座標を当て直す（京都大学がデルタに残らないように）。
+        let seeded = LandmarkRegistry.apply(
+            to: LandMentionSeeder.ensure(on: LandPresentAnchors.ensure(on: station))
+        )
+        let sealed = balanceMajorsSightseeing(sealIconicMajors(seeded))
         let marked = sealed.spots.filter(\.majorWorthy)
         if marked.count >= MajorFaces.total { return sealed }
         let scored: [(Spot, Double)] = sealed.spots.map { spot in
@@ -930,14 +972,393 @@ enum CourseBuilder {
         return balanceMajorsSightseeing(withMajorFlags(sealed, ids: Set(picked.prefix(MajorFaces.total).map(\.id))))
     }
 
+    /// 駅から近い順（実座標の距離 → 徒歩分）。歩くページ・地図の番号の正本。
+    private static func sortNearStation(_ spots: [Spot], station: Station) -> [Spot] {
+        func meters(_ spot: Spot) -> Double {
+            let km = Geo.haversineKm(
+                lat1: station.lat, lng1: station.lng,
+                lat2: spot.lat, lng2: spot.lng
+            )
+            // 座標が駅とほぼ同じ（未確定の仮ピン）だけ徒歩分を距離の代理にする。
+            // 0.08km だと実座標の鴨川デルタ等まで仮扱いされ、近い順が崩れる。
+            if km < 0.02 {
+                return Double(max(spot.walkMinutes, 1)) * 80
+            }
+            return km * 1000
+        }
+        return spots.sorted { lhs, rhs in
+            let dm = meters(lhs) - meters(rhs)
+            if abs(dm) > 15 { return dm < 0 }
+            if lhs.walkMinutes != rhs.walkMinutes {
+                return lhs.walkMinutes < rhs.walkMinutes
+            }
+            return lhs.name < rhs.name
+        }
+    }
+
+    /// ショート（手短）とロング（ゆったり）。候補は近い顔から選び、歩き順は道なり最適化。
+    static func firstVisitOrdinaryCourses(
+        for station: Station,
+        dayPart: DayPart,
+        stay: StayOption = .halfDay
+    ) -> [WalkCourse] {
+        // シーダーが出町の文から顔を起こしたあと、もう一度落とす。
+        let prepared = DemachiTemplate.scrubContamination(
+            on: snapLandmarkPins(
+                BikeRentalSeal.ensure(
+                    ensureLocalMajors(
+                        normalizeEdibleSouvenirs(DemachiTemplate.scrubContamination(on: station))
+                    )
+                )
+            )
+        )
+        let must = DemachiTemplate.filterWalkSpots(mustVisitWalkSpots(in: prepared), station: prepared)
+        var pool = DemachiTemplate.filterWalkSpots(ordinaryWalkPool(in: prepared), station: prepared)
+        for spot in must where !pool.contains(where: { sameWalkPlace($0, spot) }) {
+            pool.append(spot)
+        }
+        guard !pool.isEmpty else { return [] }
+
+        let near = sortNearStation(pool, station: prepared)
+        // 雛形がある駅はショート＝mustVisit そのもの（出町方式: 土地の顔3点など）。
+        // 出町固有名が他駅に混ざって must が空になったら near に落ちる。
+        let shortRaw: [Spot] =
+            must.count >= 2
+            ? must
+            : ensureMustVisits(
+                Array(near.prefix(min(3, near.count))),
+                must: must,
+                station: prepared,
+                cap: min(3, near.count)
+            )
+        let shortSet = DemachiTemplate.filterWalkSpots(shortRaw, station: prepared)
+        let longCap = min(max(stay.maxCourseStops, 5), max(near.count, shortSet.count), 6)
+        let longSet = DemachiTemplate.filterWalkSpots(
+            ensureMustVisits(
+                Array(near.prefix(longCap)), must: must, station: prepared, cap: longCap
+            ),
+            station: prepared
+        )
+        guard !shortSet.isEmpty else { return [] }
+        let startHour = dayPart.defaultClockHour
+        let bare = SavedStationStore.bareName(prepared.name)
+
+        var out: [WalkCourse] = []
+        if let short = buildOrdinaryVariant(
+            id: "ordinary-short-\(bare)-\(dayPart.rawValue)",
+            title: "ショートで歩く",
+            subtitle: "駅まわりを手短に · \(shortSet.count)か所",
+            vibe: "土地の顔を、遠回りしない順で",
+            spots: shortSet,
+            station: prepared,
+            dayPart: dayPart,
+            stay: stay,
+            startHour: startHour
+        ) {
+            out.append(short)
+        }
+        // ロングはショートより多いときだけ別コースにする
+        if longSet.count > shortSet.count,
+           let long = buildOrdinaryVariant(
+            id: "ordinary-long-\(bare)-\(dayPart.rawValue)",
+            title: "ロングで歩く",
+            subtitle: "土地の顔をゆったり · \(longSet.count)か所",
+            vibe: "土地の顔から先まで、道なりにゆったり巡る",
+            spots: longSet,
+            station: prepared,
+            dayPart: dayPart,
+            stay: stay,
+            startHour: startHour
+        ) {
+            out.append(long)
+        } else if out.isEmpty, let only = buildOrdinaryVariant(
+            id: "ordinary-short-\(bare)-\(dayPart.rawValue)",
+            title: "ショートで歩く",
+            subtitle: "駅まわりを手短に",
+            vibe: "土地の顔を、遠回りしない順で",
+            spots: ensureMustVisits(near, must: must, station: prepared, cap: near.count),
+            station: prepared,
+            dayPart: dayPart,
+            stay: stay,
+            startHour: startHour
+        ) {
+            out.append(only)
+        }
+        return out
+    }
+
+    /// 互換: ショート（無ければロング）を1本返す。
+    static func firstVisitOrdinaryCourse(
+        for station: Station,
+        dayPart: DayPart,
+        stay: StayOption = .halfDay
+    ) -> WalkCourse? {
+        firstVisitOrdinaryCourses(for: station, dayPart: dayPart, stay: stay).first
+    }
+
+    private static func ordinaryWalkPool(in station: Station) -> [Spot] {
+        // 歩くコースは土地文の名前が正本。地図用の lock/Apple は必須にしない
+        // （未確定座標でも道順は出す。地図ピンは MapPinTrust 側で別判定）。
+        let near: (Spot) -> Bool = {
+            !isGenericNeighborhoodCafe($0)
+                && DemachiTemplate.spotNearStation($0, station: station)
+        }
+        let narrative = StationLore.landNarrativeSpots(in: station).filter(near)
+        if narrative.count >= 2 { return narrative }
+
+        let introduced = StationLore.introducedVisitSpots(in: station).filter {
+            near($0)
+                && ($0.guide == .sight || $0.guide == .rest || $0.guide == .tip
+                    || $0.majorWorthy
+                    || FirstVisitFaces.isOrdinaryPublicFace($0.name)
+                    || FirstVisitFaces.isGuidebookWorship($0.name, stationName: station.name))
+        }
+        if !introduced.isEmpty { return introduced }
+
+        // 土地文の抽出が薄い駅: 観光・休み・名所印から起こす
+        return station.spots.filter {
+            near($0)
+                && !$0.name.hasSuffix("駅")
+                && !PlaceNoise.isNoise($0.name)
+                && ($0.guide == .sight || $0.guide == .rest || $0.majorWorthy
+                    || FirstVisitFaces.isGuidebookWorship($0.name, stationName: station.name))
+        }
+    }
+
+    /// 出町柳雛形のショート正本。JSON mustVisit → なければ観光案内の顔。
+    private static func mustVisitWalkSpots(in station: Station) -> [Spot] {
+        let anchors = LandPresentAnchors.anchors(forStationName: station.name).filter(\.isMustVisit)
+        var found: [Spot] = []
+        for anchor in anchors {
+            if DemachiTemplate.isForeignDemachiPlace(anchor.name, stationName: station.name) {
+                continue
+            }
+            if let hit = station.spots.first(where: { spot in
+                spotMatchesAnchorKeys(spot.name, keys: anchor.keys)
+                    || anchor.keys.contains { NameMatch.score(spot.name, $0) >= 90 }
+            }), DemachiTemplate.spotNearStation(hit, station: station) {
+                if !found.contains(where: { sameWalkPlace($0, hit) }) {
+                    found.append(LandmarkRegistry.apply(hit, stationName: station.name))
+                }
+                continue
+            }
+            // スポットが欠けていてもアンカーから起こす
+            guard let lat = anchor.lat, let lng = anchor.lng else { continue }
+            let guide: GuideKind = {
+                switch anchor.guide {
+                case "meal": return .meal
+                case "rest": return .rest
+                case "souvenir": return .souvenir
+                case "tip": return .tip
+                default: return .sight
+                }
+            }()
+            let created = Spot(
+                id: "anchor-\(NameMatch.normalize(anchor.name).prefix(28))",
+                name: anchor.name,
+                genre: "town",
+                guide: guide,
+                mealTier: .casual,
+                mealTimes: [],
+                soloOk: true,
+                budgetYen: "—",
+                hours: "終日（屋外）",
+                blurb: [anchor.why, anchor.present].compactMap { $0 }.joined(separator: " "),
+                detail: anchor.whereLabel,
+                walkMinutes: anchor.walkMinutes ?? 8,
+                secretWorthy: false,
+                majorWorthy: true,
+                lat: lat,
+                lng: lng,
+                coordTrust: .lock
+            )
+            guard DemachiTemplate.spotNearStation(created, station: station) else { continue }
+            found.append(created)
+        }
+        if found.count >= 2 { return found }
+
+        // 知らない駅: 観光案内メモ（出町雛形で揃えた3点）から起こす
+        for note in station.sightseeingNotes {
+            if DemachiTemplate.isForeignDemachiPlace(note.title, stationName: station.name) {
+                continue
+            }
+            let title = note.title
+                .split(whereSeparator: { "と・/｜|".contains($0) })
+                .map(String.init)
+                .first { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                ?? note.title
+            guard title.count >= 2 else { continue }
+            if let hit = station.spots.first(where: {
+                spotMatchesAnchorKeys($0.name, keys: [title, note.title])
+            }), DemachiTemplate.spotNearStation(hit, station: station),
+               !found.contains(where: { sameWalkPlace($0, hit) }) {
+                found.append(LandmarkRegistry.apply(hit, stationName: station.name))
+            } else if !found.contains(where: {
+                NameMatch.score($0.name, title) >= 85 || namesLikelySamePlace($0.name, title)
+            }) {
+                // スポット未登録でも土地の顔としてコースに載せる（座標は後で Apple 採取）
+                found.append(
+                    Spot(
+                        id: "note-\(NameMatch.normalize(title).prefix(24))",
+                        name: title,
+                        genre: "town",
+                        guide: .sight,
+                        mealTier: .casual,
+                        mealTimes: [],
+                        soloOk: true,
+                        budgetYen: "—",
+                        hours: "終日（屋外）",
+                        blurb: note.body,
+                        detail: "土地の案内メモから。",
+                        walkMinutes: 8 + found.count * 3,
+                        secretWorthy: false,
+                        majorWorthy: true,
+                        lat: station.lat + Double(found.count) * 0.0004,
+                        lng: station.lng - Double(found.count) * 0.0003,
+                        coordTrust: .unverified
+                    )
+                )
+            }
+            if found.count >= 3 { break }
+        }
+        return found.filter { DemachiTemplate.spotNearStation($0, station: station) }
+    }
+
+    private static func namesLikelySamePlace(_ a: String, _ b: String) -> Bool {
+        if a == b { return true }
+        if a.contains("枡形") || a.contains("桝形"),
+           b.contains("枡形") || b.contains("桝形"),
+           !a.contains("満寿"), !b.contains("満寿") {
+            return true
+        }
+        let short = a.count <= b.count ? a : b
+        let long = a.count <= b.count ? b : a
+        guard long.contains(short) else { return false }
+        // 参道ケーブル≠本殿、山崎≠大山崎山荘
+        return short.count >= 4 && Double(short.count) >= Double(long.count) * 0.85
+    }
+
+    private static func sameWalkPlace(_ a: Spot, _ b: Spot) -> Bool {
+        if a.id == b.id { return true }
+        if NameMatch.score(a.name, b.name) >= 92 { return true }
+        return namesLikelySamePlace(a.name, b.name)
+    }
+
+    private static func spotMatchesAnchorKeys(_ spotName: String, keys: [String]) -> Bool {
+        keys.contains { key in
+            if spotName == key { return true }
+            if key.count >= 4, spotName.contains(key) { return true }
+            if spotName.count >= 4, key.contains(spotName),
+               Double(spotName.count) >= Double(key.count) * 0.85 {
+                return true
+            }
+            return false
+        }
+    }
+
+    /// mustVisit が落ちないよう、遠い候補と入れ替えてセットに残す。
+    private static func ensureMustVisits(
+        _ set: [Spot],
+        must: [Spot],
+        station: Station,
+        cap: Int
+    ) -> [Spot] {
+        var out = set
+        let limit = max(cap, must.count)
+        for m in must {
+            if out.contains(where: { sameWalkPlace($0, m) }) { continue }
+            if out.count < limit {
+                out.append(m)
+                continue
+            }
+            // いちばん遠い非 must を入れ替え
+            let mustIds = Set(must.map(\.id))
+            guard let dropIdx = out.indices.max(by: { i, j in
+                let si = out[i], sj = out[j]
+                if mustIds.contains(si.id) != mustIds.contains(sj.id) {
+                    return mustIds.contains(si.id) && !mustIds.contains(sj.id)
+                }
+                let di = Geo.haversineKm(
+                    lat1: station.lat, lng1: station.lng, lat2: si.lat, lng2: si.lng
+                )
+                let dj = Geo.haversineKm(
+                    lat1: station.lat, lng1: station.lng, lat2: sj.lat, lng2: sj.lng
+                )
+                return di < dj
+            }) else { continue }
+            if mustIds.contains(out[dropIdx].id) { continue }
+            out[dropIdx] = m
+        }
+        return out
+    }
+
+    private static func buildOrdinaryVariant(
+        id: String,
+        title: String,
+        subtitle: String,
+        vibe: String,
+        spots: [Spot],
+        station: Station,
+        dayPart: DayPart,
+        stay: StayOption,
+        startHour: Int
+    ) -> WalkCourse? {
+        guard !spots.isEmpty else { return nil }
+        let provisional = spots.map {
+            CourseStop(
+                spot: $0,
+                walkMinutes: $0.walkMinutes,
+                dwellMinutes: dwellMinutes($0.guide, stay: stay),
+                clockLabel: ""
+            )
+        }
+        // 駅出発 → 立ち寄り → 駅に戻る周回（同じ道の往復を避ける）
+        return finishLoopCourse(
+            id: id,
+            title: title,
+            subtitle: subtitle,
+            vibe: vibe,
+            provisional: provisional,
+            stationLat: station.lat,
+            stationLng: station.lng,
+            startHour: startHour,
+            stay: stay
+        )
+    }
+
+    /// 登場順のまま時計だけ振る（まわり方の地理並べ替えはしない）。
+    private static func stampClocks(_ stops: [CourseStop], startHour: Int) -> [CourseStop] {
+        var hour = startHour
+        var minute = 0
+        return stops.map { stop in
+            let label = String(format: "%d:%02d", hour, minute)
+            minute += stop.walkMinutes + stop.dwellMinutes
+            while minute >= 60 {
+                minute -= 60
+                hour = (hour + 1) % 24
+            }
+            return CourseStop(
+                spot: stop.spot,
+                walkMinutes: stop.walkMinutes,
+                dwellMinutes: stop.dwellMinutes,
+                clockLabel: label
+            )
+        }
+    }
+
     static func courses(
         for station: Station,
         stay: StayOption,
         dayPart: DayPart,
         prefs: MealPrefs?
     ) -> [WalkCourse] {
-        let prepared = snapLandmarkPins(
-            BikeRentalSeal.ensure(ensureLocalMajors(normalizeEdibleSouvenirs(station)))
+        let prepared = DemachiTemplate.scrubContamination(
+            on: snapLandmarkPins(
+                BikeRentalSeal.ensure(
+                    ensureLocalMajors(normalizeEdibleSouvenirs(DemachiTemplate.scrubContamination(on: station)))
+                )
+            )
         )
         // 土地紹介で触れた場所だけをまわり方の正本にする
         let introduced = StationLore.introducedVisitSpots(in: prepared)
@@ -979,83 +1400,172 @@ enum CourseBuilder {
                 avoid: claimed
             )
             guard !rawStops.isEmpty else { return nil }
-            // ジャンル優先で拾ったあとに、駅起点で往復しにくい順へ並べ替える
-            let stops = orderStopsAlongWalk(
-                stationLat: prepared.lat,
-                stationLng: prepared.lng,
-                startHour: startHour,
-                stay: stay,
-                stops: rawStops
-            )
-            // 次のコースが同じ2か所から始まらないよう、先頭寄りの停留を確保
-            for stop in stops.prefix(2) {
-                claimed.insert(stop.spot.id)
-            }
-            let total = stops.reduce(0) { $0 + $1.walkMinutes + $1.dwellMinutes }
-            return WalkCourse(
+            let course = finishLoopCourse(
                 id: "\(template.id)-\(stay.rawValue)-\(dayPart.rawValue)",
                 title: template.title,
                 subtitle: "\(template.subtitle) · \(stay.courseLengthHint)",
                 vibe: template.vibe,
-                totalMinutes: total > 0 ? total : min(budget, 45),
-                stops: stops
+                provisional: rawStops,
+                stationLat: prepared.lat,
+                stationLng: prepared.lng,
+                startHour: startHour,
+                stay: stay
             )
+            guard var course = course else { return nil }
+            for stop in course.stops.prefix(2) {
+                claimed.insert(stop.spot.id)
+            }
+            if course.totalMinutes <= 0 {
+                course = WalkCourse(
+                    id: course.id,
+                    title: course.title,
+                    subtitle: course.subtitle,
+                    vibe: course.vibe,
+                    totalMinutes: min(budget, 45),
+                    stops: course.stops,
+                    returnWalkMinutes: course.returnWalkMinutes,
+                    returnClockLabel: course.returnClockLabel
+                )
+            }
+            return course
         }
     }
 
-    /// 駅から出発し、いまの位置からいちばん近い未訪問へ進む。小さな2-optで交差を減らす。
-    private static func orderStopsAlongWalk(
+    /// 駅出発→立ち寄り→駅帰還のコースを組み立てる。
+    private static func finishLoopCourse(
+        id: String,
+        title: String,
+        subtitle: String,
+        vibe: String,
+        provisional: [CourseStop],
         stationLat: Double,
         stationLng: Double,
         startHour: Int,
-        stay: StayOption,
-        stops: [CourseStop]
-    ) -> [CourseStop] {
-        guard stops.count > 1 else { return stops }
-        var remaining = stops.map(\.spot)
-        var ordered: [Spot] = []
-        var curLat = stationLat
-        var curLng = stationLng
-        while !remaining.isEmpty {
-            let bestIdx = remaining.indices.min(by: { i, j in
-                let di = Geo.haversineKm(
-                    lat1: curLat, lng1: curLng,
-                    lat2: remaining[i].lat, lng2: remaining[i].lng
-                )
-                let dj = Geo.haversineKm(
-                    lat1: curLat, lng1: curLng,
-                    lat2: remaining[j].lat, lng2: remaining[j].lng
-                )
-                return di < dj
-            })!
-            let next = remaining.remove(at: bestIdx)
-            ordered.append(next)
-            curLat = next.lat
-            curLng = next.lng
-        }
-        ordered = twoOptPath(stationLat: stationLat, stationLng: stationLng, spots: ordered)
-        return rebuildStopsWithLegs(
+        stay: StayOption
+    ) -> WalkCourse? {
+        guard !provisional.isEmpty else { return nil }
+        let ordered = orderStopsAsStationLoop(
+            stationLat: stationLat,
+            stationLng: stationLng,
+            spots: provisional.map(\.spot)
+        )
+        let built = rebuildStopsWithLegs(
             stationLat: stationLat,
             stationLng: stationLng,
             startHour: startHour,
             stay: stay,
             spots: ordered
         )
+        guard let last = built.last else { return nil }
+        let returnKm = Geo.haversineKm(
+            lat1: last.spot.lat, lng1: last.spot.lng,
+            lat2: stationLat, lng2: stationLng
+        )
+        let returnWalk = max(1, min(90, Int((returnKm * 1.3 / 4.5 * 60).rounded())))
+        // 最終立ち寄り到着時刻 + 滞在 + 駅までの徒歩
+        var hour = startHour
+        var minute = 0
+        if let parsed = parseClock(last.clockLabel) {
+            hour = parsed.hour
+            minute = parsed.minute
+        }
+        minute += last.dwellMinutes + returnWalk
+        hour += minute / 60
+        minute %= 60
+        let returnClock = formatClock(hour: hour % 24, minute: minute)
+        let visitTotal = built.reduce(0) { $0 + $1.walkMinutes + $1.dwellMinutes }
+        return WalkCourse(
+            id: id,
+            title: title,
+            subtitle: subtitle,
+            vibe: vibe,
+            totalMinutes: max(visitTotal + returnWalk, 20),
+            stops: built,
+            returnWalkMinutes: returnWalk,
+            returnClockLabel: returnClock
+        )
     }
 
-    /// 固定の出発点付きパスの2-opt（交差・遠回りを軽く減らす）。
-    private static func twoOptPath(stationLat: Double, stationLng: Double, spots: [Spot]) -> [Spot] {
+    private static func parseClock(_ label: String) -> (hour: Int, minute: Int)? {
+        let parts = label.split(separator: ":")
+        guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
+        return (h, m)
+    }
+
+    /// 駅を始点・終点にした扇形の並び。最大の空角を帰りに使い、同じ道の往復を避ける。
+    private static func orderStopsAsStationLoop(
+        stationLat: Double,
+        stationLng: Double,
+        spots: [Spot]
+    ) -> [Spot] {
+        guard spots.count > 1 else { return spots }
+
+        struct Angled {
+            let spot: Spot
+            let angle: Double
+        }
+        let angled = spots.map { spot -> Angled in
+            let angle = atan2(spot.lng - stationLng, spot.lat - stationLat)
+            return Angled(spot: spot, angle: angle)
+        }
+        .sorted { $0.angle < $1.angle }
+
+        // いちばん広い角度のすき間を「帰り」に使う（その向かい側を歩かない）
+        var bestGap = -1.0
+        var startIdx = 0
+        for i in 0..<angled.count {
+            let a = angled[i].angle
+            let b = i + 1 < angled.count
+                ? angled[i + 1].angle
+                : angled[0].angle + 2 * .pi
+            let gap = b - a
+            if gap > bestGap {
+                bestGap = gap
+                startIdx = (i + 1) % angled.count
+            }
+        }
+
+        var ordered = (0..<angled.count).map { angled[(startIdx + $0) % angled.count].spot }
+
+        // 始点側は駅から近い方を先に（扇の端のうち近い端から出る）
+        if let first = ordered.first, let last = ordered.last {
+            let dFirst = Geo.haversineKm(
+                lat1: stationLat, lng1: stationLng, lat2: first.lat, lng2: first.lng
+            )
+            let dLast = Geo.haversineKm(
+                lat1: stationLat, lng1: stationLng, lat2: last.lat, lng2: last.lng
+            )
+            if dLast + 0.05 < dFirst {
+                ordered.reverse()
+            }
+        }
+
+        ordered = twoOptLoop(
+            stationLat: stationLat,
+            stationLng: stationLng,
+            spots: ordered
+        )
+        return ordered
+    }
+
+    /// 周回長（駅→…→駅）を短くする。最初の1か所目は固定。
+    private static func twoOptLoop(
+        stationLat: Double,
+        stationLng: Double,
+        spots: [Spot]
+    ) -> [Spot] {
         guard spots.count >= 3 else { return spots }
         var best = spots
         var improved = true
         while improved {
             improved = false
-            for i in 0..<(best.count - 1) {
+            for i in 1..<(best.count - 1) {
                 for k in (i + 1)..<best.count {
                     var candidate = best
                     candidate.replaceSubrange(i...k, with: best[i...k].reversed())
-                    if pathLengthKm(stationLat: stationLat, stationLng: stationLng, spots: candidate) + 0.02
-                        < pathLengthKm(stationLat: stationLat, stationLng: stationLng, spots: best) {
+                    if loopLengthKm(stationLat: stationLat, stationLng: stationLng, spots: candidate) + 0.02
+                        < loopLengthKm(stationLat: stationLat, stationLng: stationLng, spots: best)
+                    {
                         best = candidate
                         improved = true
                     }
@@ -1065,7 +1575,12 @@ enum CourseBuilder {
         return best
     }
 
-    private static func pathLengthKm(stationLat: Double, stationLng: Double, spots: [Spot]) -> Double {
+    private static func loopLengthKm(
+        stationLat: Double,
+        stationLng: Double,
+        spots: [Spot]
+    ) -> Double {
+        guard let last = spots.last else { return 0 }
         var lat = stationLat
         var lng = stationLng
         var total = 0.0
@@ -1074,6 +1589,10 @@ enum CourseBuilder {
             lat = spot.lat
             lng = spot.lng
         }
+        total += Geo.haversineKm(
+            lat1: last.lat, lng1: last.lng,
+            lat2: stationLat, lng2: stationLng
+        )
         return total
     }
 
@@ -1096,7 +1615,7 @@ enum CourseBuilder {
             minute += walk
             hour += minute / 60
             minute %= 60
-            let clock = formatClock(hour: hour, minute: minute)
+            let clock = formatClock(hour: hour % 24, minute: minute)
             let dwell = dwellMinutes(spot.guide, stay: stay)
             out.append(
                 CourseStop(spot: spot, walkMinutes: walk, dwellMinutes: dwell, clockLabel: clock)

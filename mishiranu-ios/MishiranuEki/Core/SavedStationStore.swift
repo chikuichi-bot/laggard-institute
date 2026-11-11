@@ -62,11 +62,13 @@ enum SavedStationStore {
         )
         do {
             let encoder = JSONEncoder()
-            encoder.outputFormatting = [.sortedKeys]
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(file)
             try data.write(to: fileURL, options: [.atomic])
         } catch {
+            // 端末保存は案内の正本。失敗したら分かるように残す。
             assertionFailure("saved-stations.json の書き込みに失敗: \(error)")
+            print("MishiranuEki: saved-stations.json write failed: \(error)")
         }
         return stations
     }
@@ -76,7 +78,14 @@ enum SavedStationStore {
         let bare = bareName(name)
         guard !bare.isEmpty else { return nil }
         let pool = stations ?? load()
-        return pool.first { bareName($0.name) == bare }
+        if let hit = pool.first(where: { bareName($0.name) == bare }) {
+            return hit
+        }
+        // カタログ側に無くてもディスク正本を見る
+        if stations != nil {
+            return load().first { bareName($0.name) == bare }
+        }
+        return nil
     }
 
     /// 安定した保存用 id（時刻を付けない）。
@@ -84,14 +93,46 @@ enum SavedStationStore {
         "ai-\(bareName(name))"
     }
 
+    /// 保存用に id を安定化し、旧種駅 id も ai- 名に寄せる。
+    static func sealedForLibrary(_ station: Station) -> Station {
+        let id = stableId(forName: station.name)
+        if station.id == id { return station }
+        return Station(
+            id: id,
+            name: bareName(station.name),
+            nameReading: station.nameReading,
+            line: station.line,
+            prefecture: station.prefecture,
+            region: station.region,
+            mood: station.mood,
+            radiiKm: station.radiiKm,
+            stationIntro: station.stationIntro,
+            areaAbout: station.areaAbout,
+            walkGuide: station.walkGuide,
+            historyNotes: station.historyNotes,
+            sightseeingNotes: station.sightseeingNotes,
+            bikeRental: station.bikeRental,
+            tourTitle: station.tourTitle,
+            catchCopy: station.catchCopy,
+            emptyCopy: station.emptyCopy,
+            lat: station.lat,
+            lng: station.lng,
+            spots: station.spots
+        )
+    }
+
     @discardableResult
     static func upsert(_ station: Station) -> [Station] {
-        guard !retiredIds.contains(station.id) else { return load() }
-        let bare = Self.bareName(station.name)
-        var next = load().filter {
-            $0.id != station.id && Self.bareName($0.name) != bare
+        let sealed = sealedForLibrary(station)
+        // 旧種 id（demachiyanagi 等）はライブラリに載せないが、同名の ai- としては残す
+        if retiredIds.contains(station.id), retiredIds.contains(sealed.id) {
+            return load()
         }
-        next.insert(station, at: 0)
+        let bare = bareName(sealed.name)
+        var next = load().filter {
+            $0.id != sealed.id && bareName($0.name) != bare
+        }
+        next.insert(sealed, at: 0)
         return write(next)
     }
 

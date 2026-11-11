@@ -106,6 +106,16 @@ struct EmptyCopy: Codable, Hashable {
     let body: String
 }
 
+/// 地図ピンの信頼度。未確定は案内文には出せるが地図には出さない。
+enum CoordTrust: String, Codable, Hashable {
+    /// landmark-locks / 人手確認の正本
+    case lock
+    /// Apple MapKit で店名・座標が取れたもの
+    case apple
+    /// AI推定・駅オフセットなど（地図禁止）
+    case unverified
+}
+
 struct Spot: Codable, Hashable, Identifiable {
     let id: String
     let name: String
@@ -124,6 +134,8 @@ struct Spot: Codable, Hashable, Identifiable {
     let majorWorthy: Bool
     let lat: Double
     let lng: Double
+    /// 地図に載せてよいかの正本フラグ
+    let coordTrust: CoordTrust
 
     var soloLabel: String { soloOk ? "一人OK" : "予約・人数向き" }
 
@@ -138,14 +150,14 @@ struct Spot: Codable, Hashable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, genre, guide, mealTier, mealTimes, soloOk, budgetYen
-        case hours, blurb, detail, walkMinutes, secretWorthy, majorWorthy, lat, lng
+        case hours, blurb, detail, walkMinutes, secretWorthy, majorWorthy, lat, lng, coordTrust
     }
 
     init(
         id: String, name: String, genre: String, guide: GuideKind, mealTier: MealTier,
         mealTimes: [MealTime], soloOk: Bool, budgetYen: String, hours: String?, blurb: String,
         detail: String?, walkMinutes: Int, secretWorthy: Bool, majorWorthy: Bool = false,
-        lat: Double, lng: Double
+        lat: Double, lng: Double, coordTrust: CoordTrust = .unverified
     ) {
         self.id = id
         self.name = name
@@ -163,6 +175,7 @@ struct Spot: Codable, Hashable, Identifiable {
         self.majorWorthy = majorWorthy
         self.lat = lat
         self.lng = lng
+        self.coordTrust = coordTrust
     }
 
     init(from decoder: Decoder) throws {
@@ -183,6 +196,15 @@ struct Spot: Codable, Hashable, Identifiable {
         majorWorthy = try c.decodeIfPresent(Bool.self, forKey: .majorWorthy) ?? false
         lat = try c.decode(Double.self, forKey: .lat)
         lng = try c.decode(Double.self, forKey: .lng)
+        coordTrust = try c.decodeIfPresent(CoordTrust.self, forKey: .coordTrust)
+            ?? Self.inferredTrust(id: id)
+    }
+
+    /// 旧保存データ用。id 接頭辞だけから推定する。
+    static func inferredTrust(id: String) -> CoordTrust {
+        if id.hasPrefix("lock-") { return .lock }
+        if id.hasPrefix("apple-") || id.hasPrefix("reach-") { return .apple }
+        return .unverified
     }
 }
 
@@ -283,6 +305,24 @@ struct Station: Codable, Hashable, Identifiable {
 
     var indexStationLabel: String {
         name.hasSuffix("駅") ? String(name.dropLast()) : name
+    }
+
+    /// 案内ヘッド用。「京阪電車　出町柳駅」形式。
+    var chromeStationLabel: String {
+        let bare = indexStationLabel
+        let primary = line
+            .split(whereSeparator: { "/・,".contains($0) })
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first(where: { !$0.isEmpty && $0 != "路線情報は要確認" })
+        let linePart: String = {
+            guard let primary else { return "" }
+            if primary.hasSuffix("本線") {
+                return "\(primary.dropLast(2))電車"
+            }
+            return primary
+        }()
+        if linePart.isEmpty { return "\(bare)駅" }
+        return "\(linePart)　\(bare)駅"
     }
 
     func radiusKm(for stay: StayOption) -> Double {

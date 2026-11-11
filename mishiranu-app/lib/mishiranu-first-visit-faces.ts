@@ -81,11 +81,80 @@ export function isOrdinaryPublicFace(name: string): boolean {
   return ORDINARY_FACE_RE.test(name);
 }
 
-export function filterFirstVisitSpots<T extends { name: string }>(
+/** 楼門・参拝記念など、社寺の付属ピン。 */
+export function isWorshipSatellite(name: string): boolean {
+  return /楼門|神門|南門|東門|西門|北門|表門|参拝記念|手水|摂社|末社|授与所|社務所|絵馬殿|境内図|御朱印|お守り/.test(
+    name,
+  );
+}
+
+/** 「参拝記念 下鴨神社」「下鴨神社 楼門」→ 核は「下鴨神社」。 */
+export function worshipCoreName(name: string): string | null {
+  const re =
+    /([一-龥々ぁ-んァ-ヶーA-Za-z0-9]{2,14}(?:神社|神宮|大社|寺院|寺))/g;
+  let match: RegExpExecArray | null;
+  let last: string | null = null;
+  while ((match = re.exec(name)) != null) {
+    last = match[1] ?? null;
+  }
+  if (!last) return null;
+  if (name.includes("下鴨") && last.includes("賀茂御祖")) return "下鴨神社";
+  return last;
+}
+
+function worshipPickScore(
+  spot: { name: string; majorWorthy?: boolean },
+  core: string,
+): number {
+  let score = 0;
+  if (spot.name === core || spot.name.startsWith(core)) score += 40;
+  if (spot.name.includes("賀茂御祖") || spot.name.includes("（")) score += 20;
+  if (spot.majorWorthy) score += 15;
+  if (isWorshipSatellite(spot.name)) score -= 50;
+  score += Math.max(0, 20 - spot.name.length);
+  return score;
+}
+
+/** 同じ社の楼門・記念所などを1件に畳む。 */
+export function collapseWorshipDuplicates<
+  T extends { name: string; majorWorthy?: boolean },
+>(spots: T[]): T[] {
+  const groups = new Map<string, T[]>();
+  const passthrough: T[] = [];
+  for (const spot of spots) {
+    const core =
+      isWorshipName(spot.name) || isWorshipSatellite(spot.name)
+        ? worshipCoreName(spot.name)
+        : null;
+    if (!core) {
+      passthrough.push(spot);
+      continue;
+    }
+    const list = groups.get(core) ?? [];
+    list.push(spot);
+    groups.set(core, list);
+  }
+  const collapsed: T[] = [];
+  for (const [core, members] of groups) {
+    const ranked = [...members].sort((a, b) => {
+      const d = worshipPickScore(b, core) - worshipPickScore(a, core);
+      if (d !== 0) return d;
+      return a.name.length - b.name.length;
+    });
+    let best = ranked[0]!;
+    if (isWorshipSatellite(best.name) || best.name !== core) {
+      best = { ...best, name: core.includes("下鴨") ? "下鴨神社" : core };
+    }
+    collapsed.push(best);
+  }
+  return [...passthrough, ...collapsed];
+}
+
+export function filterFirstVisitSpots<T extends { name: string; majorWorthy?: boolean }>(
   spots: T[],
   stationName: string,
 ): T[] {
-  return spots.filter(
-    (s) => !isNeighborhoodWorship(s.name, stationName),
+  return collapseWorshipDuplicates(
+    spots.filter((s) => !isNeighborhoodWorship(s.name, stationName)),
   );
 }

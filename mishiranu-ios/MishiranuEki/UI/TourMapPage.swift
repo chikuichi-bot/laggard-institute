@@ -20,13 +20,14 @@ struct TourMapPage: View {
         CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng)
     }
 
-    /// 立ち寄り順の経由点（駅→1→2…）。道なり化前の点列。
+    /// 立ち寄り順の経由点（駅→1→2…→駅）。道なり化前の点列。終点も駅。
     private var waypointCoordinates: [CLLocationCoordinate2D] {
         guard let course = model.selectedCourse, !course.stops.isEmpty else { return [] }
-        return [stationCoordinate] + course.stops.map {
+        let mid = course.stops.map {
             let pin = model.resolvedSpot($0.spot)
             return CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng)
         }
+        return [stationCoordinate] + mid + [stationCoordinate]
     }
 
     private var routeKey: String {
@@ -35,9 +36,25 @@ struct TourMapPage: View {
         return "\(station.id)|\(course.id)|\(ids)"
     }
 
-    var body: some View {
-        let spots = model.tourSpots
+    /// 地図に出すピン。コース選択中は番号付きの立ち寄りだけ（信頼ピンが無くても道順は出す）。
+    private var mapSpots: [Spot] {
         let numbers = model.courseNumbers
+        if !numbers.isEmpty, let course = model.selectedCourse {
+            // tourSpots は信頼ピンのみなので、コース立ち寄りを正本にする
+            return course.stops.map { model.resolvedSpot($0.spot) }
+        }
+        return model.tourSpots.map(model.resolvedSpot)
+    }
+
+    /// 近いピンの表示座標だけずらす（道なりルートの実座標は変えない）。
+    private var displayCoordinates: [String: CLLocationCoordinate2D] {
+        Self.spreadDisplayCoordinates(mapSpots)
+    }
+
+    var body: some View {
+        let spots = mapSpots
+        let numbers = model.courseNumbers
+        let coords = displayCoordinates
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .bottomTrailing) {
                 Map(position: $position) {
@@ -54,24 +71,31 @@ struct TourMapPage: View {
                     }
 
                     Annotation(station.name, coordinate: stationCoordinate, anchor: .center) {
-                        StationMarker()
+                        StationMarker(showDeparture: model.selectedCourse != nil)
                     }
 
-                    ForEach(spots) { spot in
-                        let pin = model.resolvedSpot(spot)
+                    ForEach(spots) { pin in
+                        let coordinate = coords[pin.id]
+                            ?? CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng)
                         Annotation(
                             pin.name,
-                            coordinate: CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng),
-                            // 円の中心＝座標。番号バッジは描画だけ外に出す。
+                            coordinate: coordinate,
                             anchor: .center
                         ) {
                             Button {
                                 model.openSpot(pin)
                             } label: {
-                                SpotPin(kind: pin.guide, number: numbers[pin.id], active: model.activeSpot?.id == pin.id)
+                                SpotPin(
+                                    kind: pin.guide,
+                                    number: numbers[pin.id],
+                                    active: model.activeSpot?.id == pin.id
+                                )
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("\(pin.guide.label) \(pin.name)")
+                            .buttonStyle(PlainHapticButtonStyle())
+                            .accessibilityLabel(
+                                numbers[pin.id].map { "\($0)番 \(pin.guide.label) \(pin.name)" }
+                                    ?? "\(pin.guide.label) \(pin.name)"
+                            )
                         }
                         .annotationTitles(.hidden)
                     }
@@ -124,7 +148,7 @@ struct TourMapPage: View {
                         .foregroundStyle(Palette.fog)
                 }
                 if let course = model.selectedCourse {
-                    Text("線は「\(course.title)」の徒歩ルート（道なり・駅→\(course.stops.count)か所）")
+                    Text("線は「\(course.title)」の周回（道なり・駅出発→\(course.stops.count)か所→駅）。なるべく同じ道は帰りません。")
                         .font(.caption)
                         .foregroundStyle(Palette.fog)
                         .fixedSize(horizontal: false, vertical: true)
@@ -235,7 +259,7 @@ struct TourMapPage: View {
 
     /// 駅とピンが収まる範囲。ピンが少ないときは徒歩圏の円を目安にする。
     private func camera() -> MapCameraPosition {
-        let spots = model.tourSpots
+        let spots = mapSpots
         guard spots.count >= 2 else {
             let meters = model.radiusKm * 1000 * 2.3
             return .region(MKCoordinateRegion(center: stationCoordinate, latitudinalMeters: meters, longitudinalMeters: meters))
@@ -254,9 +278,12 @@ struct TourMapPage: View {
 }
 
 private struct StationMarker: View {
+    var showDeparture: Bool = false
     private let size: CGFloat = 32
+    private let badgeSize: CGFloat = 22
 
     var body: some View {
+        let topPad = showDeparture ? badgeSize + 6 : 0
         ZStack {
             Circle()
                 .fill(Palette.ink)
@@ -266,9 +293,22 @@ private struct StationMarker: View {
                 .frame(width: size, height: size)
             PictogramIcon(.train, size: 18)
                 .foregroundStyle(Palette.paper)
+            if showDeparture {
+                Text("出")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .frame(width: badgeSize, height: badgeSize)
+                    .background(Circle().fill(Palette.warm))
+                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+                    .offset(y: -(size / 2 + badgeSize / 2 + 4))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
-        .frame(width: size, height: size)
+        .frame(width: max(size, badgeSize) + 8, height: size + topPad * 2)
         .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+        .accessibilityLabel(showDeparture ? "駅・出発" : "駅")
     }
 }
 
@@ -329,9 +369,11 @@ struct SpotPin: View {
     let active: Bool
 
     private var size: CGFloat { active ? 34 : 30 }
+    private let badgeSize: CGFloat = 22
 
     var body: some View {
-        // 固定枠の中心が座標。番号は枠外に描くだけでレイアウトを広げない。
+        // ピン円の中心＝座標。番号は真上に離して置き、アイコンと重ならないようにする。
+        let topPad = number == nil ? 0 : badgeSize + 6
         ZStack {
             Circle()
                 .fill(kind.color)
@@ -343,17 +385,53 @@ struct SpotPin: View {
                 .foregroundStyle(Palette.paper)
             if let number {
                 Text("\(number)")
-                    .font(.readable(.caption2, weight: .bold))
-                    .foregroundStyle(Palette.paper)
-                    .frame(width: 18, height: 18)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .frame(width: badgeSize, height: badgeSize)
                     .background(Circle().fill(Palette.warm))
-                    .overlay(Circle().stroke(Palette.paper, lineWidth: 1.5))
-                    .offset(x: size * 0.38, y: -size * 0.38)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+                    .offset(y: -(size / 2 + badgeSize / 2 + 4))
                     .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
         }
-        .frame(width: size, height: size)
-        .compositingGroup()
+        // 上下対称に余白を取り、Map の center アンカーがピン円のままになるようにする
+        .frame(width: max(size, badgeSize) + 8, height: size + topPad * 2)
         .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+    }
+}
+
+extension TourMapPage {
+    /// 約70m以内のピンを扇状に少しずらして、番号が重ならないようにする。
+    fileprivate static func spreadDisplayCoordinates(
+        _ spots: [Spot]
+    ) -> [String: CLLocationCoordinate2D] {
+        let minKm = 0.07
+        var placed: [(id: String, lat: Double, lng: Double)] = []
+        for (index, spot) in spots.enumerated() {
+            var lat = spot.lat
+            var lng = spot.lng
+            for step in 0..<8 {
+                let clashes = placed.contains {
+                    Geo.haversineKm(
+                        lat1: lat, lng1: lng,
+                        lat2: $0.lat, lng2: $0.lng
+                    ) < minKm
+                }
+                if !clashes { break }
+                let angle = Double(index) * 2.2 + Double(step) * 1.1
+                lat += 0.00032 * cos(angle) // ~35m
+                lng += 0.00038 * sin(angle)
+            }
+            placed.append((spot.id, lat, lng))
+        }
+        return Dictionary(
+            uniqueKeysWithValues: placed.map {
+                ($0.id, CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng))
+            }
+        )
     }
 }

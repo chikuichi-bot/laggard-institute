@@ -44,6 +44,11 @@ export type Spot = {
   /** Optional WGS84 (AI / precise pins) */
   lat?: number;
   lng?: number;
+  /**
+   * 地図ピンの信頼度。lock / apple のみ地図に出す。
+   * 未指定・unverified は案内文には出せるが地図禁止。
+   */
+  coordTrust?: "lock" | "apple" | "unverified";
 };
 
 export type StationMood = "story" | "empty";
@@ -104,7 +109,7 @@ export type StationSeed = {
   areaAbout?: string;
   /** 徒歩圏の歩き方・回り方 */
   walkGuide?: string;
-  /** 過去の歴史メモ */
+  /** 土地メモ（歴史といまの姿） */
   historyNotes?: AreaHistoryNote[];
   /** 観光の見どころメモ（案内向け） */
   sightseeingNotes?: AreaHistoryNote[];
@@ -122,6 +127,20 @@ export type StationSeed = {
   lng?: number;
   /** seed = 編集データ / ai = Gemini 生成 */
   source?: "seed" | "ai";
+  /**
+   * 出町柳雛形のショート3点（地形・名所・町場）。
+   * 初めて駅に降りた人へ勧めるルート。観光案内・歩くショートの正本。
+   */
+  firstVisitFaces?: Array<{
+    role: "landform" | "landmark" | "town";
+    name: string;
+    where?: string;
+    why?: string;
+    present?: string;
+    walkMinutes?: number;
+    lat?: number;
+    lng?: number;
+  }>;
 };
 
 export function bikeRentalFor(station: StationSeed): BikeRentalInfo {

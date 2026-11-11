@@ -183,8 +183,10 @@ enum StationNormalizer {
             return arr.isEmpty ? [.lunch] : arr
         }()
         let walk = max(1, min(45, Int(number(raw["walkMinutes"], fallback: 10).rounded())))
-        let lat = number(raw["lat"], fallback: stationLat + Double(index) * 0.0004)
-        let lng = number(raw["lng"], fallback: stationLng + Double(index) * 0.0003)
+        // 欠けた lat/lng を駅から斜めにずらすと、川端・府道上に「それっぽい誤ピン」が並ぶ。
+        // 仮置きは駅座標のままにし、LandmarkRegistry / Apple 採取で上書きする。
+        let lat = number(raw["lat"], fallback: stationLat)
+        let lng = number(raw["lng"], fallback: stationLng)
         let id = string(raw["id"], fallback: "ai-spot-\(index + 1)")
 
         return Spot(

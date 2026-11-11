@@ -37,31 +37,51 @@ struct TourView: View {
 
 struct TourTabBar: View {
     @Binding var selection: TourTab
+    @Environment(ThemeStore.self) private var theme
+    @Namespace private var tabFrame
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 2) {
             ForEach(TourTab.allCases) { tab in
                 let active = selection == tab
                 Button {
-                    selection = tab
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        selection = tab
+                    }
                 } label: {
-                    VStack(spacing: 4) {
-                        PictogramIcon(tab.pictogram, size: 24)
+                    VStack(spacing: 3) {
+                        PictogramIcon(tab.pictogram, size: 22)
                         Text(tab.label)
-                            .font(.caption.weight(active ? .semibold : .regular))
+                            .font(.caption2.weight(.regular))
                             .lineLimit(1)
                     }
-                    .foregroundStyle(active ? Palette.warm : Palette.mist)
+                    // アイコンの濃さは揃える。選択は枠だけが動く。
+                    .foregroundStyle(Palette.ink)
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
+                    .padding(.vertical, 8)
+                    .background {
+                        if active {
+                            RoundedRectangle(
+                                cornerRadius: theme.skin == .board ? 10 : 8,
+                                style: .continuous
+                            )
+                            .stroke(Palette.warm, lineWidth: 2)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 2)
+                            .matchedGeometryEffect(id: "tour-tab-frame", in: tabFrame)
+                        }
+                    }
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PlainHapticButtonStyle())
                 .accessibilityLabel(tab.label)
                 .accessibilityAddTraits(active ? .isSelected : [])
+                .accessibilityValue(active ? "表示中" : "オフ")
             }
         }
+        .padding(.horizontal, 4)
+        .padding(.top, 4)
+        .padding(.bottom, 2)
         .background(Palette.paper.ignoresSafeArea(edges: .bottom))
         .overlay(alignment: .top) { Divider().overlay(Palette.line) }
     }

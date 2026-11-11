@@ -1,0 +1,348 @@
+import landPresentAnchors from "@/data/land-present-anchors.json";
+import type {
+  AreaHistoryNote,
+  GuideKind,
+  Spot,
+  SpotGenre,
+  StationSeed,
+} from "@/data/mishiranu-stations";
+import { isForeignDemachiPlace } from "@/lib/mishiranu-demachi-template";
+import { landCorpus } from "@/lib/mishiranu-lore";
+import { refineLandProse } from "@/lib/mishiranu-land-prose";
+
+/**
+ * 土地の顔アンカー。
+ * 具体名は必ず残すが、文章の詳説は historyNotes に一度だけ。
+ */
+export type LandPresentAnchor = {
+  name: string;
+  kind: string;
+  where: string;
+  why?: string;
+  present: string;
+  aliases?: string[];
+  mustVisit?: boolean;
+  guide?: GuideKind;
+  walkMinutes?: number;
+  lat?: number;
+  lng?: number;
+};
+
+type AnchorStation = {
+  station: string;
+  anchors: LandPresentAnchor[];
+};
+
+function bareStationName(name: string): string {
+  return name.replace(/駅$/u, "").trim();
+}
+
+function anchorKeys(anchor: LandPresentAnchor): string[] {
+  return [anchor.name, ...(anchor.aliases ?? [])].filter(Boolean);
+}
+
+function corpusHasAnchor(corpus: string, anchor: LandPresentAnchor): boolean {
+  return anchorKeys(anchor).some((k) => corpus.includes(k));
+}
+
+function stationRowMatch(stationName: string, rowStation: string): boolean {
+  const bare = bareStationName(stationName);
+  const key = bareStationName(rowStation);
+  if (!bare || !key) return false;
+  if (bare === key) return true;
+  // 「京阪出町柳」など接頭語付き。短いキーでの誤爆を防ぐ（3文字以上）。
+  if (key.length >= 3 && bare.includes(key)) return true;
+  if (bare.length >= 3 && key.includes(bare)) return true;
+  return false;
+}
+
+export function landAnchorsFor(stationName: string): LandPresentAnchor[] {
+  const row = (landPresentAnchors.stations as AnchorStation[]).find((s) =>
+    stationRowMatch(stationName, s.station),
+  );
+  return row?.anchors ?? [];
+}
+
+export function isMustVisitLandFace(
+  spotName: string,
+  stationName: string,
+): boolean {
+  return landAnchorsFor(stationName).some(
+    (a) =>
+      a.mustVisit === true &&
+      anchorKeys(a).some((k) => spotName.includes(k) || k.includes(spotName)),
+  );
+}
+
+export function prioritizeMustVisitSpots(
+  spots: Spot[],
+  stationName: string,
+): Spot[] {
+  const must: Spot[] = [];
+  const rest: Spot[] = [];
+  for (const spot of spots) {
+    if (isMustVisitLandFace(spot.name, stationName)) must.push(spot);
+    else rest.push(spot);
+  }
+  return [...must, ...rest];
+}
+
+/** AI プロンプト用。具体名＋仕訳。 */
+export function landAnchorPromptBlock(stationName: string): string {
+  const anchors = landAnchorsFor(stationName);
+  const role = [
+    "同じ説明をセクション間で繰り返さない。詳説は historyNotes のみ。",
+    "walkGuide は順番と方角だけ。stationIntro は路線と駅前だけ。",
+    "ショートの正本は出町柳雛形（landform・landmark・town）の3点。sightseeingNotes はその3点＋実用メモで6〜7件。",
+  ].join(" ");
+  if (!anchors.length) {
+    return [
+      role,
+      "この駅の正本アンカーは未収録。出町柳雛形で firstVisitFaces を必ず3件（地形・名所・町場）組み立てる。",
+      "例の対応: landform←鴨川デルタ、landmark←下鴨神社、town←枡形商店街。各駅で実在の正式名に置き換える。",
+      "sightseeingNotes は顔3点のあとに、短い滞在・食べる休む・季節や注意などの実用メモを足して厚くする。",
+    ].join("\n");
+  }
+  const lines = anchors.map((a) => {
+    const visit = a.mustVisit ? "【ぜひ行く＝ショート雛形】" : "";
+    const why = a.why ? `理由: ${a.why}` : "";
+    return `- ${visit}${a.name}（${a.where}）… ${why} ${a.present}`.trim();
+  });
+  return [
+    `【必須・土地の顔】この駅（${bareStationName(stationName)}）では次の正式名称を使う。`,
+    ...lines,
+    role,
+    "名前の出し方: walkGuide か areaAbout に名前を一度。詳しい why/present は historyNotes に各1件だけ。sightseeingNotes は mustVisit／firstVisitFaces の3点を先頭にし、実用メモを足して6〜7件。",
+  ].join("\n");
+}
+
+function noteTitle(anchor: LandPresentAnchor): string {
+  if (anchor.kind === "university") return `${anchor.name}のいま`;
+  if (anchor.kind === "arcade") return `${anchor.name}と土地の顔`;
+  if (anchor.kind === "road") return `${anchor.name}のこと`;
+  return anchor.name;
+}
+
+function noteForAnchor(anchor: LandPresentAnchor): AreaHistoryNote {
+  return {
+    title: noteTitle(anchor),
+    body: [
+      `${anchor.name}は${anchor.where}にあります。`,
+      anchor.why ?? "",
+      anchor.present,
+    ]
+      .filter(Boolean)
+      .join(""),
+  };
+}
+
+function genreFor(anchor: LandPresentAnchor): SpotGenre {
+  if (anchor.kind === "nature") return "nature";
+  if (anchor.kind === "university" || anchor.kind === "arcade") return "history";
+  return "odd";
+}
+
+function makeAnchorSpot(anchor: LandPresentAnchor, station: StationSeed): Spot {
+  const guide = (anchor.guide ?? "sight") as GuideKind;
+  return {
+    id: `anchor-${anchor.name.replace(/\s+/g, "").slice(0, 28)}`,
+    name: anchor.name,
+    genre: genreFor(anchor),
+    guide,
+    mealTier: "casual",
+    mealTimes: [],
+    soloOk: true,
+    budgetYen: "—",
+    hours: "終日（屋外）",
+    blurb: [anchor.why, anchor.present].filter(Boolean).join(" "),
+    detail: anchor.where,
+    walkMinutes: anchor.walkMinutes ?? 8,
+    x: 0.48,
+    y: 0.42,
+    majorWorthy: anchor.mustVisit === true,
+    secretWorthy: false,
+    ...(anchor.lat != null && anchor.lng != null
+      ? { lat: anchor.lat, lng: anchor.lng }
+      : anchor.kind === "university"
+        ? {}
+        : station.lat != null && station.lng != null
+          ? { lat: station.lat + 0.00012, lng: station.lng - 0.00015 }
+          : {}),
+  };
+}
+
+function spotMentionsAnchor(spotName: string, anchor: LandPresentAnchor): boolean {
+  return anchorKeys(anchor).some(
+    (k) => spotName.includes(k) || k.includes(spotName),
+  );
+}
+
+export function ensureLandAnchorSpots(station: StationSeed): StationSeed {
+  const anchors = landAnchorsFor(station.name);
+  // mustVisit は必ずスポット化。大学など座標付きも正本で上書きする。
+  const visit = anchors.filter(
+    (a) =>
+      a.mustVisit === true ||
+      (a.kind === "university" && a.lat != null && a.lng != null),
+  );
+  if (!visit.length) return station;
+
+  const spots = [...(station.spots ?? [])];
+  for (const anchor of visit) {
+    const idx = spots.findIndex((s) => spotMentionsAnchor(s.name, anchor));
+    if (idx >= 0) {
+      const cur = spots[idx]!;
+      spots[idx] = {
+        ...cur,
+        name: cur.name.includes(anchor.name) ? cur.name : anchor.name,
+        majorWorthy: anchor.mustVisit === true ? true : cur.majorWorthy,
+        guide: cur.guide ?? anchor.guide ?? "sight",
+        // 正本座標があれば上書き（駅・デルタ寄せの誤ピンを残さない）
+        lat: anchor.lat ?? cur.lat,
+        lng: anchor.lng ?? cur.lng,
+        walkMinutes:
+          anchor.walkMinutes != null
+            ? anchor.walkMinutes
+            : cur.walkMinutes,
+      };
+      continue;
+    }
+    spots.push(makeAnchorSpot(anchor, station));
+  }
+  return { ...station, spots };
+}
+
+function noteMentionsAnchor(
+  note: AreaHistoryNote,
+  anchor: LandPresentAnchor,
+): boolean {
+  const blob = `${note.title}${note.body}`;
+  return anchorKeys(anchor).some((k) => k.length >= 2 && blob.includes(k));
+}
+
+function sightseeingTitle(anchor: LandPresentAnchor): string {
+  if (anchor.name === "下鴨神社") return "下鴨神社と糺の森";
+  if (anchor.name === "鴨川デルタ") return "鴨川デルタ";
+  if (anchor.name === "枡形商店街") return "枡形商店街";
+  return anchor.name;
+}
+
+function sightseeingBody(anchor: LandPresentAnchor): string {
+  return [anchor.why, anchor.present].filter(Boolean).join("");
+}
+
+/**
+ * 観光案内メモ＝出町柳雛形の3点（JSON mustVisit または AI firstVisitFaces）。
+ * 旧三井家など雛形外は落とす。
+ */
+export function ensureSightseeingFromMustVisits(
+  station: StationSeed,
+): StationSeed {
+  const must = landAnchorsFor(station.name).filter((a) => a.mustVisit === true);
+  if (must.length >= 2) {
+    const existing = station.sightseeingNotes ?? [];
+    const core = must.map((anchor) => {
+      const hit = existing.find((n) => noteMentionsAnchor(n, anchor));
+      return {
+        title: sightseeingTitle(anchor),
+        body: (hit?.body ?? "").trim() || sightseeingBody(anchor),
+      };
+    });
+    const extras = existing.filter(
+      (n) =>
+        !isForeignDemachiPlace(n.title, station.name) &&
+        !must.some((a) => noteMentionsAnchor(n, a)),
+    );
+    return {
+      ...station,
+      sightseeingNotes: [...core, ...extras].slice(0, 7),
+    };
+  }
+
+  const faces = (station.firstVisitFaces ?? []).filter(
+    (face) => !isForeignDemachiPlace(face.name, station.name),
+  );
+  if (faces.length < 2) return station;
+  const existing = station.sightseeingNotes ?? [];
+  const core = faces.map((face) => {
+    const hit = existing.find(
+      (n) => n.title.includes(face.name) || n.body.includes(face.name),
+    );
+    return {
+      title: face.name === "下鴨神社" ? "下鴨神社と糺の森" : face.name,
+      body:
+        (hit?.body ?? "").trim() ||
+        [face.why, face.present].filter(Boolean).join("") ||
+        `${face.name}。この駅の土地の顔。`,
+    };
+  });
+  const extras = existing.filter(
+    (n) =>
+      !isForeignDemachiPlace(n.title, station.name) &&
+      !faces.some(
+        (f) => n.title.includes(f.name) || f.name.includes(n.title),
+      ),
+  );
+  return {
+    ...station,
+    sightseeingNotes: [...core, ...extras].slice(0, 7),
+  };
+}
+
+/**
+ * 具体名が土地全体に無ければ historyNotes に一度だけ足す。
+ * すでに名前があるセクションへ、同じ説明を重ね書きしない。
+ * 観光案内は mustVisit 雛形に揃える。
+ */
+export function ensureLandPresentAnchors(station: StationSeed): StationSeed {
+  const anchors = landAnchorsFor(station.name);
+  if (!anchors.length) {
+    return refineLandProse(ensureLandAnchorSpots(station));
+  }
+
+  const corpus = landCorpus(station);
+  let walkGuide = station.walkGuide ?? "";
+  const notes = [...(station.historyNotes ?? [])];
+
+  for (const anchor of anchors) {
+    const namedAnywhere = corpusHasAnchor(corpus, anchor);
+    const inNotes = notes.some(
+      (n) => n.title.includes(anchor.name) || n.body.includes(anchor.name),
+    );
+
+    // 詳説はメモに一度だけ
+    if (!inNotes && (anchor.kind !== "road" || !namedAnywhere)) {
+      // 鯖街道は枡形メモに含め済みなら個別追加しない
+      if (
+        anchor.kind === "road" &&
+        notes.some((n) => n.body.includes("鯖街道") || n.title.includes("鯖街道"))
+      ) {
+        continue;
+      }
+      if (
+        anchor.name === "枡形商店街" &&
+        notes.some((n) => /枡形/.test(n.title) || /枡形/.test(n.body))
+      ) {
+        continue;
+      }
+      notes.push(noteForAnchor(anchor));
+    }
+
+    // mustVisit で土地全体に名前が無いときだけ、歩き方に短い経由を足す
+    if (
+      anchor.mustVisit &&
+      !namedAnywhere &&
+      !walkGuide.includes(anchor.name)
+    ) {
+      const line = `駅を出たら${anchor.name}へ寄ります。`;
+      walkGuide = walkGuide.trim() ? `${walkGuide.trim()}${line}` : line;
+    }
+  }
+
+  const withProse: StationSeed = ensureSightseeingFromMustVisits({
+    ...station,
+    walkGuide: walkGuide || station.walkGuide,
+    historyNotes: notes,
+  });
+  return refineLandProse(ensureLandAnchorSpots(withProse));
+}

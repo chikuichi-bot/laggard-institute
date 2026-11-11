@@ -144,6 +144,7 @@ export default function StationMap({
 
     const courseIds = (courseStopIds ?? []).filter((id) => spotById.has(id));
     const courseSet = new Set(courseIds);
+    // 駅出発 → 立ち寄り → 駅帰還
     const waypoints: Array<{ lat: number; lng: number }> = [
       { lat: center.lat, lng: center.lng },
     ];
@@ -152,6 +153,9 @@ export default function StationMap({
       if (!spot) continue;
       const ll = spotLatLng(station, spot);
       waypoints.push({ lat: ll.lat, lng: ll.lng });
+    }
+    if (courseIds.length > 0) {
+      waypoints.push({ lat: center.lat, lng: center.lng });
     }
 
     let cancelled = false;

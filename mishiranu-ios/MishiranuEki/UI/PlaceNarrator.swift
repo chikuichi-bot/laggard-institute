@@ -33,7 +33,7 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         }
         let area = paragraphs(station.areaAbout)
         if !area.isEmpty || !station.historyNotes.isEmpty {
-            parts.append("このエリアのこと、歴史。")
+            parts.append("このエリアのこと（いまと歴史）。")
             parts.append(contentsOf: area)
             for note in station.historyNotes {
                 parts.append(note.title)

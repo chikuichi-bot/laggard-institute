@@ -1,16 +1,12 @@
 "use client";
 
-/** C案 · 駅名ピル。地図・土地・歩く／案内／設定で共通。 */
+/** 駅ヘッド。地図・土地・歩く／案内／設定で共通。「京阪電車　出町柳駅」だけ。 */
 export function StationChrome({
-  stationName,
-  courseTitle,
-  metaLine,
+  label,
   onBack,
   titleId = "tour-title",
 }: {
-  stationName: string;
-  courseTitle: string;
-  metaLine: string;
+  label: string;
   onBack: () => void;
   titleId?: string;
 }) {
@@ -31,11 +27,24 @@ export function StationChrome({
           </svg>
         </button>
         <span className="mishiranu-station-pill" id={titleId}>
-          {stationName}
+          {label}
         </span>
-        <span className="mishiranu-station-course">{courseTitle}</span>
       </div>
-      <p className="mishiranu-station-chrome-meta">{metaLine}</p>
     </header>
   );
+}
+
+/** 「京阪電車　出町柳駅」形式。 */
+export function chromeStationLabel(name: string, line: string): string {
+  const bare = name.endsWith("駅") ? name.slice(0, -1) : name;
+  const primary =
+    line
+      .split(/[\/・,]/)
+      .map((part) => part.trim())
+      .find((part) => part && part !== "路線情報は要確認") ?? "";
+  const linePart = primary.endsWith("本線")
+    ? `${primary.slice(0, -2)}電車`
+    : primary;
+  if (!linePart) return `${bare}駅`;
+  return `${linePart}　${bare}駅`;
 }

@@ -3,30 +3,15 @@ import SwiftUI
 struct ArrivalChatView: View {
     @Environment(AppModel.self) private var model
     @State private var locator = LocationService()
-    @FocusState private var composerFocused: Bool
     @FocusState private var stationSearchFocused: Bool
 
     var body: some View {
-        GeometryReader { geo in
-            let coursePicking = model.phase == .course
-            // コース選択中は会話を最小にし、カード一覧へ画面の大半を渡す（キーボードも出さない）
-            let threadCap = geo.size.height * 0.12
-            VStack(spacing: 0) {
-                header
-                thread
-                    .frame(maxHeight: coursePicking ? threadCap : .infinity)
-                    .layoutPriority(coursePicking ? 0 : 1)
-                dock(coursePicking: coursePicking)
-                    .layoutPriority(coursePicking ? 1 : 0)
-                    .frame(maxHeight: coursePicking ? .infinity : nil, alignment: .top)
-            }
+        VStack(spacing: 0) {
+            header
+            thread
+            dock
         }
         .background(Palette.canvas.ignoresSafeArea())
-        .onChange(of: model.phase) { _, phase in
-            if phase == .course || phase == .ready || phase == .station {
-                composerFocused = false
-            }
-        }
         .onChange(of: model.showStationSearch) { _, open in
             if open {
                 DispatchQueue.main.async {
@@ -44,7 +29,7 @@ struct ArrivalChatView: View {
                 Kicker(text: model.savedCount > 0
                     ? "ARRIVAL · 保存 \(model.savedCount) 駅 · 全国検索可"
                     : "ARRIVAL · 全国の駅を検索")
-                Text("知らない駅から、まわり方をつくる")
+                Text("駅が決まると、土地の案内へ")
                     .font(.mincho(.title3, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
@@ -87,95 +72,22 @@ struct ArrivalChatView: View {
         }
     }
 
-    private func dock(coursePicking: Bool) -> some View {
+    private var dock: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if coursePicking {
-                GeometryReader { dockGeo in
-                    // 見出し1行分を除き、カード一覧へほぼ全部を渡す
-                    coursePicker(listMaxHeight: max(300, dockGeo.size.height - 28))
-                }
-            } else {
-                replies
-                if model.phase == .ready {
-                    Text("案内を開いています…")
-                        .font(.readable(.body))
-                        .foregroundStyle(Palette.mist)
-                        .frame(maxWidth: .infinity)
-                } else if model.phase == .station {
-                    // 駅フェーズはチップのみ。検索窓は「駅名で探す」後に出す。
-                    EmptyView()
-                } else {
-                    composer
-                }
+            if model.phase == .station {
+                stationReplies
+            } else if model.phase == .ready {
+                Text("土地の案内を開いています…")
+                    .font(.readable(.body))
+                    .foregroundStyle(Palette.mist)
+                    .frame(maxWidth: .infinity)
             }
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
-        .padding(.bottom, coursePicking ? 12 : 8)
+        .padding(.bottom, 8)
         .background(Palette.paper.ignoresSafeArea(edges: .bottom))
         .overlay(alignment: .top) { Divider().overlay(Palette.line) }
-    }
-
-    @ViewBuilder
-    private var replies: some View {
-        switch model.phase {
-        case .station:
-            stationReplies
-        case .clock:
-            FlowLayout {
-                Button {
-                    model.chooseClockNow()
-                } label: {
-                    chipLabel("いまの時刻で", .watch)
-                }
-                // 他の時間帯と同じ未選択見た目（塗りつぶしだと「もう選んだ」に見える）
-                .buttonStyle(ChipButtonStyle())
-                ForEach(DayPart.allCases) { part in
-                    Button {
-                        model.chooseClock(part)
-                    } label: {
-                        chipLabel(part.label, part.pictogram)
-                    }
-                    .buttonStyle(ChipButtonStyle())
-                    .accessibilityHint(part.hint)
-                }
-            }
-        case .stay:
-            FlowLayout {
-                ForEach(StayOption.allCases) { stay in
-                    Button {
-                        model.chooseStay(stay)
-                    } label: {
-                        chipLabel(stay.label, .watch)
-                    }
-                    .buttonStyle(ChipButtonStyle())
-                }
-            }
-        case .mealSolo:
-            FlowLayout {
-                ForEach(SoloPref.allCases) { pref in
-                    Button(pref.label) { model.chooseMealSolo(pref) }
-                        .buttonStyle(ChipButtonStyle(primary: pref == .solo))
-                        .accessibilityHint(pref.hint)
-                }
-            }
-        case .mealBudget:
-            FlowLayout {
-                ForEach(BudgetPref.allCases) { pref in
-                    Button {
-                        model.chooseMealBudget(pref)
-                    } label: {
-                        VStack(spacing: 2) {
-                            Text(pref.label)
-                            Text(pref.hint).font(.readable(.caption)).opacity(0.8)
-                        }
-                    }
-                    .buttonStyle(ChipButtonStyle(primary: pref == .casual))
-                }
-            }
-        case .course, .ready:
-            EmptyView()
-        }
     }
 
     private var stationReplies: some View {
@@ -236,7 +148,7 @@ struct ArrivalChatView: View {
                                     .padding(.vertical, 12)
                                     .contentShape(Rectangle())
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(PlainHapticButtonStyle())
                                 .disabled(model.stationLoading)
                                 Divider().overlay(Palette.line)
                             }
@@ -256,54 +168,6 @@ struct ArrivalChatView: View {
                     .frame(maxHeight: 200)
                 }
             }
-        }
-    }
-
-    private func coursePicker(listMaxHeight: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("下のカードから、まわり方を1つ選ぶ")
-                .font(.readable(.caption, weight: .semibold))
-                .foregroundStyle(Palette.mist)
-
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(Array(model.courses.enumerated()), id: \.element.id) { index, course in
-                        Button {
-                            model.chooseCourse(course)
-                        } label: {
-                            CourseCard(course: course, index: index)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Button {
-                        model.skipCourse()
-                    } label: {
-                        chipLabel("まわり方は決めない（自由に歩く）", .trekking)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(ChipButtonStyle(primary: false))
-                    .padding(.top, 2)
-                }
-                .padding(.bottom, 8)
-            }
-            .frame(maxHeight: listMaxHeight)
-            .scrollIndicators(.visible)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-
-    private var composer: some View {
-        @Bindable var model = model
-        return HStack(spacing: 8) {
-            TextField(model.composerPlaceholder, text: $model.draft)
-                .textFieldStyle(.roundedBorder)
-                .focused($composerFocused)
-                .submitLabel(.send)
-                .onSubmit { model.submitDraft() }
-            Button("送る") { model.submitDraft() }
-                .buttonStyle(ChipButtonStyle(primary: true))
-                .disabled(model.draft.trimmingCharacters(in: .whitespaces).isEmpty)
         }
     }
 

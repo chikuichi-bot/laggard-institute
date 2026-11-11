@@ -41,6 +41,8 @@ enum FirstVisitFaces {
 
     static func isWorshipName(_ name: String) -> Bool {
         let n = name
+        // 「タイムズ 下鴨神社南」など駐車場は社寺扱いしない
+        if PlaceNoise.isNoise(n) { return false }
         if n.contains("茶屋") || n.contains("茶房") || n.contains("食堂") || n.hasSuffix("本店") || n.hasSuffix("店") {
             return false
         }
@@ -59,12 +61,125 @@ enum FirstVisitFaces {
         return tokens.contains(where: { n.contains($0) })
     }
 
-    /// 採取・保存データの両方で、近所の社寺を落とす。
+    /// 楼門・参拝記念など、社寺の付属ピン（本体と別カードにしない）。
+    static func isWorshipSatellite(_ name: String) -> Bool {
+        let tokens = [
+            "楼門", "神門", "南門", "東門", "西門", "北門", "表門",
+            "参拝記念", "手水", "摂社", "末社", "授与所", "社務所",
+            "絵馬殿", "境内図", "御朱印", "お守り",
+        ]
+        return tokens.contains(where: { name.contains($0) })
+    }
+
+    /// 「参拝記念 下鴨神社」「下鴨神社 楼門」→ 核は「下鴨神社」。
+    static func worshipCoreName(_ name: String) -> String? {
+        let pattern = "([一-龥々ぁ-んァ-ヶーA-Za-z0-9]{2,14}(?:神社|神宮|大社|寺院|寺))"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(name.startIndex..<name.endIndex, in: name)
+        let matches = regex.matches(in: name, range: range)
+        guard let last = matches.last, let r = Range(last.range(at: 1), in: name) else { return nil }
+        let core = String(name[r])
+        // 「下鴨神社（賀茂御祖神社）」は短い側（土地の通称）を核にする
+        if name.contains("下鴨"), core.contains("賀茂御祖") { return "下鴨神社" }
+        return core
+    }
+
+    /// 同じ社の楼門・記念所などを1件に畳む。
+    static func collapseWorshipDuplicates(_ spots: [Spot], stationName: String) -> [Spot] {
+        var groups: [String: [Spot]] = [:]
+        var passthrough: [Spot] = []
+        for spot in spots {
+            guard isWorshipName(spot.name) || isWorshipSatellite(spot.name),
+                  let core = worshipCoreName(spot.name)
+            else {
+                passthrough.append(spot)
+                continue
+            }
+            // 「タイムズ 下鴨神社南」などは核抽出できてもノイズ扱いのまま外へ
+            if PlaceNoise.isNoise(spot.name) {
+                passthrough.append(spot)
+                continue
+            }
+            groups[core, default: []].append(spot)
+        }
+        var collapsed: [Spot] = []
+        for (core, members) in groups {
+            collapsed.append(pickWorshipRepresentative(members, core: core, stationName: stationName))
+        }
+        return passthrough + collapsed
+    }
+
+    private static func pickWorshipRepresentative(
+        _ members: [Spot],
+        core: String,
+        stationName: String
+    ) -> Spot {
+        let ranked = members.sorted { lhs, rhs in
+            let ls = worshipPickScore(lhs, core: core, stationName: stationName)
+            let rs = worshipPickScore(rhs, core: core, stationName: stationName)
+            if ls != rs { return ls > rs }
+            return lhs.name.count < rhs.name.count
+        }
+        guard var best = ranked.first else {
+            return members[0]
+        }
+        // 表示名は核（またはロック正式名）へ寄せ、楼門名のまま残さない
+        if isWorshipSatellite(best.name) || best.name != core {
+            let locked = LandmarkRegistry.isLocked(name: core, stationName: stationName)
+                ? LandmarkRegistry.apply(
+                    Spot(
+                        id: best.id, name: core, genre: best.genre, guide: .sight,
+                        mealTier: best.mealTier, mealTimes: best.mealTimes, soloOk: best.soloOk,
+                        budgetYen: best.budgetYen, hours: best.hours, blurb: best.blurb,
+                        detail: best.detail, walkMinutes: best.walkMinutes,
+                        secretWorthy: best.secretWorthy, majorWorthy: true,
+                        lat: best.lat, lng: best.lng
+                    ),
+                    stationName: stationName
+                )
+                : nil
+            if let locked {
+                best = locked.withCopy(from: best)
+            } else if isWorshipSatellite(best.name) {
+                best = Spot(
+                    id: best.id, name: core, genre: best.genre, guide: best.guide,
+                    mealTier: best.mealTier, mealTimes: best.mealTimes, soloOk: best.soloOk,
+                    budgetYen: best.budgetYen, hours: best.hours, blurb: best.blurb,
+                    detail: best.detail, walkMinutes: best.walkMinutes,
+                    secretWorthy: best.secretWorthy, majorWorthy: best.majorWorthy,
+                    lat: best.lat, lng: best.lng, coordTrust: best.coordTrust
+                )
+            }
+        }
+        return best
+    }
+
+    private static func worshipPickScore(_ spot: Spot, core: String, stationName: String) -> Double {
+        var score = 0.0
+        if LandmarkRegistry.isLocked(spot, stationName: stationName) { score += 100 }
+        if spot.name == core || spot.name.hasPrefix(core) { score += 40 }
+        if spot.name.contains("賀茂御祖") || spot.name.contains("（") { score += 20 }
+        if spot.majorWorthy { score += 15 }
+        if isWorshipSatellite(spot.name) { score -= 50 }
+        score += max(0, 20 - Double(spot.name.count))
+        return score
+    }
+
+    /// 採取・保存データの両方で、近所の社寺・駐車場ノイズを落とす。
     static func filterSpots(_ spots: [Spot], stationName: String) -> [Spot] {
-        spots.filter { spot in
+        let filtered = spots.filter { spot in
+            if PlaceNoise.isNoise(spot.name) { return false }
+            if DemachiTemplate.isForeignDemachiPlace(spot.name, stationName: stationName) {
+                return false
+            }
+            if !DemachiTemplate.isDemachiStationName(stationName),
+               DemachiTemplate.isOnDemachiPin(lat: spot.lat, lng: spot.lng) {
+                return false
+            }
             if LandmarkRegistry.isLocked(spot, stationName: stationName) { return true }
             if isNeighborhoodWorship(spot.name, stationName: stationName) { return false }
             return true
         }
+        return collapseWorshipDuplicates(filtered, stationName: stationName)
     }
 }

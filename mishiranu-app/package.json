@@ -16,7 +16,8 @@
     "geo:geocode": "node scripts/geocode-coordinates.mjs",
     "geo:fill": "node scripts/fill-unresolved-coordinates.mjs",
     "geo:refresh": "npm run geo:geocode && npm run geo:fill && npm run geo:export-ios",
-    "geo:export-ios": "node ../mishiranu-ios/scripts/export-stations.mjs"
+    "geo:export-ios": "node ../mishiranu-ios/scripts/export-stations.mjs",
+    "test:map-trust": "node scripts/test-map-trust.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

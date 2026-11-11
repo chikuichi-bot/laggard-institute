@@ -1,5 +1,5 @@
 {
-  "_note": "店名検索や手打ち緯度では置かない。住所は人間が確認する正本。lat/lng は OpenStreetMap の店舗ノード（番地の代表点ではない）。mishiranu-app/data/landmark-locks.json と中身を同じにする。",
+  "_note": "店名検索や手打ち緯度では置かない。住所は人間が確認する正本。lat/lng は OpenStreetMap の店舗ノード（番地の代表点ではない）。iOS の Resources/landmark-locks.json と中身を同じにする。",
   "locks": [
     {
       "id": "demachi-delta",
@@ -60,16 +60,64 @@
       "walkMinutes": 2
     },
     {
+      "id": "demachi-masugata-arcade",
+      "station": "出町柳",
+      "kind": "keyword",
+      "canonical": "枡形商店街",
+      "keywords": ["枡形商店街", "桝形商店街", "出町枡形", "出町桝形"],
+      "address": "京都市上京区出町桝形商店街",
+      "osm": "nominatim:出町枡形商店街",
+      "lat": 35.030249,
+      "lng": 135.769436,
+      "walkMinutes": 3
+    },
+    {
       "id": "demachi-masugataya",
       "station": "出町柳",
       "kind": "meal",
       "keywords": ["満寿形屋", "満寿形", "ますがた"],
       "canonical": "満寿形屋",
       "address": "京都市上京区桝形通出町西入ル二神町179",
-      "osm": "approx:枡形商店街",
-      "lat": 35.03005,
-      "lng": 135.76985,
+      "osm": "apple:満寿形屋",
+      "lat": 35.030249,
+      "lng": 135.769436,
       "walkMinutes": 4
+    },
+    {
+      "id": "demachi-mitarashi",
+      "station": "出町柳",
+      "kind": "souvenir",
+      "keywords": ["加茂みたらし茶屋", "みたらし茶屋", "みたらし"],
+      "canonical": "加茂みたらし茶屋",
+      "address": "京都市左京区下鴨松ノ木町53",
+      "osm": "apple:加茂みたらし茶屋",
+      "lat": 35.039632,
+      "lng": 135.770796,
+      "walkMinutes": 15
+    },
+    {
+      "id": "demachi-kyoto-u",
+      "station": "出町柳",
+      "kind": "keyword",
+      "canonical": "京都大学",
+      "keywords": ["京都大学"],
+      "address": "京都市左京区吉田本町（吉田キャンパス・百万遍方面）",
+      "osm": "nominatim:京都大学 吉田キャンパス",
+      "lat": 35.0272,
+      "lng": 135.7808,
+      "walkMinutes": 14
+    },
+    {
+      "id": "demachi-doshisha",
+      "station": "出町柳",
+      "kind": "keyword",
+      "canonical": "同志社大学",
+      "keywords": ["同志社大学"],
+      "address": "京都市上京区今出川通烏丸東入（今出川キャンパス）",
+      "osm": "nominatim:同志社大学 今出川キャンパス",
+      "lat": 35.029714,
+      "lng": 135.760715,
+      "walkMinutes": 15
     },
     {
       "id": "hachiman-shrine",
@@ -117,6 +165,150 @@
       "osm": "nominatim:藤森神社 京都",
       "lat": 34.9501837,
       "lng": 135.7717009,
+      "walkMinutes": 6
+    },
+    {
+      "id": "fujinomori-naikaibashi",
+      "station": "藤森",
+      "kind": "keyword",
+      "canonical": "直違橋通",
+      "keywords": ["直違橋通", "直違橋", "直違橋通り"],
+      "address": "京都市伏見区深草直違橋通",
+      "osm": "nominatim:直違橋通 深草",
+      "lat": 34.9557449,
+      "lng": 135.7722306,
+      "walkMinutes": 4
+    },
+    {
+      "id": "fujinomori-sumizome",
+      "station": "藤森",
+      "kind": "keyword",
+      "canonical": "墨染寺",
+      "keywords": ["墨染寺", "墨染"],
+      "address": "京都市伏見区墨染町",
+      "osm": "nominatim:墨染寺 京都",
+      "lat": 34.947759,
+      "lng": 135.7671697,
+      "walkMinutes": 10
+    },
+    {
+      "id": "hachiman-cable",
+      "station": "石清水八幡宮",
+      "kind": "keyword",
+      "canonical": "石清水八幡宮参道ケーブル",
+      "keywords": ["石清水八幡宮参道ケーブル", "男山ケーブル", "参道ケーブル"],
+      "address": "京都府八幡市八幡西高坊（参道ケーブル）",
+      "osm": "nominatim:石清水八幡宮参道ケーブル",
+      "lat": 34.8829527,
+      "lng": 135.6993811,
+      "walkMinutes": 5
+    },
+    {
+      "id": "chusho-gokogu",
+      "station": "中書島",
+      "kind": "keyword",
+      "canonical": "御香宮神社",
+      "keywords": ["御香宮神社", "御香宮"],
+      "address": "京都市伏見区御香宮門前町",
+      "osm": "nominatim:御香宮神社 京都",
+      "lat": 34.9340912,
+      "lng": 135.767393,
+      "walkMinutes": 12
+    },
+    {
+      "id": "chusho-horikawa",
+      "station": "中書島",
+      "kind": "keyword",
+      "canonical": "濠川",
+      "keywords": ["濠川", "十石舟", "宇治川派流"],
+      "address": "京都市伏見区・濠川",
+      "osm": "nominatim:濠川 伏見区",
+      "lat": 34.9269769,
+      "lng": 135.7557567,
+      "walkMinutes": 5
+    },
+    {
+      "id": "chusho-teradaya",
+      "station": "中書島",
+      "kind": "keyword",
+      "canonical": "寺田屋跡",
+      "keywords": ["寺田屋跡", "寺田屋"],
+      "address": "京都市伏見区南浜町",
+      "osm": "nominatim:寺田屋 伏見",
+      "lat": 34.9302856,
+      "lng": 135.7595574,
+      "walkMinutes": 6
+    },
+    {
+      "id": "oyamazaki-rikyu",
+      "station": "大山崎",
+      "kind": "keyword",
+      "canonical": "離宮八幡宮",
+      "keywords": ["離宮八幡宮", "離宮八幡"],
+      "address": "京都府乙訓郡大山崎町大山崎",
+      "osm": "nominatim:離宮八幡宮 大山崎",
+      "lat": 34.8916606,
+      "lng": 135.679563,
+      "walkMinutes": 8
+    },
+    {
+      "id": "oyamazaki-villa",
+      "station": "大山崎",
+      "kind": "keyword",
+      "canonical": "アサヒビール大山崎山荘美術館",
+      "keywords": ["アサヒビール大山崎山荘美術館", "大山崎山荘", "大山崎山荘美術館"],
+      "address": "京都府乙訓郡大山崎町大山崎",
+      "osm": "nominatim:アサヒビール大山崎山荘美術館",
+      "lat": 34.8955363,
+      "lng": 135.6796513,
+      "walkMinutes": 15
+    },
+    {
+      "id": "oyamazaki-tennozan",
+      "station": "大山崎",
+      "kind": "keyword",
+      "canonical": "天王山登山口",
+      "keywords": ["天王山登山口", "天王山"],
+      "address": "京都府乙訓郡大山崎町大山崎（天王山登山口）",
+      "osm": "nominatim:天王山登山口 大山崎",
+      "lat": 34.8967535,
+      "lng": 135.6830433,
+      "walkMinutes": 12
+    },
+    {
+      "id": "uji-byodoin",
+      "station": "宇治",
+      "kind": "keyword",
+      "canonical": "平等院",
+      "keywords": ["平等院", "鳳凰堂"],
+      "address": "京都府宇治市宇治蓮華",
+      "osm": "nominatim:平等院 宇治",
+      "lat": 34.8895001,
+      "lng": 135.8074525,
+      "walkMinutes": 8
+    },
+    {
+      "id": "uji-bridge",
+      "station": "宇治",
+      "kind": "keyword",
+      "canonical": "宇治橋",
+      "keywords": ["宇治橋"],
+      "address": "京都府宇治市・宇治橋",
+      "osm": "nominatim:宇治橋",
+      "lat": 34.8928016,
+      "lng": 135.805996,
+      "walkMinutes": 5
+    },
+    {
+      "id": "uji-tsuen",
+      "station": "宇治",
+      "kind": "keyword",
+      "canonical": "通圓",
+      "keywords": ["通圓", "御茶屋通圓", "通円"],
+      "address": "京都府宇治市宇治",
+      "osm": "nominatim:御茶屋通圓 宇治",
+      "lat": 34.8932519,
+      "lng": 135.8072475,
       "walkMinutes": 6
     }
   ]

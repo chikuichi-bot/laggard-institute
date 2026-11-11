@@ -127,6 +127,9 @@ struct PrimaryButtonStyle: ButtonStyle {
                     .stroke(filled ? Color.clear : Palette.line, lineWidth: 1)
             )
             .opacity(configuration.isPressed && !filled ? 0.7 : 1)
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { Haptics.tap() }
+            }
     }
 }
 
@@ -144,6 +147,19 @@ struct ChipButtonStyle: ButtonStyle {
             )
             .overlay(Capsule().stroke(primary ? Color.clear : Palette.line, lineWidth: 1))
             .opacity(configuration.isPressed ? 0.7 : 1)
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { Haptics.tap() }
+            }
+    }
+}
+
+/// `.plain` 相当。見た目はそのまま、タップで軽い振動。
+struct PlainHapticButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { Haptics.tapLight() }
+            }
     }
 }
 

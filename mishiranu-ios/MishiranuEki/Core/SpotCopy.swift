@@ -90,6 +90,8 @@ enum SpotCopy {
 
     /// よく出る固有名だけ、一文を固定（地図の定型より優先）。
     private static func namedBlurb(_ name: String) -> String? {
+        // タイムズ等に「下鴨神社」が付いても、社の文案を付けない
+        if PlaceNoise.isNoise(name) { return nil }
         if name.contains("鴨川デルタ") || (name.contains("鴨川") && name.contains("デルタ")) {
             return "鴨川と高野川の合流。飛び石が並び、多くの人が川辺で憩う町の顔。"
         }

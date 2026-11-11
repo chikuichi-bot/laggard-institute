@@ -1,0 +1,534 @@
+{
+  "version": 7,
+  "note": "出町柳が人間正本（20年住んだ初めての人へのルート）。mustVisit=true＝ショート雛形＝観光案内の3点。役割は landform（地形）・landmark（名所）・town（町場）。他駅は同型で組む。ロングは雛形＋先。駅名は「駅」なし。",
+  "stations": [
+    {
+      "station": "出町柳",
+      "anchors": [
+        {
+          "name": "鴨川デルタ",
+          "kind": "river",
+          "where": "賀茂川と高野川の合流・南へ鴨川",
+          "why": "出町の骨格。二つの川がここで一つになる。",
+          "present": "駅から徒歩数分。水音と三角の土地で方角がわかる。",
+          "aliases": [
+            "デルタ",
+            "河川敷",
+            "三角州"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 3,
+          "lat": 35.0301227,
+          "lng": 135.7717415
+        },
+        {
+          "name": "下鴨神社",
+          "kind": "shrine",
+          "where": "京都市左京区下鴨泉川町59",
+          "why": "賀茂御祖神社。出町から北へ足を延ばすときの土地の顔。",
+          "present": "糺の森と境内。駅からはデルタ経由がわかりやすい。",
+          "aliases": [
+            "下鴨",
+            "賀茂御祖",
+            "賀茂御祖神社"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 15,
+          "lat": 35.0369916,
+          "lng": 135.7724506
+        },
+        {
+          "name": "枡形商店街",
+          "kind": "arcade",
+          "where": "京阪出町柳駅前・出町桝形",
+          "why": "鯖街道（若狭街道）の京都側の終点・着き口。若狭の塩鯖が都へ入る最後の町場だった。",
+          "present": "短いアーケードに、いまも近所・学生・旅人が同じ道幅で交わる。",
+          "aliases": [
+            "枡形",
+            "桝形",
+            "桝形商店街",
+            "出町枡形商店街",
+            "出町桝形商店街"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 3,
+          "lat": 35.030249,
+          "lng": 135.769436
+        },
+        {
+          "name": "鯖街道",
+          "kind": "road",
+          "where": "若狭〜京都（出町が着き口のひとつ）",
+          "why": "若狭から塩鯖を運んだ道。出町・枡形はその終点の記憶が残る場所。",
+          "present": "道そのものは一本に固定されないが、枡形商店街の名と町割りに終点の気配が残る。",
+          "aliases": [
+            "若狭街道",
+            "鯖の道"
+          ],
+          "mustVisit": false,
+          "guide": "tip"
+        },
+        {
+          "name": "京都大学",
+          "kind": "university",
+          "where": "吉田キャンパス・百万遍方面",
+          "why": "出町から東へ続く学びの方角。土地の「いま」を形づくる。",
+          "present": "学生の自転車と古本・喫茶の流れが、駅前と川端まで届く。",
+          "aliases": [
+            "京大",
+            "吉田キャンパス"
+          ],
+          "mustVisit": false,
+          "guide": "sight",
+          "walkMinutes": 14,
+          "lat": 35.0272,
+          "lng": 135.7808
+        },
+        {
+          "name": "同志社大学",
+          "kind": "university",
+          "where": "今出川キャンパス方面",
+          "why": "南西の今出川にキャンパスがあり、出町の通学・定食の気配につながる。",
+          "present": "烏丸今出川まわりの通学路が、出町側の川端や定食屋の客層にも届く。",
+          "aliases": [
+            "同志社"
+          ],
+          "mustVisit": false,
+          "guide": "sight",
+          "walkMinutes": 15,
+          "lat": 35.029714,
+          "lng": 135.760715
+        }
+      ]
+    },
+    {
+      "station": "中書島",
+      "anchors": [
+        {
+          "name": "御香宮神社",
+          "kind": "shrine",
+          "where": "京都市伏見区御香宮門前町",
+          "why": "芳しい水の伝説。伏見の「香」と水の入口。",
+          "present": "駅から参道へすぐ。乗り換えのあとに境内の静けさで方角が整う。",
+          "aliases": [
+            "御香宮"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 12,
+          "lat": 34.9340912,
+          "lng": 135.767393
+        },
+        {
+          "name": "濠川",
+          "kind": "river",
+          "where": "伏見・宇治川派流の水路",
+          "why": "伏見の水運の骨格。物資と酒が水面を行き来した道。",
+          "present": "十石舟の岸。石積みと柳の影だけで水路の町だとわかる。",
+          "aliases": [
+            "十石舟",
+            "宇治川派流"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 5,
+          "lat": 34.9269769,
+          "lng": 135.7557567
+        },
+        {
+          "name": "寺田屋跡",
+          "kind": "history",
+          "where": "京都市伏見区南浜町",
+          "why": "幕末の伏見を象徴する船宿の跡。水路町の物語の核。",
+          "present": "南浜の岸近く。濠川とセットで見ると幕末の距離感がつかめる。",
+          "aliases": [
+            "寺田屋"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 6,
+          "lat": 34.9302856,
+          "lng": 135.7595574
+        },
+        {
+          "name": "月桂冠大倉記念館",
+          "kind": "museum",
+          "where": "京都市伏見区本材木町",
+          "why": "伏見酒造の入口。蔵めぐりの手前の顔。",
+          "present": "水路から少し歩くと酒の気配が濃くなる。",
+          "aliases": [
+            "月桂冠",
+            "大倉記念館"
+          ],
+          "mustVisit": false,
+          "guide": "sight",
+          "walkMinutes": 8,
+          "lat": 34.9288793,
+          "lng": 135.7616285
+        }
+      ]
+    },
+    {
+      "station": "石清水八幡宮",
+      "anchors": [
+        {
+          "name": "石清水八幡宮",
+          "kind": "shrine",
+          "where": "京都府八幡市八幡高坊",
+          "why": "男山の八幡宮。駅名そのものの土地の顔。",
+          "present": "ケーブルか参道で山上へ。境内の風と木立が駅前とは別世界。",
+          "aliases": [
+            "石清水",
+            "男山"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 8,
+          "lat": 34.8797343,
+          "lng": 135.7000516
+        },
+        {
+          "name": "飛行神社",
+          "kind": "shrine",
+          "where": "京都府八幡市八幡旦所",
+          "why": "航空の守り。八幡のもう一つの顔として知られる。",
+          "present": "本宮とあわせて歩くと、山裾の町の厚みが出る。",
+          "aliases": [
+            "飛行神社 八幡"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 10,
+          "lat": 34.8837747,
+          "lng": 135.7031495
+        },
+        {
+          "name": "石清水八幡宮参道ケーブル",
+          "kind": "transit",
+          "where": "男山・参道ケーブル",
+          "why": "山上への導線そのものが景色。歩かずに男山の勾配を感じる。",
+          "present": "駅からの参拝動線の核。ケーブルに乗る／並ぶ時間も滞在の一部。",
+          "aliases": [
+            "男山ケーブル",
+            "参道ケーブル"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 5,
+          "lat": 34.8829527,
+          "lng": 135.6993811
+        },
+        {
+          "name": "やわた走井餅老舗",
+          "kind": "souvenir",
+          "where": "京都府八幡市八幡高坊",
+          "why": "名物の走井餅。参拝の手土産の定番。",
+          "present": "参道近く。腹ごしらえや土産に寄りやすい。",
+          "aliases": [
+            "走井餅",
+            "やわた走井餅"
+          ],
+          "mustVisit": false,
+          "guide": "souvenir",
+          "walkMinutes": 5,
+          "lat": 34.8784038,
+          "lng": 135.7000068
+        }
+      ]
+    },
+    {
+      "station": "藤森",
+      "anchors": [
+        {
+          "name": "藤森神社",
+          "kind": "shrine",
+          "where": "京都市伏見区深草鳥居崎町609",
+          "why": "勝運・馬の社。藤森の地名そのものの顔。",
+          "present": "駅から参道へ。境内の木立で深草の静けさがわかる。",
+          "aliases": [
+            "藤森"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 6,
+          "lat": 34.9501837,
+          "lng": 135.7717009
+        },
+        {
+          "name": "直違橋通",
+          "kind": "street",
+          "where": "深草・直違橋通（参道・町の通り）",
+          "why": "神社と駅をつなぐ町場の一本。生活と参拝が同じ道幅。",
+          "present": "短い商店と住宅が混ざる。藤森の「いま」の通り。",
+          "aliases": [
+            "直違橋",
+            "直違橋通り"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 4,
+          "lat": 34.9557449,
+          "lng": 135.7722306
+        },
+        {
+          "name": "墨染寺",
+          "kind": "temple",
+          "where": "京都市伏見区墨染町",
+          "why": "墨染の名の由来に関わる寺。藤森から西へ続く深草の層。",
+          "present": "短い徒歩で町の厚みが増す。神社とセットで深草が立体になる。",
+          "aliases": [
+            "墨染"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 10,
+          "lat": 34.947759,
+          "lng": 135.7671697
+        },
+        {
+          "name": "龍谷大学 深草キャンパス",
+          "kind": "university",
+          "where": "京都市伏見区深草塚本町",
+          "why": "深草の学びの方角。通学の気配が町に届く。",
+          "present": "駅からはやや北。学生の流れが深草のいまを形づくる。",
+          "aliases": [
+            "龍谷大学",
+            "深草キャンパス"
+          ],
+          "mustVisit": false,
+          "guide": "sight",
+          "walkMinutes": 18,
+          "lat": 34.9636679,
+          "lng": 135.766411
+        }
+      ]
+    },
+    {
+      "station": "大山崎",
+      "anchors": [
+        {
+          "name": "離宮八幡宮",
+          "kind": "shrine",
+          "where": "京都府乙訓郡大山崎町大山崎",
+          "why": "油の神。大山崎の門前の顔。",
+          "present": "駅から近い古社。町の起点として方角が整う。",
+          "aliases": [
+            "離宮八幡"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 8,
+          "lat": 34.8916606,
+          "lng": 135.679563
+        },
+        {
+          "name": "アサヒビール大山崎山荘美術館",
+          "kind": "museum",
+          "where": "京都府乙訓郡大山崎町大山崎",
+          "why": "山荘と庭園の美術館。大山崎の近代の顔。",
+          "present": "山裾。建築と庭で、神社とは別の静けさがある。",
+          "aliases": [
+            "大山崎山荘",
+            "大山崎山荘美術館"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 15,
+          "lat": 34.8955363,
+          "lng": 135.6796513
+        },
+        {
+          "name": "天王山登山口",
+          "kind": "nature",
+          "where": "大山崎・天王山の麓",
+          "why": "山崎の合戦で知られる山。町からすぐ山の勾配が始まる。",
+          "present": "登山口で山の気配を受けるだけでも土地の骨格がわかる。",
+          "aliases": [
+            "天王山"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 12,
+          "lat": 34.8967535,
+          "lng": 135.6830433
+        },
+        {
+          "name": "サントリー山崎蒸溜所",
+          "kind": "museum",
+          "where": "大阪府三島郡島本町山崎",
+          "why": "ウイスキーの山崎。大山崎駅からの寄り道の定番。",
+          "present": "予約制。時間があるときのロングの先。",
+          "aliases": [
+            "山崎蒸溜所",
+            "サントリー山崎"
+          ],
+          "mustVisit": false,
+          "guide": "sight",
+          "walkMinutes": 20,
+          "lat": 34.8929428,
+          "lng": 135.6751745
+        }
+      ]
+    },
+    {
+      "station": "宇治",
+      "anchors": [
+        {
+          "name": "平等院",
+          "kind": "temple",
+          "where": "京都府宇治市宇治蓮華",
+          "why": "鳳凰堂。宇治の世界に知られた顔。",
+          "present": "表参道から池へ。駅から短く、まずはここで土地の格がわかる。",
+          "aliases": [
+            "鳳凰堂"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 8,
+          "lat": 34.8895001,
+          "lng": 135.8074525
+        },
+        {
+          "name": "宇治橋",
+          "kind": "bridge",
+          "where": "宇治川に架かる橋",
+          "why": "宇治川の横断。川と町の境界の顔。",
+          "present": "橋の上から川面と山を見る。平等院とセットで川の町だとわかる。",
+          "aliases": [
+            "宇治川"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 5,
+          "lat": 34.8928016,
+          "lng": 135.805996
+        },
+        {
+          "name": "通圓",
+          "kind": "tea",
+          "where": "京都府宇治市宇治",
+          "why": "抹茶・茶の老舗。宇治の味覚の顔。",
+          "present": "橋と平等院のあいだの町場。飲む・買うで土地の匂いが残る。",
+          "aliases": [
+            "御茶屋通圓",
+            "通円"
+          ],
+          "mustVisit": true,
+          "guide": "rest",
+          "walkMinutes": 6,
+          "lat": 34.8932519,
+          "lng": 135.8072475
+        }
+      ]
+    },
+    {
+      "station": "二ノ瀬",
+      "anchors": [
+        {
+          "name": "二ノ瀬川",
+          "kind": "river",
+          "where": "叡電二ノ瀬駅のすぐそばの渓流",
+          "why": "山あいの駅の骨格。水音がホームの余白を埋める。",
+          "present": "駅を出ると川の気配が近い。観光の派手さより、地形そのものが案内になる。",
+          "aliases": [
+            "貴船川",
+            "渓流"
+          ],
+          "mustVisit": true,
+          "guide": "rest",
+          "walkMinutes": 2,
+          "lat": 35.10685,
+          "lng": 135.7684
+        },
+        {
+          "name": "貴船神社",
+          "kind": "shrine",
+          "where": "京都市左京区鞍馬貴船町",
+          "why": "水の神の名社。二ノ瀬から山道を北へ進むときの土地の顔。",
+          "present": "本宮まで徒歩30〜40分ほど。石段と川音が続く道そのものが参拝の一部。",
+          "aliases": [
+            "貴船",
+            "きふね神社"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 35,
+          "lat": 35.12155,
+          "lng": 135.76285
+        },
+        {
+          "name": "山里の道",
+          "kind": "road",
+          "where": "二ノ瀬駅から貴船方面の山道",
+          "why": "商店街の代わりになる、この駅の「いまの通り」。歩くこと自体が町場の体験。",
+          "present": "民家と木立が交互に現れる細い道。電車の合間に、足音と虫の音が戻る。",
+          "aliases": [
+            "貴船への道",
+            "山道"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 8,
+          "lat": 35.1092,
+          "lng": 135.7672
+        }
+      ]
+    },
+    {
+      "station": "八瀬比叡山口",
+      "anchors": [
+        {
+          "name": "音羽川",
+          "kind": "river",
+          "where": "八瀬比叡山口駅前を流れる渓流",
+          "why": "比叡山の麓の骨格。清流の音が駅の余白を埋める。",
+          "present": "駅を出るとすぐに水音。深い緑に抱かれた、この土地の入り口。",
+          "aliases": [
+            "八瀬の川",
+            "渓流"
+          ],
+          "mustVisit": true,
+          "guide": "rest",
+          "walkMinutes": 2,
+          "lat": 35.0678,
+          "lng": 135.8092
+        },
+        {
+          "name": "ケーブル八瀬駅",
+          "kind": "landmark",
+          "where": "京都市左京区八瀬近衛町",
+          "why": "比叡山へ向かう門。叡電の終着と山の始まりがここでつながる。",
+          "present": "駅から徒歩数分。紅葉の季節は行列になる、麓の顔。",
+          "aliases": [
+            "比叡山ケーブル",
+            "ケーブルカー"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 5,
+          "lat": 35.0691,
+          "lng": 135.8124
+        },
+        {
+          "name": "八瀬もみじの小径",
+          "kind": "arcade",
+          "where": "八瀬比叡山口駅まわりの参道・小径",
+          "why": "商店街の代わりになる、この駅の「いまの通り」。歩くこと自体が町場の体験。",
+          "present": "川沿いと木立が続く細い道。電車の合間に、落ち葉と水音が戻る。",
+          "aliases": [
+            "もみじの小径",
+            "八瀬の参道"
+          ],
+          "mustVisit": true,
+          "guide": "sight",
+          "walkMinutes": 4,
+          "lat": 35.0683,
+          "lng": 135.8101
+        }
+      ]
+    }
+  ]
+}

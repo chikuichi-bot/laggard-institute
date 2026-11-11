@@ -109,10 +109,10 @@ enum MealStapleCatcher {
             if !lockedForFamily.isEmpty {
                 meals = meals.enumerated().compactMap { idx, spot in
                     guard members.contains(idx) else { return spot }
+                    // 「進々堂」屋号だけでは不可。京大北門前など正式支店だけ残す。
                     let isCanonical = lockedForFamily.contains { lock in
-                        NameMatch.score(spot.name, lock) >= 70
+                        LandmarkRegistry.matchesLockedBranch(spot.name, canonical: lock)
                             || (lock.contains("お米自慢") && spot.name.contains("お米自慢"))
-                            || (lock.contains("進々堂") && (spot.name.contains("進々堂") || spot.name.contains("新進堂")))
                             || (lock.contains("満寿形") && spot.name.contains("満寿形"))
                     }
                     return isCanonical ? spot : nil
@@ -143,12 +143,15 @@ enum MealStapleCatcher {
         return consolidated.filter { spot in
             guard spot.guide == .meal else { return true }
             if locked.contains(where: {
-                NameMatch.score(spot.name, $0) >= 70
+                LandmarkRegistry.matchesLockedBranch(spot.name, canonical: $0)
                     || (spot.name.contains("お米自慢") && $0.contains("お米自慢"))
-                    || (spot.name.contains("進々堂") && $0.contains("進々堂"))
                     || (spot.name.contains("満寿形") && $0.contains("満寿形"))
             }) {
                 return true
+            }
+            // ロック定番と同系統の別支店（進々堂寺町など）は出さない
+            if isNonCanonicalRival(spot.name, stationName: stationName) {
+                return false
             }
             // ロック外は、かなり強い屋号だけ（二番手おにぎり等は切る）
             return stapleScore(spot) >= 70 && brandTradeScore(spot.name) >= 50
@@ -186,9 +189,8 @@ enum MealStapleCatcher {
             }
             guard !lockedForFamily.isEmpty else { continue }
             let isCanonical = lockedForFamily.contains { lock in
-                NameMatch.score(name, lock) >= 70
+                LandmarkRegistry.matchesLockedBranch(name, canonical: lock)
                     || (lock.contains("お米自慢") && name.contains("お米自慢"))
-                    || (lock.contains("進々堂") && (name.contains("進々堂") || name.contains("新進堂")))
                     || (lock.contains("満寿形") && name.contains("満寿形"))
             }
             if !isCanonical { return true }

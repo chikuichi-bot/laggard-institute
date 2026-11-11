@@ -88,7 +88,7 @@ private struct PlaceBoardNote: View {
 }
 
 private enum PlaceBoardSection: String, Hashable {
-    case intro, walk, history, sight, visit
+    case intro, walk, history, sight
 }
 
 // MARK: - 土地（A · 駅前案内板）
@@ -106,8 +106,6 @@ struct PlacePage: View {
         let hasWalk = !walk.isEmpty
         let hasHistory = !area.isEmpty || !station.historyNotes.isEmpty
         let hasSight = !station.sightseeingNotes.isEmpty
-        let visitSpots = StationLore.introducedVisitSpots(in: station)
-        let hasVisit = !visitSpots.isEmpty
 
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
@@ -120,8 +118,7 @@ struct PlacePage: View {
                             hasIntro: hasIntro,
                             hasWalk: hasWalk,
                             hasHistory: hasHistory,
-                            hasSight: hasSight,
-                            hasVisit: hasVisit
+                            hasSight: hasSight
                         ) { section in
                             withAnimation(.easeInOut(duration: 0.25)) {
                                 proxy.scrollTo(section, anchor: .top)
@@ -165,7 +162,7 @@ struct PlacePage: View {
                         if hasHistory {
                             PlaceBoardPanel(
                                 number: "03",
-                                title: "このエリアのこと・歴史",
+                                title: "このエリアのこと（いまと歴史）",
                                 accent: Palette.ink,
                                 pictogram: .history
                             ) {
@@ -206,62 +203,7 @@ struct PlacePage: View {
                             .id(PlaceBoardSection.sight)
                         }
 
-                        if hasVisit {
-                            PlaceBoardPanel(
-                                number: hasSight ? "05" : "04",
-                                title: "訪れる場所",
-                                accent: Palette.warm,
-                                pictogram: .trekking
-                            ) {
-                                Text("土地の文章で触れた場所です。押すと地図で開けます。")
-                                    .font(.footnote)
-                                    .foregroundStyle(Palette.mist)
-                                    .padding(.bottom, 4)
-                                VStack(alignment: .leading, spacing: 0) {
-                                    ForEach(Array(visitSpots.enumerated()), id: \.element.id) { index, spot in
-                                        Button {
-                                            model.openSpot(spot)
-                                        } label: {
-                                            HStack(alignment: .top, spacing: 10) {
-                                                Text(String(format: "%02d", index + 1))
-                                                    .font(.caption.weight(.semibold))
-                                                    .foregroundStyle(Palette.warm)
-                                                    .monospacedDigit()
-                                                    .frame(width: 26, alignment: .leading)
-                                                VStack(alignment: .leading, spacing: 4) {
-                                                    Text(spot.name)
-                                                        .font(.mincho(.headline, weight: .semibold))
-                                                        .foregroundStyle(Palette.ink)
-                                                        .multilineTextAlignment(.leading)
-                                                    Text("\(spot.guide.label) · 徒歩約\(spot.walkMinutes)分")
-                                                        .font(.caption)
-                                                        .foregroundStyle(Palette.mist)
-                                                    if let trace = StationLore.trace(for: spot, in: station) {
-                                                        Text(trace)
-                                                            .font(.mincho(.footnote))
-                                                            .foregroundStyle(Palette.fog)
-                                                            .fixedSize(horizontal: false, vertical: true)
-                                                    }
-                                                }
-                                                Spacer(minLength: 0)
-                                                Image(systemName: "map")
-                                                    .font(.footnote.weight(.semibold))
-                                                    .foregroundStyle(Palette.warm)
-                                                    .padding(.top, 4)
-                                            }
-                                            .padding(.vertical, 10)
-                                        }
-                                        .buttonStyle(.plain)
-                                        if index < visitSpots.count - 1 {
-                                            Rectangle().fill(Palette.line).frame(height: 1)
-                                        }
-                                    }
-                                }
-                            }
-                            .id(PlaceBoardSection.visit)
-                        }
-
-                        if !hasIntro && !hasWalk && !hasHistory && !hasSight && !hasVisit {
+                        if !hasIntro && !hasWalk && !hasHistory && !hasSight {
                             Text("この駅の土地メモはまだ少なめです。")
                                 .font(.callout)
                                 .foregroundStyle(Palette.mist)
@@ -292,7 +234,6 @@ private struct PlaceBoardIndex: View {
     let hasWalk: Bool
     let hasHistory: Bool
     let hasSight: Bool
-    let hasVisit: Bool
     let onSelect: (PlaceBoardSection) -> Void
 
     private struct IndexItem: Identifiable {
@@ -306,9 +247,8 @@ private struct PlaceBoardIndex: View {
         let items: [IndexItem] = [
             .init(id: .intro, number: "01", label: stationLabel, enabled: hasIntro),
             .init(id: .walk, number: "02", label: "歩き方", enabled: hasWalk),
-            .init(id: .history, number: "03", label: "歴史", enabled: hasHistory),
+            .init(id: .history, number: "03", label: "いまと歴史", enabled: hasHistory),
             .init(id: .sight, number: "04", label: "観光", enabled: hasSight),
-            .init(id: .visit, number: "05", label: "訪れる", enabled: hasVisit),
         ]
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
             ForEach(items) { item in
@@ -336,7 +276,7 @@ private struct PlaceBoardIndex: View {
                     )
                     .opacity(item.enabled ? 1 : 0.45)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PlainHapticButtonStyle())
                 .disabled(!item.enabled)
                 .accessibilityLabel("\(item.number) \(item.label)")
             }
@@ -433,7 +373,7 @@ private struct PlaceListenBar: View {
                     .fill(narrator.isSpeaking ? Palette.warmDeep : Palette.warm)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PlainHapticButtonStyle())
         .accessibilityLabel(narrator.isSpeaking ? "読み上げを止める" : "土地案内を聞く")
         .accessibilityHint("駅の土地の文章を音声で読み上げます")
     }
@@ -472,18 +412,45 @@ struct WalkPage: View {
 
     var body: some View {
         PageScroll {
-            if let course = model.selectedCourse {
+            let variants = model.ordinaryWalkCourses
+            if let course = model.selectedCourse, !course.stops.isEmpty {
                 Kicker(text: "WALK", pictogram: .trekking)
                 Text(course.title)
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
-                Text("\(course.subtitle) · \(model.dayPart.label)スタート · 約\(course.totalMinutes)分 · \(course.stops.count)か所")
+                if variants.count >= 2 {
+                    HStack(spacing: 8) {
+                        ForEach(variants) { option in
+                            let on = option.id == course.id
+                            Button {
+                                model.selectWalkCourse(option)
+                            } label: {
+                                Text(option.id.contains("long") ? "ロング" : "ショート")
+                                    .font(.readable(.subheadline, weight: .semibold))
+                                    .foregroundStyle(on ? Palette.paper : Palette.ink)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        Capsule().fill(on ? Palette.warm : Palette.taupe.opacity(0.35))
+                                    )
+                            }
+                            .buttonStyle(PlainHapticButtonStyle())
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.top, 2)
+                }
+                Text("\(course.subtitle) · 約\(course.totalMinutes)分 · \(course.stops.count)か所")
                     .font(.caption)
                     .foregroundStyle(Palette.mist)
                 Text(course.vibe)
                     .font(.mincho(.callout))
                     .foregroundStyle(Palette.fog)
+                Text("駅を出て、立ち寄りを回り、駅に戻ります。なるべく同じ道は帰りません。")
+                    .font(.readable(.caption, weight: .semibold))
+                    .foregroundStyle(Palette.river)
                 VStack(spacing: 0) {
+                    WalkDepartureRow(stationName: model.station?.indexStationLabel ?? "駅")
                     ForEach(Array(course.stops.enumerated()), id: \.element.id) { index, stop in
                         Button {
                             model.openSpot(stop.spot)
@@ -491,27 +458,100 @@ struct WalkPage: View {
                             StopRow(
                                 index: index,
                                 stop: stop,
-                                isLast: index == course.stops.count - 1,
+                                isLast: false,
+                                fromStation: index == 0,
                                 trace: model.station.flatMap { StationLore.trace(for: stop.spot, in: $0) }
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PlainHapticButtonStyle())
                     }
+                    WalkReturnRow(
+                        stationName: model.station?.indexStationLabel ?? "駅",
+                        walkMinutes: course.returnWalkMinutes,
+                        clockLabel: course.returnClockLabel
+                    )
                 }
                 .padding(.top, 4)
             } else {
-                Kicker(text: "FREE WALK", pictogram: .trekking)
-                Text("まわり方は、まだ決めていません")
+                Kicker(text: "WALK", pictogram: .trekking)
+                Text("ショート／ロングで歩く")
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
-                Text("地図と観光から、気になった場所だけ寄り道できます。あとから会話をやり直して、まわり方を選ぶこともできます。")
+                Text("土地ページの文章に、まだ歩ける場所の名前が少ないようです。土地と地図から、気になる場所へ寄ってください。")
                     .font(.mincho(.body))
                     .lineSpacing(8)
                     .foregroundStyle(Palette.fog)
-                Button("会話をやり直す") { model.startArrival() }
-                    .buttonStyle(PrimaryButtonStyle(filled: false))
             }
         }
+    }
+}
+
+private struct WalkDepartureRow: View {
+    let stationName: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            VStack(spacing: 0) {
+                Text("出")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Palette.paper)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Palette.ink))
+                Rectangle()
+                    .fill(Palette.taupe)
+                    .frame(width: 2)
+                    .frame(maxHeight: .infinity)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(stationName)駅 · 出発")
+                    .font(.mincho(.headline, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                Text("ここから歩き始めます")
+                    .font(.caption)
+                    .foregroundStyle(Palette.mist)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 18)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(stationName)駅が出発点")
+    }
+}
+
+private struct WalkReturnRow: View {
+    let stationName: String
+    let walkMinutes: Int
+    let clockLabel: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Text("着")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Palette.paper)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(Palette.ink))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(
+                    clockLabel.isEmpty
+                        ? "\(stationName)駅 · 到着"
+                        : "\(clockLabel) · \(stationName)駅 · 到着"
+                )
+                .font(.mincho(.headline, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                Text(
+                    walkMinutes > 0
+                        ? "最後の立ち寄りから徒歩約 \(walkMinutes) 分 · 駅が終点です"
+                        : "駅が終点です。なるべく往路と違う道で戻ります"
+                )
+                .font(.caption)
+                .foregroundStyle(Palette.mist)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 8)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(stationName)駅が終点")
     }
 }
 
@@ -520,6 +560,7 @@ private struct StopRow: View {
     let index: Int
     let stop: CourseStop
     let isLast: Bool
+    var fromStation: Bool = false
     var trace: String? = nil
 
     var body: some View {
@@ -545,7 +586,11 @@ private struct StopRow: View {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     PictogramIcon(stop.spot.guide.pictogram, size: 16)
                         .foregroundStyle(stop.spot.guide.color)
-                    Text("\(stop.spot.guide.label) · 徒歩約 \(stop.walkMinutes) 分 · 滞在目安 \(stop.dwellMinutes) 分")
+                    Text(
+                        fromStation
+                            ? "\(stop.spot.guide.label) · 駅から徒歩約 \(stop.walkMinutes) 分 · 滞在目安 \(stop.dwellMinutes) 分"
+                            : "\(stop.spot.guide.label) · 徒歩約 \(stop.walkMinutes) 分 · 滞在目安 \(stop.dwellMinutes) 分"
+                    )
                         .font(.caption)
                         .foregroundStyle(Palette.mist)
                         .fixedSize(horizontal: false, vertical: true)
@@ -594,7 +639,7 @@ struct GuidePage: View {
                                 active: active
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PlainHapticButtonStyle())
                     }
 
                     let bikeActive = showBike
@@ -608,7 +653,7 @@ struct GuidePage: View {
                             active: bikeActive
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PlainHapticButtonStyle())
                     .accessibilityLabel("レンタサイクル")
                 }
                 .padding(.horizontal, 16)
@@ -641,7 +686,7 @@ struct GuidePage: View {
                             GuideRow(spot: spot, match: score > 0)
                                 .opacity(score < 0 ? 0.55 : 1)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PlainHapticButtonStyle())
                     }
                 }
             }
@@ -814,18 +859,18 @@ struct SettingsPage: View {
             settingsGroup(title: "この駅") {
                 settingsRow(title: "いまの駅", detail: "\(station.name) · \(station.prefecture)")
                 Button {
-                    model.requestAiStation(station.name)
+                    model.requestAiStation(station.name, forceRefresh: true)
                 } label: {
                     settingsButtonLabel("案内を作り直す（AI）", pictogram: .train)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PlainHapticButtonStyle())
                 .disabled(model.stationLoading)
                 Button {
-                    model.startArrival()
+                    model.goHero()
                 } label: {
                     settingsButtonLabel("駅を探し直す", pictogram: .search)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PlainHapticButtonStyle())
             }
 
             settingsGroup(title: "調べた駅") {
@@ -882,7 +927,7 @@ struct SettingsPage: View {
                             .background(saved.id == station.id ? Palette.warm : Color.clear)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PlainHapticButtonStyle())
                         .accessibilityLabel("\(saved.name)を開く")
                         .contextMenu {
                             Button("この駅を開く") { model.recallSavedStation(saved) }
@@ -930,7 +975,7 @@ struct SettingsPage: View {
                                         )
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PlainHapticButtonStyle())
                         }
                     }
                 }
@@ -943,7 +988,7 @@ struct SettingsPage: View {
                 } label: {
                     settingsButtonLabel("とりあえずここに行け", pictogram: .approved)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PlainHapticButtonStyle())
 
                 Button {
                     UIPasteboard.general.string = model.shareText
@@ -951,12 +996,12 @@ struct SettingsPage: View {
                 } label: {
                     settingsButtonLabel(copied ? "コピーしました" : "物語をコピー", pictogram: .information)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PlainHapticButtonStyle())
 
                 ShareLink(item: model.shareText) {
                     settingsButtonLabel("共有する", pictogram: .meetingPoint)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PlainHapticButtonStyle())
             }
 
             if let secret = model.secret {
