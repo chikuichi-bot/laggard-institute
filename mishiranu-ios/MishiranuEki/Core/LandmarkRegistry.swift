@@ -241,7 +241,9 @@ enum LandmarkRegistry {
                     budgetYen: isMeal ? "〜¥1,500" : (isSouvenir ? "〜¥1,000" : "—"),
                     hours: isSouvenir || isMeal ? "要確認" : nil,
                     blurb: isMeal
-                        ? "\(label)。この駅の定番めし。"
+                        ? (label.contains("朝日屋")
+                            ? "駅前の鯖の棒寿司で知られる一軒。参詣のあと腹ごしらえに寄れる。"
+                            : "\(label)。この駅の定番めし。")
                         : (isSouvenir
                             ? "\(label)。門前の手土産・名物。軽い包みで駅からの帰りにも向きやすい。"
                             : (isRiver
@@ -293,7 +295,10 @@ enum LandmarkRegistry {
                 names.append(lock.canonical ?? lock.keywords.first ?? lock.id)
                 continue
             }
-            let mealHints = ["進々堂", "新進堂", "おにぎり", "お米自慢", "満寿形", "ますがた"]
+            let mealHints = [
+                "進々堂", "新進堂", "おにぎり", "お米自慢", "満寿形", "ますがた",
+                "朝日屋", "棒寿司", "鯖寿司", "鯖の棒寿司",
+            ]
             guard lock.keywords.contains(where: { key in mealHints.contains { key.contains($0) } }) else {
                 continue
             }

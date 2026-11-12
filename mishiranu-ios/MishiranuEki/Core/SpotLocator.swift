@@ -9,7 +9,9 @@ enum SpotLocator {
     /// ご飯・土産の採取半径（ロック定番は別枠で半径外も採る）。
     private static let shopWalkRadiusKm = 1.2
     private static let shopMaxWalkMinutes = 22
-    /// ロック／定番の名検索だけ広げる（みたらし等）。
+    /// 地図に出してよい Apple ピンの上限（MapPinTrust と同じ）。
+    private static let appleMapMaxKm = MapPinTrust.appleMapMaxKm
+    /// ロック／定番の名検索だけ広げる（みたらし等）。地図ゲートは別。
     private static let stapleSearchMaxKm = 2.4
     /// 件数より「その土地の顔」を優先。埋めるための店は足さない。
     private static let maxSightSpots = 4
@@ -19,15 +21,17 @@ enum SpotLocator {
     private static let maxTipSpots = 1
 
     static func refine(_ station: Station) async -> Station {
-        var center = LandmarkRegistry.lockedStationCenter(name: station.name)
+        let lockedCenter = LandmarkRegistry.lockedStationCenter(name: station.name)
+        let seedCenter = lockedCenter
             ?? CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng)
+        let bare = SavedStationStore.bareName(station.name)
         // AI が出町座標を他駅に貼ると 8km では駅本体に届かない（二ノ瀬は出町から約8.5km）。
-        let want = "\(SavedStationStore.bareName(station.name))駅"
+        let want = "\(bare)駅"
         let queries = stationQueries(station.name)
         var stationHit = await bestMatch(
             queries: queries,
             want: want,
-            around: center,
+            around: seedCenter,
             maxKm: 18,
             stationOnly: true,
             minimumScore: 92
@@ -36,19 +40,29 @@ enum SpotLocator {
             stationHit = await bestMatch(
                 queries: queries,
                 want: want,
-                around: center,
-            maxKm: 80,
-            stationOnly: true,
-            minimumScore: 92
-        )
+                around: seedCenter,
+                maxKm: 80,
+                stationOnly: true,
+                minimumScore: 92
+            )
         }
-        if LandmarkRegistry.lockedStationCenter(name: station.name) == nil, let hit = stationHit {
+
+        // A: 駅中心はロック or MapKit の鉄道駅ヒットだけ採用。神社・町名代表点は拒否。
+        let center: CLLocationCoordinate2D
+        let centerVerified: Bool
+        if let locked = lockedCenter {
+            center = locked
+            centerVerified = true
+        } else if let hit = stationHit {
             center = hit.coordinate
+            centerVerified = true
+        } else {
+            center = seedCenter
+            centerVerified = false
         }
 
         // 1) Apple マップから周辺を採取し、メジャー度で絞る
         // 駅名門前の「○○神社」も必ず探す（藤森→藤森神社）。駅舎自体は名所にしない。
-        let bare = SavedStationStore.bareName(station.name)
         var preferred = station.spots.filter(\.majorWorthy).map(\.name).filter {
             !$0.hasSuffix("駅")
                 && !DemachiTemplate.isForeignDemachiPlace($0, stationName: station.name)
@@ -57,22 +71,36 @@ enum SpotLocator {
             preferred.insert(seed, at: 0)
         }
         preferred.append(contentsOf: LandmarkRegistry.appleSearchNames(for: station.name))
-        let appleSpots = await harvestApplePlaces(
+        var appleSpots = await harvestApplePlaces(
             around: center,
             stationName: station.name,
             preferredMajors: preferred
         )
+        // 駅中心が未検証なら Apple 座標を地図に出さない（ロックは後段で戻る）
+        if !centerVerified {
+            appleSpots = appleSpots.map { $0.withTrust(.unverified) }
+        }
         // 2) AI は文案だけ。座標は Apple／ロック。AI 仮座標は載せない。
         let blend = blendAICopy(aiSpots: station.spots, appleSpots: appleSpots, stationName: station.name)
-        let pinned = await resolveMissingCoordinates(
+        var pinned = await resolveMissingCoordinates(
             blend.ready,
             unresolved: blend.needsApplePin,
             center: center,
-            stationName: station.name
+            stationName: station.name,
+            allowApplePins: centerVerified
         )
+        if !centerVerified {
+            pinned = pinned.map { spot in
+                if LandmarkRegistry.isLocked(spot, stationName: station.name) { return spot }
+                if spot.coordTrust == .apple { return spot.withTrust(.unverified) }
+                return spot
+            }
+        }
         let firstVisit = FirstVisitFaces.filterSpots(pinned, stationName: station.name)
         // 3) レンタサイクル（CLEW 等）を Apple から拾って bikeRental へ
-        let bikeHits = await harvestBikeRentals(around: center, stationName: station.name)
+        let bikeHits = centerVerified
+            ? await harvestBikeRentals(around: center, stationName: station.name)
+            : []
         let withBike = BikeRentalSeal.merging(appleNames: bikeHits, into: station.relocated(center: center, spots: firstVisit))
         // 4) 名物の正本ピン（ふたば等）を最後に上書き
         let relocated = withBike.relocated(center: center, spots: markMajorFaces(withBike.spots))
@@ -159,11 +187,21 @@ enum SpotLocator {
             "\(bare) 喫茶",
             "\(bare) カフェ",
             "\(bare) 茶房",
+            // 駅前の定番めし（棒寿司・食堂など）を明示的に引く
+            "\(bare) 寿司",
+            "\(bare) 棒寿司",
+            "\(bare) 鯖寿司",
+            "\(bare) 食堂",
+            "\(bare) 定食",
+            "\(bare) うどん",
+            "\(bare) そば",
+            "\(bare) ご飯",
         ] + stapleQueries + preferredMajors.prefix(8).map { "\($0)" } + lockNames
         if bare.contains("八幡") {
             queries.append(contentsOf: [
                 "飛行神社", "飛行神社 \(bare)", "石清水八幡宮",
                 "走井餅", "やわた走井餅老舗", "八幡 土産",
+                "朝日屋", "朝日屋 棒寿司", "朝日屋 \(bare)", "鯖の棒寿司 八幡",
             ])
         }
         for query in queries {
@@ -185,8 +223,11 @@ enum SpotLocator {
                 ?? place.name
             let lockedPlace = LandmarkRegistry.isLocked(name: place.name, stationName: stationName)
                 || LandmarkRegistry.isLocked(name: displayProbe, stationName: stationName)
-            let limit = (guide == .meal || guide == .souvenir) ? shopWalkRadiusKm : walkRadiusKm
-            // ロック定番は半径外でも採る（AI 仮座標に落ちないように）
+            let limit = min(
+                appleMapMaxKm,
+                (guide == .meal || guide == .souvenir) ? shopWalkRadiusKm : walkRadiusKm
+            )
+            // ロック定番は半径外でも採る（AI 仮座標に落ちないように）。地図ゲートは MapPinTrust。
             if !lockedPlace {
                 guard place.km <= limit else { continue }
             } else {
@@ -358,6 +399,10 @@ enum SpotLocator {
         if n.contains("おにぎり") || n.contains("うどん") || n.contains("そば") || n.contains("蕎麦") || n.contains("食堂") {
             score += 26
         }
+        if n.contains("寿司") || n.contains("すし") || n.contains("棒寿司") || n.contains("鯖寿司") {
+            score += 30
+        }
+        if n.contains("朝日屋") { score += 36 }
         if n.contains("パン") || n.contains("進々堂") || n.contains("新進堂") || n.contains("満寿形") { score += 30 }
         if guide == .rest, CourseBuilder.isSitDownCafe(n) { score += 22 }
         else if n.contains("カフェ") || n.contains("茶房") || n.contains("喫茶") { score += 6 }
@@ -659,7 +704,8 @@ enum SpotLocator {
         _ ready: [Spot],
         unresolved: [Spot],
         center: CLLocationCoordinate2D,
-        stationName: String
+        stationName: String,
+        allowApplePins: Bool
     ) async -> [Spot] {
         var result = ready
         for ai in unresolved {
@@ -670,16 +716,18 @@ enum SpotLocator {
                 result.append(LandmarkRegistry.apply(ai, stationName: stationName).withCopy(from: ai))
                 continue
             }
+            guard allowApplePins else { continue }
 
             let hit = await bestMatch(
                 queries: [ai.name, "\(ai.name) \(SavedStationStore.bareName(stationName))"],
                 want: ai.name,
                 around: center,
-                maxKm: stapleSearchMaxKm,
+                maxKm: appleMapMaxKm,
                 stationOnly: false,
                 minimumScore: 90
             )
-            if let hit {
+            // B: 徒歩圏外の同名店は地図に載せない
+            if let hit, hit.kmFromCenter <= appleMapMaxKm {
                 let walk = max(1, min(90, Int((hit.kmFromCenter * 1.3 / 4.5 * 60).rounded())))
                 result.append(
                     ai.moved(to: hit.coordinate, walkMinutes: walk, coordTrust: .apple)
@@ -728,8 +776,10 @@ enum SpotLocator {
                 let km = origin.distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)) / 1000
                 guard km <= maxKm else { continue }
                 if stationOnly {
-                    let ok = item.pointOfInterestCategory == .publicTransport || name.hasSuffix("駅")
-                    guard ok else { continue }
+                    guard isRailwayStationHit(
+                        name: name,
+                        category: item.pointOfInterestCategory
+                    ) else { continue }
                 }
                 // 検索文（店名＋駅名）ではなく、欲しい店名だけで採点する。
                 // 駅名が入ったクエリだと、結果が駅や別の短い地名に吸われる。
@@ -750,7 +800,28 @@ enum SpotLocator {
 
     private static func stationQueries(_ name: String) -> [String] {
         let bare = SavedStationStore.bareName(name)
-        return ["\(bare)駅", bare]
+        // 「○○」単体は神社・町に吸われやすいので、駅付きを先に。
+        return ["\(bare)駅", "\(bare)駅 京阪", "\(bare)駅 電車"]
+    }
+
+    /// 駅中心に採用してよいヒットか。神社・寺だけは拒否。
+    private static func isRailwayStationHit(
+        name: String,
+        category: MKPointOfInterestCategory?
+    ) -> Bool {
+        if isWorshipNotStation(name) { return false }
+        if name.hasSuffix("駅") { return true }
+        if category == .publicTransport, name.contains("駅") { return true }
+        return false
+    }
+
+    private static func isWorshipNotStation(_ name: String) -> Bool {
+        if name.contains("駅") { return false }
+        return name.contains("神社")
+            || name.contains("神宮")
+            || name.contains("大社")
+            || name.contains("寺")
+            || name.hasSuffix("宮")
     }
 
     private static func coordinateOf(_ item: MKMapItem) -> CLLocationCoordinate2D {

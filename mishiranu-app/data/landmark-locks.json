@@ -1,5 +1,5 @@
 {
-  "_note": "店名検索や手打ち緯度では置かない。住所は人間が確認する正本。lat/lng は OpenStreetMap の店舗ノード（番地の代表点ではない）。iOS の Resources/landmark-locks.json と中身を同じにする。",
+  "_note": "推測座標禁止。住所は公式/食べログ等の正本。lat/lng は OSM 店舗ノード・食べログ店ピン・MapKit一致のいずれか（町名・社殿の代表点は不可）。追加手順は .cursor/rules/mishiranu-coordinate-locks.mdc。検証: swift mishiranu-app/scripts/verify-landmark-locks.swift。iOS Resources/landmark-locks.json と中身を同じにする。",
   "locks": [
     {
       "id": "demachi-delta",
@@ -162,10 +162,22 @@
       "keywords": ["走井餅", "やわた走井餅", "走井餅老舗"],
       "canonical": "やわた走井餅老舗",
       "address": "京都府八幡市八幡高坊",
-      "osm": "nominatim:走井餅 八幡",
-      "lat": 34.8784038,
-      "lng": 135.7000068,
-      "walkMinutes": 5
+      "osm": "apple:やわた走井餅老舗",
+      "lat": 34.8838413,
+      "lng": 135.7016002,
+      "walkMinutes": 3
+    },
+    {
+      "id": "hachiman-asahiya",
+      "station": "石清水八幡宮",
+      "kind": "meal",
+      "keywords": ["朝日屋", "棒寿司 朝日屋", "鯖の棒寿司", "鯖寿司 朝日屋"],
+      "canonical": "朝日屋",
+      "address": "京都府八幡市八幡高坊11-4",
+      "osm": "node/2784781535",
+      "lat": 34.884383,
+      "lng": 135.700150,
+      "walkMinutes": 1
     },
     {
       "id": "fujinomori-shrine",

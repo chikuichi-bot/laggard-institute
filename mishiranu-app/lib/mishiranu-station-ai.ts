@@ -120,8 +120,8 @@ const STATION_SCHEMA_BLOCK = [
   '  "mood": "story|empty",',
   '  "lat": 駅の緯度(number),',
   '  "lng": 駅の経度(number),',
-  '  "stationIntro": "観光案内の導入。必ず5〜8文・合計220字以上。地名の由来・路線の接続・駅前の空気・いまの人の流れ・半日と1時間の両方の見え方を含める",',
-  '  "areaAbout": "界隈の説明。必ず空行区切りの2段落。各段落4文以上・合計360字以上。各段落のなかで地形・由来といまの生活（通学・店の気配）を結び、段落を由来だけ／いまだけに分けない。近くに大学・キャンパス・学生街があれば正式名称で必ず触れる",',
+  '  "stationIntro": "観光案内の導入。必ず5〜8文・合計220字以上。地名の由来・路線の接続・駅前の空気・いまの人の流れ・半日と1時間の両方の見え方を含め、春夏秋冬の気配を駅前の文に織り交ぜる（四季の見出し一覧は禁止）",',
+  '  "areaAbout": "界隈の説明。必ず空行区切りの2段落。各段落4文以上・合計360字以上。各段落のなかで地形・由来といまの生活（通学・店の気配）を結び、段落を由来だけ／いまだけに分けない。春夏秋冬を同じ文章のなかに織り交ぜる（一覧にしない）。近くに大学・キャンパス・学生街があれば正式名称で必ず触れる",',
   '  "walkGuide": "徒歩圏の回り方。必ず5〜7文・160字以上。出方・方角・時間があるとき／短いときの分岐。大学・キャンパスが近いならその方角も書く",',
   '  "tourTitle": "28字以内",',
   '  "catchCopy": "40字以内",',
@@ -169,6 +169,7 @@ const STATION_SCHEMA_BLOCK = [
   "- 駅の徒歩圏に大学があれば正式名称で触れる（遠い大学は寄せない）。",
   "- 出町柳の川名（必須）: 上流は賀茂川と高野川。合流点から南は鴨川。",
   "- いちばん重要: stationIntro / areaAbout / historyNotes を短くしない。",
+  "- 【四季】stationIntro と areaAbout に春・夏・秋・冬の気配を必ず織る。『春は／夏は／秋は／冬は』の箇条書きは禁止。その土地に実在する季節の顔だけ。",
   "- 禁止: 1文だけの areaAbout、2件以下の historyNotes、抽象語だけの紹介。",
   "- 【名所と店を分ける】名所・地形・町場（sight/tip と firstVisitFaces）は土地文の正式名称＋検索。meal/souvenir は別枠で、検索で実在を確認できた店だけ。",
   "- spots の名所側: 土地文に出た正式名称を先に全部起こす（sight 中心）。件数は名所が足りていればよい。",
@@ -177,6 +178,7 @@ const STATION_SCHEMA_BLOCK = [
   "- firstVisitFaces の3点は majorWorthy true。major は名所を優先（目安3）。名物店の major は検索で確実なときだけ最大2。合計5未満でも名所が確かならよい。",
   "- meal/souvenir は駅から徒歩18分以内・正式店名のみ。lat/lng は本物。駅へ寄せない。閉店・別駅の店は出さない。",
   "- 【mealは店内飲食できる店だけ】ライフデリ・配食・宅食・宅配弁当・高齢者向け配食サービスは出さない（事業所で入れない）。",
+  "- 【駅前の名物めしは落とさない】石清水八幡宮駅前の朝日屋（鯖の棒寿司）のように、駅名と結びつく地元の定番食堂・寿司は meal に必ず入れる。",
   "- 【川・山の総称禁止】spots / firstVisitFaces の name に「淀川」「桂川」「鴨川」など川名だけを書かない。必ず「〇〇堤防」「三川合流点」「〇〇公園」など、歩いて立つ地点の固有名にする。",
   "- blurb に「駅から見渡せる」「一望」「眼下」と書かない。川辺・眺望は『駅から歩いて寄る場所』と書く。",
 ].join("\n");
@@ -691,8 +693,8 @@ function buildNarrativeExpandPrompt(station: StationSeed): string {
     "",
     "スキーマ:",
     "{",
-    '  "stationIntro": "5〜8文・220字以上。いまの人の流れも含める",',
-    '  "areaAbout": "空行区切り2段落・合計360字以上。各段落で由来といまを結ぶ（段落分割で分けない）。大学があれば正式名称を出す",',
+    '  "stationIntro": "5〜8文・220字以上。いまの人の流れと、春夏秋冬の気配を駅前の文に織る（四季一覧は禁止）",',
+    '  "areaAbout": "空行区切り2段落・合計360字以上。各段落で由来といまを結び、春夏秋冬を織り交ぜる（段落分割で分けない）。大学があれば正式名称を出す",',
     '  "walkGuide": "5〜7文・160字以上。大学が近いなら正式名称と方角",',
     '  "bikeRentalSummary": "2〜3文",',
     '  "historyNotes": [{ "title": "...", "body": "3〜5文。各件で由来といまを結ぶ" }]（6〜8件。歴史件／いま件の分業禁止。必須の大学名は各1件）,',
@@ -1518,6 +1520,7 @@ async function ensureStapleMealEntries(
     "例:",
     "- 出町柳: 進々堂 京大北門前, お米自慢 おにぎり屋さん, 満寿形屋",
     "- 出町柳のおにぎりは『お米自慢 おにぎり屋さん』のみ。おにぎり利次郎など他店は出さない。メジャー人気店だけ。",
+    "- 石清水八幡宮: 朝日屋（鯖の棒寿司・駅前）。参詣の定番めしは必ず入れる。",
     "- 鎌倉: 小町通りの定番めし（実在店名）",
     "- 宇治: 抹茶・甘味の定番とは別に、腹ごしらえの定番食堂・麺があれば入れる",
     "",
@@ -1994,16 +1997,14 @@ function mergePlacesFromLandText(
   return { ...station, spots: existing.slice(0, 22) };
 }
 
-/** 1回目で足りていれば 2 回目（穴埋め）を打たない。店の件数不足だけでは打たない。 */
+/**
+ * 1回目で足りていれば 2 回目（穴埋め＝Search 付き）を打たない。
+ * 穴埋めは「土地文・名所」が薄いときだけ。店・休み・major の枚数合わせでは打たない
+ * （店は MapKit／ロック、major はヒューリスティックで後段が補う）。
+ */
 function needsGapFill(station: StationSeed): boolean {
-  const spotCount = station.spots?.length ?? 0;
-  if (spotCount < 6) return true;
-  // 名所（sight）がほぼ無いときだけ穴埋め（店の枚数合わせはしない）
-  if (countGuide(station, "sight") < 2) return true;
-  if (countMajor(station) < 3) return true;
   if (isNarrativeThin(station)) return true;
-  // 休みは景色が1つも無いときだけ（喫茶を無理に埋めない）
-  if (countGuide(station, "rest") === 0) return true;
+  if (countGuide(station, "sight") < 2) return true;
   return false;
 }
 
@@ -2061,8 +2062,8 @@ function buildGapFillPrompt(station: StationSeed): string {
     "",
     "スキーマ:",
     "{",
-    '  "stationIntro": "薄いときだけ書き直し（十分な長さなら省略可）",',
-    '  "areaAbout": "薄いときだけ",',
+    '  "stationIntro": "薄いとき／四季が無いときだけ書き直し（十分な長さで四季も織ってあれば省略可）",',
+    '  "areaAbout": "薄いとき／四季が無いときだけ（春夏秋冬を織る）",',
     '  "walkGuide": "薄いときだけ",',
     '  "historyNotes": [{ "title", "body" }]（薄いときだけ追加・厚く）,',
     '  "sightseeingNotes": [{ "title", "body" }]（薄いときだけ）,',
@@ -2074,6 +2075,7 @@ function buildGapFillPrompt(station: StationSeed): string {
     "- 【名所】土地文に出た正式名称でまだspotsに無いものは必ず起こす（sight 優先）。",
     "- 【店】meal/souvenir は検索で確実なときだけ追加（目安 合計 meal≤3 / souvenir≤2）。不確かなら足さない。0件のままでよい。",
     "- 【休み】景色の休みが無ければ足す。喫茶は検索で確実なときだけ。",
+    "- 【四季】stationIntro / areaAbout を直すときは春夏秋冬を織る（見出し一覧は禁止）。",
     "- majorWorthy は名所を優先。名物店 major は確実なときだけ。合計5未満でも名所が確かならよい。",
     "- 出町柳以外で鴨川デルタ・下鴨・枡形・ふたば等を出さない。",
     "- blurb/detail は各3文以上。確認できない店・総称名は出さない。",

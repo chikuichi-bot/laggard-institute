@@ -557,11 +557,14 @@ export default function MishiranuApp({
     for (const rest of byId.values()) ordered.push(rest);
     return ordered;
   }, [station, selectedCourse]);
-  // 地図は lock / Apple 確定のみ
-  const spots = useMemo(
-    () => mapTrustedSpots(guidePool, station.name),
-    [guidePool, station.name],
-  );
+  // 地図は lock / Apple 確定のみ（Apple は駅から 1.5km 以内）
+  const spots = useMemo(() => {
+    const center =
+      station.lat != null && station.lng != null
+        ? { lat: station.lat, lng: station.lng }
+        : null;
+    return mapTrustedSpots(guidePool, station.name, center);
+  }, [guidePool, station.name, station.lat, station.lng]);
   const courseStopIds = useMemo(
     () =>
       selectedCourse && selectedCourse.stops.length > 0
@@ -1794,7 +1797,7 @@ export default function MishiranuApp({
                               : null;
                         }
                         const metersFromStation = (s: Spot) => {
-                          if (!allowsOnMap(s, station.name)) {
+                          if (!allowsOnMap(s, station.name, origin)) {
                             return 50_000 + Math.max(s.walkMinutes, 1) * 80;
                           }
                           if (

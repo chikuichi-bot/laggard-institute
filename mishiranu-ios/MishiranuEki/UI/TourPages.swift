@@ -416,6 +416,7 @@ private struct PlaceListenBar: View {
     let station: Station
 
     private var speakingAll: Bool { narrator.isSpeaking(section: .all) }
+    private var canResume: Bool { narrator.canResume(station: station, section: .all) }
 
     var body: some View {
         Button {
@@ -426,13 +427,19 @@ private struct PlaceListenBar: View {
                     .font(.title3.weight(.semibold))
                     .frame(width: 24, height: 24)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(speakingAll ? "読み上げを止める" : "土地案内を聞く（すべて）")
+                    Text(
+                        speakingAll
+                            ? "読み上げを止める"
+                            : (canResume ? "続きから聞く（すべて）" : "土地案内を聞く（すべて）")
+                    )
                         .font(.mincho(.body, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
                     Text(
                         speakingAll
-                            ? "もう一度押すと止まります"
-                            : "項目ごとにも聞けます · 駅に着く前に、イヤホンで"
+                            ? "もう一度押すと止まります · 次回は続きから"
+                            : (canResume
+                                ? "途中から再開します · 長押しで最初から"
+                                : "項目ごとにも聞けます · 駅に着く前に、イヤホンで")
                     )
                         .font(.caption)
                         .foregroundStyle(Palette.paper.opacity(0.85))
@@ -450,8 +457,22 @@ private struct PlaceListenBar: View {
             )
         }
         .buttonStyle(PlainHapticButtonStyle())
-        .accessibilityLabel(speakingAll ? "読み上げを止める" : "土地案内をすべて聞く")
-        .accessibilityHint("駅の土地の文章を音声で読み上げます。各項目の聞くでも再生できます")
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.55).onEnded { _ in
+                guard !speakingAll else { return }
+                narrator.toggle(station: station, section: .all, fromBeginning: true)
+            }
+        )
+        .accessibilityLabel(
+            speakingAll
+                ? "読み上げを止める"
+                : (canResume ? "土地案内を続きから聞く" : "土地案内をすべて聞く")
+        )
+        .accessibilityHint(
+            canResume && !speakingAll
+                ? "途中から再開します。最初から聞くときは長押し"
+                : "駅の土地の文章を音声で読み上げます。各項目の聞くでも再生できます"
+        )
     }
 }
 

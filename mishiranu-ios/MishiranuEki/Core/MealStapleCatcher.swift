@@ -9,7 +9,7 @@ enum MealStapleCatcher {
         ("bakery", ["パン", "ベーカリー", "bakery", "進々堂", "新進堂"]),
         ("udon_diner", ["うどん", "満寿形", "ますがた"]),
         ("soba", ["そば", "蕎麦"]),
-        ("sushi_diner", ["鯖寿司", "寿司", "すし"]),
+        ("sushi_diner", ["鯖寿司", "棒寿司", "寿司", "すし", "朝日屋"]),
         ("teishoku", ["定食", "食堂"]),
     ]
 
@@ -137,6 +137,7 @@ enum MealStapleCatcher {
     }
 
     /// メジャー人気店だけ残す（件数埋めの二番手店は出さない）。
+    /// 駅前の実在屋号（棒寿司・食堂など）は、厳しすぎる閾値で落とさない。
     static func keepMajorMealsOnly(_ spots: [Spot], stationName: String) -> [Spot] {
         let consolidated = consolidateMeals(spots, stationName: stationName)
         let locked = Set(LandmarkRegistry.mealStapleNames(for: stationName))
@@ -144,8 +145,11 @@ enum MealStapleCatcher {
             guard spot.guide == .meal else { return true }
             if locked.contains(where: {
                 LandmarkRegistry.matchesLockedBranch(spot.name, canonical: $0)
+                    || spot.name.contains($0)
+                    || $0.contains(spot.name)
                     || (spot.name.contains("お米自慢") && $0.contains("お米自慢"))
                     || (spot.name.contains("満寿形") && $0.contains("満寿形"))
+                    || (spot.name.contains("朝日屋") && $0.contains("朝日屋"))
             }) {
                 return true
             }
@@ -153,8 +157,14 @@ enum MealStapleCatcher {
             if isNonCanonicalRival(spot.name, stationName: stationName) {
                 return false
             }
+            let brand = brandTradeScore(spot.name)
+            let staple = stapleScore(spot)
+            // 駅から近い実在店（Apple）で屋号があるご飯は残す（朝日屋型）
+            if spot.coordTrust == .apple, spot.walkMinutes <= 12, brand >= 40, staple >= 48 {
+                return true
+            }
             // ロック外は、かなり強い屋号だけ（二番手おにぎり等は切る）
-            return stapleScore(spot) >= 70 && brandTradeScore(spot.name) >= 50
+            return staple >= 70 && brand >= 50
         }
     }
 

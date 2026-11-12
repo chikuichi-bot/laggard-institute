@@ -149,7 +149,7 @@ final class AppModel {
         guard let station else { return [] }
         let trusted = MapPinTrust.mapSpots(
             from: StationLore.introducedVisitSpots(in: station),
-            stationName: station.name
+            station: station
         )
         guard let course = selectedCourse, !course.stops.isEmpty else { return trusted }
         let stopIds = course.stops.map(\.spot.id)
@@ -216,7 +216,7 @@ final class AppModel {
         let enriched = items.map { spot -> Spot in
             let text = SpotCopy.blurb(for: spot, in: station)
             let blurb: String = {
-                if MapPinTrust.allowsOnMap(spot, stationName: station.name) { return text }
+                if MapPinTrust.allowsOnMap(spot, in: station) { return text }
                 let note = "（地図の位置は未確定）"
                 return text.contains(note) ? text : text + note
             }()
@@ -242,7 +242,7 @@ final class AppModel {
     ) -> [Spot] {
         func meters(from spot: Spot) -> Double {
             // 地図未確定は距離ソートに使わない（仮ピンで先頭に来ないように）
-            if !MapPinTrust.allowsOnMap(spot, stationName: station.name) {
+            if !MapPinTrust.allowsOnMap(spot, in: station) {
                 return 50_000 + Double(spot.walkMinutes) * 80
             }
             let km = Geo.haversineKm(
