@@ -1,0 +1,87 @@
+.rd {
+  --ink: #2a241c;
+  --paper: #f8f5ee;
+  --mist: #8a7d6b;
+  --canvas: #f3efe4;
+  min-height: 100vh;
+  color: var(--ink);
+  background: var(--canvas);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.rd * {
+  box-sizing: border-box;
+}
+
+.rd-hero {
+  width: min(920px, 100%);
+  margin: 0 auto 1.5rem;
+}
+
+.rd-kicker {
+  margin: 0 0 0.4rem;
+  font-family: "Hiragino Sans", sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  color: var(--mist);
+}
+
+.rd-hero h1 {
+  margin: 0 0 0.6rem;
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+
+.rd-hero p {
+  margin: 0;
+  max-width: 40rem;
+  line-height: 1.8;
+  font-size: 0.98rem;
+}
+
+.rd-grid {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.rd-card {
+  margin: 0;
+  background: var(--paper);
+  border: 1px solid #ddd4c4;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.rd-map {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.rd-card figcaption {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid #ddd4c4;
+}
+
+.rd-card strong {
+  font-family: "Hiragino Sans", sans-serif;
+  font-size: 0.95rem;
+}
+
+.rd-card span {
+  color: #5c5348;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .rd-grid {
+    grid-template-columns: 1fr;
+  }
+}

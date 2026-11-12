@@ -9,8 +9,8 @@ struct TourMapPage: View {
     @Environment(AppModel.self) private var model
     let station: Station
     @State private var position: MapCameraPosition = .automatic
-    /// 徒歩の道なり座標（直線は川の上を横切るので使わない）
-    @State private var walkingPath: [CLLocationCoordinate2D] = []
+    /// 徒歩の道なり。意図して途切れた区間だけ別配列。頂点が離れていても同じ断片は一本。
+    @State private var walkingLegs: [[CLLocationCoordinate2D]] = []
     @State private var routeTaskId: String = ""
     /// MapPolyline が初回描画されない癖への再マウント用
     @State private var pathRenderEpoch = 0
@@ -40,28 +40,31 @@ struct TourMapPage: View {
         return "\(station.id)|\(course.id)|\(ids)"
     }
 
-    /// この駅の地図に載せてよい距離。出町柳のピン（約15km北）を八幡の画面へ入れない。
-    private var maxPinKm: Double { 8 }
+    /// 徒歩コースと同じ上限（3.2km）。二ノ瀬から出町柳は約7.5kmなので、8kmだと吸い寄せられる。
+    private var maxPinKm: Double { DemachiTemplate.firstVisitMaxKm }
 
     private func isNearStation(_ lat: Double, _ lng: Double) -> Bool {
-        Geo.haversineKm(
+        if !DemachiTemplate.isDemachiStationName(station.name),
+           DemachiTemplate.isOnDemachiPin(lat: lat, lng: lng) {
+            return false
+        }
+        return Geo.haversineKm(
             lat1: station.lat, lng1: station.lng,
             lat2: lat, lng2: lng
         ) <= maxPinKm
     }
 
+    private func belongsOnThisMap(_ spot: Spot) -> Bool {
+        !DemachiTemplate.isForeignDemachiPlace(spot.name, stationName: station.name)
+            && isNearStation(spot.lat, spot.lng)
+    }
+
     /// 地図に出すピン。コースの立ち寄り、信頼ピンに加え、案内の店も出す。駅から遠すぎる点は捨てる。
     private var mapSpots: [Spot] {
-        let shops = model.guideShopSpots.map(model.resolvedSpot).filter {
-            isNearStation($0.lat, $0.lng)
-        }
-        let trusted = model.tourSpots.map(model.resolvedSpot).filter {
-            isNearStation($0.lat, $0.lng)
-        }
+        let shops = model.guideShopSpots.map(model.resolvedSpot).filter(belongsOnThisMap)
+        let trusted = model.tourSpots.map(model.resolvedSpot).filter(belongsOnThisMap)
         if let course = model.selectedCourse, !course.stops.isEmpty {
-            let coursePins = course.stops.map { model.resolvedSpot($0.spot) }.filter {
-                isNearStation($0.lat, $0.lng)
-            }
+            let coursePins = course.stops.map { model.resolvedSpot($0.spot) }.filter(belongsOnThisMap)
             let extras = (trusted + shops).filter { extra in
                 !coursePins.contains { sameMapPin($0, extra) }
             }
@@ -159,6 +162,136 @@ struct TourMapPage: View {
         return result
     }
 
+    private var walkingPath: [CLLocationCoordinate2D] {
+        walkingLegs.flatMap { $0 }
+    }
+
+    /// C · 線上の矢羽。行きだけ、約200mおき。帰りには置かない。丸印にはしない。
+    private func directionArrows(
+        along legs: [[CLLocationCoordinate2D]],
+        avoiding spots: [Spot],
+        coords: [String: CLLocationCoordinate2D]
+    ) -> [RouteArrow] {
+        let outbound = outboundLegs(legs)
+        guard !outbound.isEmpty else { return [] }
+        let step = 200.0
+        let inset = 70.0
+        let tail = 40.0
+        var arrows: [RouteArrow] = []
+        for leg in outbound {
+            guard leg.count >= 2 else { continue }
+            var legLength = 0.0
+            for index in 1 ..< leg.count {
+                legLength += Self.metersBetween(leg[index - 1], leg[index])
+            }
+            guard legLength > inset + 16 else { continue }
+            let limit = max(inset, legLength - tail)
+            var walked = 0.0
+            var next = inset
+            for index in 1 ..< leg.count {
+                let start = leg[index - 1]
+                let end = leg[index]
+                let segment = Self.metersBetween(start, end)
+                if segment < 1 { continue }
+                while next <= walked + segment, next <= limit + 0.5 {
+                    let t = min(1, max(0, (next - walked) / segment))
+                    let coordinate = CLLocationCoordinate2D(
+                        latitude: start.latitude + (end.latitude - start.latitude) * t,
+                        longitude: start.longitude + (end.longitude - start.longitude) * t
+                    )
+                    if !coversMarker(coordinate, spots: spots, coords: coords) {
+                        arrows.append(RouteArrow(
+                            id: arrows.count,
+                            coordinate: coordinate,
+                            degrees: Self.bearingDegrees(from: start, to: end)
+                        ))
+                    }
+                    next += step
+                }
+                walked += segment
+            }
+        }
+        return arrows
+    }
+
+    /// 最後の立ち寄りに着いた断片まで。その先の駅への戻りには矢羽を置かない。
+    private func outboundLegs(_ legs: [[CLLocationCoordinate2D]]) -> [[CLLocationCoordinate2D]] {
+        let stops = Array(waypointCoordinates.dropFirst().dropLast())
+        guard let lastStop = stops.last, !legs.isEmpty else { return legs }
+        var kept: [[CLLocationCoordinate2D]] = []
+        var stopIndex = 0
+        var sinceMatch = 999.0
+        var walked = 0.0
+        var bestLeg = -1
+        var bestIndex = 0
+        var best = Double.greatestFiniteMagnitude
+
+        for (legIndex, leg) in legs.enumerated() {
+            guard leg.count >= 2 else { continue }
+            var cutAt: Int?
+            for index in 1 ..< leg.count {
+                let segment = Self.metersBetween(leg[index - 1], leg[index])
+                walked += segment
+                sinceMatch += segment
+                if walked > 40 {
+                    let dist = Self.metersBetween(leg[index], lastStop)
+                    if dist < best {
+                        best = dist
+                        bestLeg = legIndex
+                        bestIndex = index
+                    }
+                }
+                guard sinceMatch > 25 else { continue }
+                guard stopIndex < stops.count else { continue }
+                guard Self.metersBetween(leg[index], stops[stopIndex]) < 70 else { continue }
+                if stopIndex == stops.count - 1 {
+                    cutAt = index
+                    break
+                }
+                stopIndex += 1
+                sinceMatch = 0
+            }
+            if let cutAt {
+                kept.append(Array(leg[...cutAt]))
+                return kept
+            }
+            kept.append(leg)
+        }
+        if best < 120, bestLeg >= 0 {
+            return Array(legs[...bestLeg]).enumerated().map { offset, leg in
+                offset == bestLeg ? Array(leg[...bestIndex]) : leg
+            }
+        }
+        return legs
+    }
+
+    private func coversMarker(
+        _ coordinate: CLLocationCoordinate2D,
+        spots: [Spot],
+        coords: [String: CLLocationCoordinate2D]
+    ) -> Bool {
+        if Self.metersBetween(coordinate, stationCoordinate) < 26 { return true }
+        for spot in spots {
+            let pin = coords[spot.id] ?? CLLocationCoordinate2D(latitude: spot.lat, longitude: spot.lng)
+            if Self.metersBetween(coordinate, pin) < 24 { return true }
+        }
+        return false
+    }
+
+    /// 北を 0 度、時計回り。矢印の上向きと揃える。地図は北が上。
+    private static func bearingDegrees(
+        from start: CLLocationCoordinate2D,
+        to end: CLLocationCoordinate2D
+    ) -> Double {
+        let lat1 = start.latitude * .pi / 180
+        let lat2 = end.latitude * .pi / 180
+        let dLng = (end.longitude - start.longitude) * .pi / 180
+        let y = sin(dLng) * cos(lat2)
+        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLng)
+        let degrees = atan2(y, x) * 180 / .pi
+        return degrees < 0 ? degrees + 360 : degrees
+    }
+
     private static func metersBetween(
         _ a: CLLocationCoordinate2D,
         _ b: CLLocationCoordinate2D
@@ -195,12 +328,21 @@ struct TourMapPage: View {
                         .foregroundStyle(Palette.river.opacity(0.08))
                         .stroke(Palette.river.opacity(0.45), lineWidth: 1)
 
-                    if walkingPath.count > 1 {
-                        MapPolyline(coordinates: walkingPath)
-                            .stroke(
-                                Palette.warm,
-                                style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 6])
-                            )
+                    ForEach(Array(walkingLegs.enumerated()), id: \.offset) { _, leg in
+                        if leg.count >= 2 {
+                            MapPolyline(coordinates: leg)
+                                .stroke(
+                                    Palette.warm,
+                                    style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 6])
+                                )
+                        }
+                    }
+
+                    ForEach(directionArrows(along: walkingLegs, avoiding: spots, coords: coords)) { arrow in
+                        Annotation("", coordinate: arrow.coordinate, anchor: .center) {
+                            RouteDirectionArrow(degrees: arrow.degrees)
+                        }
+                        .annotationTitles(.hidden)
                     }
 
                     Annotation(station.name, coordinate: stationCoordinate, anchor: .center) {
@@ -237,8 +379,8 @@ struct TourMapPage: View {
                         HereYouAreMarker(emphasized: focusingHere)
                     }
                 }
-                // path が入ったあとタップしないと線が出ない MapKit 癖 → epoch で中身を載せ直す
-                .id("tour-map-\(routeKey)-\(pathRenderEpoch)")
+                // 線の初回描画だけ載せ直す。コース切替で地図ごと捨てると、日本全体の初期表示に戻る。
+                .id("tour-map-\(pathRenderEpoch)")
                 .mapStyle(.standard(pointsOfInterest: .excludingAll))
                 .mapControls {
                     MapCompass()
@@ -283,7 +425,7 @@ struct TourMapPage: View {
                         .foregroundStyle(Palette.fog)
                 }
                 if let course = model.selectedCourse {
-                    Text("線は「\(course.title)」の周回（道なり・駅出発→\(course.stops.count)か所→駅）。なるべく同じ道は帰りません。")
+                    Text("線は「\(course.title)」の道です。駅を出て番号の順に寄り、駅へ戻ります。")
                         .font(.caption)
                         .foregroundStyle(Palette.fog)
                         .fixedSize(horizontal: false, vertical: true)
@@ -327,20 +469,22 @@ struct TourMapPage: View {
             .background(Palette.paper)
         }
         .onAppear {
+            model.syncWalkCourse()
             position = camera()
             // 道なり待ちでも、経由点の仮線をすぐ出す（空のまま待たない）
-            publishPath(waypointCoordinates, key: routeKey, bumpRender: true)
+            publishLegs(stubLegs(from: waypointCoordinates), key: routeKey, bumpRender: true)
             refreshWalkingPath()
         }
         .onChange(of: station.id) {
             model.syncWalkCourse()
             position = camera()
-            publishPath(waypointCoordinates, key: routeKey, bumpRender: true)
+            publishLegs(stubLegs(from: waypointCoordinates), key: routeKey, bumpRender: true)
             refreshWalkingPath()
         }
         .onChange(of: model.stay) { position = camera() }
         .onChange(of: routeKey) {
-            publishPath(waypointCoordinates, key: routeKey, bumpRender: true)
+            position = camera()
+            publishLegs(stubLegs(from: waypointCoordinates), key: routeKey, bumpRender: true)
             refreshWalkingPath()
         }
         .task(id: routeKey) {
@@ -351,38 +495,59 @@ struct TourMapPage: View {
     private func refreshWalkingPath() {
         // task(id:) が走るまでのあいだ、古い線を消すのはやめる。
         // 代わりに経由点仮線を残し、道なりが来たら差し替える。
-        if routeKey != routeTaskId, walkingPath.isEmpty {
-            let points = waypointCoordinates
-            if points.count >= 2 {
-                walkingPath = points
+        if routeKey != routeTaskId, walkingLegs.isEmpty {
+            let stub = stubLegs(from: waypointCoordinates)
+            if !stub.isEmpty {
+                walkingLegs = stub
             }
+        }
+    }
+
+    /// 道なり待ちの仮線。隣り合う経由点ごとに一本（全体を無理につなげない）。
+    private func stubLegs(from points: [CLLocationCoordinate2D]) -> [[CLLocationCoordinate2D]] {
+        guard points.count >= 2 else { return [] }
+        return (0..<(points.count - 1)).compactMap { index in
+            let a = points[index]
+            let b = points[index + 1]
+            guard isNearStation(a.latitude, a.longitude), isNearStation(b.latitude, b.longitude) else {
+                return nil
+            }
+            return [a, b]
         }
     }
 
     /// 線を載せ、必要なら Map を再マウントして初回描画を確実にする。
     /// 前の駅（出町柳など）の計算が遅れて戻ってきたときは、今の駅の線を上書きしない。
-    private func publishPath(
-        _ path: [CLLocationCoordinate2D],
+    private func publishLegs(
+        _ legs: [[CLLocationCoordinate2D]],
         key: String,
         bumpRender: Bool
     ) {
         guard key == routeKey else { return }
-        let near = path.allSatisfy { isNearStation($0.latitude, $0.longitude) }
-        guard path.count >= 2, near else {
-            walkingPath = []
+        let usable = legs.filter { leg in
+            leg.count >= 2 && leg.allSatisfy { isNearStation($0.latitude, $0.longitude) }
+        }
+        guard !usable.isEmpty else {
+            walkingLegs = []
             routeTaskId = key
-            if bumpRender { pathRenderEpoch += 1 }
+            if bumpRender {
+                pathRenderEpoch += 1
+                position = camera()
+            }
             return
         }
-        let changed = walkingPath.count != path.count
-            || zip(walkingPath, path).contains {
+        let flat = usable.flatMap { $0 }
+        let previous = walkingPath
+        let changed = previous.count != flat.count
+            || zip(previous, flat).contains {
                 abs($0.latitude - $1.latitude) > 0.00001
                     || abs($0.longitude - $1.longitude) > 0.00001
             }
-        walkingPath = path
+        walkingLegs = usable
         routeTaskId = key
         if bumpRender, changed {
             pathRenderEpoch += 1
+            position = camera()
         }
     }
 
@@ -420,33 +585,64 @@ struct TourMapPage: View {
         let key = routeKey
         let points = waypointCoordinates
         guard points.count >= 2 else {
-            publishPath([], key: key, bumpRender: true)
+            publishLegs([], key: key, bumpRender: true)
             return
         }
         // 先に経由点線 → 道なり算出後に差し替え（地図タブを開いた瞬間から線が見える）
-        publishPath(points, key: key, bumpRender: walkingPath.count < 2)
-        let path = await WalkRouteBuilder.walkingPath(through: points)
+        publishLegs(stubLegs(from: points), key: key, bumpRender: walkingLegs.isEmpty)
+        let legs = await WalkRouteBuilder.walkingLegs(through: points)
         guard !Task.isCancelled, routeTaskId == key else { return }
-        publishPath(path, key: key, bumpRender: true)
+        publishLegs(legs, key: key, bumpRender: true)
     }
 
-    /// 駅とピンが収まる範囲。ピンが少ないときは徒歩圏の円を目安にする。
+    /// 駅とピンが収まる範囲。日本全国までは開かない。
     private func camera() -> MapCameraPosition {
-        let spots = mapSpots
-        guard spots.count >= 2 else {
-            let meters = model.radiusKm * 1000 * 2.3
-            return .region(MKCoordinateRegion(center: stationCoordinate, latitudinalMeters: meters, longitudinalMeters: meters))
-        }
+        let spots = mapSpots.filter { isNearStation($0.lat, $0.lng) }
+        let neighborhood = MKCoordinateRegion(
+            center: stationCoordinate,
+            latitudinalMeters: min(model.radiusKm * 1000 * 2.3, 12_000),
+            longitudinalMeters: min(model.radiusKm * 1000 * 2.3, 12_000)
+        )
+        guard spots.count >= 2 else { return .region(neighborhood) }
         let lats = [station.lat] + spots.map(\.lat)
         let lngs = [station.lng] + spots.map(\.lng)
         let minLat = lats.min()!, maxLat = lats.max()!
         let minLng = lngs.min()!, maxLng = lngs.max()!
+        let rawLat = (maxLat - minLat) * 1.6
+        let rawLng = (maxLng - minLng) * 1.6
+        // 約6km。二ノ瀬と上京区（約7.5km）は同じ画面に収めない。
+        let cap = 0.055
+        guard rawLat <= cap, rawLng <= cap else { return .region(neighborhood) }
         let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2, longitude: (minLng + maxLng) / 2)
         let span = MKCoordinateSpan(
-            latitudeDelta: max((maxLat - minLat) * 1.6, 0.008),
-            longitudeDelta: max((maxLng - minLng) * 1.6, 0.008)
+            latitudeDelta: max(rawLat, 0.008),
+            longitudeDelta: max(rawLng, 0.008)
         )
         return .region(MKCoordinateRegion(center: center, span: span))
+    }
+}
+
+private struct RouteArrow: Identifiable {
+    let id: Int
+    let coordinate: CLLocationCoordinate2D
+    let degrees: Double
+}
+
+/// 線上の矢羽。墨の三角に紙の縁を付け、線に溶けないようにする。丸印にはしない。
+private struct RouteDirectionArrow: View {
+    var degrees: Double
+
+    var body: some View {
+        ZStack {
+            Image(systemName: "arrowtriangle.up.fill")
+                .font(.system(size: 15, weight: .black))
+                .foregroundStyle(Palette.paper)
+            Image(systemName: "arrowtriangle.up.fill")
+                .font(.system(size: 10, weight: .black))
+                .foregroundStyle(Palette.warm)
+        }
+        .rotationEffect(.degrees(degrees))
+        .accessibilityHidden(true)
     }
 }
 
@@ -454,6 +650,7 @@ private struct StationMarker: View {
     var showDeparture: Bool = false
     private let size: CGFloat = 32
     private let badgeSize: CGFloat = 22
+    private let departureBadgeWidth: CGFloat = 58
 
     var body: some View {
         let topPad = showDeparture ? badgeSize + 6 : 0
@@ -467,19 +664,23 @@ private struct StationMarker: View {
             PictogramIcon(.train, size: 18)
                 .foregroundStyle(Palette.paper)
             if showDeparture {
-                Text("出")
+                Text("start")
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.white)
-                    .frame(width: badgeSize, height: badgeSize)
-                    .background(Circle().fill(Palette.warm))
-                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .lineLimit(1)
+                    .frame(width: departureBadgeWidth, height: badgeSize)
+                    .background(Capsule().fill(Palette.river))
+                    .overlay(Capsule().stroke(Color.white, lineWidth: 2))
                     .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
                     .offset(y: -(size / 2 + badgeSize / 2 + 4))
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
         }
-        .frame(width: max(size, badgeSize) + 8, height: size + topPad * 2)
+        .frame(
+            width: max(size, showDeparture ? departureBadgeWidth : badgeSize) + 8,
+            height: size + topPad * 2
+        )
         .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
         .accessibilityLabel(showDeparture ? "駅・出発" : "駅")
     }

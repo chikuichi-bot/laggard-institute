@@ -512,7 +512,7 @@ private struct WalkRouteSummary: View {
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    routeDot("出")
+                    routeDot("start")
                     ForEach(Array(course.stops.enumerated()), id: \.element.id) { index, stop in
                         Image(systemName: "chevron.right")
                             .font(.caption2.weight(.bold))
@@ -558,12 +558,21 @@ private struct WalkRouteSummary: View {
     }
 
     private func routeDot(_ label: String, subtitle: String? = nil) -> some View {
-        HStack(spacing: 4) {
+        let wide = label.count > 1
+        return HStack(spacing: 4) {
             Text(label)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(Palette.paper)
-                .frame(width: 22, height: 22)
-                .background(Circle().fill(Palette.ink))
+                .lineLimit(1)
+                .padding(.horizontal, wide ? 7 : 0)
+                .frame(width: wide ? nil : 22, height: 22)
+                .background {
+                    if wide {
+                        Capsule().fill(Palette.ink)
+                    } else {
+                        Circle().fill(Palette.ink)
+                    }
+                }
             if let subtitle {
                 Text(subtitle)
                     .font(.caption.weight(.medium))
@@ -580,11 +589,13 @@ private struct WalkDepartureRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 0) {
-                Text("出")
-                    .font(.subheadline.weight(.bold))
+                Text("start")
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(Palette.paper)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(Palette.ink))
+                    .lineLimit(1)
+                    .frame(height: 34)
+                    .padding(.horizontal, 8)
+                    .background(Capsule().fill(Palette.ink))
                 Rectangle()
                     .fill(Palette.ink.opacity(0.35))
                     .frame(width: 3)

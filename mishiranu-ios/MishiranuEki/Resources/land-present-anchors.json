@@ -479,8 +479,8 @@
           "mustVisit": true,
           "guide": "rest",
           "walkMinutes": 2,
-          "lat": 35.10685,
-          "lng": 135.7684
+          "lat": 35.098155,
+          "lng": 135.763695
         },
         {
           "name": "貴船神社",
@@ -510,9 +510,9 @@
           ],
           "mustVisit": true,
           "guide": "sight",
-          "walkMinutes": 8,
-          "lat": 35.1092,
-          "lng": 135.7672
+          "walkMinutes": 7,
+          "lat": 35.102119,
+          "lng": 135.763597
         }
       ]
     },

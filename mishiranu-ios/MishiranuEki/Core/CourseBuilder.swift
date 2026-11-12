@@ -483,6 +483,7 @@ enum CourseBuilder {
             .filter { !LandmarkRegistry.isEditorialName($0.name) }
         let scrubbed = faces.filter { spot in
             if LandmarkRegistry.isLocked(spot, stationName: station.name) { return true }
+            if spot.coordTrust == .lock { return true }
             let km = Geo.haversineKm(
                 lat1: station.lat, lng1: station.lng,
                 lat2: spot.lat, lng2: spot.lng
