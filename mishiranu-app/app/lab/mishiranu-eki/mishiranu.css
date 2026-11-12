@@ -318,6 +318,12 @@
   stroke-width: 1.2;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .mishiranu-hero-map-fig .mhm-bank animate {
+    display: none;
+  }
+}
+
 .mishiranu-hero--ma .mishiranu-hero-arrive {
   flex: 0 0 auto;
   margin-top: 0;

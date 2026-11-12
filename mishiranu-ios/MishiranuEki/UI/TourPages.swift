@@ -430,7 +430,7 @@ private struct PlaceListenBar: View {
                     Text(
                         speakingAll
                             ? "読み上げを止める"
-                            : (canResume ? "続きから聞く（すべて）" : "土地案内を聞く（すべて）")
+                            : (canResume ? "続きから聞く" : "土地案内を聞く")
                     )
                         .font(.mincho(.body, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
@@ -466,7 +466,7 @@ private struct PlaceListenBar: View {
         .accessibilityLabel(
             speakingAll
                 ? "読み上げを止める"
-                : (canResume ? "土地案内を続きから聞く" : "土地案内をすべて聞く")
+                : (canResume ? "土地案内を続きから聞く" : "土地案内を聞く")
         )
         .accessibilityHint(
             canResume && !speakingAll

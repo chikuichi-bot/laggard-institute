@@ -115,7 +115,63 @@ function worshipPickScore(
   return score;
 }
 
-/** 同じ社の楼門・記念所などを1件に畳む。 */
+/** 「同志社大学 今出川キャンパス」→「同志社大学」。 */
+export function universityCoreName(name: string): string | null {
+  if (!name.includes("大学")) return null;
+  const m = name.match(/([一-龥々ぁ-んァ-ヶーA-Za-z0-9]{2,16}大学)/u);
+  return m?.[1] ?? null;
+}
+
+function universityPickScore(
+  spot: { name: string; majorWorthy?: boolean },
+  core: string,
+): number {
+  let score = 0;
+  if (spot.name === core) score += 50;
+  if (spot.majorWorthy) score += 15;
+  if (spot.name.includes("キャンパス")) score -= 20;
+  score += Math.max(0, 24 - spot.name.length);
+  return score;
+}
+
+/** 正本の「○○大学」と Apple の「○○大学 ○○キャンパス」を1件に。 */
+export function collapseUniversityDuplicates<
+  T extends { name: string; majorWorthy?: boolean },
+>(spots: T[]): T[] {
+  const groups = new Map<string, T[]>();
+  const passthrough: T[] = [];
+  for (const spot of spots) {
+    const core = universityCoreName(spot.name);
+    if (!core) {
+      passthrough.push(spot);
+      continue;
+    }
+    const isCampusVariant =
+      spot.name !== core &&
+      (spot.name.includes("キャンパス") || spot.name.includes(core));
+    if (spot.name === core || isCampusVariant) {
+      const list = groups.get(core) ?? [];
+      list.push(spot);
+      groups.set(core, list);
+    } else {
+      passthrough.push(spot);
+    }
+  }
+  const collapsed: T[] = [];
+  for (const [core, members] of groups) {
+    const ranked = [...members].sort((a, b) => {
+      const d = universityPickScore(b, core) - universityPickScore(a, core);
+      if (d !== 0) return d;
+      return a.name.length - b.name.length;
+    });
+    let best = ranked[0]!;
+    if (best.name !== core) best = { ...best, name: core };
+    collapsed.push(best);
+  }
+  return [...passthrough, ...collapsed];
+}
+
+/** 同じ社の楼門・記念所などを1件に畳む。大学キャンパス付きも畳む。 */
 export function collapseWorshipDuplicates<
   T extends { name: string; majorWorthy?: boolean },
 >(spots: T[]): T[] {
@@ -147,7 +203,7 @@ export function collapseWorshipDuplicates<
     }
     collapsed.push(best);
   }
-  return [...passthrough, ...collapsed];
+  return collapseUniversityDuplicates([...passthrough, ...collapsed]);
 }
 
 export function filterFirstVisitSpots<T extends { name: string; majorWorthy?: boolean }>(

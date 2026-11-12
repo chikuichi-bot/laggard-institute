@@ -160,7 +160,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
             <strong>
               {speakingSection === "all"
                 ? "読み上げを止める"
-                : "土地案内を聞く（すべて）"}
+                : "土地案内を聞く"}
             </strong>
             <small>
               {speakingSection === "all"

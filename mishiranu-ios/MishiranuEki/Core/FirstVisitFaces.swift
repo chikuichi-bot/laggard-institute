@@ -84,7 +84,7 @@ enum FirstVisitFaces {
         return core
     }
 
-    /// 同じ社の楼門・記念所などを1件に畳む。
+    /// 同じ社の楼門・記念所などを1件に畳む。大学キャンパス付きもここで畳む。
     static func collapseWorshipDuplicates(_ spots: [Spot], stationName: String) -> [Spot] {
         var groups: [String: [Spot]] = [:]
         var passthrough: [Spot] = []
@@ -106,7 +106,90 @@ enum FirstVisitFaces {
         for (core, members) in groups {
             collapsed.append(pickWorshipRepresentative(members, core: core, stationName: stationName))
         }
+        return collapseUniversityDuplicates(passthrough + collapsed, stationName: stationName)
+    }
+
+    /// 「同志社大学 今出川キャンパス」→ 核は「同志社大学」。
+    static func universityCoreName(_ name: String) -> String? {
+        guard name.contains("大学") else { return nil }
+        let pattern = "([一-龥々ぁ-んァ-ヶーA-Za-z0-9]{2,16}大学)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(name.startIndex..<name.endIndex, in: name)
+        guard let match = regex.firstMatch(in: name, range: range),
+              let r = Range(match.range(at: 1), in: name)
+        else { return nil }
+        return String(name[r])
+    }
+
+    /// 正本の「○○大学」と Apple の「○○大学 ○○キャンパス」を1件に畳む。
+    static func collapseUniversityDuplicates(_ spots: [Spot], stationName: String) -> [Spot] {
+        var groups: [String: [Spot]] = [:]
+        var passthrough: [Spot] = []
+        for spot in spots {
+            guard let core = universityCoreName(spot.name) else {
+                passthrough.append(spot)
+                continue
+            }
+            // 核だけ／核＋キャンパス・学部地名など、同じ大学なら畳む
+            let isCampusVariant = spot.name != core
+                && (spot.name.contains("キャンパス")
+                    || spot.name.contains(core)
+                    || NameMatch.score(spot.name, core) >= 78)
+            if spot.name == core || isCampusVariant {
+                groups[core, default: []].append(spot)
+            } else {
+                passthrough.append(spot)
+            }
+        }
+        var collapsed: [Spot] = []
+        for (core, members) in groups {
+            collapsed.append(pickUniversityRepresentative(members, core: core, stationName: stationName))
+        }
         return passthrough + collapsed
+    }
+
+    private static func pickUniversityRepresentative(
+        _ members: [Spot],
+        core: String,
+        stationName: String
+    ) -> Spot {
+        let ranked = members.sorted { lhs, rhs in
+            let ls = universityPickScore(lhs, core: core, stationName: stationName)
+            let rs = universityPickScore(rhs, core: core, stationName: stationName)
+            if ls != rs { return ls > rs }
+            return lhs.name.count < rhs.name.count
+        }
+        guard var best = ranked.first else { return members[0] }
+        if best.name != core {
+            let seed = Spot(
+                id: best.id, name: core, genre: best.genre, guide: best.guide,
+                mealTier: best.mealTier, mealTimes: best.mealTimes, soloOk: best.soloOk,
+                budgetYen: best.budgetYen, hours: best.hours, blurb: best.blurb,
+                detail: best.detail, walkMinutes: best.walkMinutes,
+                secretWorthy: best.secretWorthy, majorWorthy: best.majorWorthy,
+                lat: best.lat, lng: best.lng, coordTrust: best.coordTrust
+            )
+            if LandmarkRegistry.isLocked(name: core, stationName: stationName) {
+                best = LandmarkRegistry.apply(seed, stationName: stationName).withCopy(from: best)
+            } else {
+                best = seed
+            }
+        } else if LandmarkRegistry.isLocked(name: core, stationName: stationName) {
+            best = LandmarkRegistry.apply(best, stationName: stationName)
+        }
+        return best
+    }
+
+    private static func universityPickScore(_ spot: Spot, core: String, stationName: String) -> Double {
+        var score = 0.0
+        if LandmarkRegistry.isLocked(spot, stationName: stationName) { score += 100 }
+        if spot.name == core { score += 50 }
+        if spot.coordTrust == .lock { score += 30 }
+        if spot.coordTrust == .apple { score += 10 }
+        if spot.majorWorthy { score += 15 }
+        if spot.name.contains("キャンパス") { score -= 20 }
+        score += max(0, 24 - Double(spot.name.count))
+        return score
     }
 
     private static func pickWorshipRepresentative(

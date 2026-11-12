@@ -19,15 +19,6 @@ export const AREA_PRESENT_HISTORY_WEAVE = [
   "- 見出しは地名・事物の名でよい。本文が橋になる。大学・学生街があれば正式名称で、いまの通学・店の気配までつなぐ。",
 ].join("\n");
 
-/** 土地紹介に四季を織る（一覧・箇条書きにしない）。 */
-export const AREA_SEASON_WEAVE = [
-  "【土地の紹介 · 春夏秋冬】",
-  "- stationIntro と areaAbout に、その土地で実在する春・夏・秋・冬の気配を必ず織り交ぜる。",
-  "- 禁: 『春は…。夏は…。秋は…。冬は…。』の四季見出し一覧。禁: 四季だけの独立段落。",
-  "- やり方: 地形・駅前・川端・木立・店の気配の文のなかに、花・緑陰・紅葉や実り・霜や澄んだ空気などを自然に散りばめる。",
-  "- その土地に無い季節の飾り（雪のない南国に大雪、海岸に紅葉だけ 等）は書かない。検索で確かな季節の顔を使う。",
-].join("\n");
-
 function sentencesOf(text: string): string[] {
   const out: string[] = [];
   let cur = "";
@@ -229,12 +220,11 @@ export function refineLandProse(station: StationSeed): StationSeed {
 /** AI プロンプト用の仕訳ルール一文。 */
 export const LAND_PROSE_ROLE_RULES = [
   "土地文の役割を分け、同じ説明を繰り返さない:",
-  "- stationIntro: 路線・乗り換え・駅前の空気だけ。名所や大学の詳しい由来は書かない。四季の気配は駅前の空気のなかに織る。",
+  "- stationIntro: 路線・乗り換え・駅前の空気だけ。名所や大学の詳しい由来は書かない。",
   "- walkGuide: 寄る順番と方角だけ（例: 枡形→デルタ→北へ下鴨）。歴史や『なぜ有名か』は書かない。",
-  "- areaAbout: 地形・由来・いまの生活を同じ段落で結ぶ概観。個別スポットの詳説は historyNotes へ。春夏秋冬を段落のなかに織り交ぜる。",
+  "- areaAbout: 地形・由来・いまの生活を同じ段落で結ぶ概観。個別スポットの詳説は historyNotes へ。",
   "- historyNotes: 1見出し1トピック。各件で由来といまを結び、詳説はここだけ。",
   "- sightseeingNotes: 先頭は土地の顔3点。続けて短い滞在・食べる休む・季節や注意など実用メモを足し、合計6〜7件。historyNotes の再掲は禁止。",
   "- 出町柳・鴨川デルタの川名（必須・逆転禁止）: 上流は賀茂川と高野川。合流点から南は鴨川。『合流し賀茂川へ名を変える』は誤り。",
   AREA_PRESENT_HISTORY_WEAVE,
-  AREA_SEASON_WEAVE,
 ].join("\n");

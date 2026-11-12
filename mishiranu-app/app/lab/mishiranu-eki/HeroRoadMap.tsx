@@ -1,12 +1,21 @@
-/** 採用: 道網。配置は left / top / width の％だけ。 */
+/** 採用: 道網。川は「控えめな風」（左右になびく・弱め）。配置は left / top / width の％だけ。 */
 
 import type { CSSProperties } from "react";
 import { HERO_MAP_LAYOUT, type HeroMapLayout } from "./heroMapLayout";
 
 const VIEW = { w: 160, h: 168 };
 
-const RIVERS =
-  "M52 4 C50 28, 52 48, 56 64 C60 76, 64 84, 70 90 M148 20 C128 34, 108 50, 90 68 C82 76, 76 84, 70 90 M70 90 C72 108, 74 126, 76 144 C77 154, 78 160, 80 168";
+const WEST = "M52 4 C50 28, 52 48, 56 64 C60 76, 64 84, 70 90";
+const EAST = "M148 20 C128 34, 108 50, 90 68 C82 76, 76 84, 70 90";
+const SOUTH = "M70 90 C72 108, 74 126, 76 144 C77 154, 78 160, 80 168";
+
+const WEST_L = "M52 4 C48 28, 50 48, 54 64 C58 76, 63 84, 70 90";
+const EAST_L = "M148 20 C126 34, 106 50, 88 68 C80 76, 75 84, 70 90";
+const SOUTH_L = "M70 90 C70 108, 72 126, 74 144 C76 154, 77 160, 80 168";
+
+const WEST_R = "M52 4 C52 28, 54 48, 58 64 C62 76, 65 84, 70 90";
+const EAST_R = "M148 20 C130 34, 110 50, 92 68 C84 76, 77 84, 70 90";
+const SOUTH_R = "M70 90 C74 108, 76 126, 78 144 C78 154, 79 160, 80 168";
 
 const ROADS = [
   "M2 132 H158",
@@ -28,6 +37,32 @@ const ROADS = [
 ];
 
 const STATION = { x: 92, y: 82, size: 7 };
+
+const WIND_DUR = "7.5s";
+
+function SoftWindRiver({
+  rest,
+  left,
+  right,
+}: {
+  rest: string;
+  left: string;
+  right: string;
+}) {
+  return (
+    <path className="mhm-bank" d={rest}>
+      <animate
+        attributeName="d"
+        values={`${rest};${left};${rest};${right};${rest}`}
+        keyTimes="0;0.25;0.5;0.75;1"
+        dur={WIND_DUR}
+        repeatCount="indefinite"
+        calcMode="spline"
+        keySplines="0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1"
+      />
+    </path>
+  );
+}
 
 export default function HeroRoadMap({
   layout = HERO_MAP_LAYOUT,
@@ -54,7 +89,9 @@ export default function HeroRoadMap({
         className="mishiranu-hero-map-fig"
         style={figStyle}
       >
-        <path className="mhm-bank" d={RIVERS} />
+        <SoftWindRiver rest={WEST} left={WEST_L} right={WEST_R} />
+        <SoftWindRiver rest={EAST} left={EAST_L} right={EAST_R} />
+        <SoftWindRiver rest={SOUTH} left={SOUTH_L} right={SOUTH_R} />
         {ROADS.map((d) => (
           <path key={d} className="mhm-road" d={d} />
         ))}
