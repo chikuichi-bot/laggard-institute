@@ -183,7 +183,12 @@ struct ArrivalChatView: View {
         Task {
             do {
                 let location = try await locator.requestOnce()
-                model.finishLocate(lat: location.coordinate.latitude, lng: location.coordinate.longitude)
+                if let station = model.finishLocate(
+                    lat: location.coordinate.latitude,
+                    lng: location.coordinate.longitude
+                ) {
+                    model.chooseStation(station, omitYou: true)
+                }
             } catch let failure as LocateFailure {
                 model.failLocate(failure)
             } catch {

@@ -209,6 +209,99 @@ function matchTime(text: string): TimeOptionId | undefined {
   return hit?.id;
 }
 
+function CandidateConfirmSheet({
+  queryLabel,
+  items,
+  onConfirm,
+  onCancel,
+}: {
+  queryLabel: string;
+  items: Array<{
+    id: string;
+    name: string;
+    detail: string;
+    station?: StationSeed;
+  }>;
+  onConfirm: (item: {
+    id: string;
+    name: string;
+    detail: string;
+    station?: StationSeed;
+  }) => void;
+  onCancel: () => void;
+}) {
+  const [selectedId, setSelectedId] = useState(items[0]?.id ?? "");
+  const selected = items.find((i) => i.id === selectedId) ?? items[0];
+  useEffect(() => {
+    if (!items.some((i) => i.id === selectedId)) {
+      setSelectedId(items[0]?.id ?? "");
+    }
+  }, [items, selectedId]);
+
+  return (
+    <div
+      className="mishiranu-confirm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mishiranu-candidate-title"
+    >
+      <button
+        type="button"
+        className="mishiranu-confirm-backdrop"
+        aria-label="閉じる"
+        onClick={onCancel}
+      />
+      <div className="mishiranu-confirm-panel">
+        <p className="mishiranu-confirm-eyebrow">見知らぬ駅 · 候補</p>
+        <hr className="mishiranu-confirm-rule" />
+        <h4 id="mishiranu-candidate-title" className="mishiranu-confirm-title">
+          {`「${queryLabel}」の候補`}
+        </h4>
+        <p className="mishiranu-confirm-body">駅を選んでから、案内をつくります。</p>
+        <ul className="mishiranu-candidate-list">
+          {items.map((item) => {
+            const active = item.id === selected?.id;
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className={
+                    active
+                      ? "mishiranu-candidate-row mishiranu-candidate-row--active"
+                      : "mishiranu-candidate-row"
+                  }
+                  onClick={() => setSelectedId(item.id)}
+                >
+                  <span className="mishiranu-candidate-name">{item.name}</span>
+                  <span className="mishiranu-candidate-detail">{item.detail}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {selected ? (
+          <p className="mishiranu-confirm-body mishiranu-confirm-body--after-list">
+            {`「${selected.name.replace(/駅$/u, "")}」で徒歩圏の案内をつくりますか？`}
+          </p>
+        ) : null}
+        <div className="mishiranu-confirm-actions">
+          <button
+            type="button"
+            className="mishiranu-btn mishiranu-btn--primary"
+            disabled={!selected}
+            onClick={() => selected && onConfirm(selected)}
+          >
+            調べる
+          </button>
+          <button type="button" className="mishiranu-btn" onClick={onCancel}>
+            やめる
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   initialStep?: Step;
   initialStationId?: string;
@@ -253,6 +346,21 @@ export default function MishiranuApp({
   const [billingBusyId, setBillingBusyId] = useState<string | null>(null);
   const [billingNote, setBillingNote] = useState<string | null>(null);
   const [rebuildConfirmOpen, setRebuildConfirmOpen] = useState(false);
+  /** GPS など、すでに駅が決まっているときの確認（「ここは」は現在地だけ） */
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    kind: "locate" | "open";
+    station: StationSeed;
+  } | null>(null);
+  /** 駅名検索の候補一覧。選んでから AI へ */
+  const [candidateSheet, setCandidateSheet] = useState<{
+    query: string;
+    items: Array<{
+      id: string;
+      name: string;
+      detail: string;
+      station?: StationSeed;
+    }>;
+  } | null>(null);
   const [skin, setSkin] = useState<MishiranuSkin>("ma");
   const [chatPhase, setChatPhase] = useState<ChatPhase>("station");
   const [messages, setMessages] = useState<ChatMsg[]>(() => [
@@ -409,15 +517,21 @@ export default function MishiranuApp({
 
   const filteredStations = useMemo(() => {
     const q = query.trim();
+    const bare = q.endsWith("駅") ? q.slice(0, -1) : q;
     const savedIds = new Set(savedStations.map((s) => s.id));
     const pool = q
-      ? catalog.filter(
-          (s) =>
+      ? catalog.filter((s) => {
+          const nameBare = s.name.endsWith("駅") ? s.name.slice(0, -1) : s.name;
+          return (
             s.name.includes(q) ||
+            s.name.includes(bare) ||
+            nameBare.includes(bare) ||
+            bare.includes(nameBare) ||
             s.prefecture.includes(q) ||
             s.line.includes(q) ||
-            s.tourTitle.includes(q),
-        )
+            s.tourTitle.includes(q)
+          );
+        })
       : catalog.filter((s) => savedIds.has(s.id));
     return pool.slice(0, 8);
   }, [query, catalog, savedStations]);
@@ -650,11 +764,8 @@ export default function MishiranuApp({
         const local = findNearestStation(lat, lng, catalog);
         if (local && local.km <= 3.5) {
           setHeroNote(null);
-          chooseStation(
-            local.station,
-            `現在地（${local.station.name}・約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）`,
-            { omitYou: true },
-          );
+          // いきなり開かず、確認してから案内へ。
+          setPendingConfirm({ kind: "locate", station: local.station });
           return;
         }
 
@@ -748,6 +859,7 @@ export default function MishiranuApp({
         credentials: "same-origin",
         body: JSON.stringify({
           name,
+          ...(opts?.forceRefresh ? { forceRefresh: true } : {}),
           ...(userAi ? { userAi } : {}),
         }),
       });
@@ -909,13 +1021,98 @@ export default function MishiranuApp({
                     {heroNote}
                   </p>
                 ) : null}
+                {pendingConfirm ? (
+                  <div
+                    className="mishiranu-confirm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="mishiranu-locate-title"
+                  >
+                    <button
+                      type="button"
+                      className="mishiranu-confirm-backdrop"
+                      aria-label="閉じる"
+                      onClick={() => setPendingConfirm(null)}
+                    />
+                    <div className="mishiranu-confirm-panel">
+                      <p className="mishiranu-confirm-eyebrow">見知らぬ駅 · 案内</p>
+                      <hr className="mishiranu-confirm-rule" />
+                      <h4
+                        id="mishiranu-locate-title"
+                        className="mishiranu-confirm-title"
+                      >
+                        {pendingConfirm.kind === "locate"
+                          ? `ここは${pendingConfirm.station.name.replace(/駅$/u, "")}駅です`
+                          : `「${pendingConfirm.station.name.replace(/駅$/u, "")}駅」ですか？`}
+                      </h4>
+                      <p className="mishiranu-confirm-body">
+                        この駅の徒歩圏の案内を開きますか？
+                      </p>
+                      <div className="mishiranu-confirm-actions">
+                        <button
+                          type="button"
+                          className="mishiranu-btn mishiranu-btn--primary"
+                          onClick={() => {
+                            const next = pendingConfirm.station;
+                            setPendingConfirm(null);
+                            chooseStation(next, undefined, { omitYou: true });
+                          }}
+                        >
+                          調べる
+                        </button>
+                        <button
+                          type="button"
+                          className="mishiranu-btn"
+                          onClick={() => setPendingConfirm(null)}
+                        >
+                          やめる
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                {candidateSheet ? (
+                  <CandidateConfirmSheet
+                    queryLabel={candidateSheet.query}
+                    items={candidateSheet.items}
+                    onCancel={() => setCandidateSheet(null)}
+                    onConfirm={(item) => {
+                      setCandidateSheet(null);
+                      if (item.station && (item.station.spots?.length ?? 0) >= 3) {
+                        chooseStation(item.station, undefined, { omitYou: true });
+                      } else {
+                        void requestAiStation(
+                          item.name.replace(/駅$/u, ""),
+                          item.name,
+                        );
+                      }
+                    }}
+                  />
+                ) : null}
                 <form
                   className="mishiranu-hero-search mishiranu-hero-search--line"
                   onSubmit={(event) => {
                     event.preventDefault();
                     const text = query.trim();
                     if (!text || stationLoading) return;
-                    void requestAiStation(text, text);
+                    const bare = text.endsWith("駅") ? text.slice(0, -1) : text;
+                    const matches = filteredStations.slice(0, 8);
+                    const items =
+                      matches.length > 0
+                        ? matches.map((s) => ({
+                            id: s.id,
+                            name: s.name.endsWith("駅") ? s.name : `${s.name}駅`,
+                            detail: `${s.prefecture} · ${s.line}`,
+                            station: s,
+                          }))
+                        : [
+                            {
+                              id: `typed-${bare}`,
+                              name: `${bare}駅`,
+                              detail: "入力した名前のまま調べる",
+                            },
+                          ];
+                    setCandidateSheet({ query: bare, items });
                   }}
                 >
                   <label className="mishiranu-search mishiranu-search--line">
@@ -948,7 +1145,22 @@ export default function MishiranuApp({
                       <button
                         type="button"
                         disabled={stationLoading}
-                        onClick={() => chooseStation(s)}
+                        onClick={() => {
+                          const bare = query.trim().endsWith("駅")
+                            ? query.trim().slice(0, -1)
+                            : query.trim();
+                          setCandidateSheet({
+                            query: bare || s.name.replace(/駅$/u, ""),
+                            items: filteredStations.slice(0, 8).map((row) => ({
+                              id: row.id,
+                              name: row.name.endsWith("駅")
+                                ? row.name
+                                : `${row.name}駅`,
+                              detail: `${row.prefecture} · ${row.line}`,
+                              station: row,
+                            })),
+                          });
+                        }}
                       >
                         <span className="mishiranu-station-name">{s.name}</span>
                         <span className="mishiranu-station-meta">
@@ -1164,16 +1376,6 @@ export default function MishiranuApp({
                     onSelect={(id) => openSpot(id)}
                   />
                   <div className="mishiranu-map-foot">
-                    <p className="mishiranu-tour-catch">{shownCopy.catchCopy}</p>
-                    <p className="mishiranu-radius">
-                      徒歩圏 約 {walkRadiusKm(time.id)} km
-                    </p>
-                    {selectedCourse ? (
-                      <p className="mishiranu-map-course-note">
-                        線は「{selectedCourse.title}」の周回（道なり・駅出発→
-                        {selectedCourse.stopCount}か所→駅）。なるべく同じ道は帰りません。
-                      </p>
-                    ) : null}
                     <ul className="mishiranu-legend">
                       {GUIDE_ORDER.map((kind) => (
                         <li
@@ -1188,10 +1390,21 @@ export default function MishiranuApp({
                           <span className="mishiranu-legend-icon">
                             <GuideKindIcon kind={kind} />
                           </span>
-                          {GUIDE_LABEL[kind]}
+                          {kind === "rest" ? "休む" : GUIDE_LABEL[kind]}
                         </li>
                       ))}
                     </ul>
+                    <p className="mishiranu-map-meta">
+                      {[
+                        `徒歩圏 約 ${walkRadiusKm(time.id)} km`,
+                        time.id === "half" ? "半日は円外に1か所" : null,
+                        selectedCourse
+                          ? `${selectedCourse.title} · 番号順`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
                   </div>
                 </div>
               ) : null}
@@ -2031,24 +2244,19 @@ export default function MishiranuApp({
                   onClick={() => setRebuildConfirmOpen(false)}
                 />
                 <div className="mishiranu-confirm-panel">
+                  <p className="mishiranu-confirm-eyebrow">見知らぬ駅 · 案内</p>
+                  <hr className="mishiranu-confirm-rule" />
                   <h4 id="mishiranu-rebuild-title" className="mishiranu-confirm-title">
-                    案内を作り直しますか？
+                    {`ここは${station.name.replace(/駅$/u, "")}駅です`}
                   </h4>
                   <p className="mishiranu-confirm-body">
                     {billing.byokUnlocked && isByokConfigured(billing)
-                      ? "自分の API で作り直します（コインは使いません）。いまの案内は新しい案内に差し替わります。"
+                      ? "この駅の案内を、もう一度調べますか？\n自分の API で作り直します（コインは使いません）。"
                       : billing.byokUnlocked
-                        ? "買い切り済みです。料金で API を設定してから作り直してください。"
-                        : `コインを1枚使います（残り ${billing.coins} 枚）。いまの案内は新しい案内に差し替わります。`}
+                        ? "買い切り済みです。料金で API を設定してから、もう一度調べてください。"
+                        : `この駅の案内を、もう一度調べますか？\nコインを1枚使います（残り ${billing.coins} 枚）。`}
                   </p>
                   <div className="mishiranu-confirm-actions">
-                    <button
-                      type="button"
-                      className="mishiranu-btn"
-                      onClick={() => setRebuildConfirmOpen(false)}
-                    >
-                      やめる
-                    </button>
                     <button
                       type="button"
                       className="mishiranu-btn mishiranu-btn--primary"
@@ -2059,7 +2267,14 @@ export default function MishiranuApp({
                         });
                       }}
                     >
-                      作り直す
+                      調べる
+                    </button>
+                    <button
+                      type="button"
+                      className="mishiranu-btn"
+                      onClick={() => setRebuildConfirmOpen(false)}
+                    >
+                      やめる
                     </button>
                   </div>
                 </div>

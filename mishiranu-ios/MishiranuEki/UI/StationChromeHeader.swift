@@ -65,14 +65,20 @@ struct StationChromeHeader: View {
                 Button {
                     model.goHero()
                 } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Palette.ink)
-                        .frame(width: 32, height: 32)
-                        .contentShape(Rectangle())
+                    HStack(spacing: 2) {
+                        Image(systemName: "chevron.left")
+                            .font(.body.weight(.semibold))
+                        Text("top")
+                            .font(.system(.caption, design: .serif).weight(.medium))
+                            .tracking(0.5)
+                    }
+                    .foregroundStyle(Palette.ink)
+                    .padding(.trailing, 4)
+                    .frame(minWidth: 44, minHeight: 32, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainHapticButtonStyle())
-                .accessibilityLabel("駅を探し直す")
+                .accessibilityLabel("top · 駅を探し直す")
                 Spacer(minLength: 0)
             }
         }

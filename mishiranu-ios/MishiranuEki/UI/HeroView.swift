@@ -4,12 +4,53 @@ struct HeroView: View {
     @Environment(AppModel.self) private var model
     @State private var locator = LocationService()
     @FocusState private var searchFocused: Bool
+    /// 現在地ヒット・保存駅の確認（「ここは」は現在地だけ）。
+    @State private var pendingConfirm: StationConfirm?
+    /// 駅名検索の候補一覧。選んでから AI 案内へ。
+    @State private var candidateSheet: CandidateSheet?
 
     private let brandChars = Array("見知らぬ駅")
     private let heroInk = Color(hex: 0x2a241c)
     private let heroFog = Color(hex: 0x5c5348)
     private let heroMist = Color(hex: 0x8a7d6b)
     private let heroPaper = Color(hex: 0xf8f5ee)
+
+    private struct CandidateSheet: Equatable {
+        var query: String
+        var items: [StationNameCandidate]
+        var loading: Bool
+    }
+
+    private enum StationConfirm: Equatable {
+        /// GPS で近いときだけ「ここは」と言う。
+        case locate(Station)
+        case open(Station)
+        case recall(Station)
+
+        var title: String {
+            switch self {
+            case .locate(let station):
+                return "ここは\(Self.label(station.name))です"
+            case .open(let station), .recall(let station):
+                return "「\(Self.label(station.name))」ですか？"
+            }
+        }
+
+        var message: String {
+            switch self {
+            case .locate:
+                return "この駅の徒歩圏の案内を開きますか？"
+            case .open, .recall:
+                return "この駅の徒歩圏の案内を開きますか？"
+            }
+        }
+
+        private static func label(_ raw: String) -> String {
+            let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { return "駅" }
+            return name.hasSuffix("駅") ? name : "\(name)駅"
+        }
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -21,6 +62,7 @@ struct HeroView: View {
                     HeroRoadMap()
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .frame(minHeight: 180)
+                        .allowsHitTesting(false)
                     VStack(spacing: 8) {
                         ForEach(Array(brandChars.enumerated()), id: \.offset) { _, ch in
                             Text(String(ch))
@@ -98,7 +140,7 @@ struct HeroView: View {
                                 .overlay(
                                     Rectangle().stroke(heroInk, lineWidth: 1)
                                 )
-                                .disabled(model.stationLoading)
+                                .disabled(model.stationLoading || candidateSheet?.loading == true)
                         }
                     }
 
@@ -123,6 +165,40 @@ struct HeroView: View {
         .scrollDismissesKeyboard(.interactively)
         }
         .background(heroPaper.ignoresSafeArea())
+        .overlay {
+            if let sheet = candidateSheet {
+                GuideCandidatePopup(
+                    queryLabel: sheet.query,
+                    candidates: sheet.items,
+                    isLoading: sheet.loading,
+                    onConfirm: { cand in
+                        candidateSheet = nil
+                        commitCandidate(cand)
+                    },
+                    onCancel: {
+                        candidateSheet = nil
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(50)
+            } else if let pending = pendingConfirm {
+                GuideConfirmPopup(
+                    title: pending.title,
+                    message: pending.message,
+                    onConfirm: {
+                        commitConfirm(pending)
+                        pendingConfirm = nil
+                    },
+                    onCancel: {
+                        pendingConfirm = nil
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(50)
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: candidateSheet?.query)
+        .animation(.easeInOut(duration: 0.18), value: pendingConfirm?.title)
     }
 
     private var queryTrimmed: String {
@@ -149,7 +225,7 @@ struct HeroView: View {
             if rows.isEmpty {
                 Text(queryTrimmed.isEmpty
                     ? "まだありません。駅名を入れて開くと、ここに残ります。"
-                    : "候補がありません。そのまま「開く」で調べられます。")
+                    : "一覧に無い駅は「開く」で地図の候補から選べます。")
                     .font(.system(.caption, design: .serif))
                     .foregroundStyle(heroMist)
                     .fixedSize(horizontal: false, vertical: true)
@@ -160,9 +236,10 @@ struct HeroView: View {
                         Button {
                             searchFocused = false
                             if queryTrimmed.isEmpty {
-                                model.recallSavedStation(station)
+                                pendingConfirm = .recall(station)
                             } else {
-                                model.chooseStation(station)
+                                // 候補はポップアップで選び直してから調べる。
+                                openCandidateSheet(for: queryTrimmed)
                             }
                         } label: {
                             HStack(spacing: 10) {
@@ -184,7 +261,7 @@ struct HeroView: View {
                         }
                         .buttonStyle(PlainHapticButtonStyle())
                         .disabled(model.stationLoading)
-                        .accessibilityLabel("\(station.name)を開く")
+                        .accessibilityLabel("\(station.name)を選ぶ")
                         Divider().overlay(heroInk.opacity(0.15))
                     }
                 }
@@ -214,13 +291,47 @@ struct HeroView: View {
         }
     }
 
+    private func commitConfirm(_ pending: StationConfirm) {
+        switch pending {
+        case .locate(let station), .open(let station):
+            model.chooseStation(station, omitYou: true)
+        case .recall(let station):
+            model.recallSavedStation(station)
+        }
+    }
+
+    private func commitCandidate(_ cand: StationNameCandidate) {
+        if let known = cand.knownStation, !Self.isThin(known) {
+            model.chooseStation(known, omitYou: true)
+        } else {
+            // 案内が無い／薄いときだけ AI でつくる。
+            model.requestAiStation(
+                cand.bareName,
+                forceRefresh: cand.knownStation != nil
+            )
+        }
+    }
+
+    private static func isThin(_ station: Station) -> Bool {
+        let prose =
+            (station.stationIntro?.count ?? 0)
+            + (station.areaAbout?.count ?? 0)
+            + (station.walkGuide?.count ?? 0)
+        return station.spots.count < 3 || prose < 80
+    }
+
     private func locateHere() {
         guard model.beginLocate() else { return }
         searchFocused = false
         Task {
             do {
                 let location = try await locator.requestOnce()
-                model.finishLocate(lat: location.coordinate.latitude, lng: location.coordinate.longitude)
+                if let station = model.finishLocate(
+                    lat: location.coordinate.latitude,
+                    lng: location.coordinate.longitude
+                ) {
+                    pendingConfirm = .locate(station)
+                }
             } catch let failure as LocateFailure {
                 model.failLocate(failure)
             } catch {
@@ -230,9 +341,23 @@ struct HeroView: View {
     }
 
     private func submitStationQuery() {
-        let text = model.query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = queryTrimmed
         guard !text.isEmpty else { return }
         searchFocused = false
-        model.requestAiStation(text)
+        openCandidateSheet(for: text)
+    }
+
+    private func openCandidateSheet(for text: String) {
+        let bare = text.hasSuffix("駅") ? String(text.dropLast()) : text
+        candidateSheet = CandidateSheet(query: bare, items: [], loading: true)
+        Task { @MainActor in
+            let items = await StationCandidateSearch.candidates(
+                for: text,
+                in: model.stations,
+                savedIds: model.savedStationIds
+            )
+            guard candidateSheet?.query == bare else { return }
+            candidateSheet = CandidateSheet(query: bare, items: items, loading: false)
+        }
     }
 }

@@ -28,10 +28,10 @@ enum StationAPIError: Error, LocalizedError {
 enum StationAPIClient {
     private static let deviceToken = "mishiranu-ios-lagado-2026"
 
-    /// DEBUG: まず Mac の開発サーバー。Release: Info の URL → 公開 Cursor App。
+    /// DEBUG: まず Mac の開発サーバー（`npm run dev` = 3010）。Release: Info の URL → 公開 Cursor App。
     static var baseURL: URL {
         #if DEBUG
-        if let url = URL(string: "http://192.168.0.8:3011") {
+        if let url = URL(string: "http://192.168.0.8:3010") {
             return url
         }
         #endif
@@ -43,9 +43,11 @@ enum StationAPIClient {
     }
 
     /// - Parameter userAi: 買い切り BYOK のときだけ渡す。ホストの Gemini は使わない。
+    /// - Parameter forceRefresh: true なら共有キャッシュを無視して作り直す。
     static func lookupStation(
         name: String,
-        userAi: BillingStore.UserAiPayload? = nil
+        userAi: BillingStore.UserAiPayload? = nil,
+        forceRefresh: Bool = false
     ) async throws -> Station {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw StationAPIError.emptyName }
@@ -54,8 +56,12 @@ enum StationAPIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
+        // 接続失敗は早く諦める。応答待ちだけ長く取る（案内生成は時間がかかることがある）。
         request.timeoutInterval = 120
         var payload: [String: Any] = ["name": trimmed]
+        if forceRefresh {
+            payload["forceRefresh"] = true
+        }
         if let userAi {
             var ai: [String: Any] = [
                 "provider": userAi.provider,
@@ -97,7 +103,7 @@ enum StationAPIClient {
         case .notConnectedToInternet:
             return "インターネットに接続されていません。Wi‑Fiを確認してください。"
         case .cannotConnectToHost, .cannotFindHost, .networkConnectionLost, .dnsLookupFailed:
-            return "Macの案内サーバー（3011）に届きません。同じWi‑Fiか、サーバー起動を確認してください。"
+            return "Macの案内サーバー（3010）に届きません。同じWi‑Fiか、サーバー起動を確認してください。"
         default:
             return "案内の通信に失敗しました。通信状況をみて、もう一度どうぞ。"
         }

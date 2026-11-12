@@ -4,7 +4,7 @@
 <dict>
 	<key>MishiranuAPIBaseURL</key>
 	<string>https://mishiranu-eki.apps.grok.bot</string>
-	<!-- DEBUG 実機が Mac の http://192.168.x.x:3011 に届くように -->
+	<!-- DEBUG 実機が Mac の http://192.168.x.x:3010 に届くように -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>この端末の近くにある案内サーバー（Mac）へつなぎ、駅のまわり方をつくるために使います。</string>
 	<key>NSBonjourServices</key>

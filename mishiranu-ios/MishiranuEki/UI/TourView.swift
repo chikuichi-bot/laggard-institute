@@ -15,9 +15,11 @@ struct TourView: View {
                 // 地図はタブ切替で破棄しない（導線の MKDirections を先に走らせ、polyline の初回描画欠けも避ける）
                 ZStack {
                     TourMapPage(station: station)
+                        // MapKit は opacity 0 でも触りを取ることがあるので、非表示タブでは奥へ退かす。
                         .opacity(model.tourTab == .map ? 1 : 0)
                         .allowsHitTesting(model.tourTab == .map)
                         .accessibilityHidden(model.tourTab != .map)
+                        .offset(x: model.tourTab == .map ? 0 : 2500)
                         .zIndex(model.tourTab == .map ? 1 : 0)
 
                     Group {

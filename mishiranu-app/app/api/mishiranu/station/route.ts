@@ -6,9 +6,14 @@ import {
 import { requireJsonContentType } from "@/lib/mishiranu-request";
 import type { UserAiConfig } from "@/lib/mishiranu-billing";
 import {
+  readCachedStation,
+  writeCachedStation,
+} from "@/lib/mishiranu-station-cache";
+import {
   generateStationGuideWithGemini,
   generateStationGuideWithUserAi,
 } from "@/lib/mishiranu-station-ai";
+import { sealGuideIntegrity } from "@/lib/mishiranu-guide-integrity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +22,8 @@ export const maxDuration = 120;
 
 type Body = {
   name?: string;
+  /** true なら共有キャッシュを読まず、ホスト生成で作り直して上書きする */
+  forceRefresh?: boolean;
   /** @deprecated userAi を優先 */
   userApiKey?: string;
   /** 買い切りユーザーの自分の AI（端末から送る。サーバーに保存しない） */
@@ -102,6 +109,21 @@ export async function POST(request: Request) {
     );
   }
 
+  const forceRefresh = body.forceRefresh === true;
+
+  // 同じ駅は誰が引いても同じ。作る前に共有キャッシュを見る（BYOK も含めて全員）。
+  // 設定の「案内を作り直す」だけ forceRefresh でここを飛ばす。
+  if (!forceRefresh) {
+    const cached = await readCachedStation(name);
+    if (cached) {
+      // 古いキャッシュに配食・川の総称が残っていても、返す前に関所を通す
+      return Response.json(
+        { station: sealGuideIntegrity(cached), source: "ai" },
+        { headers: NO_STORE },
+      );
+    }
+  }
+
   const userAi = parseUserAi(body);
   const usingByok = !!userAi;
 
@@ -172,6 +194,9 @@ export async function POST(request: Request) {
             : 422;
       return Response.json(result, { status, headers: NO_STORE });
     }
+    // 次の人のために置く。書けなくても案内は返す。
+    // BYOK 側では書かない（相手のモデル次第で品質が揺れるため）。
+    await writeCachedStation(name, result.station);
     return Response.json(result, { headers: NO_STORE });
   } catch {
     return Response.json(

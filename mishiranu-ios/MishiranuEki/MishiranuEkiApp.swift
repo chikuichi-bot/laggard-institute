@@ -37,7 +37,8 @@ struct RootView: View {
 
             if model.stationLoading {
                 StationGuideLoadingPopup(
-                    stationName: model.query.trimmingCharacters(in: .whitespacesAndNewlines)
+                    stationName: model.query.trimmingCharacters(in: .whitespacesAndNewlines),
+                    onCancel: { model.cancelStationLookup() }
                 )
                 .transition(.opacity)
                 .zIndex(40)
@@ -57,6 +58,7 @@ struct RootView: View {
 /// 案内生成中のモーダル。トップ／設定のどちらからでも同じ見た目。
 struct StationGuideLoadingPopup: View {
     var stationName: String = ""
+    var onCancel: (() -> Void)?
 
     private var bareName: String {
         let t = stationName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -90,6 +92,14 @@ struct StationGuideLoadingPopup: View {
                 Text("少し時間がかかることがあります")
                     .font(.readable(.caption))
                     .foregroundStyle(Palette.mist)
+
+                if let onCancel {
+                    Button("やめる", action: onCancel)
+                        .font(.readable(.callout, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.top, 4)
+                        .accessibilityLabel("案内づくりをやめる")
+                }
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 30)
@@ -105,12 +115,7 @@ struct StationGuideLoadingPopup: View {
             .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
             .padding(.horizontal, 36)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            bareName.isEmpty
-                ? "案内を作っています。"
-                : "「\(bareName)」の案内を作っています。"
-        )
+        .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.updatesFrequently)
     }
 }

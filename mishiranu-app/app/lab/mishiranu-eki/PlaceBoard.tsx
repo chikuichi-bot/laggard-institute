@@ -26,30 +26,50 @@ function readingLines(text?: string | null): string[] {
   return lines;
 }
 
-function placeScript(station: StationSeed, tourTitle: string): string {
-  const parts: string[] = [`${station.name}の、土地案内です。`];
-  if (station.stationIntro) parts.push(station.stationIntro);
-  if (station.areaAbout) {
-    parts.push("このエリアのこと。");
-    parts.push(station.areaAbout);
+type PlaceSpeakSection = "all" | "intro" | "history" | "sight" | "walk";
+
+function placeScript(
+  station: StationSeed,
+  section: PlaceSpeakSection = "all",
+): string {
+  const join = (parts: string[]) =>
+    parts.map((p) => p.trim()).filter(Boolean).join("\n\n");
+
+  if (section === "intro") {
+    return join([station.stationIntro ?? ""]);
   }
-  for (const note of station.historyNotes ?? []) {
-    parts.push(note.title);
-    parts.push(note.body);
-  }
-  if ((station.sightseeingNotes ?? []).length > 0) {
-    parts.push("観光案内メモ。");
-    for (const note of station.sightseeingNotes ?? []) {
-      parts.push(note.title);
-      parts.push(note.body);
+  if (section === "history") {
+    const parts: string[] = [];
+    if (station.areaAbout) {
+      parts.push("このエリアのこと。", station.areaAbout);
     }
+    for (const note of station.historyNotes ?? []) {
+      parts.push(note.title, note.body);
+    }
+    return join(parts);
   }
-  if (station.walkGuide) {
-    parts.push("歩き方の目安。");
-    parts.push(station.walkGuide);
+  if (section === "sight") {
+    const parts: string[] = [];
+    if ((station.sightseeingNotes ?? []).length > 0) {
+      parts.push("観光案内メモ。");
+      for (const note of station.sightseeingNotes ?? []) {
+        parts.push(note.title, note.body);
+      }
+    }
+    return join(parts);
   }
-  if (parts.length === 1) parts.push("この駅の土地メモは、まだ少なめです。");
-  return parts.filter(Boolean).join("\n\n");
+  if (section === "walk") {
+    return station.walkGuide
+      ? join(["歩き方の目安。", station.walkGuide])
+      : "";
+  }
+  return join([
+    `${station.name}の、土地案内です。`,
+    placeScript(station, "intro"),
+    placeScript(station, "history"),
+    placeScript(station, "sight"),
+    placeScript(station, "walk"),
+  ]);
 }
 
 type Props = {
@@ -58,7 +78,8 @@ type Props = {
 };
 
 export function PlaceBoard({ station, tourTitle }: Props) {
-  const [speaking, setSpeaking] = useState(false);
+  const [speakingSection, setSpeakingSection] =
+    useState<PlaceSpeakSection | null>(null);
   const intro = useMemo(() => readingLines(station.stationIntro), [station.stationIntro]);
   const walk = useMemo(() => readingLines(station.walkGuide), [station.walkGuide]);
   const area = useMemo(() => readingLines(station.areaAbout), [station.areaAbout]);
@@ -71,6 +92,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
   const hasWalk = walk.length > 0;
   const hasHistory = area.length > 0 || history.length > 0;
   const hasSight = sight.length > 0;
+  void tourTitle;
 
   useEffect(() => {
     return () => {
@@ -84,24 +106,25 @@ export function PlaceBoard({ station, tourTitle }: Props) {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
-    setSpeaking(false);
+    setSpeakingSection(null);
   }, [station.id]);
 
-  function toggleSpeak() {
+  function toggleSpeak(section: PlaceSpeakSection) {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    if (speaking) {
+    if (speakingSection === section) {
       window.speechSynthesis.cancel();
-      setSpeaking(false);
+      setSpeakingSection(null);
       return;
     }
-    const utter = new SpeechSynthesisUtterance(
-      placeScript(station, tourTitle),
-    );
+    window.speechSynthesis.cancel();
+    const text = placeScript(station, section);
+    if (!text) return;
+    const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "ja-JP";
     utter.rate = 0.95;
-    utter.onend = () => setSpeaking(false);
-    utter.onerror = () => setSpeaking(false);
-    setSpeaking(true);
+    utter.onend = () => setSpeakingSection(null);
+    utter.onerror = () => setSpeakingSection(null);
+    setSpeakingSection(section);
     window.speechSynthesis.speak(utter);
   }
 
@@ -109,19 +132,40 @@ export function PlaceBoard({ station, tourTitle }: Props) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function sectionListenButton(section: PlaceSpeakSection, label: string) {
+    const on = speakingSection === section;
+    return (
+      <button
+        type="button"
+        className={`mishiranu-place-section-listen${on ? " mishiranu-place-section-listen--on" : ""}`}
+        onClick={() => toggleSpeak(section)}
+        aria-pressed={on}
+        aria-label={on ? `${label}の読み上げを止める` : `${label}を聞く`}
+      >
+        {on ? "止める" : "聞く"}
+      </button>
+    );
+  }
+
   return (
     <div className="mishiranu-place-board">
       <div className="mishiranu-place-board-body">
         <button
           type="button"
-          className={`mishiranu-place-listen${speaking ? " mishiranu-place-listen--on" : ""}`}
-          onClick={toggleSpeak}
-          aria-pressed={speaking}
+          className={`mishiranu-place-listen${speakingSection === "all" ? " mishiranu-place-listen--on" : ""}`}
+          onClick={() => toggleSpeak("all")}
+          aria-pressed={speakingSection === "all"}
         >
           <span className="mishiranu-place-listen-copy">
-            <strong>{speaking ? "読み上げを止める" : "土地案内を聞く"}</strong>
+            <strong>
+              {speakingSection === "all"
+                ? "読み上げを止める"
+                : "土地案内を聞く（すべて）"}
+            </strong>
             <small>
-              {speaking ? "もう一度押すと止まります" : "駅に着く前に、イヤホンで"}
+              {speakingSection === "all"
+                ? "もう一度押すと止まります"
+                : "項目ごとにも聞けます · 駅に着く前に、イヤホンで"}
             </small>
           </span>
         </button>
@@ -129,22 +173,39 @@ export function PlaceBoard({ station, tourTitle }: Props) {
         <div className="mishiranu-place-index" role="navigation" aria-label="この案内の目次">
           {(
             [
-              ["place-intro", "01", indexStationLabel, hasIntro],
-              ["place-history", "02", "このエリア", hasHistory],
-              ["place-sight", "03", "観光案内", hasSight],
-              ["place-walk", "04", "歩き方", hasWalk],
+              ["place-intro", "01", indexStationLabel, hasIntro, "intro"],
+              ["place-history", "02", "このエリア", hasHistory, "history"],
+              ["place-sight", "03", "観光案内", hasSight, "sight"],
+              ["place-walk", "04", "歩き方", hasWalk, "walk"],
             ] as const
-          ).map(([id, num, label, on]) => (
-            <button
+          ).map(([id, num, label, on, section]) => (
+            <div
               key={id}
-              type="button"
-              className="mishiranu-place-index-item"
-              disabled={!on}
-              onClick={() => on && scrollTo(id)}
+              className={`mishiranu-place-index-item-wrap${speakingSection === section ? " mishiranu-place-index-item-wrap--on" : ""}`}
             >
-              <b>{num}</b>
-              {label}
-            </button>
+              <button
+                type="button"
+                className="mishiranu-place-index-item"
+                disabled={!on}
+                onClick={() => on && scrollTo(id)}
+              >
+                <b>{num}</b>
+                {label}
+              </button>
+              <button
+                type="button"
+                className="mishiranu-place-index-listen"
+                disabled={!on}
+                onClick={() => on && toggleSpeak(section)}
+                aria-label={
+                  speakingSection === section
+                    ? `${label}の読み上げを止める`
+                    : `${label}を聞く`
+                }
+              >
+                {speakingSection === section ? "止" : "聴"}
+              </button>
+            </div>
           ))}
         </div>
 
@@ -158,6 +219,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
                 ) : null}
                 <h3>{aboutTitle}</h3>
               </div>
+              {sectionListenButton("intro", aboutTitle)}
             </div>
             {intro.map((line) => (
               <p key={line}>{line}</p>
@@ -171,6 +233,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
               <span>02</span>
               <IconHistory />
               <h3>このエリアのこと</h3>
+              {sectionListenButton("history", "このエリアのこと")}
             </div>
             {area.map((line) => (
               <p key={line}>{line}</p>
@@ -197,6 +260,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
               <span>03</span>
               <IconBinoculars />
               <h3>観光案内メモ</h3>
+              {sectionListenButton("sight", "観光案内メモ")}
             </div>
             <ol className="mishiranu-place-notes">
               {sight.map((note, i) => (
@@ -221,6 +285,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
               <span>04</span>
               <IconWalk />
               <h3>歩き方の目安</h3>
+              {sectionListenButton("walk", "歩き方の目安")}
             </div>
             {walk.map((line) => (
               <p key={line}>{line}</p>

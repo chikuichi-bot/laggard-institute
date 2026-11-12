@@ -30,12 +30,22 @@ enum TextMatch {
         limit: Int = 8
     ) -> [Station] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bare = q.hasSuffix("駅") ? String(q.dropLast()) : q
         let pool: [Station]
         if q.isEmpty {
             pool = stations.filter { savedIds.contains($0.id) }
         } else {
+            // 「淀駅」入力でも name「淀」に当たるように、駅の有無を揃えて見る。
             pool = stations.filter {
-                $0.name.contains(q) || $0.prefecture.contains(q) || $0.line.contains(q) || $0.tourTitle.contains(q)
+                let nameBare = $0.name.hasSuffix("駅") ? String($0.name.dropLast()) : $0.name
+                return $0.name.contains(q)
+                    || $0.name.contains(bare)
+                    || nameBare.contains(bare)
+                    || bare.contains(nameBare)
+                    || $0.prefecture.contains(q)
+                    || $0.line.contains(q)
+                    || $0.tourTitle.contains(q)
+                    || (!bare.isEmpty && ($0.prefecture.contains(bare) || $0.line.contains(bare)))
             }
         }
         return Array(pool.prefix(limit))

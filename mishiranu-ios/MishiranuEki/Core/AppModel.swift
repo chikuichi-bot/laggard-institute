@@ -96,6 +96,8 @@ final class AppModel {
     var activeSpot: Spot?
     /// トップページの短い案内・エラー（到着チャットは使わない）。
     var heroNote: String?
+    /// 設定など、トップ以外でも見せる短い案内・エラー。
+    var stationNotice: String?
 
     private let now: () -> Date
     @ObservationIgnored private var pendingTour: Task<Void, Never>?
@@ -319,6 +321,7 @@ final class AppModel {
         draft = ""
         activeSpot = nil
         heroNote = nil
+        stationNotice = nil
         messages = [ChatMessage(role: .guide, text: openingGuide)]
     }
 
@@ -339,12 +342,7 @@ final class AppModel {
     // MARK: - Chat steps
 
     func chooseStation(_ next: Station, spoken: String? = nil, omitYou: Bool = false, persist: Bool = true) {
-        // ロック名所を足してから保存（石清水八幡宮・飛行神社などが落ちないように）
-        let sealed = DemachiTemplate.scrubContamination(
-            on: LandProse.refine(
-                CourseBuilder.ensureLocalMajors(CourseBuilder.snapLandmarkPins(next))
-            )
-        )
+        let sealed = GuideIntegrity.seal(next)
         remember(sealed, persist: persist)
         stationId = sealed.id
         showStationSearch = false
@@ -402,7 +400,8 @@ final class AppModel {
 
     private func courseFitsStation(_ course: WalkCourse, station: Station) -> Bool {
         !course.stops.contains {
-            DemachiTemplate.isForeignDemachiPlace($0.spot.name, stationName: station.name)
+            WalkInMealFilter.isNonWalkIn($0.spot)
+                || DemachiTemplate.isForeignDemachiPlace($0.spot.name, stationName: station.name)
                 || !DemachiTemplate.spotNearStation($0.spot, station: station)
         }
     }
@@ -423,11 +422,7 @@ final class AppModel {
     /// 保存済み駅も再採取する（昔の AI 仮座標・半径外で落ちたみたらし等が残るため）。
     private func relocateIfNeeded(_ station: Station) {
         Task { [weak self] in
-            let located = DemachiTemplate.scrubContamination(
-                on: CourseBuilder.ensureLocalMajors(
-                    CourseBuilder.snapLandmarkPins(await SpotLocator.refine(station))
-                )
-            )
+            let located = GuideIntegrity.seal(await SpotLocator.refine(station))
             guard let self, !Task.isCancelled, self.stationId == station.id || self.stations.contains(where: { $0.id == station.id }) else { return }
             self.remember(located, persist: true)
             // 座標確定後にメジャー印付きでまわり方を組み直す
@@ -439,7 +434,8 @@ final class AppModel {
 
     /// カタログに載せ、必要なら端末へ保存。
     private func remember(_ next: Station, persist: Bool) {
-        let sealed = SavedStationStore.sealedForLibrary(next)
+        // どの経路でも関所を通す（配食・出町混入・川の総称・閉業レンタ）
+        let sealed = GuideIntegrity.seal(SavedStationStore.sealedForLibrary(next))
         if let index = stations.firstIndex(where: {
             $0.id == sealed.id
                 || SavedStationStore.bareName($0.name) == SavedStationStore.bareName(sealed.name)
@@ -489,7 +485,9 @@ final class AppModel {
         }
 
         if let coinError = BillingStore.shared.tryConsumeGenerationCoin() {
+            // 設定から作り直したときも見えるように、土地タブではなくメモを残す。
             heroNote = coinError
+            stationNotice = coinError
             tourTab = .more
             if station != nil {
                 screen = .tour
@@ -503,6 +501,7 @@ final class AppModel {
         draft = ""
         // 作成中の文言は Root のポップアップ。ここはエラー用に空ける。
         heroNote = nil
+        stationNotice = nil
         if screen != .tour {
             screen = .hero
         }
@@ -513,11 +512,17 @@ final class AppModel {
             do {
                 let station = try await StationAPIClient.lookupStation(
                     name: bare,
-                    userAi: BillingStore.shared.userAiPayload
+                    userAi: BillingStore.shared.userAiPayload,
+                    forceRefresh: forceRefresh
                 )
-                guard !Task.isCancelled else { return }
+                if Task.isCancelled {
+                    BillingStore.shared.refundGenerationCoin()
+                    self.stationLoading = false
+                    return
+                }
                 self.stationLoading = false
                 self.heroNote = nil
+                self.stationNotice = nil
                 // 調べた結果は必ず端末へ残す
                 self.chooseStation(station, omitYou: true, persist: true)
             } catch is CancellationError {
@@ -529,11 +534,24 @@ final class AppModel {
                 self.stationLoading = false
                 let message = (error as? LocalizedError)?.errorDescription?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                self.heroNote = (message?.isEmpty == false)
+                let note = (message?.isEmpty == false)
                     ? message!
                     : "案内の通信に失敗しました。通信状況をみて、もう一度どうぞ。"
+                self.heroNote = note
+                self.stationNotice = note
             }
         }
+    }
+
+    /// 案内生成の待ちをやめる（ポップアップの「やめる」）。
+    func cancelStationLookup() {
+        guard stationLoading else { return }
+        pendingStationLookup?.cancel()
+        pendingStationLookup = nil
+        stationLoading = false
+        BillingStore.shared.refundGenerationCoin()
+        heroNote = "案内づくりをやめました。"
+        stationNotice = heroNote
     }
 
     /// 位置取得を始めたときに呼ぶ。false なら取得中なので何もしない。
@@ -546,19 +564,22 @@ final class AppModel {
         return true
     }
 
-    func finishLocate(lat: Double, lng: Double) {
+    /// 現在地から最寄りを返す。近いときは呼び出し側で確認してから `chooseStation` する。
+    @discardableResult
+    func finishLocate(lat: Double, lng: Double) -> Station? {
         geoLoading = false
         let hit = Geo.nearestStation(lat: lat, lng: lng, in: stations)
         if let hit, hit.km <= nearbyStationKm {
             heroNote = nil
-            chooseStation(hit.station, omitYou: true)
-            return
+            screen = .hero
+            return hit.station
         }
         let nearestHint = hit.map {
             "いちばん近い保存済みの駅は\($0.station.name)（\(Geo.distanceLabel(km: $0.km))）ですが、徒歩圏外です。"
         } ?? ""
         heroNote = "\(nearestHint)駅名を入力すれば、全国どこでも徒歩圏の案内をつくれます。"
         screen = .hero
+        return nil
     }
 
     func failLocate(_ failure: LocateFailure) {
@@ -577,11 +598,7 @@ final class AppModel {
         screen = .tour
         // 誤ピン修正＋出町汚染落とし＋営業時間フィルタ後のコースに差し替える
         if let station {
-            let fixed = DemachiTemplate.scrubContamination(
-                on: LandProse.refine(
-                    CourseBuilder.ensureLocalMajors(CourseBuilder.snapLandmarkPins(station))
-                )
-            )
+            let fixed = GuideIntegrity.seal(station)
             if fixed.sightseeingNotes.map(\.title) != station.sightseeingNotes.map(\.title)
                 || fixed.spots.count != station.spots.count
                 || fixed.spots.contains(where: { spot in
@@ -601,11 +618,7 @@ final class AppModel {
     /// 設定の「調べた駅」から、保存済みの案内を思い出す。
     /// 駅名スタートと同じく、最初は土地ページを開く（地図は土地の次）。
     func recallSavedStation(_ next: Station) {
-        let sealed = BikeRentalSeal.ensure(
-            DemachiTemplate.scrubContamination(
-                on: CourseBuilder.ensureLocalMajors(CourseBuilder.snapLandmarkPins(next))
-            )
-        )
+        let sealed = GuideIntegrity.seal(next)
         // ほぼ空のときだけ作り直し。一度調べた内容は消さない。
         if Self.isUnusableSaved(sealed) {
             requestAiStation(sealed.name, forceRefresh: true)
@@ -658,11 +671,16 @@ final class AppModel {
 
     func resolvedSpot(_ spot: Spot) -> Spot {
         let name = station?.name ?? ""
-        if let live = station.map({ CourseBuilder.snapLandmarkPins($0) })?
-            .spots.first(where: { $0.id == spot.id || $0.name == spot.name }) {
-            return LandmarkRegistry.apply(live, stationName: name)
-        }
-        return LandmarkRegistry.apply(spot, stationName: name)
+        let live = station.map({ CourseBuilder.snapLandmarkPins($0) })?
+            .spots.first(where: { $0.id == spot.id || $0.name == spot.name })
+            ?? spot
+        let pinned = LandmarkRegistry.apply(live, stationName: name)
+        return clarifyLandscapeSpot(pinned)
+    }
+
+    /// 川の総称だけだと駅から見渡せるように読めるので、立ち寄り先の名前と文に直す。
+    private func clarifyLandscapeSpot(_ spot: Spot) -> Spot {
+        LandscapeSpotName.apply(to: spot)
     }
 
 }

@@ -16,7 +16,7 @@ export function StationChrome({
         <button
           type="button"
           className="mishiranu-station-chrome-back"
-          aria-label="駅を探し直す"
+          aria-label="top · 駅を探し直す"
           onClick={onBack}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -25,6 +25,7 @@ export function StationChrome({
               d="M14.7 5.3a1 1 0 0 1 0 1.4L9.4 12l5.3 5.3a1 1 0 1 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"
             />
           </svg>
+          <span className="mishiranu-station-chrome-back-label">top</span>
         </button>
         <span className="mishiranu-station-pill" id={titleId}>
           {label}

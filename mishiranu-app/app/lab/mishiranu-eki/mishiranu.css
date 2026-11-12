@@ -3193,19 +3193,28 @@ a.mishiranu-btn {
   border: 0;
   background: transparent;
   color: var(--mk-ink);
-  width: 2rem;
+  min-width: 2.75rem;
   height: 2rem;
-  padding: 0;
+  padding: 0 0.2rem 0 0;
   margin: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  border-radius: 6px;
   cursor: pointer;
   position: absolute;
   left: 0;
   top: 50%;
   transform: translateY(-50%);
   z-index: 1;
+}
+
+.mishiranu-station-chrome-back-label {
+  font-family: var(--mk-display);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .mishiranu-station-chrome-back:hover,
@@ -3539,19 +3548,19 @@ a.mishiranu-btn {
 
 .mishiranu-map-foot {
   display: grid;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
 }
 
-.mishiranu-map-foot .mishiranu-tour-catch {
+.mishiranu-map-foot .mishiranu-legend {
   margin: 0;
-  font-size: 0.92rem;
 }
 
-.mishiranu-map-foot .mishiranu-radius,
-.mishiranu-map-foot .mishiranu-map-course-note {
+.mishiranu-map-foot .mishiranu-map-meta {
   margin: 0;
   font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--mk-fog, #5c5348);
 }
 
 .mishiranu-place-board {
@@ -3619,11 +3628,25 @@ a.mishiranu-btn {
   gap: 0.4rem;
 }
 
+.mishiranu-place-index-item-wrap {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--mk-line);
+  border-radius: 4px;
+  background: var(--mk-paper);
+  overflow: hidden;
+}
+
+.mishiranu-place-index-item-wrap--on {
+  border-color: var(--mk-warm);
+  border-width: 1.5px;
+}
+
 .mishiranu-place-index-item {
   appearance: none;
-  border: 1px solid var(--mk-line);
-  background: var(--mk-paper);
-  border-radius: 4px;
+  border: 0;
+  background: transparent;
+  flex: 1;
   padding: 0.65rem 0.4rem;
   display: grid;
   gap: 0.15rem;
@@ -3634,6 +3657,24 @@ a.mishiranu-btn {
   cursor: pointer;
 }
 
+.mishiranu-place-index-listen {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--mk-line);
+  background: transparent;
+  width: 2.2rem;
+  color: var(--mk-ink);
+  font-family: var(--mk-sans);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.mishiranu-place-index-listen:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .mishiranu-place-index-item b {
   color: var(--mk-warm);
   font-size: 0.9rem;
@@ -3642,6 +3683,27 @@ a.mishiranu-btn {
 .mishiranu-place-index-item:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+.mishiranu-place-section-listen {
+  appearance: none;
+  margin-left: auto;
+  border: 1px solid var(--mk-line);
+  background: color-mix(in srgb, var(--mk-ink) 6%, transparent);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--mk-ink);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.mishiranu-place-section-listen--on {
+  border-color: transparent;
+  background: var(--mk-warm-deep, #8a6a3a);
+  color: var(--mk-paper);
 }
 
 .mishiranu-place-panel {
@@ -3662,6 +3724,7 @@ a.mishiranu-btn {
   margin-bottom: 0.55rem;
   padding-bottom: 0.45rem;
   border-bottom: 1px solid var(--mk-line);
+  flex-wrap: wrap;
 }
 
 .mishiranu-place-panel-head span {
@@ -3787,39 +3850,135 @@ a.mishiranu-btn {
   position: absolute;
   inset: 0;
   border: 0;
-  background: rgba(31, 27, 23, 0.4);
+  background: rgba(31, 27, 23, 0.34);
   cursor: pointer;
 }
 
+/* 紙の案内票。システムの丸い吹き出しにはしない。 */
 .mishiranu-confirm-panel {
   position: relative;
   z-index: 1;
-  width: min(22rem, 100%);
-  padding: 1.25rem 1.2rem 1.1rem;
-  border-radius: 16px;
-  border: 1px solid var(--mk-line);
+  width: min(20.5rem, 100%);
+  padding: 1.2rem 1.25rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--mk-ink) 55%, transparent);
   background: var(--mk-paper);
-  box-shadow: 0 12px 36px rgba(31, 27, 23, 0.18);
+  box-shadow:
+    inset 0 0 0 4px var(--mk-paper),
+    inset 0 0 0 5px var(--mk-line),
+    0 12px 36px rgba(31, 27, 23, 0.16);
+}
+
+.mishiranu-confirm-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.7rem;
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--mk-mist);
+}
+
+.mishiranu-confirm-eyebrow::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 1.5px solid var(--mk-warm, #c5a059);
+  border-radius: 1px;
+  flex: 0 0 auto;
+}
+
+.mishiranu-confirm-rule {
+  height: 0;
+  margin: 0 0 1rem;
+  border: 0;
+  border-top: 1px solid var(--mk-line);
+  border-bottom: 1px solid color-mix(in srgb, var(--mk-ink) 45%, transparent);
+  padding-bottom: 1px;
 }
 
 .mishiranu-confirm-title {
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.65rem;
   font-family: var(--mk-display);
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 600;
+  line-height: 1.45;
   color: var(--mk-ink);
 }
 
 .mishiranu-confirm-body {
-  margin: 0 0 1.1rem;
-  font-family: var(--mk-sans);
-  font-size: 0.88rem;
-  line-height: 1.55;
+  margin: 0 0 1.25rem;
+  font-family: var(--mk-display);
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--mk-fog, var(--mk-mist));
+  white-space: pre-line;
+}
+
+.mishiranu-candidate-list {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  max-height: 13rem;
+  overflow: auto;
+  border-top: 1px solid var(--mk-line);
+}
+
+.mishiranu-candidate-row {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0.7rem 0.45rem;
+  border: 0;
+  border-bottom: 1px solid var(--mk-line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.mishiranu-candidate-row--active {
+  background: color-mix(in srgb, var(--mk-ink) 6%, transparent);
+}
+
+.mishiranu-candidate-name {
+  font-family: var(--mk-display);
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--mk-ink);
+}
+
+.mishiranu-candidate-detail {
+  font-size: 0.78rem;
   color: var(--mk-mist);
+}
+
+.mishiranu-confirm-body--after-list {
+  margin-top: 0.2rem;
 }
 
 .mishiranu-confirm-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.55rem;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mishiranu-confirm-actions .mishiranu-btn--primary {
+  width: 100%;
+  border-radius: 4px;
+  letter-spacing: 0.12em;
+}
+
+.mishiranu-confirm-actions .mishiranu-btn:not(.mishiranu-btn--primary) {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--mk-mist);
+  box-shadow: none;
 }

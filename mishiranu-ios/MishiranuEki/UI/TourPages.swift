@@ -120,12 +120,25 @@ struct PlacePage: View {
                             hasIntro: hasIntro,
                             hasWalk: hasWalk,
                             hasHistory: hasHistory,
-                            hasSight: hasSight
-                        ) { section in
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                proxy.scrollTo(section, anchor: .top)
+                            hasSight: hasSight,
+                            speakingSection: narrator.activeSection,
+                            onSelect: { section in
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    proxy.scrollTo(section, anchor: .top)
+                                }
+                            },
+                            onListen: { section in
+                                let script: PlaceScriptSection = {
+                                    switch section {
+                                    case .intro: return .intro
+                                    case .history: return .history
+                                    case .sight: return .sight
+                                    case .walk: return .walk
+                                    }
+                                }()
+                                narrator.toggle(station: station, section: script)
                             }
-                        }
+                        )
 
                         if hasIntro {
                             PlaceBoardPanel(
@@ -133,7 +146,9 @@ struct PlacePage: View {
                                 title: station.aboutTitle,
                                 reading: station.displayNameReading,
                                 accent: Palette.ink,
-                                pictogram: nil
+                                pictogram: nil,
+                                isListening: narrator.isSpeaking(section: .intro),
+                                onListen: { narrator.toggle(station: station, section: .intro) }
                             ) {
                                 if !intro.isEmpty {
                                     ReadingText(lines: intro)
@@ -154,7 +169,9 @@ struct PlacePage: View {
                                 number: "02",
                                 title: "このエリアのこと",
                                 accent: Palette.ink,
-                                pictogram: .history
+                                pictogram: .history,
+                                isListening: narrator.isSpeaking(section: .history),
+                                onListen: { narrator.toggle(station: station, section: .history) }
                             ) {
                                 if !area.isEmpty {
                                     ReadingText(lines: area)
@@ -179,7 +196,9 @@ struct PlacePage: View {
                                 number: "03",
                                 title: "観光案内メモ",
                                 accent: Palette.ink,
-                                pictogram: .photoSpot
+                                pictogram: .photoSpot,
+                                isListening: narrator.isSpeaking(section: .sight),
+                                onListen: { narrator.toggle(station: station, section: .sight) }
                             ) {
                                 VStack(alignment: .leading, spacing: 14) {
                                     ForEach(
@@ -198,7 +217,9 @@ struct PlacePage: View {
                                 number: "04",
                                 title: "歩き方の目安",
                                 accent: Palette.moss,
-                                pictogram: .trekking
+                                pictogram: .trekking,
+                                isListening: narrator.isSpeaking(section: .walk),
+                                onListen: { narrator.toggle(station: station, section: .walk) }
                             ) {
                                 ReadingText(lines: walk)
                             }
@@ -236,51 +257,72 @@ private struct PlaceBoardIndex: View {
     let hasWalk: Bool
     let hasHistory: Bool
     let hasSight: Bool
+    var speakingSection: PlaceScriptSection? = nil
     let onSelect: (PlaceBoardSection) -> Void
+    let onListen: (PlaceBoardSection) -> Void
 
     private struct IndexItem: Identifiable {
         let id: PlaceBoardSection
         let number: String
         let label: String
         let enabled: Bool
+        let script: PlaceScriptSection
     }
 
     var body: some View {
         let items: [IndexItem] = [
-            .init(id: .intro, number: "01", label: stationLabel, enabled: hasIntro),
-            .init(id: .history, number: "02", label: "このエリア", enabled: hasHistory),
-            .init(id: .sight, number: "03", label: "観光案内", enabled: hasSight),
-            .init(id: .walk, number: "04", label: "歩き方", enabled: hasWalk),
+            .init(id: .intro, number: "01", label: stationLabel, enabled: hasIntro, script: .intro),
+            .init(id: .history, number: "02", label: "このエリア", enabled: hasHistory, script: .history),
+            .init(id: .sight, number: "03", label: "観光案内", enabled: hasSight, script: .sight),
+            .init(id: .walk, number: "04", label: "歩き方", enabled: hasWalk, script: .walk),
         ]
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
             ForEach(items) { item in
-                Button {
-                    guard item.enabled else { return }
-                    onSelect(item.id)
-                } label: {
-                    VStack(spacing: 3) {
-                        Text(item.number)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(item.enabled ? Palette.warm : Palette.mist)
-                            .monospacedDigit()
-                        Text(item.label)
-                            .font(.footnote)
-                            .foregroundStyle(item.enabled ? Palette.fog : Palette.mist)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.9)
+                let listening = speakingSection == item.script
+                HStack(spacing: 0) {
+                    Button {
+                        guard item.enabled else { return }
+                        onSelect(item.id)
+                    } label: {
+                        VStack(spacing: 3) {
+                            Text(item.number)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(item.enabled ? Palette.warm : Palette.mist)
+                                .monospacedDigit()
+                            Text(item.label)
+                                .font(.footnote)
+                                .foregroundStyle(item.enabled ? Palette.fog : Palette.mist)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.9)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Palette.paper)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .stroke(Palette.line, lineWidth: 1)
-                    )
-                    .opacity(item.enabled ? 1 : 0.45)
+                    .buttonStyle(PlainHapticButtonStyle())
+                    .disabled(!item.enabled)
+                    .accessibilityLabel("\(item.number) \(item.label)")
+
+                    Button {
+                        guard item.enabled else { return }
+                        onListen(item.id)
+                    } label: {
+                        Image(systemName: listening ? "stop.fill" : "speaker.wave.2.fill")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(listening ? Palette.warmDeep : (item.enabled ? Palette.ink : Palette.mist))
+                            .frame(width: 36, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainHapticButtonStyle())
+                    .disabled(!item.enabled)
+                    .accessibilityLabel(listening ? "\(item.label)の読み上げを止める" : "\(item.label)を聞く")
                 }
-                .buttonStyle(PlainHapticButtonStyle())
-                .disabled(!item.enabled)
-                .accessibilityLabel("\(item.number) \(item.label)")
+                .background(Palette.paper)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .stroke(listening ? Palette.warm : Palette.line, lineWidth: listening ? 1.5 : 1)
+                )
+                .opacity(item.enabled ? 1 : 0.45)
             }
         }
     }
@@ -292,6 +334,8 @@ private struct PlaceBoardPanel<Content: View>: View {
     var reading: String? = nil
     let accent: Color
     let pictogram: Pictogram?
+    var isListening: Bool = false
+    var onListen: (() -> Void)? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -319,6 +363,30 @@ private struct PlaceBoardPanel<Content: View>: View {
                         .foregroundStyle(Palette.ink)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                Spacer(minLength: 8)
+                if let onListen {
+                    Button(action: onListen) {
+                        HStack(spacing: 4) {
+                            Image(systemName: isListening ? "stop.fill" : "speaker.wave.2.fill")
+                                .font(.caption.weight(.semibold))
+                            Text(isListening ? "止める" : "聞く")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(isListening ? Palette.paper : Palette.ink)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(isListening ? Palette.warmDeep : Palette.ink.opacity(0.06))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(isListening ? Color.clear : Palette.line, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(PlainHapticButtonStyle())
+                    .accessibilityLabel(isListening ? "\(title)の読み上げを止める" : "\(title)を聞く")
+                }
             }
             .padding(.bottom, 8)
             .overlay(alignment: .bottom) {
@@ -342,24 +410,30 @@ private struct PlaceBoardPanel<Content: View>: View {
     }
 }
 
-/// 電車のイヤホン向け。押すと土地案内を読み上げ／もう一度で停止。
+/// 電車のイヤホン向け。上段は全部、各項目にも聞くボタンがある。
 private struct PlaceListenBar: View {
     let narrator: PlaceNarrator
     let station: Station
 
+    private var speakingAll: Bool { narrator.isSpeaking(section: .all) }
+
     var body: some View {
         Button {
-            narrator.toggle(station: station)
+            narrator.toggle(station: station, section: .all)
         } label: {
             HStack(alignment: .center, spacing: 12) {
-                Image(systemName: narrator.isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
+                Image(systemName: speakingAll ? "stop.fill" : "speaker.wave.2.fill")
                     .font(.title3.weight(.semibold))
                     .frame(width: 24, height: 24)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(narrator.isSpeaking ? "読み上げを止める" : "土地案内を聞く")
+                    Text(speakingAll ? "読み上げを止める" : "土地案内を聞く（すべて）")
                         .font(.mincho(.body, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(narrator.isSpeaking ? "もう一度押すと止まります" : "駅に着く前に、イヤホンで")
+                    Text(
+                        speakingAll
+                            ? "もう一度押すと止まります"
+                            : "項目ごとにも聞けます · 駅に着く前に、イヤホンで"
+                    )
                         .font(.caption)
                         .foregroundStyle(Palette.paper.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
@@ -372,12 +446,12 @@ private struct PlaceListenBar: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(narrator.isSpeaking ? Palette.warmDeep : Palette.warm)
+                    .fill(speakingAll ? Palette.warmDeep : Palette.warm)
             )
         }
         .buttonStyle(PlainHapticButtonStyle())
-        .accessibilityLabel(narrator.isSpeaking ? "読み上げを止める" : "土地案内を聞く")
-        .accessibilityHint("駅の土地の文章を音声で読み上げます")
+        .accessibilityLabel(speakingAll ? "読み上げを止める" : "土地案内をすべて聞く")
+        .accessibilityHint("駅の土地の文章を音声で読み上げます。各項目の聞くでも再生できます")
     }
 }
 
@@ -517,7 +591,7 @@ private struct WalkRouteSummary: View {
                         Image(systemName: "chevron.right")
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(Palette.mist)
-                        routeDot("\(index + 1)", subtitle: stop.spot.name)
+                        routeDot("\(index + 1)", subtitle: LandscapeSpotName.clarified(stop.spot.name))
                     }
                     Image(systemName: "chevron.right")
                         .font(.caption2.weight(.bold))
@@ -688,7 +762,7 @@ private struct StopRow: View {
                 Text(legLabel)
                     .font(.readable(.subheadline, weight: .bold))
                     .foregroundStyle(Palette.ink)
-                Text(stop.spot.name)
+                Text(LandscapeSpotName.clarified(stop.spot.name))
                     .font(.mincho(.title3, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
@@ -730,7 +804,7 @@ private struct StopRow: View {
             .padding(.bottom, 12)
         }
         .contentShape(Rectangle())
-        .accessibilityLabel("\(index + 1)番 \(stop.spot.name)、\(legLabel)")
+        .accessibilityLabel("\(index + 1)番 \(LandscapeSpotName.clarified(stop.spot.name))、\(legLabel)")
     }
 }
 
@@ -905,7 +979,7 @@ private struct GuideRow: View {
             HStack(spacing: 8) {
                 PictogramIcon(spot.guide.pictogram, size: 18)
                     .foregroundStyle(spot.guide.color)
-                Text(spot.name)
+                Text(SpotCopy.displayName(for: spot))
                     .font(.mincho(.headline, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                 Spacer(minLength: 0)
@@ -935,7 +1009,7 @@ private struct GuideRow: View {
                     .font(.caption)
                     .foregroundStyle(Palette.warm)
             }
-            Text(spot.blurb)
+            Text(SpotCopy.blurb(for: spot))
                 .font(.mincho(.callout))
                 .foregroundStyle(Palette.fog)
                 .fixedSize(horizontal: false, vertical: true)
@@ -969,15 +1043,24 @@ struct SettingsPage: View {
     let station: Station
     @State private var copied = false
     @State private var confirmRebuild = false
+    @State private var noticeAlert = false
+
+    /// トップの「この駅について」と同じ型：駅名 → 調べるか確認。
+    private var rebuildConfirmTitle: String {
+        let name = station.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return "この駅の案内" }
+        let label = name.hasSuffix("駅") ? name : "\(name)駅"
+        return "ここは\(label)です"
+    }
 
     private var rebuildConfirmMessage: String {
         if billing.byokUnlocked, billing.isByokConfigured {
-            return "自分の API で作り直します（コインは使いません）。いまの案内は新しい案内に差し替わります。"
+            return "この駅の案内を、もう一度調べますか？\n自分の API で作り直します（コインは使いません）。"
         }
         if billing.byokUnlocked {
-            return "買い切り済みです。料金で API を設定してから作り直してください。"
+            return "買い切り済みです。料金で API を設定してから、もう一度調べてください。"
         }
-        return "コインを1枚使います（残り \(billing.coins) 枚）。いまの案内は新しい案内に差し替わります。"
+        return "この駅の案内を、もう一度調べますか？\nコインを1枚使います（残り \(billing.coins) 枚）。"
     }
 
     var body: some View {
@@ -997,18 +1080,6 @@ struct SettingsPage: View {
                 }
                 .buttonStyle(PlainHapticButtonStyle())
                 .disabled(model.stationLoading)
-                .confirmationDialog(
-                    "案内を作り直しますか？",
-                    isPresented: $confirmRebuild,
-                    titleVisibility: .visible
-                ) {
-                    Button("作り直す") {
-                        model.requestAiStation(station.name, forceRefresh: true)
-                    }
-                    Button("やめる", role: .cancel) {}
-                } message: {
-                    Text(rebuildConfirmMessage)
-                }
                 Button {
                     model.goHero()
                 } label: {
@@ -1186,6 +1257,34 @@ struct SettingsPage: View {
                 .buttonStyle(PlainHapticButtonStyle())
             }
         }
+        }
+        .overlay {
+            if confirmRebuild {
+                GuideConfirmPopup(
+                    title: rebuildConfirmTitle,
+                    message: rebuildConfirmMessage,
+                    onConfirm: {
+                        confirmRebuild = false
+                        model.requestAiStation(station.name, forceRefresh: true)
+                    },
+                    onCancel: {
+                        confirmRebuild = false
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(50)
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: confirmRebuild)
+        .onChange(of: model.stationNotice) { _, note in
+            noticeAlert = note?.isEmpty == false
+        }
+        .alert("案内", isPresented: $noticeAlert) {
+            Button("閉じる", role: .cancel) {
+                model.stationNotice = nil
+            }
+        } message: {
+            Text(model.stationNotice ?? "")
         }
         .onChange(of: station.id) { copied = false }
     }

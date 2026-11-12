@@ -66,6 +66,7 @@ enum DemachiTemplate {
     static func scrubContamination(on station: Station) -> Station {
         guard !isDemachiStationName(station.name) else { return station }
         let spots = station.spots.filter { spot in
+            if WalkInMealFilter.isNonWalkIn(spot) { return false }
             if isForeignDemachiPlace(spot.name, stationName: station.name) { return false }
             if isForeignDemachiPlace(spot.blurb, stationName: station.name) { return false }
             if isForeignDemachiPlace(spot.detail ?? "", stationName: station.name) { return false }

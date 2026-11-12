@@ -41,6 +41,13 @@ import {
 } from "@/lib/mishiranu-land-prose";
 import { ensureLandMentions } from "@/lib/mishiranu-lore";
 import type { UserAiConfig } from "@/lib/mishiranu-billing";
+import {
+  clarifyLandscapeName,
+  landscapeWalkBlurb,
+  shouldRewriteLandscapeBlurb,
+} from "@/lib/mishiranu-landscape-name";
+import { isNonWalkInMeal } from "@/lib/mishiranu-walk-in-meal";
+import { sealGuideIntegrity } from "@/lib/mishiranu-guide-integrity";
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
@@ -123,7 +130,7 @@ const STATION_SCHEMA_BLOCK = [
   '  "bikeRental": { "available": boolean, "summary": "1〜2文", "places": [ { "kind": "local|app", "name": "その駅にある実在サービス・店の正式名", "walkMinutes": 5, "note": "使い方1文" } ] },',
   "- bikeRental は入力駅の徒歩圏（目安8分以内）で実在確認できたものだけ。無ければ available:false・places:[]。推測で埋めない。",
   "- places の name は総称禁止（「駅前のレンタサイクル店」不可）。他駅の店名・ポート名を混ぜない。",
-  "- 例（出町柳だけ）: CLEW（クルー）京阪出町柳駅前（app）、レンタサイクルえむじか 出町柳店（local）。出町柳以外にこの2つを書かない。",
+  "- 例（出町柳だけ）: CLEW（クルー）京阪出町柳駅前（app）。えむじかは 2026-01 閉業なので書かない。出町柳以外に CLEW 出町柳も書かない。",
   '  "historyNotes": [{ "title": "短い見出し", "body": "土地メモ。各3〜5文・80字以上。各件で由来・地層といまの見え方を同じ本文で結ぶ" }]（必ず6〜8件。歴史件といま件を分けない。地名由来・産業/信仰・交通に加え、近くの大学・学校・学生街・いまの生活があれば正式名称で1件以上）,',
   '  "firstVisitFaces": [',
   '    { "role": "landform", "name": "正式名", "where": "位置", "why": "なぜ土地の骨格か1文", "present": "いまどう見えるか1文", "walkMinutes": 5, "lat": 0, "lng": 0 },',
@@ -169,6 +176,9 @@ const STATION_SCHEMA_BLOCK = [
   "- rest は景色の休みを優先。喫茶は検索で実在確認できたときだけ（無理に埋めない）。",
   "- firstVisitFaces の3点は majorWorthy true。major は名所を優先（目安3）。名物店の major は検索で確実なときだけ最大2。合計5未満でも名所が確かならよい。",
   "- meal/souvenir は駅から徒歩18分以内・正式店名のみ。lat/lng は本物。駅へ寄せない。閉店・別駅の店は出さない。",
+  "- 【mealは店内飲食できる店だけ】ライフデリ・配食・宅食・宅配弁当・高齢者向け配食サービスは出さない（事業所で入れない）。",
+  "- 【川・山の総称禁止】spots / firstVisitFaces の name に「淀川」「桂川」「鴨川」など川名だけを書かない。必ず「〇〇堤防」「三川合流点」「〇〇公園」など、歩いて立つ地点の固有名にする。",
+  "- blurb に「駅から見渡せる」「一望」「眼下」と書かない。川辺・眺望は『駅から歩いて寄る場所』と書く。",
 ].join("\n");
 
 const PLACES_FROM_LAND_SCHEMA = [
@@ -287,9 +297,16 @@ function buildNearbyPrompt(lat: number, lng: number): string {
 function parseSpot(raw: unknown, index: number): Spot | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
-  const name = asString(o.name);
-  const blurb = asString(o.blurb);
-  if (!name || !blurb) return null;
+  const rawName = asString(o.name);
+  let blurb = asString(o.blurb);
+  if (!rawName || !blurb) return null;
+  const name = clarifyLandscapeName(rawName);
+  if (shouldRewriteLandscapeBlurb(blurb, rawName)) {
+    blurb = landscapeWalkBlurb(
+      rawName,
+      clamp(Math.round(asNumber(o.walkMinutes, 10)), 1, 45),
+    );
+  }
 
   const genreRaw = asString(o.genre, "odd") as SpotGenre;
   const genre = GENRE_SET.has(genreRaw) ? genreRaw : "odd";
@@ -556,8 +573,9 @@ function parseFirstVisitFaces(raw: unknown): FirstVisitFace[] | undefined {
     if (!item || typeof item !== "object") continue;
     const o = item as Record<string, unknown>;
     const roleRaw = asString(o.role) as FirstVisitRole;
-    const name = asString(o.name);
-    if (!ROLE_SET.has(roleRaw) || !name) continue;
+    const rawName = asString(o.name);
+    if (!ROLE_SET.has(roleRaw) || !rawName) continue;
+    const name = clarifyLandscapeName(rawName);
     const lat = asNumber(o.lat, Number.NaN);
     const lng = asNumber(o.lng, Number.NaN);
     faces.push({
@@ -1282,7 +1300,14 @@ function isWeakShopName(name: string): boolean {
 function stripUntrustedShops(station: StationSeed): StationSeed {
   const spots = station.spots.filter((s) => {
     if (s.guide !== "meal" && s.guide !== "souvenir") return true;
-    return !isWeakShopName(s.name);
+    if (isWeakShopName(s.name)) return false;
+    if (
+      s.guide === "meal" &&
+      isNonWalkInMeal({ name: s.name, blurb: s.blurb, detail: s.detail })
+    ) {
+      return false;
+    }
+    return true;
   });
   if (spots.length === station.spots.length) return station;
   return { ...station, spots };
@@ -1400,11 +1425,10 @@ function sanitizeBikeRentals(station: StationSeed): StationSeed {
     if (!p.name || BIKE_GENERIC.test(p.name) || generics.test(p.name)) {
       return false;
     }
+    // えむじかは 2026-01 閉業
+    if (/えむじか/.test(p.name)) return false;
     if (typeof p.walkMinutes === "number" && p.walkMinutes > 8) return false;
     if (!isDemachi && /出町柳|京阪出町柳/.test(p.name)) return false;
-    if (!isDemachi && /えむじか/.test(p.name) && /出町/.test(p.name)) {
-      return false;
-    }
     for (const hint of BIKE_FOREIGN_HINTS) {
       if (p.name.includes(hint) && !station.name.includes(hint)) return false;
     }
@@ -1412,47 +1436,46 @@ function sanitizeBikeRentals(station: StationSeed): StationSeed {
   });
 
   if (isDemachi) {
-    const must = [
-      {
-        kind: "app" as const,
-        name: "CLEW（クルー）京阪出町柳駅前",
-        walkMinutes: 1,
-        note: "京阪7番出口付近のポート。アプリ登録のあとQRで解錠。",
-      },
-      {
-        kind: "local" as const,
-        name: "レンタサイクルえむじか 出町柳店",
-        walkMinutes: 2,
-        note: "駅すぐの店頭貸出。半日〜長期向き。",
-      },
-    ];
+    const clew = {
+      kind: "app" as const,
+      name: "CLEW（クルー）京阪出町柳駅前",
+      walkMinutes: 1,
+      note: "京阪7番出口付近のポート。アプリ登録のあとQRで解錠。",
+    };
     if (!places.some((p) => /CLEW|クルー|CREW/i.test(p.name))) {
-      places.push(must[0]!);
-    }
-    if (!places.some((p) => p.name.includes("えむじか"))) {
-      places.push(must[1]!);
+      places.push(clew);
     }
   }
 
+  // 同じ系統は1件。徒歩が短い方を残す（HELLO CYCLING の総称と駅名付きなど）。
+  places = [...places].sort(
+    (a, b) => (a.walkMinutes ?? 99) - (b.walkMinutes ?? 99),
+  );
   const seen = new Set<string>();
-  places = places.filter((p) => {
-    const key = /CLEW|クルー|CREW/i.test(p.name)
-      ? `clew:${isDemachi ? "demachi" : p.name}`
-      : p.name.includes("えむじか")
-        ? `emusica:${isDemachi ? "demachi" : p.name}`
-        : p.name;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  places = places
+    .filter((p) => {
+      const key = /CLEW|クルー|CREW/i.test(p.name)
+        ? `clew:${isDemachi ? "demachi" : p.name}`
+        : /HELLO|ハロー/.test(p.name)
+          ? "hello"
+          : p.name;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((p) =>
+      isDemachi && /HELLO|ハロー/.test(p.name)
+        ? { ...p, name: "HELLO CYCLING 京阪出町柳駅" }
+        : p,
+    );
 
   const available = places.length > 0;
   const summary = available
     ? isDemachi
-      ? "駅すぐには CLEW（クルー）のポートと、店頭貸出のえむじかがあります。短い移動はアプリ、半日たっぷりなら店頭が向きます。"
+      ? "駅すぐには CLEW（クルー）など、アプリで借りるポートがあります。会員登録のあとQRで解錠します。"
       : station.bikeRental?.summary &&
           station.bikeRental.summary.length >= 12 &&
-          !/未確認|使えることがあります/.test(station.bikeRental.summary)
+          !/未確認|使えることがあります|えむじか/.test(station.bikeRental.summary)
         ? station.bikeRental.summary
         : `この駅で確認できた貸出は次のとおりです（${places.map((p) => p.name).join("、")}）。`
     : "この駅で確認できたレンタサイクルは、いまのところありません。観光案内所や駅掲示も見てください。";
@@ -2180,6 +2203,7 @@ async function finalizeAiStation(
   station = balanceMajorsSightseeing(station);
   station = refineLandProse(ensureLandPresentAnchors(station));
   station = snapLandmarkCoordinates(station);
+  station = sealGuideIntegrity(station);
   return { station, source: "ai" };
 }
 

@@ -500,7 +500,8 @@ enum CourseBuilder {
 
     /// 名物菓子を souvenir に寄せる（ご飯だけに閉じない）。喫茶は休むところへ。
     static func normalizeEdibleSouvenirs(_ station: Station) -> Station {
-        var spots = station.spots.map { spot -> Spot in
+        // 配食・宅食（ライフデリ等）はご飯から外す
+        var spots = WalkInMealFilter.strip(from: station).spots.map { spot -> Spot in
             if isSitDownCafe(spot.name), spot.guide == .meal || spot.guide == .tip {
                 let blurb = spot.blurb.contains("食事") || spot.blurb.contains("観光の目印")
                     ? SpotCopy.compose(name: spot.name, guide: .rest, address: spot.detail)

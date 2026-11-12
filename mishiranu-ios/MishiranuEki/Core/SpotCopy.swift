@@ -19,20 +19,28 @@ enum SpotCopy {
 
     /// 表示用の短い説明。定型なら作り直し、土地の記憶があれば添える。
     static func blurb(for spot: Spot, in station: Station? = nil) -> String {
+        let displayName = LandscapeSpotName.clarified(spot.name)
         let base: String
-        if isGeneric(spot.blurb) {
-            base = compose(name: spot.name, guide: spot.guide, address: spot.detail)
+        if LandscapeSpotName.shouldRewriteBlurb(spot.blurb, name: spot.name) {
+            base = LandscapeSpotName.walkBlurb(for: spot.name, walkMinutes: spot.walkMinutes)
+        } else if isGeneric(spot.blurb) {
+            base = compose(name: displayName, guide: spot.guide, address: spot.detail)
         } else {
             base = spot.blurb
         }
         if let station, let trace = StationLore.trace(for: spot, in: station),
            !base.contains(trace), trace.count <= 70 {
             // すでに十分な文案があるときは記憶を重ねない
-            if isGeneric(spot.blurb) {
+            if isGeneric(spot.blurb) || LandscapeSpotName.shouldRewriteBlurb(spot.blurb, name: spot.name) {
                 return "\(base) \(trace)"
             }
         }
         return base
+    }
+
+    /// 地図・シートに出す名前（川の総称だけを避ける）。
+    static func displayName(for spot: Spot) -> String {
+        LandscapeSpotName.clarified(spot.name)
     }
 
     static func compose(name: String, guide: GuideKind, address: String?) -> String {
@@ -52,8 +60,11 @@ enum SpotCopy {
             if n.contains("城") {
                 return "\(n)\(paren(whereText))。城の跡と町の層が、短く見える場所。"
             }
-            if n.contains("デルタ") || n.contains("三角州") || n.contains("鴨川") {
-                return "\(n)\(paren(whereText))。川の気配に腰を下ろせる、駅前の顔。"
+            if n.contains("デルタ") || n.contains("三角州") {
+                return "\(n)\(paren(whereText))。歩いて川辺へ出ると、合流の景色が開ける。"
+            }
+            if n.contains("川") || n.contains("河") || n.contains("堤防") {
+                return "\(n)\(paren(whereText))。駅から歩いて寄る川辺。ホームから見渡す景色ではない。"
             }
             if n.contains("資料館") || n.contains("博物館") || n.contains("美術館") {
                 return "\(n)\(paren(whereText))。土地の物語を、短く辿れる展示。"

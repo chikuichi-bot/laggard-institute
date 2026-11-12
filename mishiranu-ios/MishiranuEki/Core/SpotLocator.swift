@@ -90,7 +90,6 @@ enum SpotLocator {
             "CLEW \(bare)",
             "クルー \(bare)",
             "\(bare) レンタサイクル",
-            "えむじか \(bare)",
             "HELLO CYCLING \(bare)",
         ]
         var hits: [(name: String, walk: Int)] = []
@@ -99,7 +98,8 @@ enum SpotLocator {
             if Task.isCancelled { break }
             for place in await searchQuery(query, around: center, maxKm: bikeRadiusKm) {
                 guard BikeRentalSeal.looksLikeBike(place.name) || place.name.uppercased().contains("CLEW")
-                    || place.name.contains("クルー") || place.name.contains("えむじか") else { continue }
+                    || place.name.contains("クルー") else { continue }
+                guard !BikeRentalSeal.isClosedBikeName(place.name) else { continue }
                 guard BikeRentalSeal.belongs(to: stationName, placeName: place.name) else { continue }
                 let key = NameMatch.normalize(place.name)
                 guard seen.insert(key).inserted else { continue }
