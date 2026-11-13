@@ -167,7 +167,8 @@ final class AppModel {
         stations.first { $0.id == stationId } ?? stations.first
     }
 
-    var radiusKm: Double { station?.radiusKm(for: stay) ?? 1 }
+    /// 地図の徒歩圏。小回り 1.2km / 大回り 1.5km。
+    var radiusKm: Double { PromenadeRadius.km(for: selectedCourse) }
 
     /// 徒歩圏のスポット（地図用）。lock / Apple 確定のみ。コース順があれば先に。
     var tourSpots: [Spot] {
@@ -310,7 +311,7 @@ final class AppModel {
             "【見知らぬ駅】\(station.name)",
             station.tourTitle,
             station.catchCopy,
-            "\(stay.label) · 徒歩圏 約 \(formatKm(radiusKm)) km",
+            "徒歩圏 約 \(formatKm(radiusKm)) km",
         ]
         if let course = selectedCourse {
             lines.append("まわり方: \(course.title)（\(course.stops.map(\.spot.name).joined(separator: " → "))）")
@@ -493,6 +494,12 @@ final class AppModel {
     /// 歩くページからショート／ロングを選ぶ。
     func selectWalkCourse(_ course: WalkCourse) {
         selectedCourse = course
+    }
+
+    /// 空気の道設定を変えたあと、散歩コースを組み直す。
+    func rebuildWalkForAtmospherePreference() {
+        guard let station else { return }
+        applyOrdinaryWalk(for: station)
     }
 
     /// 歩くタブに出すショート／ロング。

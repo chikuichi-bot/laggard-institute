@@ -363,6 +363,21 @@ func paragraphs(_ text: String?) -> [String] {
         .filter { !$0.isEmpty }
 }
 
+/// 散歩道の地図円。小回り／大回りで半径が変わる（滞在時間設定は廃止）。
+enum PromenadeRadius {
+    static let shortKm: Double = 1.2
+    static let longKm: Double = 1.5
+
+    static func km(forCourseId id: String?) -> Double {
+        guard let id, id.contains("ordinary-long") else { return shortKm }
+        return longKm
+    }
+
+    static func km(for course: WalkCourse?) -> Double {
+        km(forCourseId: course?.id)
+    }
+}
+
 enum StayOption: String, CaseIterable, Identifiable, Hashable {
     case oneHour = "1h"
     case threeHours = "3h"
@@ -380,12 +395,12 @@ enum StayOption: String, CaseIterable, Identifiable, Hashable {
 
     var index: Int { StayOption.allCases.firstIndex(of: self) ?? 0 }
 
-    /// 地図に描く徒歩圏（約1km）。
+    /// 互換用。地図の徒歩圏は `PromenadeRadius`（小回り1.2 / 大回り1.5）を使う。
     var walkRadiusKm: Double {
         switch self {
         case .oneHour: return 0.9
         case .threeHours: return 1.0
-        case .halfDay: return 1.2
+        case .halfDay: return PromenadeRadius.shortKm
         }
     }
 

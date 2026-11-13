@@ -684,6 +684,38 @@ struct WalkPage: View {
                     .padding(.top, 4)
                 }
 
+                if !course.corridors.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("空気の道")
+                            .font(.readable(.caption, weight: .semibold))
+                            .foregroundStyle(Palette.warm)
+                            .tracking(1)
+                        ForEach(course.corridors) { corridor in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(corridor.name)
+                                    .font(.mincho(.body, weight: .semibold))
+                                    .foregroundStyle(Palette.ink)
+                                Text(corridor.blurb)
+                                    .font(.readable(.caption))
+                                    .foregroundStyle(Palette.fog)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Palette.paper)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Palette.line, lineWidth: 1)
+                    )
+                    .padding(.top, 8)
+                }
+
                 WalkRouteSummary(course: course)
 
                 VStack(spacing: 0) {
@@ -1330,6 +1362,27 @@ struct SettingsPage: View {
                 }
             }
 
+            settingsGroup(title: "散歩道") {
+                Toggle(isOn: Binding(
+                    get: { AtmosphereWalkPrefs.preferAtmosphere },
+                    set: { next in
+                        AtmosphereWalkPrefs.preferAtmosphere = next
+                        model.rebuildWalkForAtmospherePreference()
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("空気の道を主に歩く")
+                            .font(.mincho(.body))
+                            .foregroundStyle(Palette.ink)
+                        Text("商店街・街並み・川辺など、点では表せない区間を散歩の芯にする。店や名所は道の途中の層。")
+                            .font(.readable(.caption))
+                            .foregroundStyle(Palette.mist)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .tint(Palette.warm)
+            }
+
             settingsGroup(title: "見た目") {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("案内の色と空気")
@@ -1407,8 +1460,14 @@ struct SettingsPage: View {
             }
 
             settingsGroup(title: "このアプリについて") {
-                Link(destination: PublicURLs.orikata) {
-                    settingsButtonLabel("見知らぬ駅について", pictogram: .information, detail: "知らない駅に降りる · 聴いて散策する")
+                NavigationLink {
+                    TutorialPage(finishLabel: "とじる")
+                } label: {
+                    settingsButtonLabel(
+                        "見知らぬ駅について",
+                        pictogram: .information,
+                        detail: "チュートリアル · なにができるか"
+                    )
                 }
                 .buttonStyle(PlainHapticButtonStyle())
                 Text("地図は Apple マップ。出町柳ピンは実座標寄り、ほかの駅は目安の位置です。")

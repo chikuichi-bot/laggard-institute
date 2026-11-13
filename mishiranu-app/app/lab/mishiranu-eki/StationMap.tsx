@@ -10,6 +10,7 @@ import {
   type StationSeed,
 } from "@/data/mishiranu-stations";
 import { haversineKm, spotLatLng, stationLatLng } from "@/lib/mishiranu-geo";
+import type { AtmosphereCorridor } from "@/lib/mishiranu-atmosphere";
 
 type Props = {
   station: StationSeed;
@@ -18,6 +19,8 @@ type Props = {
   activeSpotId: string | null;
   /** Ordered spot ids for the chosen walking course */
   courseStopIds?: string[] | null;
+  /** 空気の区間（商店街・街並み・川辺） */
+  corridors?: AtmosphereCorridor[] | null;
   onSelect: (spotId: string) => void;
 };
 
@@ -146,6 +149,7 @@ export default function StationMap({
   radiusKm,
   activeSpotId,
   courseStopIds = null,
+  corridors = null,
   onSelect,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -235,6 +239,9 @@ export default function StationMap({
       map.setView([ll.lat, ll.lng], 16, { animate: true });
       return true;
     };
+
+    // 空気の区間は歩くタブの一覧が正本。地図に直線帯を載せると道に沿わず紛らわしいので描かない。
+    void corridors;
 
     const drawCourseLine = (path: L.LatLngExpression[]) => {
       if (cancelled || !layerRef.current) return;
@@ -393,7 +400,7 @@ export default function StationMap({
     return () => {
       cancelled = true;
     };
-  }, [station, spots, radiusKm, activeSpotId, courseStopIds]);
+  }, [station, spots, radiusKm, activeSpotId, courseStopIds, corridors]);
 
   return (
     <div className="mishiranu-map mishiranu-map--live" aria-label={`${station.name}駅周辺の地図`}>

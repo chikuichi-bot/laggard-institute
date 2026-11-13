@@ -21,6 +21,9 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(ThemeStore.self) private var theme
     @Environment(BillingStore.self) private var billing
+    @Environment(\.scenePhase) private var scenePhase
+    /// 試験中は毎回表示。本番に戻すときは AppStorage で一度きりにする。
+    @State private var showTutorial = false
 
     private var storyPeekStationLabel: String {
         let bare = model.pendingDetailBare
@@ -95,7 +98,22 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.2), value: model.contourLoading)
         .animation(.easeInOut(duration: 0.2), value: model.awaitingDetailConfirm)
         .buttonStyle(PlainHapticButtonStyle())
-        .onAppear { Haptics.prepare() }
+        .onAppear {
+            Haptics.prepare()
+            // 試験中: 起動のたびチュートリアルを出す
+            showTutorial = true
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // 試験中: フォアグラウンドに戻るたびも出す
+            if phase == .active {
+                showTutorial = true
+            }
+        }
+        .fullScreenCover(isPresented: $showTutorial) {
+            TutorialPage(onFinished: {
+                showTutorial = false
+            }, finishLabel: "はじめる")
+        }
         .onChange(of: model.screen) { _, screen in
             if screen != .tour {
                 model.placeNarrator.stop()

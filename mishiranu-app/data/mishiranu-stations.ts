@@ -298,6 +298,19 @@ export function walkRadiusKm(timeId: TimeOptionId): number {
   return WALK_RADIUS_KM[timeId] ?? 1.0;
 }
 
+/** 散歩道の地図円。小回り 1.2km / 大回り 1.5km（滞在時間設定は廃止）。 */
+export const PROMENADE_RADIUS_KM = {
+  short: 1.2,
+  long: 1.5,
+} as const;
+
+export function walkRadiusKmForCourse(
+  course: { id: string } | null | undefined,
+): number {
+  if (course?.id.includes("ordinary-long")) return PROMENADE_RADIUS_KM.long;
+  return PROMENADE_RADIUS_KM.short;
+}
+
 /** 収録カタログは空。駅は検索（Gemini）→端末ライブラリにだけ貯める。 */
 export const STATIONS: StationSeed[] = [];
 

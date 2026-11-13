@@ -31,6 +31,8 @@ struct WalkCourse: Hashable, Identifiable {
     let returnWalkMinutes: Int
     /// 駅に戻る目安時刻。
     let returnClockLabel: String
+    /// 点では表せない空気の区間（商店街・街並み・川辺）。
+    let corridors: [AtmosphereCorridor]
 
     init(
         id: String,
@@ -40,7 +42,8 @@ struct WalkCourse: Hashable, Identifiable {
         totalMinutes: Int,
         stops: [CourseStop],
         returnWalkMinutes: Int = 0,
-        returnClockLabel: String = ""
+        returnClockLabel: String = "",
+        corridors: [AtmosphereCorridor] = []
     ) {
         self.id = id
         self.title = title
@@ -50,6 +53,7 @@ struct WalkCourse: Hashable, Identifiable {
         self.stops = stops
         self.returnWalkMinutes = returnWalkMinutes
         self.returnClockLabel = returnClockLabel
+        self.corridors = corridors
     }
 }
 
@@ -1065,14 +1069,26 @@ enum CourseBuilder {
         guard !shortSet.isEmpty else { return [] }
         let startHour = dayPart.defaultClockHour
         let bare = SavedStationStore.bareName(prepared.name)
+        let atmosphereOn = AtmosphereWalkPrefs.preferAtmosphere
+        let allCorridors = AtmosphereCorridorCanon.corridors(for: prepared)
+        let shortOrdered = AtmosphereCorridorCanon.prioritize(
+            shortSet, corridors: allCorridors, preferAtmosphere: atmosphereOn
+        )
+        let longOrdered = AtmosphereCorridorCanon.prioritize(
+            longSet, corridors: allCorridors, preferAtmosphere: atmosphereOn
+        )
 
         var out: [WalkCourse] = []
         if let short = buildOrdinaryVariant(
             id: "ordinary-short-\(bare)-\(dayPart.rawValue)",
             title: "駅から、小回り",
-            subtitle: "ぶらりと回って駅へ帰る · \(shortSet.count)か所",
-            vibe: "駅を出て、少し回り道をして、駅へ帰る",
-            spots: shortSet,
+            subtitle: atmosphereOn
+                ? "土地の空気を通って駅へ帰る · \(shortOrdered.count)か所"
+                : "ぶらりと回って駅へ帰る · \(shortOrdered.count)か所",
+            vibe: atmosphereOn
+                ? "商店街や街並みなど、点ではない道を歩く"
+                : "駅を出て、少し回り道をして、駅へ帰る",
+            spots: shortOrdered,
             station: prepared,
             dayPart: dayPart,
             stay: stay,
@@ -1081,13 +1097,17 @@ enum CourseBuilder {
             out.append(short)
         }
         // ロングはショートより多いときだけ別コースにする
-        if longSet.count > shortSet.count,
+        if longOrdered.count > shortOrdered.count,
            let long = buildOrdinaryVariant(
             id: "ordinary-long-\(bare)-\(dayPart.rawValue)",
             title: "駅から、大回り",
-            subtitle: "もう少し遠くまで回って駅へ帰る · \(longSet.count)か所",
-            vibe: "少し先まで回り道をして、駅へ帰る",
-            spots: longSet,
+            subtitle: atmosphereOn
+                ? "もう少し先の空気まで通って駅へ帰る · \(longOrdered.count)か所"
+                : "もう少し遠くまで回って駅へ帰る · \(longOrdered.count)か所",
+            vibe: atmosphereOn
+                ? "川辺や町並みの帯を、少し長く歩く"
+                : "少し先まで回り道をして、駅へ帰る",
+            spots: longOrdered,
             station: prepared,
             dayPart: dayPart,
             stay: stay,
@@ -1359,6 +1379,11 @@ enum CourseBuilder {
                 clockLabel: ""
             )
         }
+        let corridors = AtmosphereCorridorCanon.corridors(
+            for: station,
+            matching: clean,
+            preferAtmosphere: AtmosphereWalkPrefs.preferAtmosphere
+        )
         // 駅出発 → 立ち寄り → 駅に戻る周回（同じ道の往復を避ける）
         return finishLoopCourse(
             id: id,
@@ -1369,7 +1394,8 @@ enum CourseBuilder {
             stationLat: station.lat,
             stationLng: station.lng,
             startHour: startHour,
-            stay: stay
+            stay: stay,
+            corridors: corridors
         )
     }
 
@@ -1470,7 +1496,8 @@ enum CourseBuilder {
                     totalMinutes: min(budget, 45),
                     stops: course.stops,
                     returnWalkMinutes: course.returnWalkMinutes,
-                    returnClockLabel: course.returnClockLabel
+                    returnClockLabel: course.returnClockLabel,
+                    corridors: course.corridors
                 )
             }
             return course
@@ -1487,7 +1514,8 @@ enum CourseBuilder {
         stationLat: Double,
         stationLng: Double,
         startHour: Int,
-        stay: StayOption
+        stay: StayOption,
+        corridors: [AtmosphereCorridor] = []
     ) -> WalkCourse? {
         guard !provisional.isEmpty else { return nil }
         let ordered = orderStopsAsStationLoop(
@@ -1528,7 +1556,8 @@ enum CourseBuilder {
             totalMinutes: max(visitTotal + returnWalk, 20),
             stops: built,
             returnWalkMinutes: returnWalk,
-            returnClockLabel: returnClock
+            returnClockLabel: returnClock,
+            corridors: corridors
         )
     }
 

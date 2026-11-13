@@ -19,7 +19,7 @@ import {
   EMPTY_STATION,
   STATIONS,
   TIME_OPTIONS,
-  walkRadiusKm,
+  walkRadiusKmForCourse,
   bikePlacesByKind,
   bikeRentalFor,
   budgetYenFor,
@@ -33,6 +33,10 @@ import {
   type StationSeed,
   type TimeOptionId,
 } from "@/data/mishiranu-stations";
+import {
+  loadAtmosphereFirst,
+  saveAtmosphereFirst,
+} from "@/lib/mishiranu-atmosphere";
 import { storyNotesForName } from "@/lib/mishiranu-story-notes";
 import type { TourCopy } from "@/lib/mishiranu-copy";
 import {
@@ -97,8 +101,8 @@ import {
   userAiConfigFromBilling,
   type BillingState,
 } from "@/lib/mishiranu-billing";
-import { MISHIRANU_ORIKATA_URL } from "@/lib/mishiranu-public-urls";
 import { PricingBoard } from "./PricingBoard";
+import TutorialBoard from "./TutorialBoard";
 import {
   CourseIcon,
   DayPartIcon,
@@ -422,10 +426,15 @@ export default function MishiranuApp({
   const [draft, setDraft] = useState("");
   const [showStationSearch, setShowStationSearch] = useState(true);
   const [heroNote, setHeroNote] = useState<string | null>(null);
-  const [settingsPane, setSettingsPane] = useState<"home" | "pricing">("home");
+  const [settingsPane, setSettingsPane] = useState<
+    "home" | "pricing" | "tutorial"
+  >("home");
   const [billing, setBilling] = useState<BillingState>(() => loadBillingState());
   const [billingBusyId, setBillingBusyId] = useState<string | null>(null);
   const [billingNote, setBillingNote] = useState<string | null>(null);
+  /** 試験中は毎回表示。本番は localStorage TUTORIAL_SEEN_KEY で一度きりに戻す。 */
+  const [showTutorial, setShowTutorial] = useState(true);
+  const [atmosphereFirst, setAtmosphereFirst] = useState(true);
   const [rebuildConfirmOpen, setRebuildConfirmOpen] = useState(false);
   /** GPS など、すでに駅が決まっているときの確認（「ここは」は現在地だけ） */
   const [pendingConfirm, setPendingConfirm] = useState<{
@@ -492,6 +501,7 @@ export default function MishiranuApp({
   useEffect(() => {
     setSavedStations(loadStationLibrary());
     setSkin(loadMishiranuSkin());
+    setAtmosphereFirst(loadAtmosphereFirst());
     const nextBilling = loadBillingState();
     setBilling(nextBilling);
     saveBillingState(nextBilling);
@@ -500,6 +510,11 @@ export default function MishiranuApp({
   useEffect(() => {
     saveBillingState(billing);
   }, [billing]);
+
+  function finishTutorial() {
+    // 試験中: 見たフラグを書かない（リロード／再入場でまた出る）
+    setShowTutorial(false);
+  }
 
   function chooseSkin(next: MishiranuSkin) {
     setSkin(next);
@@ -1175,7 +1190,7 @@ export default function MishiranuApp({
       `【見知らぬ駅】${station.name}`,
       shownCopy.tourTitle,
       shownCopy.catchCopy,
-      `${time.label} · 徒歩圏 約 ${walkRadiusKm(time.id)} km`,
+      `徒歩圏 約 ${walkRadiusKmForCourse(selectedCourse)} km`,
     ];
     if (focusKinds.length > 0) {
       lines.push(`案内の重点: ${focusKinds.map((k) => GUIDE_LABEL[k]).join("・")}`);
@@ -1608,7 +1623,8 @@ export default function MishiranuApp({
                     key={`${station.id}-${skin}`}
                     station={station}
                     spots={spots}
-                    radiusKm={walkRadiusKm(time.id)}
+                    radiusKm={walkRadiusKmForCourse(selectedCourse)}
+                    corridors={selectedCourse?.corridors ?? null}
                     activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
                     courseStopIds={courseStopIds}
                     onSelect={(id) => openSpot(id)}
@@ -1634,8 +1650,7 @@ export default function MishiranuApp({
                     </ul>
                     <p className="mishiranu-map-meta">
                       {[
-                        `徒歩圏 約 ${walkRadiusKm(time.id)} km`,
-                        time.id === "half" ? "半日は円外に1か所" : null,
+                        `徒歩圏 約 ${walkRadiusKmForCourse(selectedCourse)} km`,
                         selectedCourse
                           ? `${selectedCourse.title} · 番号順`
                           : null,
@@ -1720,6 +1735,21 @@ export default function MishiranuApp({
                           </div>
                         );
                       })()}
+                      {selectedCourse.corridors &&
+                      selectedCourse.corridors.length > 0 ? (
+                        <div className="mishiranu-atmosphere-list">
+                          <p className="mishiranu-atmosphere-kicker">空気の道</p>
+                          {selectedCourse.corridors.map((corridor) => (
+                            <div
+                              key={corridor.id}
+                              className="mishiranu-atmosphere-item"
+                            >
+                              <strong>{corridor.name}</strong>
+                              <p>{corridor.blurb}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                       <div className="mishiranu-wayfind-summary">
                         <div className="mishiranu-wayfind-chips">
                           <div>
@@ -2188,7 +2218,13 @@ export default function MishiranuApp({
                 <div
                   className="mishiranu-tour-page mishiranu-settings"
                   role="tabpanel"
-                  aria-label={settingsPane === "pricing" ? "料金" : "設定"}
+                  aria-label={
+                    settingsPane === "pricing"
+                      ? "料金"
+                      : settingsPane === "tutorial"
+                        ? "見知らぬ駅について"
+                        : "設定"
+                  }
                 >
                   {settingsPane === "pricing" ? (
                     <PricingBoard
@@ -2213,6 +2249,12 @@ export default function MishiranuApp({
                       onPreferCoinChange={(prefer) =>
                         updateBilling(setPreferCoinOverByok(billing, prefer))
                       }
+                    />
+                  ) : settingsPane === "tutorial" ? (
+                    <TutorialBoard
+                      finishLabel="とじる"
+                      onBack={() => setSettingsPane("home")}
+                      onFinished={() => setSettingsPane("home")}
                     />
                   ) : (
                     <>
@@ -2373,6 +2415,43 @@ export default function MishiranuApp({
 
                   <section
                     className="mishiranu-settings-group"
+                    aria-label="散歩道"
+                  >
+                    <p className="mishiranu-settings-group-label">散歩道</p>
+                    <div className="mishiranu-settings-card">
+                      <label className="mishiranu-settings-row mishiranu-settings-toggle">
+                        <span>
+                          空気の道を主に歩く
+                          <span className="mishiranu-settings-detail">
+                            商店街・街並み・川辺など、点では表せない区間を散歩の芯にする
+                          </span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={atmosphereFirst}
+                          onChange={(event) => {
+                            const on = event.target.checked;
+                            setAtmosphereFirst(on);
+                            saveAtmosphereFirst(on);
+                            if (station.id === "__empty__") return;
+                            const nowPart = dayPartFromHour(
+                              new Date().getHours(),
+                            );
+                            const ordinary = buildFirstVisitOrdinaryCourses(
+                              station,
+                              nowPart,
+                              "half",
+                            );
+                            setSelectedCourse(ordinary[0] ?? null);
+                            setCourses(ordinary);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </section>
+
+                  <section
+                    className="mishiranu-settings-group"
                     aria-label="表示"
                   >
                     <p className="mishiranu-settings-group-label">表示</p>
@@ -2423,17 +2502,16 @@ export default function MishiranuApp({
                       このアプリについて
                     </p>
                     <div className="mishiranu-settings-card">
-                      <a
+                      <button
+                        type="button"
                         className="mishiranu-settings-action mishiranu-settings-action--nav"
-                        href={MISHIRANU_ORIKATA_URL}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => setSettingsPane("tutorial")}
                       >
                         <span>見知らぬ駅について</span>
                         <span className="mishiranu-settings-detail">
-                          知らない駅に降りる · 聴いて散策する
+                          チュートリアル · なにができるか
                         </span>
-                      </a>
+                      </button>
                     </div>
                     <p className="mishiranu-foot">
                       地図は OpenStreetMap。ピンは検索した駅の座標です。
@@ -2623,6 +2701,16 @@ export default function MishiranuApp({
           </section>
         ) : null}
       </div>
+
+      {showTutorial ? (
+        <div className="mishiranu-tutorial-overlay" role="presentation">
+          <TutorialBoard
+            showSkip
+            finishLabel="はじめる"
+            onFinished={finishTutorial}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

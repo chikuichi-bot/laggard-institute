@@ -94,9 +94,6 @@ struct TourMapPage: View {
     /// 地図下の一行。徒歩圏と、あればコース名だけ。
     private var mapFootLine: String {
         var parts = ["徒歩圏 約 \(formatKm(model.radiusKm)) km"]
-        if model.stay == .halfDay {
-            parts.append("半日は円外に1か所")
-        }
         if let course = model.selectedCourse {
             parts.append("\(course.title) · 番号順")
         }
@@ -380,6 +377,8 @@ struct TourMapPage: View {
                         .foregroundStyle(Palette.river.opacity(0.08))
                         .stroke(Palette.river.opacity(0.45), lineWidth: 1)
 
+                    // 空気の区間は歩くタブの一覧が正本。地図に直線帯を載せると道に沿わず紛らわしいので描かない。
+
                     ForEach(Array(walkingLegs.enumerated()), id: \.offset) { _, leg in
                         if leg.count >= 2 {
                             MapPolyline(coordinates: leg)
@@ -565,6 +564,7 @@ struct TourMapPage: View {
             refreshWalkingPath()
         }
         .onChange(of: model.stay) { position = camera() }
+        .onChange(of: model.selectedCourse?.id) { position = camera() }
         .onChange(of: routeKey) {
             // 場所シートで地点を選んでいるときは、全体フィットで上書きしない
             if model.activeSpot == nil {

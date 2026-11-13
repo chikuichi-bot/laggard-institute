@@ -32,6 +32,13 @@ import {
 } from "@/lib/mishiranu-lore";
 import { allowsOnMap, sealMapCoordinates } from "@/lib/mishiranu-map-trust";
 import { placeNameFromStoryTitle } from "@/lib/mishiranu-story-notes";
+import {
+  corridorsForStation,
+  corridorsMatching,
+  loadAtmosphereFirst,
+  prioritizeAtmosphereSpots,
+  type AtmosphereCorridor,
+} from "@/lib/mishiranu-atmosphere";
 
 export type DayPart = "morning" | "midday" | "afternoon" | "evening" | "night";
 
@@ -124,6 +131,8 @@ export type WalkCourse = {
   returnWalkMinutes?: number;
   /** 駅に戻る目安時刻 */
   returnClockLabel?: string;
+  /** 点では表せない空気の区間 */
+  corridors?: AtmosphereCorridor[];
 };
 
 export const DAY_PART_OPTIONS: Array<{
@@ -993,6 +1002,7 @@ function buildOrdinaryVariant(
   timeId: TimeOptionId,
   spots: Spot[],
   kind: "short" | "long",
+  preferAtmosphere: boolean,
 ): WalkCourse | null {
   if (!spots.length) return null;
   const startHour = defaultClockHour(dayPart);
@@ -1005,6 +1015,7 @@ function buildOrdinaryVariant(
     dwellMinutes: dwellFor(spotGuide(spot), timeId),
     clockLabel: "",
   }));
+  const corridors = corridorsMatching(prepared, spots, preferAtmosphere);
   // 駅出発→立ち寄り→駅帰還の周回（同じ道の往復を避ける）
   return finishLoopCourse(
     prepared,
@@ -1015,15 +1026,22 @@ function buildOrdinaryVariant(
     {
       id: `ordinary-${kind}-${prepared.name.replace(/駅$/u, "")}-${dayPart}`,
       title: kind === "short" ? "駅から、小回り" : "駅から、大回り",
-      subtitle:
-        kind === "short"
+      subtitle: preferAtmosphere
+        ? kind === "short"
+          ? `土地の空気を通って駅へ帰る · ${spots.length}か所`
+          : `もう少し先の空気まで通って駅へ帰る · ${spots.length}か所`
+        : kind === "short"
           ? `ぶらりと回って駅へ帰る · ${spots.length}か所`
           : `もう少し遠くまで回って駅へ帰る · ${spots.length}か所`,
-      vibe:
-        kind === "short"
+      vibe: preferAtmosphere
+        ? kind === "short"
+          ? "商店街や街並みなど、点ではない道を歩く"
+          : "川辺や町並みの帯を、少し長く歩く"
+        : kind === "short"
           ? "駅を出て、少し回り道をして、駅へ帰る"
           : "少し先まで回り道をして、駅へ帰る",
     },
+    corridors,
   );
 }
 
@@ -1071,22 +1089,36 @@ export function buildFirstVisitOrdinaryCourses(
     scrubbedPrepared,
     longCap,
   ).filter((s) => spotNearStation(s, scrubbedPrepared));
+  const preferAtmosphere = loadAtmosphereFirst();
+  const allCorridors = corridorsForStation(scrubbedPrepared);
+  const shortOrdered = prioritizeAtmosphereSpots(
+    shortSet,
+    allCorridors,
+    preferAtmosphere,
+  );
+  const longOrdered = prioritizeAtmosphereSpots(
+    longSet,
+    allCorridors,
+    preferAtmosphere,
+  );
   const out: WalkCourse[] = [];
   const short = buildOrdinaryVariant(
     scrubbedPrepared,
     dayPart,
     timeId,
-    shortSet,
+    shortOrdered,
     "short",
+    preferAtmosphere,
   );
   if (short) out.push(short);
-  if (longSet.length > shortSet.length) {
+  if (longOrdered.length > shortOrdered.length) {
     const long = buildOrdinaryVariant(
       scrubbedPrepared,
       dayPart,
       timeId,
-      longSet,
+      longOrdered,
       "long",
+      preferAtmosphere,
     );
     if (long) out.push(long);
   }
@@ -1184,6 +1216,7 @@ function finishLoopCourse(
   stops: CourseStop[],
   extraSpots: Spot[],
   meta: { id: string; title: string; subtitle: string; vibe: string },
+  corridors: AtmosphereCorridor[] = [],
 ): WalkCourse | null {
   if (stops.length === 0) return null;
   const byId = new Map<string, Spot>();
@@ -1230,6 +1263,7 @@ function finishLoopCourse(
     stops: built,
     returnWalkMinutes: returnWalk,
     returnClockLabel,
+    corridors,
   };
 }
 

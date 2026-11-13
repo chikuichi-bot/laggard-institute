@@ -4080,3 +4080,304 @@ a.mishiranu-btn {
   color: var(--mk-mist);
   box-shadow: none;
 }
+
+/* —— アプリ内チュートリアル（orikata 紹介のページ分け） —— */
+.mishiranu-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: color-mix(in srgb, var(--mk-canvas, #f5eedc) 92%, #000 8%);
+  padding: max(0.75rem, env(safe-area-inset-top)) 0.85rem
+    max(0.85rem, env(safe-area-inset-bottom));
+}
+
+.mishiranu-tutorial {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 420px);
+  max-height: 100%;
+  margin: 0 auto;
+  background: var(--mk-paper, #f9f4e6);
+  border: 1px solid var(--mk-line, #e3d5c1);
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(40, 30, 18, 0.12);
+  overflow: hidden;
+}
+
+.mishiranu-tutorial-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 2.4rem;
+  padding: 0.55rem 0.9rem 0;
+}
+
+.mishiranu-tutorial-textbtn {
+  border: 0;
+  background: transparent;
+  color: var(--mk-mist, #827b72);
+  font: inherit;
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+  padding: 0.35rem 0.2rem;
+  cursor: pointer;
+}
+
+.mishiranu-tutorial-slide {
+  flex: 1;
+  overflow: auto;
+  padding: 0.35rem 1.15rem 0.5rem;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 短いページは縦中央。長いページは margin:auto のままスクロール可 */
+.mishiranu-tutorial-slide-inner {
+  margin-block: auto;
+  width: 100%;
+}
+
+.mishiranu-tutorial-kicker {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: var(--mk-warm, #b5493a);
+  font-weight: 600;
+}
+
+.mishiranu-tutorial-brand {
+  margin: 0.4rem 0 0.85rem;
+  text-align: center;
+  font-family: var(--mk-display, "Shippori Mincho", serif);
+  font-size: 1.85rem;
+  letter-spacing: 0.22em;
+  color: var(--mk-ink, #2b2722);
+}
+
+.mishiranu-tutorial-title {
+  margin: 0 0 0.85rem;
+  font-family: var(--mk-display, "Shippori Mincho", serif);
+  font-size: 1.18rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.55;
+  color: var(--mk-ink, #2b2722);
+}
+
+.mishiranu-tutorial-title--center {
+  text-align: center;
+}
+
+.mishiranu-tutorial-quote {
+  margin: 0 0 0.95rem;
+  padding: 0.65rem 0 0.65rem 0.9rem;
+  border-left: 2px solid color-mix(in srgb, var(--mk-warm, #b5493a) 55%, transparent);
+}
+
+.mishiranu-tutorial-quote p {
+  margin: 0;
+  font-family: var(--mk-display, "Shippori Mincho", serif);
+  font-size: 0.95rem;
+  line-height: 1.85;
+  letter-spacing: 0.04em;
+  color: var(--mk-ink, #2b2722);
+}
+
+.mishiranu-tutorial-quote-by {
+  display: block;
+  margin-top: 0.45rem;
+  font-style: normal;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--mk-mist, #827b72);
+  text-align: right;
+}
+
+.mishiranu-tutorial-body {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.9;
+  letter-spacing: 0.04em;
+  color: var(--mk-fog, #5c5348);
+}
+
+.mishiranu-tutorial-body--center {
+  text-align: center;
+}
+
+.mishiranu-tutorial-phone {
+  width: min(100%, 210px);
+  margin: 0.4rem auto 0.9rem;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--mk-line, #e3d5c1);
+  box-shadow: 0 10px 24px rgba(40, 30, 18, 0.1);
+}
+
+.mishiranu-tutorial-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mishiranu-tutorial-steps {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mishiranu-tutorial-steps li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.mishiranu-tutorial-steps span {
+  flex: 0 0 1.6rem;
+  font-family: var(--mk-display, "Shippori Mincho", serif);
+  font-weight: 600;
+  color: var(--mk-warm, #b5493a);
+  letter-spacing: 0.04em;
+}
+
+.mishiranu-tutorial-steps strong {
+  display: block;
+  font-family: var(--mk-display, "Shippori Mincho", serif);
+  font-weight: 600;
+  color: var(--mk-ink, #2b2722);
+  margin-bottom: 0.15rem;
+}
+
+.mishiranu-tutorial-steps p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.7;
+  color: var(--mk-fog, #5c5348);
+}
+
+.mishiranu-tutorial-icon {
+  display: flex;
+  justify-content: center;
+  margin: 0.85rem 0 0.2rem;
+}
+
+.mishiranu-tutorial-icon img {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+}
+
+.mishiranu-tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0 0.2rem;
+}
+
+.mishiranu-tutorial-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  border: 0;
+  padding: 0;
+  background: var(--mk-line, #e3d5c1);
+  cursor: pointer;
+}
+
+.mishiranu-tutorial-dot--on {
+  width: 16px;
+  background: var(--mk-warm, #b5493a);
+}
+
+.mishiranu-tutorial-bar {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.65rem 1rem 1rem;
+}
+
+.mishiranu-tutorial-btn {
+  flex: 1;
+  border-radius: 14px;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 0.85rem 0.6rem;
+  cursor: pointer;
+}
+
+.mishiranu-tutorial-btn--ghost {
+  background: transparent;
+  color: var(--mk-ink, #2b2722);
+  box-shadow: inset 0 0 0 1px var(--mk-line, #e3d5c1);
+}
+
+.mishiranu-tutorial-btn--warm {
+  background: var(--mk-warm, #b5493a);
+  color: var(--mk-paper, #f9f4e6);
+}
+
+/* —— 空気の道 —— */
+.mishiranu-atmosphere-list {
+  margin: 0.75rem 0 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--mk-line, #e3d5c1);
+  border-radius: 12px;
+  background: var(--mk-paper, #f9f4e6);
+}
+
+.mishiranu-atmosphere-kicker {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+  color: var(--mk-warm, #b5493a);
+}
+
+.mishiranu-atmosphere-item {
+  margin: 0 0 0.65rem;
+}
+
+.mishiranu-atmosphere-item:last-child {
+  margin-bottom: 0;
+}
+
+.mishiranu-atmosphere-item strong {
+  display: block;
+  font-family: var(--mk-display, "Shippori Mincho", serif);
+  font-weight: 600;
+  color: var(--mk-ink, #2b2722);
+  margin-bottom: 0.2rem;
+}
+
+.mishiranu-atmosphere-item p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.7;
+  color: var(--mk-fog, #5c5348);
+}
+
+.mishiranu-settings-toggle {
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.mishiranu-settings-toggle input[type="checkbox"] {
+  margin-top: 0.25rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--mk-warm, #b5493a);
+}
+
+.mishiranu-settings-toggle .mishiranu-settings-detail {
+  display: block;
+  margin-top: 0.25rem;
+}
