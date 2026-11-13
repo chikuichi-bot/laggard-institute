@@ -676,8 +676,10 @@ enum CourseBuilder {
             mood: station.mood, radiiKm: station.radiiKm, stationIntro: station.stationIntro,
             areaAbout: station.areaAbout, walkGuide: station.walkGuide,
             historyNotes: station.historyNotes, sightseeingNotes: station.sightseeingNotes,
+            storyNotes: station.storyNotes,
             bikeRental: station.bikeRental, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
+            railHint: station.railHint,
             lat: station.lat, lng: station.lng, spots: spots
         )
     }
@@ -824,8 +826,10 @@ enum CourseBuilder {
             mood: station.mood, radiiKm: station.radiiKm, stationIntro: station.stationIntro,
             areaAbout: station.areaAbout, walkGuide: station.walkGuide,
             historyNotes: station.historyNotes, sightseeingNotes: station.sightseeingNotes,
+            storyNotes: station.storyNotes,
             bikeRental: station.bikeRental, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
+            railHint: station.railHint,
             lat: station.lat, lng: station.lng, spots: spots
         )
     }
@@ -848,8 +852,10 @@ enum CourseBuilder {
             mood: station.mood, radiiKm: station.radiiKm, stationIntro: station.stationIntro,
             areaAbout: station.areaAbout, walkGuide: station.walkGuide,
             historyNotes: station.historyNotes, sightseeingNotes: station.sightseeingNotes,
+            storyNotes: station.storyNotes,
             bikeRental: station.bikeRental, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
+            railHint: station.railHint,
             lat: station.lat, lng: station.lng, spots: spots
         )
     }
@@ -883,8 +889,10 @@ enum CourseBuilder {
                 mood: station.mood, radiiKm: station.radiiKm, stationIntro: station.stationIntro,
                 areaAbout: station.areaAbout, walkGuide: station.walkGuide,
                 historyNotes: station.historyNotes, sightseeingNotes: station.sightseeingNotes,
+            storyNotes: station.storyNotes,
                 bikeRental: station.bikeRental, tourTitle: station.tourTitle,
                 catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
+                railHint: station.railHint,
                 lat: station.lat, lng: station.lng, spots: station.spots + [futaba]
             )
         }
@@ -1060,9 +1068,9 @@ enum CourseBuilder {
         var out: [WalkCourse] = []
         if let short = buildOrdinaryVariant(
             id: "ordinary-short-\(bare)-\(dayPart.rawValue)",
-            title: "ショートで歩く",
-            subtitle: "駅まわりを手短に · \(shortSet.count)か所",
-            vibe: "土地の顔を、遠回りしない順で",
+            title: "駅から、小回り",
+            subtitle: "ぶらりと回って駅へ帰る · \(shortSet.count)か所",
+            vibe: "駅を出て、少し回り道をして、駅へ帰る",
             spots: shortSet,
             station: prepared,
             dayPart: dayPart,
@@ -1075,9 +1083,9 @@ enum CourseBuilder {
         if longSet.count > shortSet.count,
            let long = buildOrdinaryVariant(
             id: "ordinary-long-\(bare)-\(dayPart.rawValue)",
-            title: "ロングで歩く",
-            subtitle: "土地の顔をゆったり · \(longSet.count)か所",
-            vibe: "土地の顔から先まで、道なりにゆったり巡る",
+            title: "駅から、大回り",
+            subtitle: "もう少し遠くまで回って駅へ帰る · \(longSet.count)か所",
+            vibe: "少し先まで回り道をして、駅へ帰る",
             spots: longSet,
             station: prepared,
             dayPart: dayPart,
@@ -1087,9 +1095,9 @@ enum CourseBuilder {
             out.append(long)
         } else if out.isEmpty, let only = buildOrdinaryVariant(
             id: "ordinary-short-\(bare)-\(dayPart.rawValue)",
-            title: "ショートで歩く",
-            subtitle: "駅まわりを手短に",
-            vibe: "土地の顔を、遠回りしない順で",
+            title: "駅から、小回り",
+            subtitle: "ぶらりと回って駅へ帰る",
+            vibe: "駅を出て、少し回り道をして、駅へ帰る",
             spots: ensureMustVisits(near, must: must, station: prepared, cap: near.count),
             station: prepared,
             dayPart: dayPart,

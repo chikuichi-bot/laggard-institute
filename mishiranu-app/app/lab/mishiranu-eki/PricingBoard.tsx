@@ -5,6 +5,7 @@ import {
   BYOK_PRODUCT,
   BYOK_PROVIDERS,
   COIN_PACKS,
+  billingModeLabel,
   isByokConfigured,
   type BillingState,
   type ByokProvider,
@@ -31,6 +32,7 @@ type Props = {
     apiBaseUrl?: string;
     apiModel?: string;
   }) => void;
+  onPreferCoinChange: (preferCoin: boolean) => void;
 };
 
 function Glyph({
@@ -57,15 +59,11 @@ export function PricingBoard({
   onApiKeyChange,
   onProviderChange,
   onOpenAiSettingsChange,
+  onPreferCoinChange,
 }: Props) {
-  const mode = billing.byokUnlocked
-    ? isByokConfigured(billing)
-      ? `自分の API（${billing.byokProvider === "openai" ? "OpenAI互換" : "Gemini"}）`
-      : "買い切り済み · API を設定してください"
-    : "コインで案内を生成";
-
-  const showCostDiagram =
-    !billing.byokUnlocked || !isByokConfigured(billing);
+  const mode = billingModeLabel(billing);
+  const showPathPicker =
+    billing.byokUnlocked && isByokConfigured(billing);
 
   return (
     <div className="mishiranu-pricing" aria-label="料金">
@@ -181,50 +179,97 @@ export function PricingBoard({
         </div>
       </section>
 
-      {showCostDiagram ? (
-        <section className="mishiranu-settings-group" aria-label="コインの中身">
-          <p className="mishiranu-settings-group-label">
-            コイン1枚の中身（方法①の目安）
+      <section className="mishiranu-settings-group" aria-label="コインの中身">
+        <p className="mishiranu-settings-group-label">
+          コイン1枚の中身（方法①の目安）
+        </p>
+        <div className="mishiranu-settings-card mishiranu-pricing-cost-card">
+          <div className="mishiranu-pricing-cost-row">
+            <Glyph>
+              <IconSpark />
+            </Glyph>
+            <div className="mishiranu-pricing-cost-main">
+              <div className="mishiranu-pricing-cost-label">
+                <span>文章をつくる</span>
+                <span>約 ¥2</span>
+              </div>
+              <div
+                className="mishiranu-pricing-cost-bar"
+                style={{ ["--fill" as string]: "12%" }}
+              />
+            </div>
+          </div>
+          <div className="mishiranu-pricing-cost-row">
+            <Glyph>
+              <IconSearch />
+            </Glyph>
+            <div className="mishiranu-pricing-cost-main">
+              <div className="mishiranu-pricing-cost-label">
+                <span>実在を検索で確認</span>
+                <span>約 ¥0〜14</span>
+              </div>
+              <div
+                className="mishiranu-pricing-cost-bar"
+                style={{ ["--fill" as string]: "55%" }}
+              />
+            </div>
+          </div>
+          <div className="mishiranu-pricing-cost-total">
+            <span>原価の合計</span>
+            <strong>約 ¥2〜16</strong>
+          </div>
+          <p className="mishiranu-pricing-note">
+            コイン1枚（約¥30〜40）に、この費用と App Store
+            手数料（15%）が入っています。方法②の費用は、お使いの AI
+            の料金表に従います。
           </p>
-          <div className="mishiranu-settings-card mishiranu-pricing-cost-card">
-            <div className="mishiranu-pricing-cost-row">
-              <Glyph>
-                <IconSpark />
-              </Glyph>
-              <div className="mishiranu-pricing-cost-main">
-                <div className="mishiranu-pricing-cost-label">
-                  <span>文章をつくる</span>
-                  <span>約 ¥2</span>
-                </div>
-                <div
-                  className="mishiranu-pricing-cost-bar"
-                  style={{ ["--fill" as string]: "12%" }}
-                />
-              </div>
-            </div>
-            <div className="mishiranu-pricing-cost-row">
-              <Glyph>
-                <IconSearch />
-              </Glyph>
-              <div className="mishiranu-pricing-cost-main">
-                <div className="mishiranu-pricing-cost-label">
-                  <span>実在を検索で確認</span>
-                  <span>約 ¥0〜14</span>
-                </div>
-                <div
-                  className="mishiranu-pricing-cost-bar"
-                  style={{ ["--fill" as string]: "55%" }}
-                />
-              </div>
-            </div>
-            <div className="mishiranu-pricing-cost-total">
-              <span>原価の合計</span>
-              <strong>約 ¥2〜16</strong>
-            </div>
+        </div>
+      </section>
+
+      {showPathPicker ? (
+        <section className="mishiranu-settings-group" aria-label="案内のつくり方">
+          <p className="mishiranu-settings-group-label">案内のつくり方</p>
+          <div className="mishiranu-settings-card">
+            <button
+              type="button"
+              className={
+                !billing.preferCoinOverByok
+                  ? "mishiranu-pricing-pack mishiranu-pricing-pack--selected"
+                  : "mishiranu-pricing-pack"
+              }
+              aria-pressed={!billing.preferCoinOverByok}
+              onClick={() => onPreferCoinChange(false)}
+            >
+              <span className="mishiranu-pricing-pack-main">
+                <span className="mishiranu-pricing-pack-label">自分の API</span>
+                <span className="mishiranu-pricing-pack-sub">
+                  コイン不要 ·{" "}
+                  {billing.byokProvider === "openai" ? "OpenAI互換" : "Gemini"}
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={
+                billing.preferCoinOverByok
+                  ? "mishiranu-pricing-pack mishiranu-pricing-pack--selected"
+                  : "mishiranu-pricing-pack"
+              }
+              aria-pressed={billing.preferCoinOverByok}
+              onClick={() => onPreferCoinChange(true)}
+            >
+              <span className="mishiranu-pricing-pack-main">
+                <span className="mishiranu-pricing-pack-label">
+                  コイン（用意した AI）
+                </span>
+                <span className="mishiranu-pricing-pack-sub">
+                  1駅 = 1枚 · 残り {billing.coins} 枚
+                </span>
+              </span>
+            </button>
             <p className="mishiranu-pricing-note">
-              コイン1枚（約¥30〜40）に、この費用と App Store
-              手数料（15%）が入っています。方法②の費用は、お使いの AI
-              の料金表に従います。
+              買い切り後もコインで案内できます。API
+              の上限に当たったときなどに切り替えてください。
             </p>
           </div>
         </section>
@@ -273,7 +318,7 @@ export function PricingBoard({
             </Glyph>
             <p className="mishiranu-pricing-note">
               買い切り（{formatYen(BYOK_PRODUCT.priceYen)}）後、Gemini や OpenAI
-              互換など自分の AI で作ります。コインは使いません。キーは端末だけに置き、サーバーには保存しません。
+              互換など自分の AI で作れます。コインもそのまま使えます。キーは端末だけに置き、サーバーには保存しません。
             </p>
           </div>
           {!billing.byokUnlocked ? (

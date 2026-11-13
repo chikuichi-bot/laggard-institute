@@ -718,8 +718,12 @@ enum SpotLocator {
             }
             guard allowApplePins else { continue }
 
+            let bare = SavedStationStore.bareName(stationName)
+            var queries = [ai.name, "\(ai.name) \(bare)"]
+            queries.append(contentsOf: landscapeFallbackQueries(for: ai.name, stationBare: bare))
+
             let hit = await bestMatch(
-                queries: [ai.name, "\(ai.name) \(SavedStationStore.bareName(stationName))"],
+                queries: queries,
                 want: ai.name,
                 around: center,
                 maxKm: appleMapMaxKm,
@@ -735,8 +739,21 @@ enum SpotLocator {
                 continue
             }
             // Apple にもロックにも無い → 文案があってもピンは出さない（川端に仮置きしない）
+            // 案内タブには残り、シートで「位置未確定」とマップ検索へ誘導する。
         }
         return result
+    }
+
+    /// 固有店名が外れたとき用。川・橋・公園・神社など広域ランドマークだけを足す。
+    private static func landscapeFallbackQueries(for name: String, stationBare: String) -> [String] {
+        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard n.count >= 2 else { return [] }
+        let kinds = ["川", "用水", "橋", "公園", "神社", "神宮", "寺", "堤防", "緑地", "遊歩道"]
+        guard kinds.contains(where: { n.contains($0) }) else { return [] }
+        return [
+            "\(n) \(stationBare)",
+            "\(stationBare) \(n)",
+        ]
     }
 
     // MARK: - Matching helpers (station center)
@@ -870,7 +887,13 @@ enum NameMatch {
             return 100
         }
         if x.contains(y) || y.contains(x) {
-            let raw = 70 + 25 * Double(min(x.count, y.count)) / Double(max(x.count, y.count))
+            let shorter = min(x.count, y.count)
+            let longer = max(x.count, y.count)
+            // 「淀」⊂「淀屋橋」のような短い包含は駅の取り違え。高得点にしない。
+            if shorter * 2 < longer {
+                return aSta != bSta ? 28 : 42
+            }
+            let raw = 70 + 25 * Double(shorter) / Double(longer)
             if aSta != bSta { return min(raw, 70) }
             return raw
         }
@@ -941,7 +964,9 @@ extension Station {
             id: id, name: name, nameReading: nameReading, line: line, prefecture: prefecture, region: region,
             mood: mood, radiiKm: radiiKm, stationIntro: stationIntro, areaAbout: areaAbout,
             walkGuide: walkGuide, historyNotes: historyNotes, sightseeingNotes: sightseeingNotes,
+            storyNotes: storyNotes,
             bikeRental: bikeRental, tourTitle: tourTitle, catchCopy: catchCopy, emptyCopy: emptyCopy,
+            railHint: railHint,
             lat: center.latitude, lng: center.longitude, spots: spots
         )
     }

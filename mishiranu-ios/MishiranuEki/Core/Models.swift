@@ -223,26 +223,32 @@ struct Station: Codable, Hashable, Identifiable {
     let walkGuide: String?
     let historyNotes: [HistoryNote]
     let sightseeingNotes: [HistoryNote]
+    /// ドラマ・映画・本の撮影地／舞台（徒歩圏で確かなものだけ）。無い駅は空。
+    let storyNotes: [HistoryNote]
     let bikeRental: BikeRental
     let tourTitle: String
     let catchCopy: String
     let emptyCopy: EmptyCopy?
+    /// 運行の目安（任意。確信があるときだけ AI が付ける）
+    let railHint: String?
     let lat: Double
     let lng: Double
     let spots: [Spot]
 
     enum CodingKeys: String, CodingKey {
         case id, name, nameReading, line, prefecture, region, mood, radiiKm
-        case stationIntro, areaAbout, walkGuide, historyNotes, sightseeingNotes
-        case bikeRental, tourTitle, catchCopy, emptyCopy, lat, lng, spots
+        case stationIntro, areaAbout, walkGuide, historyNotes, sightseeingNotes, storyNotes
+        case bikeRental, tourTitle, catchCopy, emptyCopy, railHint, lat, lng, spots
     }
 
     init(
         id: String, name: String, nameReading: String?, line: String, prefecture: String,
         region: String, mood: StationMood, radiiKm: [Double], stationIntro: String?,
         areaAbout: String?, walkGuide: String?, historyNotes: [HistoryNote],
-        sightseeingNotes: [HistoryNote], bikeRental: BikeRental, tourTitle: String,
-        catchCopy: String, emptyCopy: EmptyCopy?, lat: Double, lng: Double, spots: [Spot]
+        sightseeingNotes: [HistoryNote], storyNotes: [HistoryNote] = [],
+        bikeRental: BikeRental, tourTitle: String,
+        catchCopy: String, emptyCopy: EmptyCopy?, railHint: String? = nil,
+        lat: Double, lng: Double, spots: [Spot]
     ) {
         self.id = id
         self.name = name
@@ -257,10 +263,12 @@ struct Station: Codable, Hashable, Identifiable {
         self.walkGuide = walkGuide
         self.historyNotes = historyNotes
         self.sightseeingNotes = sightseeingNotes
+        self.storyNotes = storyNotes
         self.bikeRental = bikeRental
         self.tourTitle = tourTitle
         self.catchCopy = catchCopy
         self.emptyCopy = emptyCopy
+        self.railHint = railHint
         self.lat = lat
         self.lng = lng
         self.spots = spots
@@ -282,11 +290,13 @@ struct Station: Codable, Hashable, Identifiable {
         walkGuide = try c.decodeIfPresent(String.self, forKey: .walkGuide)
         historyNotes = try c.decodeIfPresent([HistoryNote].self, forKey: .historyNotes) ?? []
         sightseeingNotes = try c.decodeIfPresent([HistoryNote].self, forKey: .sightseeingNotes) ?? []
+        storyNotes = try c.decodeIfPresent([HistoryNote].self, forKey: .storyNotes) ?? []
         bikeRental = try c.decodeIfPresent(BikeRental.self, forKey: .bikeRental)
             ?? BikeRental(available: false, summary: "レンタサイクル情報は現地でもご確認ください。", places: nil)
         tourTitle = try c.decodeIfPresent(String.self, forKey: .tourTitle) ?? "\(name)の徒歩圏を、ゆるく歩く"
         catchCopy = try c.decodeIfPresent(String.self, forKey: .catchCopy) ?? "降りた場所から、予定のない寄り道を。"
         emptyCopy = try c.decodeIfPresent(EmptyCopy.self, forKey: .emptyCopy)
+        railHint = try c.decodeIfPresent(String.self, forKey: .railHint)
         lat = try c.decode(Double.self, forKey: .lat)
         lng = try c.decode(Double.self, forKey: .lng)
         spots = try c.decodeIfPresent([Spot].self, forKey: .spots) ?? []

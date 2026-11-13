@@ -1,4 +1,5 @@
 import AVFoundation
+import MediaPlayer
 import Observation
 import UIKit
 
@@ -8,6 +9,7 @@ enum PlaceScriptSection: String, CaseIterable, Identifiable {
     case intro
     case history
     case sight
+    case story
     case walk
 
     var id: String { rawValue }
@@ -15,16 +17,26 @@ enum PlaceScriptSection: String, CaseIterable, Identifiable {
     var listenLabel: String {
         switch self {
         case .all: return "土地案内を聞く"
-        case .intro: return "この項目を聞く"
-        case .history: return "この項目を聞く"
-        case .sight: return "この項目を聞く"
-        case .walk: return "この項目を聞く"
+        case .intro, .history, .sight, .story, .walk: return "この項目を聞く"
+        }
+    }
+
+    var nowPlayingSubtitle: String {
+        switch self {
+        case .all: return "土地案内"
+        case .intro: return "この駅のこと"
+        case .history: return "このエリアのこと"
+        case .sight: return "目の置きどころ"
+        case .story: return "物語のゆかり"
+        case .walk: return "駅から小回り"
         }
     }
 }
 
-/// 土地ページの文章を、電車のイヤホン向けに読み上げる。
+/// 土地の文章を読み上げる（電車の中でも、散策中でも、画面を消しても）。
 /// 「すべて」は文単位で進め、中断しても同じ駅なら続きから再開できる。
+/// タブ切替では止めない（AppModel が保持する）。駅が変わった／トップに戻ったときだけ止める。
+/// バックグラウンド再生には Info.plist の UIBackgroundModes=audio が必要。
 @MainActor
 @Observable
 final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
@@ -34,9 +46,13 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
 
     private let synthesizer = AVSpeechSynthesizer()
     private var activeStationId: String?
+    private var activeStationTitle = "見知らぬ駅"
+    /// 発話直前の言い間違い対策用（表示文は変えず、ここだけ使う）。
+    private var activeSpeakStation: Station?
     private var chunks: [String] = []
     private var chunkIndex = 0
     private var scriptDigest = ""
+    private var didSetupRemoteCommands = false
 
     private static let bookmarkKey = "mishiranu.placeNarrator.bookmark.v1"
 
@@ -50,6 +66,7 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
     override init() {
         super.init()
         synthesizer.delegate = self
+        setupRemoteCommandsIfNeeded()
         NotificationCenter.default.addObserver(
             forName: UIApplication.willResignActiveNotification,
             object: nil,
@@ -57,6 +74,7 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.persistBookmarkIfNeeded()
+                self?.publishNowPlaying()
             }
         }
     }
@@ -86,6 +104,7 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
                 script(for: station, section: .intro),
                 script(for: station, section: .history),
                 script(for: station, section: .sight),
+                script(for: station, section: .story),
                 script(for: station, section: .walk),
             ]
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -116,8 +135,18 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         case .sight:
             var parts: [String] = []
             if !station.sightseeingNotes.isEmpty {
-                parts.append("観光案内メモ。")
+                parts.append("目の置きどころ。")
                 for note in station.sightseeingNotes {
+                    parts.append(note.title)
+                    parts.append(note.body)
+                }
+            }
+            return join(parts)
+        case .story:
+            var parts: [String] = []
+            if !station.storyNotes.isEmpty {
+                parts.append("物語のゆかり。")
+                for note in station.storyNotes {
                     parts.append(note.title)
                     parts.append(note.body)
                 }
@@ -125,7 +154,7 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
             return join(parts)
         case .walk:
             guard let walk = station.walkGuide, !walk.isEmpty else { return "" }
-            return join(["歩き方の目安。", walk])
+            return join(["駅から小回り。", walk])
         }
     }
 
@@ -212,12 +241,17 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         }
 
         activeStationId = station.id
+        activeSpeakStation = station
+        activeStationTitle = station.indexStationLabel.isEmpty
+            ? station.name
+            : "\(station.indexStationLabel)駅"
         activeSection = section
         chunks = parts
         chunkIndex = start
         scriptDigest = digest
         prepareAudioSession()
         persistBookmarkIfNeeded()
+        publishNowPlaying()
         speakCurrentChunk()
     }
 
@@ -226,16 +260,28 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
             finishPlayback(clearProgress: true)
             return
         }
-        let utterance = AVSpeechUtterance(string: chunks[chunkIndex])
+        let raw = chunks[chunkIndex]
+        let spoken: String = {
+            if let station = activeSpeakStation {
+                return SpeechSpeakable.prepare(raw, station: station)
+            }
+            return SpeechSpeakable.prepare(
+                raw,
+                stationName: "",
+                stationReading: nil
+            )
+        }()
+        let utterance = AVSpeechUtterance(string: spoken.isEmpty ? raw : spoken)
         utterance.voice = Self.preferredJapaneseVoice()
-        // 電車の中でも聞き取りやすいよう、少しゆっくり。
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.92
+        // 少しゆっくり読むと、固有名の食い違いが減る。
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.84
         utterance.pitchMultiplier = 1.0
-        utterance.preUtteranceDelay = chunkIndex == 0 ? 0.15 : 0.05
-        utterance.postUtteranceDelay = 0.12
+        utterance.preUtteranceDelay = chunkIndex == 0 ? 0.18 : 0.08
+        utterance.postUtteranceDelay = 0.16
 
         isSpeaking = true
         isPaused = false
+        publishNowPlaying()
         synthesizer.speak(utterance)
     }
 
@@ -247,8 +293,10 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         isSpeaking = false
         isPaused = false
         activeStationId = nil
+        activeSpeakStation = nil
         activeSection = nil
         chunks = []
+        clearNowPlaying()
         if deactivateAudio {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
@@ -259,11 +307,81 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         isSpeaking = false
         isPaused = false
         activeStationId = nil
+        activeSpeakStation = nil
         activeSection = nil
         chunks = []
         chunkIndex = 0
         scriptDigest = ""
+        clearNowPlaying()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func setupRemoteCommandsIfNeeded() {
+        guard !didSetupRemoteCommands else { return }
+        didSetupRemoteCommands = true
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.isEnabled = true
+        center.pauseCommand.isEnabled = true
+        center.stopCommand.isEnabled = true
+        center.togglePlayPauseCommand.isEnabled = true
+        center.nextTrackCommand.isEnabled = false
+        center.previousTrackCommand.isEnabled = false
+
+        center.playCommand.addTarget { [weak self] _ in
+            guard let self else { return .commandFailed }
+            return self.handleRemoteResume()
+        }
+        center.pauseCommand.addTarget { [weak self] _ in
+            guard let self else { return .commandFailed }
+            return self.handleRemotePauseOrStop()
+        }
+        center.stopCommand.addTarget { [weak self] _ in
+            guard let self else { return .commandFailed }
+            Task { @MainActor in self.stop() }
+            return .success
+        }
+        center.togglePlayPauseCommand.addTarget { [weak self] _ in
+            guard let self else { return .commandFailed }
+            if self.isSpeaking {
+                return self.handleRemotePauseOrStop()
+            }
+            return self.handleRemoteResume()
+        }
+    }
+
+    private func handleRemotePauseOrStop() -> MPRemoteCommandHandlerStatus {
+        // 散策中は「止める」が主。続きはアプリ内の「続きから聞く」で再開。
+        Task { @MainActor in self.stop() }
+        return .success
+    }
+
+    private func handleRemoteResume() -> MPRemoteCommandHandlerStatus {
+        // ロック画面からの再開は、途中ブックマークがあるときアプリ内で「続きから」を押す想定。
+        // ここでは止めず、再生中なら成功扱い。
+        .success
+    }
+
+    private func publishNowPlaying() {
+        guard isSpeaking || isPaused else {
+            clearNowPlaying()
+            return
+        }
+        var info: [String: Any] = [
+            MPMediaItemPropertyTitle: activeStationTitle,
+            MPMediaItemPropertyArtist: "見知らぬ駅",
+            MPMediaItemPropertyAlbumTitle: activeSection?.nowPlayingSubtitle ?? "土地案内",
+            MPNowPlayingInfoPropertyPlaybackRate: isSpeaking ? 1.0 : 0.0,
+        ]
+        if !chunks.isEmpty {
+            info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = Double(chunkIndex)
+            info[MPMediaItemPropertyPlaybackDuration] = Double(max(chunks.count, 1))
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        UIApplication.shared.beginReceivingRemoteControlEvents()
+    }
+
+    private func clearNowPlaying() {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
     private func persistBookmarkIfNeeded() {
@@ -295,7 +413,8 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
     private func prepareAudioSession() {
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            // 背面・ロック中も続ける。散策ガイダンス用の再生セッション。
+            try session.setCategory(.playback, mode: .spokenAudio, options: [])
             try session.setActive(true)
         } catch {
             // 読み上げ自体は続行。イヤホン接続時はシステムがルートを選ぶ。
@@ -304,8 +423,15 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
 
     private static func preferredJapaneseVoice() -> AVSpeechSynthesisVoice? {
         let voices = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("ja") }
+        // 高品質ボイスほど固有名の読みが安定しやすい。
+        if #available(iOS 17.0, *) {
+            if let premium = voices.first(where: { $0.quality == .premium }) {
+                return premium
+            }
+        }
         let enhanced = voices.first { $0.quality == .enhanced }
-        return enhanced ?? AVSpeechSynthesisVoice(language: "ja-JP") ?? voices.first
+        let kyoko = voices.first { $0.identifier.lowercased().contains("kyoko") }
+        return enhanced ?? kyoko ?? AVSpeechSynthesisVoice(language: "ja-JP") ?? voices.first
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {

@@ -28,19 +28,35 @@ enum StationAPIError: Error, LocalizedError {
 enum StationAPIClient {
     private static let deviceToken = "mishiranu-ios-lagado-2026"
 
-    /// DEBUG: まず Mac の開発サーバー（`npm run dev` = 3010）。Release: Info の URL → 公開 Cursor App。
-    static var baseURL: URL {
-        #if DEBUG
-        if let url = URL(string: "http://192.168.0.8:3010") {
-            return url
-        }
-        #endif
+    /// Release / 最終フォールバックの公開 URL。
+    static var productionURL: URL {
         if let raw = Bundle.main.object(forInfoDictionaryKey: "MishiranuAPIBaseURL") as? String,
            let url = URL(string: raw), !raw.isEmpty {
             return url
         }
         return URL(string: "https://mishiranu-eki.apps.grok.bot")!
     }
+
+    /// DEBUG: Mac の `npm run dev`（3010）。IP は DHCP で変わるので複数試し、ダメなら本番へ。
+    static var baseURL: URL {
+        #if DEBUG
+        return debugBaseCandidates().first ?? productionURL
+        #else
+        return productionURL
+        #endif
+    }
+
+    #if DEBUG
+    private static func debugBaseCandidates() -> [URL] {
+        // いまの Mac LAN → 以前の固定 → 本番。届かない先は短時間で諦める。
+        [
+            "http://192.168.0.5:3010",
+            "http://192.168.0.8:3010",
+            productionURL.absoluteString,
+        ]
+        .compactMap(URL.init(string:))
+    }
+    #endif
 
     /// - Parameter userAi: 買い切り BYOK のときだけ渡す。ホストの Gemini は使わない。
     /// - Parameter forceRefresh: true なら共有キャッシュを無視して作り直す。
@@ -52,13 +68,60 @@ enum StationAPIClient {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw StationAPIError.emptyName }
 
-        var request = URLRequest(url: baseURL.appendingPathComponent("api/mishiranu/station"))
+        let base = await resolveBaseURL()
+        return try await lookupStationOnce(
+            name: trimmed,
+            base: base,
+            userAi: userAi,
+            forceRefresh: forceRefresh,
+            timeout: 120
+        )
+    }
+
+    /// 死んだ LAN は 2 秒で捨て、生きている先だけ本生成（最大120秒）に使う。
+    private static func resolveBaseURL() async -> URL {
+        #if DEBUG
+        for candidate in debugBaseCandidates() {
+            let isLan = candidate.host?.hasPrefix("192.168.") == true
+                || candidate.host == "localhost"
+                || candidate.host == "127.0.0.1"
+            if !isLan {
+                return candidate
+            }
+            if await isReachable(candidate, timeout: 2) {
+                return candidate
+            }
+        }
+        #endif
+        return productionURL
+    }
+
+    private static func isReachable(_ base: URL, timeout: TimeInterval) async -> Bool {
+        var request = URLRequest(url: base)
+        request.httpMethod = "GET"
+        request.timeoutInterval = timeout
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            return (200 ... 499).contains(status)
+        } catch {
+            return false
+        }
+    }
+
+    private static func lookupStationOnce(
+        name: String,
+        base: URL,
+        userAi: BillingStore.UserAiPayload?,
+        forceRefresh: Bool,
+        timeout: TimeInterval
+    ) async throws -> Station {
+        var request = URLRequest(url: base.appendingPathComponent("api/mishiranu/station"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
-        // 接続失敗は早く諦める。応答待ちだけ長く取る（案内生成は時間がかかることがある）。
-        request.timeoutInterval = 120
-        var payload: [String: Any] = ["name": trimmed]
+        request.timeoutInterval = timeout
+        var payload: [String: Any] = ["name": name]
         if forceRefresh {
             payload["forceRefresh"] = true
         }
@@ -117,9 +180,12 @@ enum StationAPIClient {
             return "案内サーバー側の設定がまだです。しばらくしてから、または別の駅名でどうぞ。"
         case "not_a_station":
             return "鉄道の駅として確認できませんでした。別の駅名で試してください。"
-        case "unauthorized":
-            return "案内サーバーへの接続が拒否されました。"
+        case "unauthorized", "sign_in_required":
+            return "案内サーバーへの接続が拒否されました。Macの開発サーバー（3010）が同じWi‑Fiで起動しているか確認してください。"
         default:
+            if status == 401 || status == 403 {
+                return "案内サーバーへの接続が拒否されました。Macの開発サーバー（3010）が同じWi‑Fiで起動しているか確認してください。"
+            }
             if status >= 500 {
                 return "案内の応答が途切れました。もう一度どうぞ。"
             }
@@ -145,7 +211,12 @@ enum StationNormalizer {
         let spots: [Spot] = spotsRaw.enumerated().compactMap { index, spot in
             Self.spot(from: spot, index: index, stationLat: lat, stationLng: lng)
         }
-        guard !spots.isEmpty else { throw StationAPIError.decode }
+        let landChars =
+            string(raw["areaAbout"]).count
+            + string(raw["stationIntro"]).count
+            + string(raw["walkGuide"]).count
+        // 真の空白駅は店スポット0でも土地文があれば通す
+        guard !spots.isEmpty || landChars >= 80 else { throw StationAPIError.decode }
 
         let moodRaw = string(raw["mood"])
         let mood: StationMood = moodRaw == "empty" ? .empty : .story
@@ -166,6 +237,8 @@ enum StationNormalizer {
             )
         }()
 
+        let railHint = sanitizeRailHint(optionalString(raw["railHint"]))
+
         _ = sourceHint
         return Station(
             id: id,
@@ -181,10 +254,12 @@ enum StationNormalizer {
             walkGuide: optionalString(raw["walkGuide"]),
             historyNotes: notes(raw["historyNotes"]),
             sightseeingNotes: notes(raw["sightseeingNotes"]),
+            storyNotes: notes(raw["storyNotes"]),
             bikeRental: bike(raw["bikeRental"]),
             tourTitle: string(raw["tourTitle"], fallback: "\(name)の徒歩圏を、ゆるく歩く"),
             catchCopy: string(raw["catchCopy"], fallback: "降りた場所から、予定のない寄り道を。"),
             emptyCopy: empty,
+            railHint: railHint,
             lat: lat,
             lng: lng,
             spots: spots
@@ -290,5 +365,22 @@ enum StationNormalizer {
         if let d = any as? Double { return d }
         if let i = any as? Int { return Double(i) }
         return fallback
+    }
+
+    /// 運行目安。短い・確信っぽいものだけ。
+    private static func sanitizeRailHint(_ raw: String?) -> String? {
+        guard var t = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty else {
+            return nil
+        }
+        t = t.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        guard t.count >= 6, t.count <= 48 else { return nil }
+        if t.range(of: "http|www\\.|予約|ランキング|必見|絶対", options: .regularExpression) != nil {
+            return nil
+        }
+        let ok = t.range(
+            of: "本数|時刻|ローカル|近郊|都市|閑散|終電|帰る|運行|単線|電鉄|電車",
+            options: .regularExpression
+        ) != nil
+        return ok ? t : nil
     }
 }

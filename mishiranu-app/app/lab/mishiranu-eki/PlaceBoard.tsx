@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { StationSeed } from "@/data/mishiranu-stations";
 import {
   stationAboutTitle,
@@ -26,9 +26,9 @@ function readingLines(text?: string | null): string[] {
   return lines;
 }
 
-type PlaceSpeakSection = "all" | "intro" | "history" | "sight" | "walk";
+export type PlaceSpeakSection = "all" | "intro" | "history" | "sight" | "story" | "walk";
 
-function placeScript(
+export function placeScript(
   station: StationSeed,
   section: PlaceSpeakSection = "all",
 ): string {
@@ -51,8 +51,18 @@ function placeScript(
   if (section === "sight") {
     const parts: string[] = [];
     if ((station.sightseeingNotes ?? []).length > 0) {
-      parts.push("観光案内メモ。");
+      parts.push("目の置きどころ。");
       for (const note of station.sightseeingNotes ?? []) {
+        parts.push(note.title, note.body);
+      }
+    }
+    return join(parts);
+  }
+  if (section === "story") {
+    const parts: string[] = [];
+    if ((station.storyNotes ?? []).length > 0) {
+      parts.push("物語のゆかり。");
+      for (const note of station.storyNotes ?? []) {
         parts.push(note.title, note.body);
       }
     }
@@ -60,7 +70,7 @@ function placeScript(
   }
   if (section === "walk") {
     return station.walkGuide
-      ? join(["歩き方の目安。", station.walkGuide])
+      ? join(["駅から小回り。", station.walkGuide])
       : "";
   }
   return join([
@@ -68,6 +78,7 @@ function placeScript(
     placeScript(station, "intro"),
     placeScript(station, "history"),
     placeScript(station, "sight"),
+    placeScript(station, "story"),
     placeScript(station, "walk"),
   ]);
 }
@@ -75,11 +86,16 @@ function placeScript(
 type Props = {
   station: StationSeed;
   tourTitle: string;
+  speakingSection: PlaceSpeakSection | null;
+  onToggleSpeak: (section: PlaceSpeakSection) => void;
 };
 
-export function PlaceBoard({ station, tourTitle }: Props) {
-  const [speakingSection, setSpeakingSection] =
-    useState<PlaceSpeakSection | null>(null);
+export function PlaceBoard({
+  station,
+  tourTitle,
+  speakingSection,
+  onToggleSpeak,
+}: Props) {
   const intro = useMemo(() => readingLines(station.stationIntro), [station.stationIntro]);
   const walk = useMemo(() => readingLines(station.walkGuide), [station.walkGuide]);
   const area = useMemo(() => readingLines(station.areaAbout), [station.areaAbout]);
@@ -88,45 +104,13 @@ export function PlaceBoard({ station, tourTitle }: Props) {
   const indexStationLabel = stationBaseName(station.name);
   const history = station.historyNotes ?? [];
   const sight = station.sightseeingNotes ?? [];
+  const story = station.storyNotes ?? [];
   const hasIntro = intro.length > 0;
   const hasWalk = walk.length > 0;
   const hasHistory = area.length > 0 || history.length > 0;
   const hasSight = sight.length > 0;
+  const hasStory = story.length > 0;
   void tourTitle;
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    setSpeakingSection(null);
-  }, [station.id]);
-
-  function toggleSpeak(section: PlaceSpeakSection) {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    if (speakingSection === section) {
-      window.speechSynthesis.cancel();
-      setSpeakingSection(null);
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const text = placeScript(station, section);
-    if (!text) return;
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "ja-JP";
-    utter.rate = 0.95;
-    utter.onend = () => setSpeakingSection(null);
-    utter.onerror = () => setSpeakingSection(null);
-    setSpeakingSection(section);
-    window.speechSynthesis.speak(utter);
-  }
 
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -138,7 +122,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
       <button
         type="button"
         className={`mishiranu-place-section-listen${on ? " mishiranu-place-section-listen--on" : ""}`}
-        onClick={() => toggleSpeak(section)}
+        onClick={() => onToggleSpeak(section)}
         aria-pressed={on}
         aria-label={on ? `${label}の読み上げを止める` : `${label}を聞く`}
       >
@@ -153,7 +137,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
         <button
           type="button"
           className={`mishiranu-place-listen${speakingSection === "all" ? " mishiranu-place-listen--on" : ""}`}
-          onClick={() => toggleSpeak("all")}
+          onClick={() => onToggleSpeak("all")}
           aria-pressed={speakingSection === "all"}
         >
           <span className="mishiranu-place-listen-copy">
@@ -164,8 +148,8 @@ export function PlaceBoard({ station, tourTitle }: Props) {
             </strong>
             <small>
               {speakingSection === "all"
-                ? "もう一度押すと止まります"
-                : "項目ごとにも聞けます · 駅に着く前に、イヤホンで"}
+                ? "歩くタブへ移っても続きが聴けます"
+                : "歴史と今を聴きながら、小回り・大回りできます"}
             </small>
           </span>
         </button>
@@ -173,12 +157,21 @@ export function PlaceBoard({ station, tourTitle }: Props) {
         <div className="mishiranu-place-index" role="navigation" aria-label="この案内の目次">
           {(
             [
-              ["place-intro", "01", indexStationLabel, hasIntro, "intro"],
-              ["place-history", "02", "このエリア", hasHistory, "history"],
-              ["place-sight", "03", "観光案内", hasSight, "sight"],
-              ["place-walk", "04", "歩き方", hasWalk, "walk"],
-            ] as const
-          ).map(([id, num, label, on, section]) => (
+              hasIntro &&
+                (["place-intro", indexStationLabel, "intro"] as const),
+              hasHistory &&
+                (["place-history", "このエリア", "history"] as const),
+              hasSight &&
+                (["place-sight", "目の置きどころ", "sight"] as const),
+              hasStory &&
+                (["place-story", "物語のゆかり", "story"] as const),
+              hasWalk && (["place-walk", "歩き方", "walk"] as const),
+            ].filter(Boolean) as Array<
+              readonly [string, string, PlaceSpeakSection]
+            >
+          ).map(([id, label, section], index) => {
+            const num = String(index + 1).padStart(2, "0");
+            return (
             <div
               key={id}
               className={`mishiranu-place-index-item-wrap${speakingSection === section ? " mishiranu-place-index-item-wrap--on" : ""}`}
@@ -186,8 +179,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
               <button
                 type="button"
                 className="mishiranu-place-index-item"
-                disabled={!on}
-                onClick={() => on && scrollTo(id)}
+                onClick={() => scrollTo(id)}
               >
                 <b>{num}</b>
                 {label}
@@ -195,8 +187,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
               <button
                 type="button"
                 className="mishiranu-place-index-listen"
-                disabled={!on}
-                onClick={() => on && toggleSpeak(section)}
+                onClick={() => onToggleSpeak(section)}
                 aria-label={
                   speakingSection === section
                     ? `${label}の読み上げを止める`
@@ -206,7 +197,8 @@ export function PlaceBoard({ station, tourTitle }: Props) {
                 {speakingSection === section ? "止" : "聴"}
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {hasIntro ? (
@@ -224,6 +216,9 @@ export function PlaceBoard({ station, tourTitle }: Props) {
             {intro.map((line) => (
               <p key={line}>{line}</p>
             ))}
+            {station.railHint ? (
+              <p className="mishiranu-place-rail-hint">{station.railHint}</p>
+            ) : null}
           </section>
         ) : null}
 
@@ -259,11 +254,33 @@ export function PlaceBoard({ station, tourTitle }: Props) {
             <div className="mishiranu-place-panel-head">
               <span>03</span>
               <IconBinoculars />
-              <h3>観光案内メモ</h3>
-              {sectionListenButton("sight", "観光案内メモ")}
+              <h3>目の置きどころ</h3>
+              {sectionListenButton("sight", "目の置きどころ")}
             </div>
             <ol className="mishiranu-place-notes">
               {sight.map((note, i) => (
+                <li key={note.title}>
+                  <b>{String(i + 1).padStart(2, "0")}</b>
+                  <div>
+                    <h4>{note.title}</h4>
+                    <p>{note.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
+
+        {hasStory ? (
+          <section id="place-story" className="mishiranu-place-panel">
+            <div className="mishiranu-place-panel-head">
+              <span>04</span>
+              <IconBinoculars />
+              <h3>物語のゆかり</h3>
+              {sectionListenButton("story", "物語のゆかり")}
+            </div>
+            <ol className="mishiranu-place-notes">
+              {story.map((note, i) => (
                 <li key={note.title}>
                   <b>{String(i + 1).padStart(2, "0")}</b>
                   <div>
@@ -282,10 +299,10 @@ export function PlaceBoard({ station, tourTitle }: Props) {
             className="mishiranu-place-panel mishiranu-place-panel--moss"
           >
             <div className="mishiranu-place-panel-head">
-              <span>04</span>
+              <span>{hasStory ? "05" : "04"}</span>
               <IconWalk />
-              <h3>歩き方の目安</h3>
-              {sectionListenButton("walk", "歩き方の目安")}
+              <h3>駅から小回り</h3>
+              {sectionListenButton("walk", "駅から小回り")}
             </div>
             {walk.map((line) => (
               <p key={line}>{line}</p>
@@ -293,7 +310,7 @@ export function PlaceBoard({ station, tourTitle }: Props) {
           </section>
         ) : null}
 
-        {!hasIntro && !hasWalk && !hasHistory && !hasSight ? (
+        {!hasIntro && !hasWalk && !hasHistory && !hasSight && !hasStory ? (
           <p className="mishiranu-note">この駅の土地メモはまだ少なめです。</p>
         ) : null}
       </div>

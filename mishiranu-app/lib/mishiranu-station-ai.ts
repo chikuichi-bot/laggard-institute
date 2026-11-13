@@ -109,6 +109,15 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
+const WANDER_TONE_RULES = [
+  "【文体】観光案内ではなく、用事のない人がブラブラ歩いて駅へ帰るときの『目の置きどころ』を書く。",
+  "- 地形・川の流れ・坂の傾き・橋・町の音・いまの人の流れを描写する。店も『目に入るもの』として書けばよい。",
+  "- 禁止語: 「〜しましょう」「〜してみて」「おすすめ」「必見」「ぜひ」「人気」「穴場」「見逃せない」。命令・勧誘・ランキング口調にしない。",
+  "- 目的地へ急がせない。どこにいても駅まで徒歩何分で戻れるかを、ところどころ静かに書く。",
+  "- 何もない駅は、何もないこと自体を散歩のいちばん良い形として書く（埋め草で長くしない）。",
+  "- Lagadoらしい静かで具体的な日本語。",
+].join("\n");
+
 const STATION_SCHEMA_BLOCK = [
   "スキーマ:",
   "{",
@@ -120,24 +129,24 @@ const STATION_SCHEMA_BLOCK = [
   '  "mood": "story|empty",',
   '  "lat": 駅の緯度(number),',
   '  "lng": 駅の経度(number),',
-  '  "stationIntro": "観光案内の導入。必ず5〜8文・合計220字以上。地名の由来・路線の接続・駅前の空気・いまの人の流れ・半日と1時間の両方の見え方を含める",',
+  '  "stationIntro": "改札を出たときの目の置きどころ。story は5〜8文・合計220字以上、empty は3〜5文でよい。地名の由来・地形・駅前の空気・いまの人の流れを描写で書く（勧誘しない）",',
   '  "areaAbout": "界隈の説明。必ず空行区切りの2段落。各段落4文以上・合計360字以上。各段落のなかで地形・由来といまの生活（通学・店の気配）を結び、段落を由来だけ／いまだけに分けない。近くに大学・キャンパス・学生街があれば正式名称で必ず触れる",',
-  '  "walkGuide": "徒歩圏の回り方。必ず5〜7文・160字以上。出方・方角・時間があるとき／短いときの分岐。大学・キャンパスが近いならその方角も書く",',
+  '  "walkGuide": "駅を出て、少し回り道をして、駅へ帰る小回りの描写。4〜7文・120字以上。出口と方角、途中で目に入る地形・川・坂、そこから駅まで徒歩何分で戻れるか。同じ道を戻らない輪にする。命令形にしない",',
   '  "tourTitle": "28字以内",',
   '  "catchCopy": "40字以内",',
-  '  "emptyHeadline": "emptyのときだけ20字以内",',
-  '  "emptyBody": "emptyのときだけ80字以内",',
+  '  "emptyHeadline": "emptyのときだけ20字以内。店の欠落を失敗にせず、歩く理由にする（例: 余白を、歩く）",',
+  '  "emptyBody": "emptyのときだけ80字以内。『用事がないから、川沿い／坂／橋／田畑の道をただ歩いて駅へ帰る』と、何もないこと自体を散歩のいちばん良い形として書く",',
+  '  "railHint": "確信があるときだけ1文（土地タブ冒頭用）。例:『都市近郊の駅・帰りは本数多め』『本数が少ない路線・改札を出る前に帰りの時刻確認がおすすめ』。不確か・調べ不足なら省略（キー自体なし）",',
   '  "bikeRental": { "available": boolean, "summary": "1〜2文", "places": [ { "kind": "local|app", "name": "その駅にある実在サービス・店の正式名", "walkMinutes": 5, "note": "使い方1文" } ] },',
   "- bikeRental は入力駅の徒歩圏（目安8分以内）で実在確認できたものだけ。無ければ available:false・places:[]。推測で埋めない。",
   "- places の name は総称禁止（「駅前のレンタサイクル店」不可）。他駅の店名・ポート名を混ぜない。",
   "- 例（出町柳だけ）: CLEW（クルー）京阪出町柳駅前（app）。えむじかは 2026-01 閉業なので書かない。出町柳以外に CLEW 出町柳も書かない。",
-  '  "historyNotes": [{ "title": "短い見出し", "body": "土地メモ。各3〜5文・80字以上。各件で由来・地層といまの見え方を同じ本文で結ぶ" }]（必ず6〜8件。歴史件といま件を分けない。地名由来・産業/信仰・交通に加え、近くの大学・学校・学生街・いまの生活があれば正式名称で1件以上）,',
+  '  "historyNotes": [{ "title": "短い見出し", "body": "土地メモ。各3〜5文・80字以上。各件で由来・地層といまの見え方を同じ本文で結ぶ" }]（story は6〜8件。mood:empty は2〜4件でよい。店の列挙で埋めない。地形・坂・橋・田畑・静けさを歩く理由にする）,',
   '  "firstVisitFaces": [',
-  '    { "role": "landform", "name": "正式名", "where": "位置", "why": "なぜ土地の骨格か1文", "present": "いまどう見えるか1文", "walkMinutes": 5, "lat": 0, "lng": 0 },',
-  '    { "role": "landmark", "name": "正式名", "where": "位置", "why": "なぜ名所か1文", "present": "いまどう見えるか1文", "walkMinutes": 10, "lat": 0, "lng": 0 },',
-  '    { "role": "town", "name": "正式名", "where": "位置", "why": "なぜ町場の顔か1文", "present": "いまどう見えるか1文", "walkMinutes": 5, "lat": 0, "lng": 0 }',
-  "  ]（必須・ちょうど3件。出町柳雛形の役割どおり。ショートコースの正本）,",
-  '  "sightseeingNotes": [{ "title": "見出し", "body": "観光メモ。各2〜4文" }]（必ず6〜7件。先頭3件は firstVisitFaces と同名・同順。続けて実用メモを3〜4件: 短い滞在の回り方・食べる休む・季節や注意・駅からの帰り方。別邸・二番手の名所だけで埋めない）,',
+  '    { "role": "landform|landmark|town", "name": "正式名", "where": "位置", "why": "なぜその役割か1文", "present": "いまどう見えるか1文", "walkMinutes": 5, "lat": 0, "lng": 0 }',
+  "  ]（1〜3件。実在する役割だけ。町場・店が無ければ town を出さない。3件そろえなくてよい）,",
+  '  "sightseeingNotes": [{ "title": "見出し", "body": "目の置きどころ。各2〜4文。何が見えるか・駅から何分か" }]（先頭は firstVisitFaces と同名・同順。続けて実用メモ。合計は顔の件数＋実用でよい。店が無い駅は「食べる」メモを無理に増やさない。別邸・二番手だけで埋めない）,',
+  '  "storyNotes": [{ "title": "作品名や場所名", "body": "ドラマ・映画・小説などの撮影地／舞台。各2〜4文。駅から徒歩圏で実在確認できたものだけ。何の作品のどの場面か、いま歩いて何が見えるかを静かに書く" }]（0〜4件。無い駅は [] かキー省略。推測・都市伝説・遠いスタジオは禁止）,',
   '  "spots": [',
   "    {",
   '      "name": "土地文に出た正式名称、または徒歩圏の実在店名",',
@@ -162,22 +171,26 @@ const STATION_SCHEMA_BLOCK = [
   "制約（土地の文章と案内スポットを一度に返す）:",
   "- 日本の実在の鉄道駅でなければ { \"error\": \"not_a_station\", \"message\": \"理由\" } を返す。",
   "- 【出町柳雛形】役割の構成だけ借りる。固有名は出町柳のときだけ出町の名前。",
-  "- firstVisitFaces 必須: landform / landmark / town を1件ずつ。本文にも同じ正式名称を書く。",
+  "- firstVisitFaces: 実在する役割だけ 1〜3 件。town が無ければ出さない。欠けた役割を推測で埋めない。本文にも出した正式名称を書く。",
+  "- 【真の空白駅】店・町場が本当に薄い駅は mood:empty 可。meal/souvenir は 0 件のままでよい。1.5km 超のチェーン・隣駅の店で枠を埋めない。",
+  "- 【空白の歩き】店が無い駅は landform（川・用水・坂・田畑の道・橋）を firstVisitFaces の主役にする。神社・公園があれば足す。『何もない＝失敗』にせず、『店がないので風景を30分歩く駅』と catchCopy / emptyBody で肯定する。",
+  "- 【散歩の口実】spots が 1〜2 件でもよい。無理に 3 役割を埋めない。1 つの landform があれば降りられる設計。",
+  "- 【物語のゆかり】駅の徒歩圏がドラマ・映画・小説・漫画の撮影地／舞台として知られるなら storyNotes に書く（作品名を正確に）。無い・不確かなら出さない。観光ランキング口調にしない。",
   "- 【固有名の取り違え禁止】入力駅が出町柳以外なら、鴨川デルタ・下鴨神社・枡形商店街・出町ふたば・同志社大学・京都大学を本文に入れない。",
-  "- empty（本当に何も薄い駅）でも areaAbout と historyNotes は厚く書く。",
+  "- empty の areaAbout は地形といまの静けさで書く（店リスト禁止）。historyNotes は 2〜4 件で足りる。",
   "- 歴史だけで終わらせない。いまの姿も、同じ段落・同じメモの中で結んで書く。",
   "- 駅の徒歩圏に大学があれば正式名称で触れる（遠い大学は寄せない）。",
   "- 出町柳の川名（必須）: 上流は賀茂川と高野川。合流点から南は鴨川。",
   "- いちばん重要: stationIntro / areaAbout / historyNotes を短くしない。",
-  "- 禁止: 1文だけの areaAbout、2件以下の historyNotes、抽象語だけの紹介。",
+  "- 禁止: 1文だけの areaAbout、抽象語だけの紹介。story で historyNotes が2件未満は禁止。empty は2件以上でよい。",
   "- 【名所と店を分ける】名所・地形・町場（sight/tip と firstVisitFaces）は土地文の正式名称＋検索。meal/souvenir は別枠で、検索で実在を確認できた店だけ。",
   "- spots の名所側: 土地文に出た正式名称を先に全部起こす（sight 中心）。件数は名所が足りていればよい。",
-  "- spots の店側: meal は 0〜4件、souvenir は 0〜3件。件数を埋めるための推測・総称・「駅前の食堂」は禁止。不確かなら 0件でよい。",
+  "- spots の店側: meal は 0〜4件、souvenir は 0〜3件。件数を埋めるための推測・総称・「駅前の食堂」・遠方チェーンは禁止。不確かなら 0件でよい。",
   "- rest は景色の休みを優先。喫茶は検索で実在確認できたときだけ（無理に埋めない）。",
-  "- firstVisitFaces の3点は majorWorthy true。major は名所を優先（目安3）。名物店の major は検索で確実なときだけ最大2。合計5未満でも名所が確かならよい。",
+  "- firstVisitFaces に出した点は majorWorthy true。major は名所を優先。名物店の major は検索で確実なときだけ。合計が少なくても確かならよい。",
   "- meal/souvenir は駅から徒歩18分以内・正式店名のみ。lat/lng は本物。駅へ寄せない。閉店・別駅の店は出さない。",
   "- 【mealは店内飲食できる店だけ】ライフデリ・配食・宅食・宅配弁当・高齢者向け配食サービスは出さない（事業所で入れない）。",
-  "- 【駅前の名物めしは落とさない】石清水八幡宮駅前の朝日屋（鯖の棒寿司）のように、駅名と結びつく地元の定番食堂・寿司は meal に必ず入れる。",
+  "- 【駅前の名物めしは落とさない】石清水八幡宮駅前の朝日屋（鯖の棒寿司）のように、駅名と結びつく地元の定番食堂・寿司は meal に入れる（無い駅では無理に作らない）。",
   "- 【川・山の総称禁止】spots / firstVisitFaces の name に「淀川」「桂川」「鴨川」など川名だけを書かない。必ず「〇〇堤防」「三川合流点」「〇〇公園」など、歩いて立つ地点の固有名にする。",
   "- blurb に「駅から見渡せる」「一望」「眼下」と書かない。川辺・眺望は『駅から歩いて寄る場所』と書く。",
 ].join("\n");
@@ -210,7 +223,8 @@ const PLACES_FROM_LAND_SCHEMA = [
   "- 【最重要・名所】spots の名所・地形・町場は、渡した土地の文章に登場する正式名称を先に全部起こす。文章に無い名所を先にリストしない。",
   "- 【最重要・店】meal/souvenir は Google検索で実在確認できた正式店名だけ。生活感に合わせて推測で埋めない。不確かなら 0件でよい。",
   "- spots: 名所（sight 等）を厚く。meal 0〜4、souvenir 0〜3。rest/tip は無理に増やさない。",
-  "- firstVisitFaces の3点は majorWorthy true。major は名所優先。名物店 major は確実なときだけ。",
+  "- firstVisitFaces がある点は majorWorthy true。役割が欠けていても名所が確かならよい。",
+  "- 店が無い土地文なら meal/souvenir を足さない（遠方チェーン禁止）。",
   "- 出町柳以外で鴨川デルタ・下鴨・枡形・ふたば等を出さない。",
   "- lat/lng は本物。駅へ寄せない。徒歩25分超は出さない。",
 ].join("\n");
@@ -221,7 +235,7 @@ function buildStationPrompt(rawName: string): string {
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
     "Google検索の結果を優先し、実在する駅・名所・店だけを使ってください。",
     "【信頼】名所は土地文の正式名称から。店（meal/souvenir）は検索で確かめたものだけ。不確かな店は件数を埋めずに出さない。",
-    "観光ガイドの煽りやランキング口調は禁止。Lagadoらしい静かで詩的な日本語。",
+    WANDER_TONE_RULES,
     "【この段階】土地の文章と、地図・案内の spots（名所を厚く、店は確かなものだけ）を一度に返す。",
     "出力は JSON オブジェクトのみ（前後の説明文なし）。",
     "",
@@ -252,7 +266,7 @@ function buildPlacesFromLandPrompt(station: StationSeed): string {
   return [
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
     "【順番】土地の文章はすでにできている。その文章に書いた正式名称から、地図と案内の場所（spots）を起こす。",
-    "観光ランキング口調は禁止。Lagadoらしい静かで具体的な日本語。",
+    WANDER_TONE_RULES,
     "出力は JSON のみ。",
     "",
     `駅名: ${station.name}（${station.prefecture} · ${station.line}）`,
@@ -278,7 +292,7 @@ function buildNearbyPrompt(lat: number, lng: number): string {
   return [
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
     "Google検索の結果を優先し、実在する駅・名所だけを使ってください。",
-    "観光ガイドの煽りやランキング口調は禁止。Lagadoらしい静かで詩的な日本語。",
+    WANDER_TONE_RULES,
     "【この段階】最寄り駅を特定し、土地の文章と案内 spots（名所・ご飯・土産・休む）を一度に返す。",
     "出力は JSON オブジェクトのみ（前後の説明文なし）。",
     "",
@@ -442,7 +456,7 @@ export function parseAiStationPayload(
 
   const facesPreview = parseFirstVisitFaces(parsed.firstVisitFaces);
   // 土地文先出し: spots は後段で土地文から起こす。faces があれば空でも進む。
-  if (spots.length === 0 && !(facesPreview && facesPreview.length >= 2)) {
+  if (spots.length === 0 && !(facesPreview && facesPreview.length >= 1)) {
     const hasLand =
       asString(parsed.areaAbout).length >= 80 ||
       asString(parsed.stationIntro).length >= 80 ||
@@ -460,6 +474,7 @@ export function parseAiStationPayload(
 
   const historyNotes = parseNoteList(parsed.historyNotes, 9);
   const sightseeingNotes = parseNoteList(parsed.sightseeingNotes, 8);
+  const storyNotes = parseNoteList(parsed.storyNotes, 4);
   const firstVisitFaces = parseFirstVisitFaces(parsed.firstVisitFaces);
 
   let station: StationSeed = {
@@ -479,6 +494,8 @@ export function parseAiStationPayload(
       sightseeingNotes && sightseeingNotes.length > 0
         ? sightseeingNotes
         : undefined,
+    storyNotes:
+      storyNotes && storyNotes.length > 0 ? storyNotes : undefined,
     bikeRental: parseBike(parsed.bikeRental),
     tourTitle:
       asString(parsed.tourTitle).slice(0, 28) ||
@@ -486,6 +503,7 @@ export function parseAiStationPayload(
     catchCopy:
       asString(parsed.catchCopy).slice(0, 40) ||
       "降りた場所から、予定のない寄り道を。",
+    railHint: sanitizeRailHint(asString(parsed.railHint)) || undefined,
     spots,
     lat,
     lng,
@@ -496,10 +514,10 @@ export function parseAiStationPayload(
   if (mood === "empty") {
     station.emptyCopy = {
       headline:
-        asString(parsed.emptyHeadline).slice(0, 20) || "余白を、そのまま座る",
+        asString(parsed.emptyHeadline).slice(0, 20) || "用事のない駅を、歩いて帰る",
       body:
         asString(parsed.emptyBody).slice(0, 80) ||
-        "観光リストは短くていい。駅の静けさそのものが案内です。",
+        "寄るところが少ないぶん、坂や川の向きだけを見て歩けます。小回りして、駅へ帰る。",
     };
   }
 
@@ -511,6 +529,9 @@ export function parseAiStationPayload(
       (s) => !isForeignDemachiPlace(s.name, station.name),
     ),
     sightseeingNotes: (station.sightseeingNotes ?? []).filter(
+      (n) => !isForeignDemachiPlace(n.title, station.name),
+    ),
+    storyNotes: (station.storyNotes ?? []).filter(
       (n) => !isForeignDemachiPlace(n.title, station.name),
     ),
     firstVisitFaces: (station.firstVisitFaces ?? []).filter(
@@ -536,6 +557,9 @@ function isNarrativeThin(station: StationSeed): boolean {
   const notes = station.historyNotes ?? [];
   const histChars = notes.reduce((n, h) => n + h.body.length, 0);
   const sight = station.sightseeingNotes ?? [];
+  if (station.mood === "empty") {
+    return intro < 80 || about < 160 || walk < 60 || notes.length < 2;
+  }
   return (
     intro < 160 ||
     about < 240 ||
@@ -563,6 +587,16 @@ function parseNoteList(
     .filter((n): n is { title: string; body: string } => !!n)
     .slice(0, limit);
   return notes.length > 0 ? notes : undefined;
+}
+
+/** 運行目安。短い・確信っぽいものだけ通す（宣伝口調や長い文は捨てる）。 */
+function sanitizeRailHint(raw: string): string {
+  const t = raw.replace(/\s+/g, " ").trim();
+  if (t.length < 6 || t.length > 48) return "";
+  if (/http|www\.|予約|ランキング|必見|絶対/i.test(t)) return "";
+  const ok =
+    /本数|時刻|ローカル|近郊|都市|閑散|終電|帰る|運行|単線|電鉄|電車/.test(t);
+  return ok ? t : "";
 }
 
 const ROLE_SET = new Set<FirstVisitRole>(["landform", "landmark", "town"]);
@@ -597,7 +631,8 @@ function parseFirstVisitFaces(raw: unknown): FirstVisitFace[] | undefined {
   const ordered = (["landform", "landmark", "town"] as FirstVisitRole[])
     .map((r) => byRole.get(r))
     .filter((f): f is FirstVisitFace => !!f);
-  return ordered.length >= 2 ? ordered : undefined;
+  // 真の空白駅は landform だけ等もありうる
+  return ordered.length >= 1 ? ordered : undefined;
 }
 
 /** firstVisitFaces を観光メモ・スポットへ降ろす（知らない駅も出町と同じ型）。 */
@@ -677,7 +712,7 @@ function buildNarrativeExpandPrompt(station: StationSeed): string {
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
     "実在の歴史・地名由来・産業・信仰・交通の変遷に加え、いまの生活・通学・店の気配も書いて、薄い紹介文を厚く書き直してください。",
     "近くに大学・キャンパス・学生街があれば正式名称で触れる（例: 出町柳なら京都大学・同志社大学）。",
-    "観光ガイドの煽りやランキング口調は禁止。Lagadoらしい静かで詩的な日本語。",
+    WANDER_TONE_RULES,
     "出力は JSON オブジェクトのみ。",
     "",
     `駅名: ${station.name}`,
@@ -692,12 +727,13 @@ function buildNarrativeExpandPrompt(station: StationSeed): string {
     "",
     "スキーマ:",
     "{",
-    '  "stationIntro": "5〜8文・220字以上。いまの人の流れも含める",',
+    '  "stationIntro": "5〜8文・220字以上。改札を出たときの目の置きどころ。いまの人の流れも含める",',
     '  "areaAbout": "空行区切り2段落・合計360字以上。各段落で由来といまを結ぶ（段落分割で分けない）。大学があれば正式名称を出す",',
-    '  "walkGuide": "5〜7文・160字以上。大学が近いなら正式名称と方角",',
+    '  "walkGuide": "4〜7文・120字以上。駅を出て回り道をし、駅へ帰る小回り。途中から駅まで徒歩何分か。命令形にしない。大学が近いなら正式名称と方角",',
     '  "bikeRentalSummary": "2〜3文",',
     '  "historyNotes": [{ "title": "...", "body": "3〜5文。各件で由来といまを結ぶ" }]（6〜8件。歴史件／いま件の分業禁止。必須の大学名は各1件）,',
     '  "sightseeingNotes": [{ "title": "...", "body": "2〜4文" }]（6〜7件。先頭は土地の顔3点、続きは実用メモ）',
+    '  "storyNotes": [{ "title": "...", "body": "2〜4文" }]（徒歩圏のドラマ・映画・小説の撮影地／舞台。確かなものだけ。無ければ []）',
     "}",
     "",
     "短い一文で終わらせないこと。読者が歴史といまの姿を一本の糸で知れる分量にする。必須の具体名は省略しない。",
@@ -727,7 +763,7 @@ function buildShopExpandPrompt(station: StationSeed): string {
   return [
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
     "Google検索で実在を確認できる店だけを使う。件数より確かさを優先する。",
-    "観光ランキング口調は禁止。Lagadoらしい静かで具体的な日本語。",
+    WANDER_TONE_RULES,
     "出力は JSON のみ。",
     "",
     `駅名: ${station.name}（${station.prefecture} · ${station.line}）`,
@@ -932,6 +968,8 @@ async function expandStationNarrative(
     parseNoteList(parsed.historyNotes, 9) ?? station.historyNotes;
   const sightseeingNotes =
     parseNoteList(parsed.sightseeingNotes, 8) ?? station.sightseeingNotes;
+  const storyNotes =
+    parseNoteList(parsed.storyNotes, 4) ?? station.storyNotes;
   const stationIntro = asString(parsed.stationIntro) || station.stationIntro;
   const areaAbout = asString(parsed.areaAbout) || station.areaAbout;
   const walkGuide = asString(parsed.walkGuide) || station.walkGuide;
@@ -955,6 +993,10 @@ async function expandStationNarrative(
       (historyNotes?.length ?? 0) >= (station.historyNotes?.length ?? 0)
         ? historyNotes
         : station.historyNotes,
+    storyNotes:
+      (storyNotes?.length ?? 0) >= (station.storyNotes?.length ?? 0)
+        ? storyNotes
+        : station.storyNotes,
     sightseeingNotes:
       (sightseeingNotes?.length ?? 0) >= (station.sightseeingNotes?.length ?? 0)
         ? sightseeingNotes
@@ -2066,6 +2108,7 @@ function buildGapFillPrompt(station: StationSeed): string {
     '  "walkGuide": "薄いときだけ",',
     '  "historyNotes": [{ "title", "body" }]（薄いときだけ追加・厚く）,',
     '  "sightseeingNotes": [{ "title", "body" }]（薄いときだけ）,',
+    '  "storyNotes": [{ "title", "body" }]（徒歩圏の撮影地／文学の舞台。確かなものだけ。無ければ省略）,',
     '  "spots": [ { "name", "guide":"meal|souvenir|sight|rest|tip", "genre", "blurb", "detail", "walkMinutes", "lat", "lng", "hours", "budgetYen", "mealTier", "mealTimes", "soloOk", "majorWorthy", "secretWorthy" } ]',
     "}",
     "",
@@ -2093,6 +2136,8 @@ function mergeGapFillIntoStation(
       parseNoteList(parsed.historyNotes, 9) ?? next.historyNotes;
     const sightseeingNotes =
       parseNoteList(parsed.sightseeingNotes, 8) ?? next.sightseeingNotes;
+    const storyNotes =
+      parseNoteList(parsed.storyNotes, 4) ?? next.storyNotes;
     const stationIntro = asString(parsed.stationIntro) || next.stationIntro;
     const areaAbout = asString(parsed.areaAbout) || next.areaAbout;
     const walkGuide = asString(parsed.walkGuide) || next.walkGuide;
@@ -2103,6 +2148,7 @@ function mergeGapFillIntoStation(
       walkGuide,
       historyNotes,
       sightseeingNotes,
+      storyNotes,
     };
   }
 

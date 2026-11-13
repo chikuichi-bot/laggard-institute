@@ -2,6 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- 散策中も土地ガイダンスを聴けるようにする -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>MishiranuAPIBaseURL</key>
 	<string>https://mishiranu-eki.apps.grok.bot</string>
 	<!-- DEBUG 実機が Mac の http://192.168.x.x:3010 に届くように -->
@@ -17,6 +22,13 @@
 		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
+			<key>192.168.0.5</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
 			<key>192.168.0.8</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>

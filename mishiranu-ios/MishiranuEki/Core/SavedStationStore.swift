@@ -111,10 +111,12 @@ enum SavedStationStore {
                 walkGuide: station.walkGuide,
                 historyNotes: station.historyNotes,
                 sightseeingNotes: station.sightseeingNotes,
+                storyNotes: station.storyNotes,
                 bikeRental: station.bikeRental,
                 tourTitle: station.tourTitle,
                 catchCopy: station.catchCopy,
                 emptyCopy: station.emptyCopy,
+                railHint: station.railHint,
                 lat: station.lat,
                 lng: station.lng,
                 spots: station.spots

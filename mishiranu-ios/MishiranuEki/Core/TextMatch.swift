@@ -10,9 +10,15 @@ enum TextMatch {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return nil }
         let bare = t.hasSuffix("駅") ? String(t.dropLast()) : t
-        if let byName = stations.first(where: { t.contains($0.name) || (!bare.isEmpty && $0.name.contains(bare)) }) {
-            return byName
+        // 短い駅名（「淀」）が長い入力（「淀屋橋」）に含まれて吸われないよう、
+        // 駅名側がクエリを含む／一致する方向だけ見る。
+        let ranked = stations.compactMap { s -> (Station, Int)? in
+            let nameBare = s.name.hasSuffix("駅") ? String(s.name.dropLast()) : s.name
+            let score = nameMatchScore(queryBare: bare, nameBare: nameBare)
+            return score > 0 ? (s, score) : nil
         }
+        .sorted { $0.1 > $1.1 }
+        if let best = ranked.first { return best.0 }
         return stations.first { s in
             if t.contains(s.prefecture) || t.contains(s.line) { return true }
             return s.line
@@ -31,24 +37,40 @@ enum TextMatch {
     ) -> [Station] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let bare = q.hasSuffix("駅") ? String(q.dropLast()) : q
-        let pool: [Station]
         if q.isEmpty {
-            pool = stations.filter { savedIds.contains($0.id) }
-        } else {
-            // 「淀駅」入力でも name「淀」に当たるように、駅の有無を揃えて見る。
-            pool = stations.filter {
-                let nameBare = $0.name.hasSuffix("駅") ? String($0.name.dropLast()) : $0.name
-                return $0.name.contains(q)
-                    || $0.name.contains(bare)
-                    || nameBare.contains(bare)
-                    || bare.contains(nameBare)
-                    || $0.prefecture.contains(q)
-                    || $0.line.contains(q)
-                    || $0.tourTitle.contains(q)
-                    || (!bare.isEmpty && ($0.prefecture.contains(bare) || $0.line.contains(bare)))
-            }
+            return Array(stations.filter { savedIds.contains($0.id) }.prefix(limit))
         }
-        return Array(pool.prefix(limit))
+        // 「淀駅」→ name「淀」は一致。「淀屋橋」→「淀」は不一致（短い名前の飲み込み禁止）。
+        let ranked: [(Station, Int)] = stations.compactMap { station in
+            let nameBare = station.name.hasSuffix("駅") ? String(station.name.dropLast()) : station.name
+            var score = nameMatchScore(queryBare: bare, nameBare: nameBare)
+            if score == 0 {
+                if station.prefecture == q || station.line == q { score = 20 }
+                else if !bare.isEmpty,
+                        (station.line.hasPrefix(bare) || station.tourTitle.contains(bare)) {
+                    score = 10
+                }
+            }
+            return score > 0 ? (station, score) : nil
+        }
+        .sorted { lhs, rhs in
+            if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+            return lhs.0.name.count < rhs.0.name.count
+        }
+        return Array(ranked.prefix(limit).map(\.0))
+    }
+
+    /// 高いほど良い。0 は不一致。
+    /// - 一致 / 前方一致 / 駅名がクエリを含む … OK
+    /// - クエリが駅名を含むだけ（淀屋橋 ⊃ 淀）… NG（短い駅への誤吸着）
+    private static func nameMatchScore(queryBare: String, nameBare: String) -> Int {
+        let q = queryBare.trimmingCharacters(in: .whitespacesAndNewlines)
+        let n = nameBare.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty, !n.isEmpty else { return 0 }
+        if n == q { return 100 }
+        if n.hasPrefix(q) { return 80 }
+        if n.contains(q) { return 60 }
+        return 0
     }
 
     static func stay(_ text: String) -> StayOption? {

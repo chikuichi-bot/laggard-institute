@@ -93,18 +93,19 @@ export function landAnchorPromptBlock(stationName: string): string {
   const role = [
     "同じ説明をセクション間で繰り返さない。詳説は historyNotes のみ。",
     "walkGuide は順番と方角だけ。stationIntro は路線と駅前だけ。",
-    "ショートの正本は出町柳雛形（landform・landmark・town）の3点。sightseeingNotes はその3点＋実用メモで6〜7件。",
+    "ショートの正本は出町柳雛形の役割（landform・landmark・town）。揃う役割だけでよい（1〜3件）。",
   ].join(" ");
   if (!anchors.length) {
     return [
       role,
-      "この駅の正本アンカーは未収録。出町柳雛形で firstVisitFaces を必ず3件（地形・名所・町場）組み立てる。",
-      "例の対応: landform←鴨川デルタ、landmark←下鴨神社、town←枡形商店街。各駅で実在の正式名に置き換える。",
-      "sightseeingNotes は顔3点のあとに、短い滞在・食べる休む・季節や注意などの実用メモを足して厚くする。",
+      "この駅の正本アンカーは未収録。出町柳雛形で firstVisitFaces を実在する役割だけ組み立てる（必ず3件そろえなくてよい）。",
+      "町場・店が無ければ town を出さず、川・用水・坂・田畑の道・橋・神社・公園で歩く駅として書く。",
+      "例の対応（出町だけ）: landform←鴨川デルタ、landmark←下鴨神社、town←枡形商店街。各駅で実在の正式名に置き換える。",
+      "sightseeingNotes は顔のあとに実用メモ。店が無い駅は食べるメモを無理に増やさない。",
     ].join("\n");
   }
   const lines = anchors.map((a) => {
-    const visit = a.mustVisit ? "【ぜひ行く＝ショート雛形】" : "";
+    const visit = a.mustVisit ? "【駅から寄る顔＝小回り雛形】" : "";
     const why = a.why ? `理由: ${a.why}` : "";
     return `- ${visit}${a.name}（${a.where}）… ${why} ${a.present}`.trim();
   });
@@ -112,7 +113,7 @@ export function landAnchorPromptBlock(stationName: string): string {
     `【必須・土地の顔】この駅（${bareStationName(stationName)}）では次の正式名称を使う。`,
     ...lines,
     role,
-    "名前の出し方: walkGuide か areaAbout に名前を一度。詳しい why/present は historyNotes に各1件だけ。sightseeingNotes は mustVisit／firstVisitFaces の3点を先頭にし、実用メモを足して6〜7件。",
+    "名前の出し方: walkGuide か areaAbout に名前を一度。詳しい why/present は historyNotes に各1件だけ。sightseeingNotes は mustVisit／firstVisitFaces を先頭にし、実用メモを足す。",
   ].join("\n");
 }
 

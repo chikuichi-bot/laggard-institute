@@ -113,6 +113,8 @@ export type StationSeed = {
   historyNotes?: AreaHistoryNote[];
   /** 観光の見どころメモ（案内向け） */
   sightseeingNotes?: AreaHistoryNote[];
+  /** ドラマ・映画・小説などの撮影地／舞台（徒歩圏・確かなものだけ） */
+  storyNotes?: AreaHistoryNote[];
   /** レンタサイクルの有無（未設定時は未確認として表示） */
   bikeRental?: BikeRentalInfo;
   tourTitle: string;
@@ -121,6 +123,11 @@ export type StationSeed = {
     headline: string;
     body: string;
   };
+  /**
+   * 運行の目安（任意・確信があるときだけ）。
+   * 例: 「ローカル線・帰る前に時刻表を確認」
+   */
+  railHint?: string;
   spots: Spot[];
   /** Optional WGS84 station center (AI stations) */
   lat?: number;

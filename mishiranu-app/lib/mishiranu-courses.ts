@@ -993,15 +993,15 @@ function buildOrdinaryVariant(
     spots,
     {
       id: `ordinary-${kind}-${prepared.name.replace(/駅$/u, "")}-${dayPart}`,
-      title: kind === "short" ? "ショートで歩く" : "ロングで歩く",
+      title: kind === "short" ? "駅から、小回り" : "駅から、大回り",
       subtitle:
         kind === "short"
-          ? `駅まわりを手短に · ${spots.length}か所`
-          : `土地の顔をゆったり · ${spots.length}か所`,
+          ? `ぶらりと回って駅へ帰る · ${spots.length}か所`
+          : `もう少し遠くまで回って駅へ帰る · ${spots.length}か所`,
       vibe:
         kind === "short"
-          ? "駅を出て回り、別の道で駅へ戻る"
-          : "土地の顔を扇状に巡り、駅へ戻る",
+          ? "駅を出て、少し回り道をして、駅へ帰る"
+          : "少し先まで回り道をして、駅へ帰る",
     },
   );
 }

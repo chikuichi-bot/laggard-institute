@@ -90,7 +90,7 @@ private struct PlaceBoardNote: View {
 }
 
 private enum PlaceBoardSection: String, Hashable {
-    case intro, walk, history, sight
+    case intro, walk, history, sight, story
 }
 
 // MARK: - 土地（A · 駅前案内板）
@@ -98,7 +98,8 @@ private enum PlaceBoardSection: String, Hashable {
 struct PlacePage: View {
     @Environment(AppModel.self) private var model
     let station: Station
-    @State private var narrator = PlaceNarrator()
+
+    private var narrator: PlaceNarrator { model.placeNarrator }
 
     var body: some View {
         let intro = readingLines(station.stationIntro)
@@ -108,6 +109,7 @@ struct PlacePage: View {
         let hasWalk = !walk.isEmpty
         let hasHistory = !area.isEmpty || !station.historyNotes.isEmpty
         let hasSight = !station.sightseeingNotes.isEmpty
+        let hasStory = !station.storyNotes.isEmpty
 
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
@@ -115,12 +117,34 @@ struct PlacePage: View {
                     VStack(alignment: .leading, spacing: 12) {
                         PlaceListenBar(narrator: narrator, station: station)
 
+                        if model.awaitingDetailConfirm || model.isStationPreview {
+                            Text(
+                                model.contourIsDecisionUseful
+                                    ? "地図で確かめた寄り道だけ先に置いています。詳しい順番は、このあと開けます。"
+                                    : "駅の位置だけ先に開いています。詳しい案内は、確認のあと調べます。"
+                            )
+                                .font(.readable(.caption))
+                                .foregroundStyle(Palette.mist)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.bottom, 4)
+                        }
+
+                        if let rail = station.railHint?.trimmingCharacters(in: .whitespacesAndNewlines),
+                           !rail.isEmpty {
+                            Text(rail)
+                                .font(.readable(.caption))
+                                .foregroundStyle(Palette.fog)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.bottom, 6)
+                        }
+
                         PlaceBoardIndex(
                             stationLabel: station.indexStationLabel,
                             hasIntro: hasIntro,
                             hasWalk: hasWalk,
                             hasHistory: hasHistory,
                             hasSight: hasSight,
+                            hasStory: hasStory,
                             speakingSection: narrator.activeSection,
                             onSelect: { section in
                                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -133,6 +157,7 @@ struct PlacePage: View {
                                     case .intro: return .intro
                                     case .history: return .history
                                     case .sight: return .sight
+                                    case .story: return .story
                                     case .walk: return .walk
                                     }
                                 }()
@@ -194,7 +219,7 @@ struct PlacePage: View {
                         if hasSight {
                             PlaceBoardPanel(
                                 number: "03",
-                                title: "観光案内メモ",
+                                title: "目の置きどころ",
                                 accent: Palette.ink,
                                 pictogram: .photoSpot,
                                 isListening: narrator.isSpeaking(section: .sight),
@@ -212,10 +237,31 @@ struct PlacePage: View {
                             .id(PlaceBoardSection.sight)
                         }
 
-                        if hasWalk {
+                        if hasStory {
                             PlaceBoardPanel(
                                 number: "04",
-                                title: "歩き方の目安",
+                                title: "物語のゆかり",
+                                accent: Palette.ink,
+                                pictogram: .photoSpot,
+                                isListening: narrator.isSpeaking(section: .story),
+                                onListen: { narrator.toggle(station: station, section: .story) }
+                            ) {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    ForEach(
+                                        Array(station.storyNotes.enumerated()),
+                                        id: \.element.title
+                                    ) { index, note in
+                                        PlaceBoardNote(index: index + 1, note: note)
+                                    }
+                                }
+                            }
+                            .id(PlaceBoardSection.story)
+                        }
+
+                        if hasWalk {
+                            PlaceBoardPanel(
+                                number: hasStory ? "05" : "04",
+                                title: "駅から小回り",
                                 accent: Palette.moss,
                                 pictogram: .trekking,
                                 isListening: narrator.isSpeaking(section: .walk),
@@ -226,8 +272,12 @@ struct PlacePage: View {
                             .id(PlaceBoardSection.walk)
                         }
 
-                        if !hasIntro && !hasWalk && !hasHistory && !hasSight {
-                            Text("この駅の土地メモはまだ少なめです。")
+                        if !hasIntro && !hasWalk && !hasHistory && !hasSight && !hasStory {
+                            Text(
+                                model.awaitingDetailConfirm || model.isStationPreview
+                                    ? "散歩の口実は、詳しい案内で足します。輪郭だけでも、降りて歩く判断はできます。"
+                                    : "この駅は店が少なくても、道そのものが散歩の口実になります。"
+                            )
                                 .font(.callout)
                                 .foregroundStyle(Palette.mist)
                                 .padding(.top, 8)
@@ -245,9 +295,6 @@ struct PlacePage: View {
         .onChange(of: station.id) { _, _ in
             narrator.stop()
         }
-        .onDisappear {
-            narrator.stop()
-        }
     }
 }
 
@@ -257,6 +304,7 @@ private struct PlaceBoardIndex: View {
     let hasWalk: Bool
     let hasHistory: Bool
     let hasSight: Bool
+    var hasStory: Bool = false
     var speakingSection: PlaceScriptSection? = nil
     let onSelect: (PlaceBoardSection) -> Void
     let onListen: (PlaceBoardSection) -> Void
@@ -270,12 +318,35 @@ private struct PlaceBoardIndex: View {
     }
 
     var body: some View {
-        let items: [IndexItem] = [
-            .init(id: .intro, number: "01", label: stationLabel, enabled: hasIntro, script: .intro),
-            .init(id: .history, number: "02", label: "このエリア", enabled: hasHistory, script: .history),
-            .init(id: .sight, number: "03", label: "観光案内", enabled: hasSight, script: .sight),
-            .init(id: .walk, number: "04", label: "歩き方", enabled: hasWalk, script: .walk),
-        ]
+        // 中身がある項目だけ並べ、番号も連番にする（空の「物語のゆかり」を灰色で残さない）。
+        let items: [IndexItem] = {
+            var out: [IndexItem] = []
+            var n = 1
+            func push(
+                _ id: PlaceBoardSection,
+                _ label: String,
+                _ enabled: Bool,
+                _ script: PlaceScriptSection
+            ) {
+                guard enabled else { return }
+                out.append(
+                    .init(
+                        id: id,
+                        number: String(format: "%02d", n),
+                        label: label,
+                        enabled: true,
+                        script: script
+                    )
+                )
+                n += 1
+            }
+            push(.intro, stationLabel, hasIntro, .intro)
+            push(.history, "このエリア", hasHistory, .history)
+            push(.sight, "目の置きどころ", hasSight, .sight)
+            push(.story, "物語のゆかり", hasStory, .story)
+            push(.walk, "歩き方", hasWalk, .walk)
+            return out
+        }()
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
             ForEach(items) { item in
                 let listening = speakingSection == item.script
@@ -410,7 +481,7 @@ private struct PlaceBoardPanel<Content: View>: View {
     }
 }
 
-/// 電車のイヤホン向け。上段は全部、各項目にも聞くボタンがある。
+/// 土地案内の読み上げ。タブを変えても続く（歩きながら聴く）。
 private struct PlaceListenBar: View {
     let narrator: PlaceNarrator
     let station: Station
@@ -436,10 +507,10 @@ private struct PlaceListenBar: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Text(
                         speakingAll
-                            ? "もう一度押すと止まります · 次回は続きから"
+                            ? "歩くタブでも、画面を消しても続きます"
                             : (canResume
                                 ? "途中から再開します · 長押しで最初から"
-                                : "項目ごとにも聞けます · 駅に着く前に、イヤホンで")
+                                : "歴史と今を聴きながら、小回り・大回りできます")
                     )
                         .font(.caption)
                         .foregroundStyle(Palette.paper.opacity(0.85))
@@ -471,8 +542,59 @@ private struct PlaceListenBar: View {
         .accessibilityHint(
             canResume && !speakingAll
                 ? "途中から再開します。最初から聞くときは長押し"
-                : "駅の土地の文章を音声で読み上げます。各項目の聞くでも再生できます"
+                : "土地の歴史と今を読み上げます。歩くタブや画面オフでも続きが聴けます"
         )
+    }
+}
+
+/// 歩くタブでも土地ガイダンスを開始・停止できる細いバー。
+private struct WalkGuideListenBar: View {
+    let narrator: PlaceNarrator
+    let station: Station
+
+    private var speaking: Bool { narrator.isSpeaking }
+    private var canResume: Bool { narrator.canResume(station: station, section: .all) }
+
+    var body: some View {
+        Button {
+            narrator.toggle(station: station, section: .all)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: speaking ? "stop.fill" : "speaker.wave.2.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 18, height: 18)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(
+                        speaking
+                            ? "ガイダンスを止める"
+                            : (canResume ? "ガイダンスを続きから" : "ガイダンスを聴きながら歩く")
+                    )
+                    .font(.readable(.subheadline, weight: .semibold))
+                    Text(
+                        speaking
+                            ? "画面を消しても続きます · ロック画面で止められます"
+                            : "土地の歴史と今を耳でたどります"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(Palette.mist)
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(Palette.ink)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(speaking ? Palette.warm.opacity(0.18) : Palette.paper)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(speaking ? Palette.warm : Palette.line, lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(PlainHapticButtonStyle())
+        .accessibilityLabel(speaking ? "ガイダンスを止める" : "ガイダンスを聴きながら歩く")
     }
 }
 
@@ -525,10 +647,15 @@ struct WalkPage: View {
                 return $0.id.contains(SavedStationStore.bareName(station.name))
             }
             if let course = shownCourse, !course.stops.isEmpty {
-                Kicker(text: "道案内", pictogram: .trekking)
+                Kicker(text: "駅から、駅まで", pictogram: .trekking)
                 Text(course.title)
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
+
+                if let station = model.station {
+                    WalkGuideListenBar(narrator: model.placeNarrator, station: station)
+                        .padding(.top, 6)
+                }
 
                 if variants.count >= 2 {
                     HStack(spacing: 8) {
@@ -537,7 +664,7 @@ struct WalkPage: View {
                             Button {
                                 model.selectWalkCourse(option)
                             } label: {
-                                Text(option.id.contains("long") ? "ロング" : "ショート")
+                                Text(option.id.contains("long") ? "大回り" : "小回り")
                                     .font(.readable(.subheadline, weight: .semibold))
                                     .foregroundStyle(on ? Palette.paper : Palette.ink)
                                     .frame(maxWidth: .infinity)
@@ -582,11 +709,15 @@ struct WalkPage: View {
                 }
                 .padding(.top, 8)
             } else {
-                Kicker(text: "道案内", pictogram: .trekking)
-                Text("ショート／ロングで歩く")
+                Kicker(text: "駅から、駅まで", pictogram: .trekking)
+                Text("駅から、小回り")
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
-                Text("土地ページの文章に、まだ歩ける場所の名前が少ないようです。土地と地図から、気になる場所へ寄ってください。")
+                if let station = model.station {
+                    WalkGuideListenBar(narrator: model.placeNarrator, station: station)
+                        .padding(.top, 6)
+                }
+                Text("寄る場所の名前は、まだ少ないようです。地図で駅のまわりを見て、気の向く方へ少し歩き、同じ駅へ帰ってくれば、それで一周です。")
                     .font(.mincho(.body))
                     .lineSpacing(8)
                     .foregroundStyle(Palette.fog)
@@ -602,8 +733,8 @@ private struct WalkRouteSummary: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 summaryChip(title: "所要", value: "約\(course.totalMinutes)分")
-                summaryChip(title: "立ち寄り", value: "\(course.stops.count)か所")
-                summaryChip(title: "道順", value: "駅→回り→駅")
+                summaryChip(title: "目の置きどころ", value: "\(course.stops.count)か所")
+                summaryChip(title: "帰り", value: "同じ駅へ")
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
@@ -621,7 +752,7 @@ private struct WalkRouteSummary: View {
                 }
                 .padding(.vertical, 2)
             }
-            Text("同じ道はなるべく帰りません。番号を押すと地図で場所を開けます。")
+            Text("同じ道はなるべく通らず、駅へ帰ります。どこからでも駅まで歩いて戻れます。")
                 .font(.caption)
                 .foregroundStyle(Palette.mist)
                 .fixedSize(horizontal: false, vertical: true)
@@ -703,7 +834,7 @@ private struct WalkDepartureRow: View {
                 Text("\(stationName)駅")
                     .font(.mincho(.title3, weight: .semibold))
                     .foregroundStyle(Palette.ink)
-                Text("改札を出て、1番へ向かいます")
+                Text("改札を出て、ぶらりと")
                     .font(.readable(.subheadline, weight: .medium))
                     .foregroundStyle(Palette.body)
             }
@@ -737,7 +868,7 @@ private struct WalkReturnRow: View {
                     .foregroundStyle(Palette.ink)
                 Text(
                     walkMinutes > 0
-                        ? "徒歩約 \(walkMinutes) 分で駅へ戻る"
+                        ? "駅へ帰る · 徒歩約 \(walkMinutes) 分"
                         : "駅が終点です"
                 )
                 .font(.readable(.subheadline, weight: .semibold))
@@ -761,7 +892,11 @@ private struct StopRow: View {
     private var legLabel: String {
         fromStation
             ? "駅から徒歩 約\(stop.walkMinutes)分"
-            : "徒歩 約\(stop.walkMinutes)分"
+            : "次まで 徒歩約\(stop.walkMinutes)分"
+    }
+
+    private var stationBackLabel: String {
+        "駅まで約\(max(1, stop.spot.walkMinutes))分"
     }
 
     var body: some View {
@@ -780,9 +915,16 @@ private struct StopRow: View {
                 }
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text(legLabel)
-                    .font(.readable(.subheadline, weight: .bold))
-                    .foregroundStyle(Palette.ink)
+                HStack(spacing: 8) {
+                    Text(legLabel)
+                        .font(.readable(.subheadline, weight: .bold))
+                        .foregroundStyle(Palette.ink)
+                    if !fromStation {
+                        Text(stationBackLabel)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Palette.moss)
+                    }
+                }
                 Text(LandscapeSpotName.clarified(stop.spot.name))
                     .font(.mincho(.title3, weight: .semibold))
                     .foregroundStyle(Palette.ink)
@@ -825,7 +967,7 @@ private struct StopRow: View {
             .padding(.bottom, 12)
         }
         .contentShape(Rectangle())
-        .accessibilityLabel("\(index + 1)番 \(LandscapeSpotName.clarified(stop.spot.name))、\(legLabel)")
+        .accessibilityLabel("\(index + 1)番 \(LandscapeSpotName.clarified(stop.spot.name))、\(legLabel)、\(stationBackLabel)")
     }
 }
 
@@ -888,13 +1030,10 @@ struct GuidePage: View {
                             .foregroundStyle(Palette.warm)
                     }
                     if items.isEmpty {
-                        Text(
-                            kind == .souvenir
-                                ? "お土産の候補は、まだ少なめです。門前の菓子屋・社務所の授与品も現地で探してみてください。"
-                                : "この徒歩圏ではまだ少なめです。別の案内タブも見てみてください。"
-                        )
+                        Text(emptyGuideCopy(for: kind))
                             .font(.callout)
                             .foregroundStyle(Palette.mist)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     ForEach(items) { spot in
                         let score = kind == .meal ? CourseBuilder.mealPrefScore(spot, prefs: model.mealPrefs) : 0
@@ -908,6 +1047,19 @@ struct GuidePage: View {
                     }
                 }
             }
+        }
+    }
+
+    private func emptyGuideCopy(for kind: GuideKind) -> String {
+        switch kind {
+        case .meal:
+            return "案内できる店はありません。店がないこと自体が、川沿い・坂・橋・田畑の道を歩く口実になります。"
+        case .souvenir:
+            return "お土産の候補はありません。門前や社務所の授与品は、現地で見つかることがあります。"
+        case .rest:
+            return "屋内の休み場は少なめです。川べりや公園のベンチなど、景色の休みを土地・観光からどうぞ。"
+        case .sight, .tip:
+            return "名所の数は少なくて大丈夫です。散歩の口実が1つあれば、降りて歩けます。土地タブもどうぞ。"
         }
     }
 
@@ -1013,9 +1165,14 @@ private struct GuideRow: View {
                         .background(Capsule().fill(Palette.moss))
                 }
             }
-            Text("徒歩約 \(spot.walkMinutes) 分")
+            Text(SpotDistance.caption(walkMinutes: spot.walkMinutes))
                 .font(.caption)
                 .foregroundStyle(Palette.mist)
+            if SpotHours.isShopLike(spot) {
+                Text("※営業状況は現地またはマップでご確認ください")
+                    .font(.caption2)
+                    .foregroundStyle(Palette.mist)
+            }
             if let hours = SpotHours.display(for: spot) {
                 Text("営業 \(hours)")
                     .font(.caption.weight(.semibold))
@@ -1075,11 +1232,8 @@ struct SettingsPage: View {
     }
 
     private var rebuildConfirmMessage: String {
-        if billing.byokUnlocked, billing.isByokConfigured {
+        if billing.usesByokForGeneration {
             return "この駅の案内を、もう一度調べますか？\n自分の API で作り直します（コインは使いません）。"
-        }
-        if billing.byokUnlocked {
-            return "買い切り済みです。料金で API を設定してから、もう一度調べてください。"
         }
         return "この駅の案内を、もう一度調べますか？\nコインを1枚使います（残り \(billing.coins) 枚）。"
     }
@@ -1252,6 +1406,10 @@ struct SettingsPage: View {
             }
 
             settingsGroup(title: "このアプリについて") {
+                Link(destination: PublicURLs.orikata) {
+                    settingsButtonLabel("見知らぬ駅について", pictogram: .information, detail: "知らない駅に降りる · 聴いて散策する")
+                }
+                .buttonStyle(PlainHapticButtonStyle())
                 Text("地図は Apple マップ。出町柳ピンは実座標寄り、ほかの駅は目安の位置です。")
                     .font(.caption)
                     .foregroundStyle(Palette.mist)

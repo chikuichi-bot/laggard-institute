@@ -109,10 +109,15 @@ enum DemachiTemplate {
             walkGuide: stripExclusiveSentences(station.walkGuide),
             historyNotes: history,
             sightseeingNotes: sightseeing,
+            storyNotes: station.storyNotes.filter {
+                !isForeignDemachiPlace($0.title, stationName: station.name)
+                    && !sentenceHasExclusivePlace($0.body)
+            },
             bikeRental: station.bikeRental,
             tourTitle: stripExclusiveSentences(station.tourTitle) ?? station.tourTitle,
             catchCopy: stripExclusiveSentences(station.catchCopy) ?? station.catchCopy,
             emptyCopy: station.emptyCopy,
+            railHint: station.railHint,
             lat: station.lat,
             lng: station.lng,
             spots: spots

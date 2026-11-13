@@ -135,6 +135,10 @@ struct SpotSheet: View {
         )
     }
 
+    private var mapTrusted: Bool {
+        spot.coordTrust == .lock || spot.coordTrust == .apple
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -175,26 +179,47 @@ struct SpotSheet: View {
                     LoreTrace(text: trace, size: .callout)
                 }
 
+                if SpotHours.isShopLike(spot) {
+                    Text("※営業状況は現地またはマップでご確認ください")
+                        .font(.caption)
+                        .foregroundStyle(Palette.mist)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if !mapTrusted {
+                    Text("地図上の正確な位置は未確定です。案内の文章と、マップ検索をあわせてご確認ください。")
+                        .font(.caption)
+                        .foregroundStyle(Palette.mist)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Text("場所")
                     .font(.mincho(.subheadline, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .padding(.top, 4)
-                Map(position: $mapPosition, interactionModes: [.pan, .zoom]) {
-                    Annotation(spot.name, coordinate: coordinate, anchor: .center) {
-                        SpotPin(kind: spot.guide, number: model.courseNumbers[spot.id], active: true)
+
+                if mapTrusted {
+                    Map(position: $mapPosition, interactionModes: [.pan, .zoom]) {
+                        Annotation(spot.name, coordinate: coordinate, anchor: .center) {
+                            SpotPin(kind: spot.guide, number: model.courseNumbers[spot.id], active: true)
+                        }
+                        .annotationTitles(.hidden)
                     }
-                    .annotationTitles(.hidden)
+                    .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                    .frame(height: 220)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Palette.line, lineWidth: 1)
+                    )
+                    .simultaneousGesture(DragGesture(minimumDistance: 0))
+                    .accessibilityLabel("\(spot.name)の地図。指で動かしたり拡大できます")
                 }
-                .mapStyle(.standard(pointsOfInterest: .excludingAll))
-                .frame(height: 220)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Palette.line, lineWidth: 1)
-                )
-                // ScrollView にジェスチャを奪われないよう、地図操作を優先
-                .simultaneousGesture(DragGesture(minimumDistance: 0))
-                .accessibilityLabel("\(spot.name)の地図。指で動かしたり拡大できます")
+
+                Button(mapTrusted ? "Appleマップで開く" : "Appleマップで名前を検索") {
+                    openInAppleMaps()
+                }
+                .buttonStyle(PrimaryButtonStyle(filled: false))
 
                 Button("閉じる") { dismiss() }
                     .buttonStyle(PrimaryButtonStyle())
@@ -209,11 +234,32 @@ struct SpotSheet: View {
     }
 
     private var metaLine: String {
-        var parts = ["\(spot.guide.label)", "徒歩約 \(spot.walkMinutes) 分"]
+        var parts = ["\(spot.guide.label)", SpotDistance.caption(walkMinutes: spot.walkMinutes)]
         if let hours = SpotHours.display(for: spot) {
             parts.append("営業 \(hours)")
         }
         return parts.joined(separator: " · ")
+    }
+
+    private func openInAppleMaps() {
+        if mapTrusted {
+            let placemark = MKPlacemark(coordinate: coordinate)
+            let item = MKMapItem(placemark: placemark)
+            item.name = spot.name
+            item.openInMaps()
+            return
+        }
+        var comps = URLComponents(string: "http://maps.apple.com/")
+        let near: String = {
+            if let s = model.station {
+                return "\(spot.name) \(s.name)駅"
+            }
+            return spot.name
+        }()
+        comps?.queryItems = [URLQueryItem(name: "q", value: near)]
+        if let url = comps?.url {
+            UIApplication.shared.open(url)
+        }
     }
 }
 

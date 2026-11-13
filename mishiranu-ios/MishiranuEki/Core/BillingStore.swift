@@ -64,6 +64,8 @@ final class BillingStore {
         static let provider = "mishiranu.billing.byokProvider"
         static let baseUrl = "mishiranu.billing.apiBaseUrl"
         static let model = "mishiranu.billing.apiModel"
+        /// 買い切り設定済みでもコイン経路を選ぶか。
+        static let preferCoin = "mishiranu.billing.preferCoinOverByok"
         /// 試作中はコイン経路で見る。一度だけ買い切りフラグを落とす。
         static let forceCoinMode = "mishiranu.billing.forceCoinMode.20261111"
     }
@@ -72,12 +74,16 @@ final class BillingStore {
     var freeGranted: Bool = false
     var byokUnlocked: Bool = false
     var byokProvider: ByokProvider = .gemini
+    /// 買い切り＋API設定済みでも、コイン（用意AI）を使う。
+    var preferCoinOverByok: Bool = false
     /// 端末内のみ。
     var apiKey: String = ""
     var apiBaseUrl: String = BillingStore.defaultOpenAiBase
     var apiModel: String = BillingStore.defaultOpenAiModel
     var statusNote: String?
     var busyProductId: String?
+    /// 直前の `tryConsumeGenerationCoin` でコインを実際に引いたか。
+    private(set) var lastGenerationUsedCoin = false
 
     var isByokConfigured: Bool {
         guard byokUnlocked else { return false }
@@ -91,18 +97,26 @@ final class BillingStore {
         return true
     }
 
+    /// 今回の生成で自分の API を使うか（コイン不要）。
+    var usesByokForGeneration: Bool {
+        byokUnlocked && isByokConfigured && !preferCoinOverByok
+    }
+
     var modeLabel: String {
-        if byokUnlocked {
-            if isByokConfigured {
-                return "自分の API（\(byokProvider.label)）"
-            }
-            return "買い切り済み · API を設定してください"
+        if usesByokForGeneration {
+            return "自分の API（\(byokProvider.label)）"
+        }
+        if byokUnlocked, isByokConfigured, preferCoinOverByok {
+            return "コインで案内（買い切りと併用）"
+        }
+        if byokUnlocked, !isByokConfigured {
+            return "コインで案内 · API 未設定でも可"
         }
         return "コインで案内を生成"
     }
 
     var userAiPayload: UserAiPayload? {
-        guard isByokConfigured else { return nil }
+        guard usesByokForGeneration else { return nil }
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         if byokProvider == .openai {
             let base = apiBaseUrl.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -122,6 +136,7 @@ final class BillingStore {
         coins = max(0, defaults.integer(forKey: Key.coins))
         freeGranted = defaults.bool(forKey: Key.freeGranted)
         byokUnlocked = defaults.bool(forKey: Key.byok)
+        preferCoinOverByok = defaults.bool(forKey: Key.preferCoin)
         apiKey = defaults.string(forKey: Key.apiKey) ?? ""
         if let raw = defaults.string(forKey: Key.provider),
            let provider = ByokProvider(rawValue: raw)
@@ -148,6 +163,7 @@ final class BillingStore {
         defaults.set(coins, forKey: Key.coins)
         defaults.set(freeGranted, forKey: Key.freeGranted)
         defaults.set(byokUnlocked, forKey: Key.byok)
+        defaults.set(preferCoinOverByok, forKey: Key.preferCoin)
         defaults.set(apiKey, forKey: Key.apiKey)
         defaults.set(byokProvider.rawValue, forKey: Key.provider)
         defaults.set(apiBaseUrl, forKey: Key.baseUrl)
@@ -161,23 +177,36 @@ final class BillingStore {
         persist()
     }
 
-    /// 道B（設定済み）は消費なし。道Aは1コイン。
+    /// 自分の API 利用時は消費なし。それ以外（買い切り後のコイン選択含む）は1コイン。
     func tryConsumeGenerationCoin() -> String? {
-        if byokUnlocked {
-            if isByokConfigured { return nil }
-            return "買い切り済みです。設定の「料金」で自分の API（キーなど）を入れると案内をつくれます。"
+        lastGenerationUsedCoin = false
+        if usesByokForGeneration {
+            return nil
         }
         guard coins >= 1 else {
+            if byokUnlocked, isByokConfigured {
+                return "コインが足りません。自分の API に切り替えるか、設定の「料金」から補充できます。"
+            }
+            if byokUnlocked {
+                return "コインが足りません。API を設定するか、設定の「料金」から補充できます。"
+            }
             return "コインが足りません。設定の「料金」から補充できます。"
         }
         coins -= 1
+        lastGenerationUsedCoin = true
         persist()
         return nil
     }
 
     func refundGenerationCoin() {
-        guard !byokUnlocked else { return }
+        guard lastGenerationUsedCoin else { return }
+        lastGenerationUsedCoin = false
         coins += 1
+        persist()
+    }
+
+    func updatePreferCoinOverByok(_ value: Bool) {
+        preferCoinOverByok = value
         persist()
     }
 

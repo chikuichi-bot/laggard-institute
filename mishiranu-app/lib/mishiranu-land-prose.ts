@@ -224,7 +224,7 @@ export const LAND_PROSE_ROLE_RULES = [
   "- walkGuide: 寄る順番と方角だけ（例: 枡形→デルタ→北へ下鴨）。歴史や『なぜ有名か』は書かない。",
   "- areaAbout: 地形・由来・いまの生活を同じ段落で結ぶ概観。個別スポットの詳説は historyNotes へ。",
   "- historyNotes: 1見出し1トピック。各件で由来といまを結び、詳説はここだけ。",
-  "- sightseeingNotes: 先頭は土地の顔3点。続けて短い滞在・食べる休む・季節や注意など実用メモを足し、合計6〜7件。historyNotes の再掲は禁止。",
+  "- sightseeingNotes: 先頭は firstVisitFaces（1〜3件・揃う役割だけ）。続けて実用メモ。店が無い駅は食べるメモを無理に増やさない。historyNotes の再掲は禁止。",
   "- 出町柳・鴨川デルタの川名（必須・逆転禁止）: 上流は賀茂川と高野川。合流点から南は鴨川。『合流し賀茂川へ名を変える』は誤り。",
   AREA_PRESENT_HISTORY_WEAVE,
 ].join("\n");

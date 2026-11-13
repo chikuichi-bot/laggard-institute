@@ -89,6 +89,20 @@ final class AppModel {
     var draft = ""
     var geoLoading = false
     var stationLoading = false
+    /// コイン前チラ見せ中（本生成で上書き・保存しない）。
+    var isStationPreview = false
+    /// 無料輪郭を出し、「詳しく」待ち。
+    var awaitingDetailConfirm = false
+    /// 輪郭の一行（降りる決断用）。薄いときは空。
+    var contourSummary: String = ""
+    /// 輪郭に決断材料があるか。無いときは偽の「気配」モーダルにしない。
+    var contourIsDecisionUseful = false
+    /// 詳しく調べる対象の駅名（駅なし）。
+    var pendingDetailBare: String = ""
+    /// 待ちUIに出す MapKit の短い手がかり。
+    var previewHints: [String] = []
+    /// MapKit 輪郭の取得中（コイン前）。
+    var contourLoading = false
     var tourTab: TourTab = .place
     var guideKind: GuideKind = .sight
     /// 案内タブでレンタサイクルを選んでいるとき true。
@@ -98,10 +112,14 @@ final class AppModel {
     var heroNote: String?
     /// 設定など、トップ以外でも見せる短い案内・エラー。
     var stationNotice: String?
+    /// 土地案内の読み上げ。タブをまたいでも止めない（歩きながら聴く）。
+    let placeNarrator = PlaceNarrator()
 
     private let now: () -> Date
     @ObservationIgnored private var pendingTour: Task<Void, Never>?
     @ObservationIgnored private var pendingStationLookup: Task<Void, Never>?
+    /// 今回の案内生成でコインを既に引いたか（キャンセル／失敗時の返金用）。
+    @ObservationIgnored private var coinConsumedForLookup = false
 
     init(stations: [Station], now: @escaping () -> Date = Date.init) {
         let saved = SavedStationStore.load()
@@ -313,6 +331,14 @@ final class AppModel {
         showStationSearch = false
         geoLoading = false
         stationLoading = false
+        contourLoading = false
+        isStationPreview = false
+        awaitingDetailConfirm = false
+        contourSummary = ""
+        contourIsDecisionUseful = false
+        pendingDetailBare = ""
+        previewHints = []
+        coinConsumedForLookup = false
         courses = []
         selectedCourse = nil
         mealPrefs = MealPrefs()
@@ -341,7 +367,15 @@ final class AppModel {
 
     // MARK: - Chat steps
 
-    func chooseStation(_ next: Station, spoken: String? = nil, omitYou: Bool = false, persist: Bool = true) {
+    func chooseStation(
+        _ next: Station,
+        spoken: String? = nil,
+        omitYou: Bool = false,
+        persist: Bool = true,
+        relocate: Bool = true
+    ) {
+        isStationPreview = false
+        previewHints = []
         let sealed = GuideIntegrity.seal(next)
         remember(sealed, persist: persist)
         stationId = sealed.id
@@ -362,7 +396,49 @@ final class AppModel {
             text: "\(sealed.name)（\(sealed.prefecture)・\(sealed.line)）。土地の案内を開きます。"
         ))
         openTour(tab: .place)
-        relocateIfNeeded(sealed)
+        if relocate {
+            relocateIfNeeded(sealed)
+        }
+    }
+
+    /// コイン前の MapKit 骨格。端末には保存せず、本生成で上書きする。
+    private func applyStationPreview(_ next: Station, hints: [String]) {
+        isStationPreview = true
+        previewHints = hints
+        let sealed = GuideIntegrity.seal(next)
+        remember(sealed, persist: false)
+        stationId = sealed.id
+        showStationSearch = false
+        draft = ""
+        selectedCourse = nil
+        mealPrefs = MealPrefs()
+        dayPart = DayPart.from(hour: Calendar.current.component(.hour, from: now()))
+        stay = .halfDay
+        courses = []
+        selectedCourse = nil
+        openTour(tab: .place)
+    }
+
+    /// プレビューだけ残っていた駅をメモリから外す（保存済みは触らない）。
+    private func discardStationPreviewIfNeeded() {
+        guard isStationPreview else {
+            previewHints = []
+            return
+        }
+        let previewId = stationId
+        let bare = stations.first { $0.id == previewId }.map { SavedStationStore.bareName($0.name) }
+        if !savedStationIds.contains(previewId) {
+            stations.removeAll { row in
+                if row.id == previewId { return true }
+                if let bare, SavedStationStore.bareName(row.name) == bare { return true }
+                return false
+            }
+        }
+        isStationPreview = false
+        previewHints = []
+        if stations.first(where: { $0.id == stationId }) == nil {
+            stationId = savedStations.first?.id ?? stations.first?.id ?? ""
+        }
     }
 
     /// 歩くタブ＝ショート／ロング（道なり最適化）。既定はショート。
@@ -462,9 +538,10 @@ final class AppModel {
     }
 
     /// - Parameter forceRefresh: true なら保存を無視して AI で作り直す（設定の「案内を作り直す」）。
+    /// 新規は無料輪郭→「詳しく」後にコイン。作り直しは確認済みなので本生成へ。
     func requestAiStation(_ rawName: String, spoken: String? = nil, forceRefresh: Bool = false) {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, !stationLoading else { return }
+        guard !name.isEmpty, !stationLoading, !contourLoading else { return }
         let bare = name.hasSuffix("駅") ? String(name.dropLast()) : name
 
         // 一度調べた駅は端末から開く（毎回 Gemini しない）。
@@ -479,31 +556,118 @@ final class AppModel {
                 query = ""
                 draft = ""
                 heroNote = nil
+                awaitingDetailConfirm = false
                 chooseStation(scrubbed, omitYou: true, persist: true)
                 return
             }
         }
 
-        if let coinError = BillingStore.shared.tryConsumeGenerationCoin() {
-            // 設定から作り直したときも見えるように、土地タブではなくメモを残す。
-            heroNote = coinError
-            stationNotice = coinError
-            tourTab = .more
-            if station != nil {
-                screen = .tour
-            }
+        if forceRefresh {
+            startPaidGeneration(bare: bare, forceRefresh: true)
             return
         }
 
-        stationLoading = true
+        // P0: 無料輪郭のみ。コインは「詳しく」のあと。
+        contourLoading = true
+        awaitingDetailConfirm = false
         phase = .station
         query = name
         draft = ""
-        // 作成中の文言は Root のポップアップ。ここはエラー用に空ける。
         heroNote = nil
         stationNotice = nil
+        isStationPreview = false
+        contourSummary = ""
+        contourIsDecisionUseful = false
+        pendingDetailBare = bare
+        previewHints = ["駅の位置を、地図で確認しています"]
+        coinConsumedForLookup = false
         if screen != .tour {
             screen = .hero
+        }
+
+        pendingStationLookup?.cancel()
+        pendingStationLookup = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let skeleton = await StationSkeletonPreview.build(name: bare)
+            if Task.isCancelled {
+                self.contourLoading = false
+                self.finishLookupCancelled()
+                return
+            }
+            self.contourLoading = false
+            if let skeleton {
+                self.applyStationPreview(skeleton.station, hints: skeleton.hints)
+                self.contourIsDecisionUseful = skeleton.isDecisionUseful
+                self.contourSummary = skeleton.isDecisionUseful ? skeleton.contourLine : ""
+                self.previewHints = skeleton.isDecisionUseful ? skeleton.hints : []
+            } else {
+                self.contourIsDecisionUseful = false
+                self.contourSummary = ""
+                self.previewHints = []
+            }
+            self.awaitingDetailConfirm = true
+            self.pendingDetailBare = bare
+        }
+    }
+
+    /// 輪郭を見たあと、コインで本案内を開く。
+    func confirmDetailGeneration() {
+        let bare = pendingDetailBare.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !bare.isEmpty, !stationLoading else { return }
+        awaitingDetailConfirm = false
+        startPaidGeneration(bare: bare, forceRefresh: false)
+    }
+
+    /// 輪郭だけでやめる（コインなし）。
+    func declineDetailGeneration() {
+        awaitingDetailConfirm = false
+        contourLoading = false
+        pendingStationLookup?.cancel()
+        pendingStationLookup = nil
+        discardStationPreviewIfNeeded()
+        contourSummary = ""
+        contourIsDecisionUseful = false
+        pendingDetailBare = ""
+        previewHints = []
+        screen = .hero
+        phase = .station
+        query = ""
+        draft = ""
+        courses = []
+        selectedCourse = nil
+        heroNote = nil
+    }
+
+    /// コイン消費＋本生成。
+    private func startPaidGeneration(bare: String, forceRefresh: Bool) {
+        guard !bare.isEmpty, !stationLoading else { return }
+
+        if let coinError = BillingStore.shared.tryConsumeGenerationCoin() {
+            discardStationPreviewIfNeeded()
+            awaitingDetailConfirm = false
+            let label = bare.hasSuffix("駅") ? bare : "\(bare)駅"
+            let note = "「\(label)」の案内：\(coinError)"
+            heroNote = note
+            stationNotice = note
+            query = bare
+            phase = .station
+            screen = .hero
+            tourTab = .place
+            return
+        }
+        coinConsumedForLookup = BillingStore.shared.lastGenerationUsedCoin
+
+        stationLoading = true
+        awaitingDetailConfirm = false
+        phase = .station
+        query = bare
+        draft = ""
+        heroNote = nil
+        stationNotice = nil
+        if previewHints.isEmpty {
+            previewHints = ["詳しい案内を調べています"]
+        } else if !previewHints.contains(where: { $0.contains("詳しい案内") }) {
+            previewHints.append("詳しい案内を調べています")
         }
 
         pendingStationLookup?.cancel()
@@ -516,22 +680,35 @@ final class AppModel {
                     forceRefresh: forceRefresh
                 )
                 if Task.isCancelled {
-                    BillingStore.shared.refundGenerationCoin()
+                    self.finishLookupCancelled()
+                    return
+                }
+                if Self.isSuspiciousNameSwap(requested: bare, returned: station.name) {
+                    self.refundLookupCoinIfNeeded()
                     self.stationLoading = false
+                    self.discardStationPreviewIfNeeded()
+                    let label = bare.hasSuffix("駅") ? bare : "\(bare)駅"
+                    let note = "「\(label)」とは別の駅が返ってきました。名前を確認してもう一度どうぞ。"
+                    self.heroNote = note
+                    self.stationNotice = note
+                    self.query = bare
+                    self.screen = .hero
                     return
                 }
                 self.stationLoading = false
+                self.coinConsumedForLookup = false
+                self.contourSummary = ""
+                self.pendingDetailBare = ""
+                self.previewHints = []
                 self.heroNote = nil
                 self.stationNotice = nil
-                // 調べた結果は必ず端末へ残す
                 self.chooseStation(station, omitYou: true, persist: true)
             } catch is CancellationError {
-                BillingStore.shared.refundGenerationCoin()
-                self.stationLoading = false
-                self.heroNote = nil
+                self.finishLookupCancelled()
             } catch {
-                BillingStore.shared.refundGenerationCoin()
+                self.refundLookupCoinIfNeeded()
                 self.stationLoading = false
+                self.discardStationPreviewIfNeeded()
                 let message = (error as? LocalizedError)?.errorDescription?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 let note = (message?.isEmpty == false)
@@ -539,19 +716,58 @@ final class AppModel {
                     : "案内の通信に失敗しました。通信状況をみて、もう一度どうぞ。"
                 self.heroNote = note
                 self.stationNotice = note
+                self.query = bare
+                self.screen = .hero
             }
         }
     }
 
+    /// 「淀屋橋」要求なのに「淀」が返るような、短い別名への吸い込み。
+    private static func isSuspiciousNameSwap(requested: String, returned: String) -> Bool {
+        let a = SavedStationStore.bareName(requested)
+        let b = SavedStationStore.bareName(returned)
+        guard !a.isEmpty, !b.isEmpty, a != b else { return false }
+        if a.contains(b), b.count * 2 < a.count { return true }
+        return false
+    }
+
     /// 案内生成の待ちをやめる（ポップアップの「やめる」）。
     func cancelStationLookup() {
-        guard stationLoading else { return }
+        guard stationLoading || contourLoading else { return }
         pendingStationLookup?.cancel()
         pendingStationLookup = nil
-        stationLoading = false
+        finishLookupCancelled(message: "案内づくりをやめました。")
+    }
+
+    private func refundLookupCoinIfNeeded() {
+        guard coinConsumedForLookup else { return }
         BillingStore.shared.refundGenerationCoin()
-        heroNote = "案内づくりをやめました。"
-        stationNotice = heroNote
+        coinConsumedForLookup = false
+    }
+
+    private func finishLookupCancelled(message: String? = nil) {
+        refundLookupCoinIfNeeded()
+        stationLoading = false
+        contourLoading = false
+        awaitingDetailConfirm = false
+        contourSummary = ""
+        contourIsDecisionUseful = false
+        pendingDetailBare = ""
+        let wasPreview = isStationPreview
+        discardStationPreviewIfNeeded()
+        if wasPreview || screen == .tour {
+            screen = .hero
+            phase = .station
+            showStationSearch = false
+            query = ""
+            draft = ""
+            courses = []
+            selectedCourse = nil
+        }
+        if let message {
+            heroNote = message
+            stationNotice = message
+        }
     }
 
     /// 位置取得を始めたときに呼ぶ。false なら取得中なので何もしない。

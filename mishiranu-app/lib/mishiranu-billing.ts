@@ -82,6 +82,8 @@ export type BillingState = {
   coins: number;
   freeGranted: boolean;
   byokUnlocked: boolean;
+  /** 買い切り＋API設定済みでもコイン経路を選ぶ */
+  preferCoinOverByok: boolean;
   /** 端末内のみ */
   byokProvider: ByokProvider;
   apiKey: string;
@@ -103,6 +105,7 @@ function defaultState(): BillingState {
     coins: 0,
     freeGranted: false,
     byokUnlocked: false,
+    preferCoinOverByok: false,
     byokProvider: "gemini",
     apiKey: "",
     apiBaseUrl: DEFAULT_OPENAI_BASE,
@@ -123,6 +126,7 @@ export function loadBillingState(): BillingState {
       coins: typeof parsed?.coins === "number" ? Math.max(0, parsed.coins) : 0,
       freeGranted: parsed?.freeGranted === true,
       byokUnlocked: parsed?.byokUnlocked === true,
+      preferCoinOverByok: parsed?.preferCoinOverByok === true,
       byokProvider: provider,
       apiKey: typeof parsed?.apiKey === "string" ? parsed.apiKey : "",
       apiBaseUrl:
@@ -172,10 +176,32 @@ export function isByokConfigured(state: BillingState): boolean {
   return true;
 }
 
+/** 今回の生成で自分の API を使うか（コイン不要）。 */
+export function usesByokForGeneration(state: BillingState): boolean {
+  return (
+    state.byokUnlocked &&
+    isByokConfigured(state) &&
+    !state.preferCoinOverByok
+  );
+}
+
+export function billingModeLabel(state: BillingState): string {
+  if (usesByokForGeneration(state)) {
+    return `自分の API（${state.byokProvider === "openai" ? "OpenAI互換" : "Gemini"}）`;
+  }
+  if (state.byokUnlocked && isByokConfigured(state) && state.preferCoinOverByok) {
+    return "コインで案内（買い切りと併用）";
+  }
+  if (state.byokUnlocked && !isByokConfigured(state)) {
+    return "コインで案内 · API 未設定でも可";
+  }
+  return "コインで案内を生成";
+}
+
 export function userAiConfigFromBilling(
   state: BillingState,
 ): UserAiConfig | null {
-  if (!isByokConfigured(state)) return null;
+  if (!usesByokForGeneration(state)) return null;
   if (state.byokProvider === "openai") {
     return {
       provider: "openai",
@@ -190,36 +216,47 @@ export function userAiConfigFromBilling(
   };
 }
 
-/** 道Bなら消費なし。道Aは1コイン。足りなければ false */
+/** 自分の API 利用時は消費なし。それ以外（買い切り後のコイン選択含む）は1コイン。 */
 export function tryConsumeGenerationCoin(state: BillingState): {
   ok: boolean;
   next: BillingState;
+  usedCoin: boolean;
   reason?: string;
 } {
-  if (state.byokUnlocked) {
-    if (isByokConfigured(state)) {
-      return { ok: true, next: state };
-    }
-    return {
-      ok: false,
-      next: state,
-      reason:
-        "買い切り済みです。設定の「料金」で自分の API（キーなど）を入れると案内をつくれます。",
-    };
+  if (usesByokForGeneration(state)) {
+    return { ok: true, next: state, usedCoin: false };
   }
   if (state.coins < 1) {
-    return {
-      ok: false,
-      next: state,
-      reason: "コインが足りません。設定の「料金」から補充できます。",
-    };
+    let reason = "コインが足りません。設定の「料金」から補充できます。";
+    if (state.byokUnlocked && isByokConfigured(state)) {
+      reason =
+        "コインが足りません。自分の API に切り替えるか、設定の「料金」から補充できます。";
+    } else if (state.byokUnlocked) {
+      reason =
+        "コインが足りません。API を設定するか、設定の「料金」から補充できます。";
+    }
+    return { ok: false, next: state, usedCoin: false, reason };
   }
-  return { ok: true, next: { ...state, coins: state.coins - 1 } };
+  return {
+    ok: true,
+    next: { ...state, coins: state.coins - 1 },
+    usedCoin: true,
+  };
 }
 
-export function refundGenerationCoin(state: BillingState): BillingState {
-  if (state.byokUnlocked) return state;
+export function refundGenerationCoin(
+  state: BillingState,
+  usedCoin = true,
+): BillingState {
+  if (!usedCoin) return state;
   return { ...state, coins: state.coins + 1 };
+}
+
+export function setPreferCoinOverByok(
+  state: BillingState,
+  preferCoinOverByok: boolean,
+): BillingState {
+  return { ...state, preferCoinOverByok };
 }
 
 export function grantCoinPack(

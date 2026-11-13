@@ -8,6 +8,10 @@ struct HeroView: View {
     @State private var pendingConfirm: StationConfirm?
     /// 駅名検索の候補一覧。選んでから AI 案内へ。
     @State private var candidateSheet: CandidateSheet?
+    /// 入力中のインライン候補（カタログ＋地図）。
+    @State private var liveCandidates: [StationNameCandidate] = []
+    @State private var liveSuggestLoading = false
+    @State private var liveSuggestTask: Task<Void, Never>?
 
     private let brandChars = Array("見知らぬ駅")
     private let heroInk = Color(hex: 0x2a241c)
@@ -102,9 +106,9 @@ struct HeroView: View {
                             }
                     }
                     .buttonStyle(PlainHapticButtonStyle())
-                    .disabled(model.geoLoading || model.stationLoading)
+                    .disabled(model.geoLoading || model.stationLoading || model.contourLoading)
 
-                    if !model.geoLoading, !model.stationLoading {
+                    if !model.geoLoading, !model.stationLoading, !model.contourLoading {
                         statusBlock
                     }
 
@@ -122,7 +126,7 @@ struct HeroView: View {
                                 .textInputAutocapitalization(.never)
                                 .submitLabel(.search)
                                 .focused($searchFocused)
-                                .disabled(model.stationLoading)
+                                .disabled(model.stationLoading || model.contourLoading)
                                 .onSubmit { submitStationQuery() }
                                 .padding(.bottom, 6)
                                 .overlay(alignment: .bottom) {
@@ -140,7 +144,11 @@ struct HeroView: View {
                                 .overlay(
                                     Rectangle().stroke(heroInk, lineWidth: 1)
                                 )
-                                .disabled(model.stationLoading || candidateSheet?.loading == true)
+                                .disabled(
+                                    model.stationLoading
+                                        || model.contourLoading
+                                        || candidateSheet?.loading == true
+                                )
                         }
                     }
 
@@ -199,69 +207,113 @@ struct HeroView: View {
         }
         .animation(.easeInOut(duration: 0.18), value: candidateSheet?.query)
         .animation(.easeInOut(duration: 0.18), value: pendingConfirm?.title)
+        .onChange(of: model.query) { _, newValue in
+            refreshLiveCandidates(for: newValue)
+        }
+        .onAppear {
+            refreshLiveCandidates(for: model.query)
+        }
     }
 
     private var queryTrimmed: String {
         model.query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var suggestStations: [Station] {
-        if queryTrimmed.isEmpty {
-            return Array(model.savedStations.prefix(12))
+    private var savedSuggestStations: [Station] {
+        Array(model.savedStations.prefix(12))
+    }
+
+    private func refreshLiveCandidates(for raw: String) {
+        liveSuggestTask?.cancel()
+        let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else {
+            liveCandidates = []
+            liveSuggestLoading = false
+            return
         }
-        return Array(model.filteredStations.prefix(8))
+        liveSuggestLoading = true
+        // カタログだけ先に出して、短い駅名の誤吸着を防いだ結果を即見せる。
+        liveCandidates = StationCandidateSearch.localCandidates(
+            for: q,
+            in: model.stations,
+            savedIds: model.savedStationIds,
+            limit: 8
+        )
+        liveSuggestTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 280_000_000)
+            guard !Task.isCancelled else { return }
+            let items = await StationCandidateSearch.candidates(
+                for: q,
+                in: model.stations,
+                savedIds: model.savedStationIds
+            )
+            guard !Task.isCancelled else { return }
+            liveCandidates = items
+            liveSuggestLoading = false
+        }
     }
 
     @ViewBuilder
     private var stationSuggestList: some View {
-        let rows = suggestStations
         VStack(alignment: .leading, spacing: 0) {
-            Text(queryTrimmed.isEmpty ? "調べた駅" : "候補")
-                .font(.system(.caption2, design: .serif).weight(.semibold))
-                .foregroundStyle(heroMist)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
+            HStack {
+                Text(queryTrimmed.isEmpty ? "調べた駅" : "候補")
+                    .font(.system(.caption2, design: .serif).weight(.semibold))
+                    .foregroundStyle(heroMist)
+                if liveSuggestLoading, !queryTrimmed.isEmpty {
+                    ProgressView()
+                        .controlSize(.mini)
+                }
+            }
+            .padding(.top, 10)
+            .padding(.bottom, 4)
 
-            if rows.isEmpty {
-                Text(queryTrimmed.isEmpty
-                    ? "まだありません。駅名を入れて開くと、ここに残ります。"
-                    : "一覧に無い駅は「開く」で地図の候補から選べます。")
+            if queryTrimmed.isEmpty {
+                if savedSuggestStations.isEmpty {
+                    Text("まだありません。駅名を入れて開くと、ここに残ります。")
+                        .font(.system(.caption, design: .serif))
+                        .foregroundStyle(heroMist)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 10)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(savedSuggestStations) { station in
+                            Button {
+                                searchFocused = false
+                                pendingConfirm = .recall(station)
+                            } label: {
+                                suggestRow(
+                                    title: station.name,
+                                    detail: "\(station.prefecture) · \(station.line)"
+                                )
+                            }
+                            .buttonStyle(PlainHapticButtonStyle())
+                            .disabled(model.stationLoading || model.contourLoading)
+                            .accessibilityLabel("\(station.name)を選ぶ")
+                            Divider().overlay(heroInk.opacity(0.15))
+                        }
+                    }
+                }
+            } else if liveCandidates.isEmpty {
+                Text(liveSuggestLoading
+                    ? "地図の候補を探しています…"
+                    : "候補が見つかりませんでした。「開く」でもう一度どうぞ。")
                     .font(.system(.caption, design: .serif))
                     .foregroundStyle(heroMist)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 10)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(rows) { station in
+                    ForEach(liveCandidates) { cand in
                         Button {
                             searchFocused = false
-                            if queryTrimmed.isEmpty {
-                                pendingConfirm = .recall(station)
-                            } else {
-                                // 候補はポップアップで選び直してから調べる。
-                                openCandidateSheet(for: queryTrimmed)
-                            }
+                            commitCandidate(cand)
                         } label: {
-                            HStack(spacing: 10) {
-                                PictogramIcon(.train, size: 16)
-                                    .foregroundStyle(heroInk.opacity(0.7))
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(station.name)
-                                        .font(.system(.headline, design: .serif).weight(.semibold))
-                                        .foregroundStyle(heroInk)
-                                    Text("\(station.prefecture) · \(station.line)")
-                                        .font(.system(.caption, design: .serif))
-                                        .foregroundStyle(heroMist)
-                                        .lineLimit(1)
-                                }
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.vertical, 12)
-                            .contentShape(Rectangle())
+                            suggestRow(title: cand.name, detail: cand.detail)
                         }
                         .buttonStyle(PlainHapticButtonStyle())
-                        .disabled(model.stationLoading)
-                        .accessibilityLabel("\(station.name)を選ぶ")
+                        .disabled(model.stationLoading || model.contourLoading)
+                        .accessibilityLabel("\(cand.name)を選ぶ")
                         Divider().overlay(heroInk.opacity(0.15))
                     }
                 }
@@ -276,6 +328,25 @@ struct HeroView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(heroInk.opacity(0.12), lineWidth: 1)
         )
+    }
+
+    private func suggestRow(title: String, detail: String) -> some View {
+        HStack(spacing: 10) {
+            PictogramIcon(.train, size: 16)
+                .foregroundStyle(heroInk.opacity(0.7))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(.headline, design: .serif).weight(.semibold))
+                    .foregroundStyle(heroInk)
+                Text(detail)
+                    .font(.system(.caption, design: .serif))
+                    .foregroundStyle(heroMist)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder

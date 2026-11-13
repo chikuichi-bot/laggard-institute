@@ -41,10 +41,14 @@ enum LandProse {
             sightseeingNotes: station.sightseeingNotes.map {
                 HistoryNote(title: correctKamoRiverNaming($0.title), body: correctKamoRiverNaming($0.body))
             },
+            storyNotes: station.storyNotes.map {
+                HistoryNote(title: correctKamoRiverNaming($0.title), body: correctKamoRiverNaming($0.body))
+            },
             bikeRental: station.bikeRental,
             tourTitle: station.tourTitle,
             catchCopy: station.catchCopy,
             emptyCopy: station.emptyCopy,
+            railHint: station.railHint,
             lat: station.lat,
             lng: station.lng,
             spots: station.spots
@@ -119,10 +123,14 @@ enum LandProse {
             walkGuide: walk.isEmpty ? station.walkGuide : join(walk),
             historyNotes: notes.isEmpty ? station.historyNotes : notes,
             sightseeingNotes: sight.isEmpty ? station.sightseeingNotes : sight,
+            storyNotes: station.storyNotes.map {
+                HistoryNote(title: correctKamoRiverNaming($0.title), body: correctKamoRiverNaming($0.body))
+            },
             bikeRental: station.bikeRental,
             tourTitle: station.tourTitle,
             catchCopy: station.catchCopy,
             emptyCopy: station.emptyCopy,
+            railHint: station.railHint,
             lat: station.lat,
             lng: station.lng,
             spots: station.spots

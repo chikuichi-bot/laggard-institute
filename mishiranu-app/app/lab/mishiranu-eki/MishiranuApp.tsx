@@ -82,18 +82,20 @@ import {
 import {
   BYOK_PRODUCT,
   grantCoinPack,
-  isByokConfigured,
   loadBillingState,
   refundGenerationCoin,
   saveBillingState,
   setBillingApiKey,
   setByokOpenAiSettings,
   setByokProvider,
+  setPreferCoinOverByok,
   tryConsumeGenerationCoin,
   unlockByok,
+  usesByokForGeneration,
   userAiConfigFromBilling,
   type BillingState,
 } from "@/lib/mishiranu-billing";
+import { MISHIRANU_ORIKATA_URL } from "@/lib/mishiranu-public-urls";
 import { PricingBoard } from "./PricingBoard";
 import {
   CourseIcon,
@@ -114,7 +116,13 @@ import {
 } from "./MishiranuIcons";
 import HeroRoadMap from "./HeroRoadMap";
 import { IosInstallCard } from "./IosInstall";
-import { PlaceBoard } from "./PlaceBoard";
+import {
+  PlaceBoard,
+  placeScript,
+  type PlaceSpeakSection,
+} from "./PlaceBoard";
+import { prepareSpeakableText } from "@/lib/mishiranu-speech-speakable";
+import { stationNameReading } from "@/data/mishiranu-station-readings";
 import { StationChrome, chromeStationLabel } from "./StationChrome";
 import {
   loadMishiranuSkin,
@@ -384,6 +392,8 @@ export default function MishiranuApp({
   mealBudgetRef.current = mealBudget;
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [tourTab, setTourTab] = useState<TourTab>("place");
+  const [placeSpeaking, setPlaceSpeaking] =
+    useState<PlaceSpeakSection | null>(null);
   const [guideTab, setGuideTab] = useState<GuideTabId>("sight");
   const [spotSheetOpen, setSpotSheetOpen] = useState(false);
   const [copy, setCopy] = useState<TourCopy | null>(null);
@@ -465,6 +475,50 @@ export default function MishiranuApp({
     () => paragraphsFrom(station.areaAbout),
     [station.areaAbout],
   );
+
+  function stopPlaceSpeech() {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setPlaceSpeaking(null);
+  }
+
+  function togglePlaceSpeak(section: PlaceSpeakSection) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (placeSpeaking === section) {
+      stopPlaceSpeech();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const text = placeScript(station, section);
+    if (!text) return;
+    const spoken = prepareSpeakableText(text, {
+      stationName: station.name,
+      stationReading: stationNameReading(station),
+      extraNames: [
+        ...(station.spots ?? []).map((sp) => sp.name),
+        ...(station.sightseeingNotes ?? []).map((n) => n.title),
+        ...(station.historyNotes ?? []).map((n) => n.title),
+        ...(station.storyNotes ?? []).map((n) => n.title),
+      ],
+    });
+    const utter = new SpeechSynthesisUtterance(spoken || text);
+    utter.lang = "ja-JP";
+    utter.rate = 0.88;
+    utter.onend = () => setPlaceSpeaking(null);
+    utter.onerror = () => setPlaceSpeaking(null);
+    setPlaceSpeaking(section);
+    window.speechSynthesis.speak(utter);
+  }
+
+  // 駅が変わった／ツアーを出たときだけ止める。タブ切替では止めない（聴きながら散策）。
+  useEffect(() => {
+    stopPlaceSpeech();
+  }, [station.id]);
+
+  useEffect(() => {
+    if (step !== "tour") stopPlaceSpeech();
+  }, [step]);
 
   // Static host (lagado.jp) では searchParams がビルド時固定なので、URL をクライアントで読む
   useEffect(() => {
@@ -840,10 +894,11 @@ export default function MishiranuApp({
 
     const spend = tryConsumeGenerationCoin(billing);
     if (!spend.ok) {
-      setHeroNote(spend.reason ?? "コインが足りません。");
-      setTourTab("more");
-      setSettingsPane("pricing");
-      setStep("tour");
+      const label = bare.endsWith("駅") ? bare : `${bare}駅`;
+      setHeroNote(`「${label}」の案内：${spend.reason ?? "コインが足りません。"}`);
+      setQuery(bare);
+      setChatPhase("station");
+      setStep("hero");
       return;
     }
     updateBilling(spend.next);
@@ -877,12 +932,12 @@ export default function MishiranuApp({
       try {
         data = raw ? (JSON.parse(raw) as typeof data) : {};
       } catch {
-        updateBilling(refundGenerationCoin(spend.next));
+        updateBilling(refundGenerationCoin(spend.next, spend.usedCoin));
         setHeroNote(stationLookupErrorMessage(res.status, {}, raw));
         return;
       }
       if (!res.ok || !data.station) {
-        updateBilling(refundGenerationCoin(spend.next));
+        updateBilling(refundGenerationCoin(spend.next, spend.usedCoin));
         setHeroNote(stationLookupErrorMessage(res.status, data, raw));
         return;
       }
@@ -894,7 +949,7 @@ export default function MishiranuApp({
       setHeroNote(null);
       chooseStation(next, spoken, { omitYou: true });
     } catch {
-      updateBilling(refundGenerationCoin(spend.next));
+      updateBilling(refundGenerationCoin(spend.next, spend.usedCoin));
       setHeroNote("案内の通信に失敗しました。通信状況をみて、もう一度どうぞ。");
     } finally {
       setStationLoading(false);
@@ -1421,7 +1476,7 @@ export default function MishiranuApp({
                     >
                       <p className="mishiranu-kicker">
                         <IconTour />
-                        道案内
+                        駅から、駅まで
                       </p>
                       <h3
                         id="course-itinerary-title"
@@ -1430,6 +1485,23 @@ export default function MishiranuApp({
                         <CourseIcon courseId={selectedCourse.id} />
                         {selectedCourse.title}
                       </h3>
+                      <button
+                        type="button"
+                        className={`mishiranu-walk-listen${placeSpeaking ? " mishiranu-walk-listen--on" : ""}`}
+                        onClick={() => togglePlaceSpeak("all")}
+                        aria-pressed={Boolean(placeSpeaking)}
+                      >
+                        <strong>
+                          {placeSpeaking
+                            ? "ガイダンスを止める"
+                            : "ガイダンスを聴きながら歩く"}
+                        </strong>
+                        <small>
+                          {placeSpeaking
+                            ? "歴史と今の読み上げ中 · 散策はそのまま"
+                            : "土地の歴史と今を耳でたどります"}
+                        </small>
+                      </button>
                       {(() => {
                         const variants = courses.filter(
                           (c) =>
@@ -1446,8 +1518,8 @@ export default function MishiranuApp({
                             {variants.map((option) => {
                               const on = option.id === selectedCourse.id;
                               const label = option.id.includes("long")
-                                ? "ロング"
-                                : "ショート";
+                                ? "大回り"
+                                : "小回り";
                               return (
                                 <button
                                   key={option.id}
@@ -1475,12 +1547,12 @@ export default function MishiranuApp({
                             <strong>約{selectedCourse.totalMinutes}分</strong>
                           </div>
                           <div>
-                            <span>立ち寄り</span>
+                            <span>目の置きどころ</span>
                             <strong>{selectedCourse.stopCount}か所</strong>
                           </div>
                           <div>
-                            <span>道順</span>
-                            <strong>駅→回り→駅</strong>
+                            <span>帰り</span>
+                            <strong>同じ駅へ</strong>
                           </div>
                         </div>
                         <div className="mishiranu-wayfind-strip" aria-label="立ち寄り順">
@@ -1506,7 +1578,7 @@ export default function MishiranuApp({
                           </span>
                         </div>
                         <p className="mishiranu-wayfind-hint">
-                          同じ道はなるべく帰りません。番号を押すと地図で場所を開けます。
+                          同じ道はなるべく通らず、駅へ帰ります。どこからでも駅まで歩いて戻れます。
                         </p>
                       </div>
                       <ol className="mishiranu-course-itinerary-list">
@@ -1524,7 +1596,7 @@ export default function MishiranuApp({
                                 駅
                               </span>
                               <span className="mishiranu-course-stop-meta">
-                                改札を出て、1番へ向かいます
+                                改札を出て、ぶらりと
                               </span>
                             </span>
                           </div>
@@ -1545,8 +1617,19 @@ export default function MishiranuApp({
                               </span>
                               <span className="mishiranu-course-stop-body">
                                 <span className="mishiranu-course-stop-leg">
-                                  {index === 0 ? "駅から" : ""}徒歩 約
+                                  {index === 0 ? "駅から徒歩 約" : "次まで 徒歩約"}
                                   {stop.walkMinutes}分
+                                  {index > 0 ? (
+                                    <span className="mishiranu-course-stop-back">
+                                      {" · "}駅まで約
+                                      {Math.max(
+                                        1,
+                                        station.spots.find((s) => s.id === stop.spotId)
+                                          ?.walkMinutes ?? stop.walkMinutes,
+                                      )}
+                                      分
+                                    </span>
+                                  ) : null}
                                 </span>
                                 <span className="mishiranu-course-stop-name">
                                   {stop.name}
@@ -1584,7 +1667,7 @@ export default function MishiranuApp({
                               </span>
                               <span className="mishiranu-course-stop-meta">
                                 {selectedCourse.returnWalkMinutes
-                                  ? `徒歩約 ${selectedCourse.returnWalkMinutes} 分で駅へ戻る`
+                                  ? `駅へ帰る · 徒歩約 ${selectedCourse.returnWalkMinutes} 分`
                                   : "駅が終点です"}
                               </span>
                             </span>
@@ -1596,13 +1679,13 @@ export default function MishiranuApp({
                     <section className="mishiranu-course-empty" aria-label="ベタなまわり方なし">
                       <p className="mishiranu-kicker">
                         <IconTour />
-                        道案内
+                        駅から、駅まで
                       </p>
                       <h3 className="mishiranu-course-itinerary-title">
-                        ショート／ロングで歩く
+                        駅から、小回り
                       </h3>
                       <p className="mishiranu-note">
-                        土地ページの文章に、まだ歩ける場所の名前が少ないようです。土地と地図から、気になる場所へ寄ってください。
+                        寄る場所の名前は、まだ少ないようです。地図で駅のまわりを見て、気の向く方へ少し歩き、同じ駅へ帰ってくれば、それで一周です。
                       </p>
                     </section>
                   )}
@@ -1834,10 +1917,16 @@ export default function MishiranuApp({
                           return a.name.localeCompare(b.name, "ja");
                         });
                         if (items.length === 0) {
+                          const emptyCopy =
+                            kind === "meal"
+                              ? "この駅の徒歩圏に、案内できる店はまだありません。店がない駅として、地形や神社・公園を歩く案内をご覧ください。"
+                              : kind === "souvenir"
+                                ? "お土産の候補はありません。門前や社務所の授与品は、現地で見つかることがあります。"
+                                : kind === "rest"
+                                  ? "屋内の休み場は少なめです。川べりや公園のベンチなど、景色の休みを土地・観光からどうぞ。"
+                                  : "この徒歩圏ではまだ少なめです。土地の話や、別の案内タブも見てみてください。";
                           return (
-                            <p className="mishiranu-guide-empty">
-                              まだこの分類の店が少ないです。設定から「案内を作り直す（AI）」を試してください。
-                            </p>
+                            <p className="mishiranu-guide-empty">{emptyCopy}</p>
                           );
                         }
                         return (
@@ -1909,6 +1998,8 @@ export default function MishiranuApp({
                     tourTitle={
                       selectedCourse ? selectedCourse.title : shownCopy.tourTitle
                     }
+                    speakingSection={placeSpeaking}
+                    onToggleSpeak={togglePlaceSpeak}
                   />
                 </div>
               ) : null}
@@ -1938,6 +2029,9 @@ export default function MishiranuApp({
                       }
                       onOpenAiSettingsChange={(patch) =>
                         updateBilling(setByokOpenAiSettings(billing, patch))
+                      }
+                      onPreferCoinChange={(prefer) =>
+                        updateBilling(setPreferCoinOverByok(billing, prefer))
                       }
                     />
                   ) : (
@@ -2148,6 +2242,19 @@ export default function MishiranuApp({
                     <p className="mishiranu-settings-group-label">
                       このアプリについて
                     </p>
+                    <div className="mishiranu-settings-card">
+                      <a
+                        className="mishiranu-settings-action mishiranu-settings-action--nav"
+                        href={MISHIRANU_ORIKATA_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <span>見知らぬ駅について</span>
+                        <span className="mishiranu-settings-detail">
+                          知らない駅に降りる · 聴いて散策する
+                        </span>
+                      </a>
+                    </div>
                     <p className="mishiranu-foot">
                       地図は OpenStreetMap。ピンは検索した駅の座標です。
                       ピクトグラム素材提供：日本デザインセンター／
@@ -2204,9 +2311,17 @@ export default function MishiranuApp({
                     >
                       <GuideKindIcon kind={spotGuide(activeSpot)} />
                     </span>
-                    {GUIDE_LABEL[spotGuide(activeSpot)]} · 徒歩約{" "}
-                    {activeSpot.walkMinutes} 分
+                    {GUIDE_LABEL[spotGuide(activeSpot)]} · 駅から徒歩約{" "}
+                    {activeSpot.walkMinutes} 分（約{" "}
+                    {activeSpot.walkMinutes * 80} m）
                   </p>
+                  {["meal", "souvenir"].includes(spotGuide(activeSpot)) ||
+                  (spotGuide(activeSpot) === "rest" &&
+                    !(hoursFor(activeSpot) ?? "").includes("屋外")) ? (
+                    <p className="mishiranu-spot-hours-note">
+                      ※営業状況は現地またはマップでご確認ください
+                    </p>
+                  ) : null}
                   {hoursFor(activeSpot) ? (
                     <p className="mishiranu-spot-hours">
                       営業 {hoursFor(activeSpot)}
@@ -2222,6 +2337,16 @@ export default function MishiranuApp({
                   {activeSpot.detail ? (
                     <p className="mishiranu-spot-detail">{activeSpot.detail}</p>
                   ) : null}
+                  <a
+                    className="mishiranu-btn mishiranu-btn--ghost mishiranu-spot-sheet-maps"
+                    href={`https://maps.apple.com/?q=${encodeURIComponent(
+                      `${activeSpot.name} ${station.name}駅`,
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Appleマップで開く
+                  </a>
                   <button
                     type="button"
                     className="mishiranu-btn mishiranu-btn--primary mishiranu-spot-sheet-close"
@@ -2253,11 +2378,9 @@ export default function MishiranuApp({
                     {`ここは${station.name.replace(/駅$/u, "")}駅です`}
                   </h4>
                   <p className="mishiranu-confirm-body">
-                    {billing.byokUnlocked && isByokConfigured(billing)
+                    {usesByokForGeneration(billing)
                       ? "この駅の案内を、もう一度調べますか？\n自分の API で作り直します（コインは使いません）。"
-                      : billing.byokUnlocked
-                        ? "買い切り済みです。料金で API を設定してから、もう一度調べてください。"
-                        : `この駅の案内を、もう一度調べますか？\nコインを1枚使います（残り ${billing.coins} 枚）。`}
+                      : `この駅の案内を、もう一度調べますか？\nコインを1枚使います（残り ${billing.coins} 枚）。`}
                   </p>
                   <div className="mishiranu-confirm-actions">
                     <button

@@ -15,6 +15,35 @@ struct StationNameCandidate: Identifiable, Equatable {
 }
 
 enum StationCandidateSearch {
+    /// カタログ／保存だけ（同期）。インライン候補の先出し用。
+    static func localCandidates(
+        for rawQuery: String,
+        in stations: [Station],
+        savedIds: Set<String>,
+        limit: Int = 8
+    ) -> [StationNameCandidate] {
+        let q = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+        var out: [StationNameCandidate] = []
+        var seen = Set<String>()
+        for station in TextMatch.filterStations(q, in: stations, savedIds: savedIds, limit: limit) {
+            let k = key(station.name)
+            guard !k.isEmpty, !seen.contains(k) else { continue }
+            seen.insert(k)
+            let saved = savedIds.contains(station.id)
+            let label = station.name.hasSuffix("駅") ? station.name : "\(station.name)駅"
+            out.append(
+                StationNameCandidate(
+                    id: station.id,
+                    name: label,
+                    detail: "\(station.prefecture) · \(station.line)" + (saved ? " · 保存済み" : ""),
+                    knownStation: station
+                )
+            )
+        }
+        return out
+    }
+
     /// 入力から候補を集める。保存・同梱を先に、足りなければ地図検索。
     static func candidates(
         for rawQuery: String,
@@ -26,13 +55,8 @@ enum StationCandidateSearch {
         guard !q.isEmpty else { return [] }
         let bare = q.hasSuffix("駅") ? String(q.dropLast()) : q
 
-        var out: [StationNameCandidate] = []
-        var seen = Set<String>()
-
-        func key(_ name: String) -> String {
-            let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            return (n.hasSuffix("駅") ? String(n.dropLast()) : n).lowercased()
-        }
+        var out = localCandidates(for: q, in: stations, savedIds: savedIds, limit: limit)
+        var seen = Set(out.map { key($0.name) })
 
         func append(name: String, detail: String, station: Station?) {
             let k = key(name)
@@ -46,16 +70,6 @@ enum StationCandidateSearch {
                     detail: detail,
                     knownStation: station
                 )
-            )
-        }
-
-        let local = TextMatch.filterStations(q, in: stations, savedIds: savedIds, limit: limit)
-        for station in local {
-            let saved = savedIds.contains(station.id)
-            append(
-                name: station.name,
-                detail: "\(station.prefecture) · \(station.line)" + (saved ? " · 保存済み" : ""),
-                station: station
             )
         }
 
@@ -74,6 +88,11 @@ enum StationCandidateSearch {
         return Array(out.prefix(limit))
     }
 
+    private static func key(_ name: String) -> String {
+        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (n.hasSuffix("駅") ? String(n.dropLast()) : n).lowercased()
+    }
+
     private static func mapCandidates(bare: String, limit: Int) async -> [(name: String, detail: String)] {
         guard limit > 0, !bare.isEmpty else { return [] }
         let request = MKLocalSearch.Request()
@@ -81,7 +100,7 @@ enum StationCandidateSearch {
         request.resultTypes = [.pointOfInterest, .address]
         guard let response = try? await MKLocalSearch(request: request).start() else { return [] }
 
-        var rows: [(name: String, detail: String)] = []
+        var rows: [(name: String, detail: String, score: Int)] = []
         var seen = Set<String>()
         for item in response.mapItems {
             guard let raw = item.name?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty
@@ -96,8 +115,11 @@ enum StationCandidateSearch {
             let bareName = raw.hasSuffix("駅") ? String(raw.dropLast()) : raw
             let k = bareName.lowercased()
             guard !seen.contains(k) else { continue }
-            // 入力と無関係な遠い駅名は落とす
-            guard bareName.contains(bare) || bare.contains(bareName) || raw.contains(bare)
+            // 入力が駅名に含まれる／前方一致だけ。短い駅名が長い入力に吸われない。
+            let score: Int
+            if bareName == bare { score = 100 }
+            else if bareName.hasPrefix(bare) { score = 80 }
+            else if bareName.contains(bare) { score = 60 }
             else { continue }
             seen.insert(k)
             let locality = [
@@ -106,9 +128,20 @@ enum StationCandidateSearch {
             ]
             .compactMap { $0 }
             .joined(separator: " · ")
-            rows.append((raw.hasSuffix("駅") ? raw : "\(bareName)駅", locality.isEmpty ? "地図の候補" : locality))
-            if rows.count >= limit { break }
+            rows.append(
+                (
+                    raw.hasSuffix("駅") ? raw : "\(bareName)駅",
+                    locality.isEmpty ? "地図の候補" : locality,
+                    score
+                )
+            )
         }
         return rows
+            .sorted { lhs, rhs in
+                if lhs.score != rhs.score { return lhs.score > rhs.score }
+                return lhs.name.count < rhs.name.count
+            }
+            .prefix(limit)
+            .map { ($0.name, $0.detail) }
     }
 }

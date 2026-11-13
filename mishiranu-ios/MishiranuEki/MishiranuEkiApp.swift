@@ -20,6 +20,32 @@ struct MishiranuEkiApp: App {
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(ThemeStore.self) private var theme
+    @Environment(BillingStore.self) private var billing
+
+    private var detailConfirmTitle: String {
+        let bare = model.pendingDetailBare
+        let label = bare.isEmpty ? "この駅" : (bare.hasSuffix("駅") ? bare : "\(bare)駅")
+        if model.contourIsDecisionUseful {
+            return "「\(label)」の輪郭"
+        }
+        return "「\(label)」を調べますか？"
+    }
+
+    private var detailConfirmMessage: String {
+        let ask: String = {
+            if billing.usesByokForGeneration {
+                return "詳しく調べますか？（自分の API・コイン不要）"
+            }
+            return "詳しく調べますか？コインを1枚使います（残り \(billing.coins) 枚）。"
+        }()
+        if model.contourIsDecisionUseful {
+            let contour = model.contourSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !contour.isEmpty {
+                return contour + "\n\n" + ask
+            }
+        }
+        return "地図だけでは降りる判断材料が足りません。詳しい歩き方と順番を調べます。\n\n" + ask
+    }
 
     var body: some View {
         ZStack {
@@ -35,13 +61,37 @@ struct RootView: View {
                 TourView().transition(.opacity)
             }
 
-            if model.stationLoading {
+            if model.contourLoading {
                 StationGuideLoadingPopup(
                     stationName: model.query.trimmingCharacters(in: .whitespacesAndNewlines),
+                    title: "駅の輪郭をみています。",
+                    hints: model.previewHints,
                     onCancel: { model.cancelStationLookup() }
                 )
                 .transition(.opacity)
                 .zIndex(40)
+            } else if model.stationLoading {
+                StationGuideLoadingPopup(
+                    stationName: model.query.trimmingCharacters(in: .whitespacesAndNewlines),
+                    hints: model.previewHints,
+                    onCancel: { model.cancelStationLookup() }
+                )
+                .transition(.opacity)
+                .zIndex(40)
+            } else if model.awaitingDetailConfirm {
+                GuideConfirmPopup(
+                    eyebrow: model.contourIsDecisionUseful
+                        ? "見知らぬ駅 · 輪郭"
+                        : "見知らぬ駅",
+                    title: detailConfirmTitle,
+                    message: detailConfirmMessage,
+                    confirmLabel: "詳しく調べる",
+                    cancelLabel: "やめる",
+                    onConfirm: { model.confirmDetailGeneration() },
+                    onCancel: { model.declineDetailGeneration() }
+                )
+                .transition(.opacity)
+                .zIndex(45)
             }
         }
         .tint(Palette.warm)
@@ -50,14 +100,26 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.2), value: theme.skin)
         .animation(.easeInOut(duration: 0.25), value: model.screen)
         .animation(.easeInOut(duration: 0.2), value: model.stationLoading)
+        .animation(.easeInOut(duration: 0.2), value: model.contourLoading)
+        .animation(.easeInOut(duration: 0.2), value: model.awaitingDetailConfirm)
         .buttonStyle(PlainHapticButtonStyle())
         .onAppear { Haptics.prepare() }
+        .onChange(of: model.screen) { _, screen in
+            if screen != .tour {
+                model.placeNarrator.stop()
+            }
+        }
+        .onChange(of: model.stationId) { _, _ in
+            model.placeNarrator.stop()
+        }
     }
 }
 
-/// 案内生成中のモーダル。トップ／設定のどちらからでも同じ見た目。
+/// 案内生成中／輪郭取得中のモーダル。トップ／設定のどちらからでも同じ見た目。
 struct StationGuideLoadingPopup: View {
     var stationName: String = ""
+    var title: String = "案内を作っています。"
+    var hints: [String] = []
     var onCancel: (() -> Void)?
 
     private var bareName: String {
@@ -77,7 +139,7 @@ struct StationGuideLoadingPopup: View {
                     .controlSize(.large)
                     .tint(Palette.warm)
 
-                Text("案内を作っています。")
+                Text(title)
                     .font(.mincho(.title3, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .multilineTextAlignment(.center)
@@ -89,9 +151,21 @@ struct StationGuideLoadingPopup: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Text("少し時間がかかることがあります")
-                    .font(.readable(.caption))
-                    .foregroundStyle(Palette.mist)
+                if !hints.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(hints.prefix(4).enumerated()), id: \.offset) { _, hint in
+                            Text(hint)
+                                .font(.readable(.caption))
+                                .foregroundStyle(Palette.fog)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(.top, 2)
+                } else {
+                    Text("少し時間がかかることがあります")
+                        .font(.readable(.caption))
+                        .foregroundStyle(Palette.mist)
+                }
 
                 if let onCancel {
                     Button("やめる", action: onCancel)

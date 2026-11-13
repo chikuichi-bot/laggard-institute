@@ -18,8 +18,10 @@ struct PricingPage: View {
 
                 diagramWhenCharge
 
-                if !billing.byokUnlocked || !billing.isByokConfigured {
-                    diagramCoinInside
+                diagramCoinInside
+
+                if billing.byokUnlocked, billing.isByokConfigured {
+                    generationPathPicker
                 }
 
                 buyCoinsSection
@@ -295,6 +297,68 @@ struct PricingPage: View {
         }
     }
 
+    // MARK: - 案内の経路（買い切り＋API 設定後）
+
+    private var generationPathPicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("案内のつくり方")
+            VStack(spacing: 0) {
+                pathChoiceRow(
+                    title: "自分の API",
+                    detail: "コイン不要 · \(billing.byokProvider.label)",
+                    selected: !billing.preferCoinOverByok
+                ) {
+                    billing.updatePreferCoinOverByok(false)
+                }
+                Divider().overlay(Palette.line).padding(.leading, 14)
+                pathChoiceRow(
+                    title: "コイン（用意した AI）",
+                    detail: "1駅 = 1枚 · 残り \(billing.coins) 枚",
+                    selected: billing.preferCoinOverByok
+                ) {
+                    billing.updatePreferCoinOverByok(true)
+                }
+            }
+            .background(cardFill)
+            .overlay(cardStroke)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            Text("買い切り後もコインで案内できます。API の上限に当たったときなどに切り替えてください。")
+                .font(.readable(.caption2))
+                .foregroundStyle(Palette.mist)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func pathChoiceRow(
+        title: String,
+        detail: String,
+        selected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selected ? Palette.warm : Palette.mist)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.mincho(.body))
+                        .foregroundStyle(Palette.ink)
+                    Text(detail)
+                        .font(.readable(.caption2))
+                        .foregroundStyle(Palette.mist)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainHapticButtonStyle())
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
     // MARK: - 買う
 
     private var buyCoinsSection: some View {
@@ -354,7 +418,7 @@ struct PricingPage: View {
                         .foregroundStyle(Palette.warm)
                         .accessibilityHidden(true)
                     Text(
-                        "買い切り（¥\(BillingStore.byokPriceYen)）後、Gemini や OpenAI 互換など自分の AI で作ります。コインは使いません。キーは端末だけに置き、サーバーには保存しません。"
+                        "買い切り（¥\(BillingStore.byokPriceYen)）後、Gemini や OpenAI 互換など自分の AI で作れます。コインもそのまま使えます。キーは端末だけに置き、サーバーには保存しません。"
                     )
                     .font(.readable(.caption))
                     .foregroundStyle(Palette.mist)

@@ -1371,11 +1371,51 @@ a.mishiranu-btn {
   min-width: 0;
 }
 
+.mishiranu-walk-listen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  margin: 0.65rem 0 0.85rem;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--mk-line, #e3d5c1);
+  border-radius: 10px;
+  background: var(--mk-paper, #f9f4e6);
+  color: var(--mk-ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.mishiranu-walk-listen strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.mishiranu-walk-listen small {
+  font-size: 0.78rem;
+  color: var(--mk-mist, #8a7d6b);
+  letter-spacing: 0.03em;
+}
+
+.mishiranu-walk-listen--on {
+  border-color: var(--mk-warm, #c5a059);
+  background: color-mix(in srgb, var(--mk-warm, #c5a059) 16%, var(--mk-paper, #f9f4e6));
+}
+
 .mishiranu-course-stop-leg {
   font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--mk-ink);
+}
+
+.mishiranu-course-stop-back {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mk-moss, #5f6f52);
 }
 
 .mishiranu-course-stop-name {
@@ -3446,6 +3486,26 @@ a.mishiranu-btn {
   border-radius: 999px;
   background: var(--mk-taupe);
   margin: 0.15rem auto 0.85rem;
+}
+
+.mishiranu-place-rail-hint {
+  margin: 0.85rem 0 0;
+  font-size: 0.82rem;
+  color: var(--mk-mist);
+  letter-spacing: 0.04em;
+}
+
+.mishiranu-spot-hours-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--mk-mist);
+}
+
+.mishiranu-spot-sheet-maps {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  margin-top: 0.75rem;
 }
 
 .mishiranu-spot-sheet-close {

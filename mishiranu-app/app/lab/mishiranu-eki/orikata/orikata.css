@@ -41,47 +41,65 @@
     calc(3rem + env(safe-area-inset-bottom));
 }
 
-/* —— ヘッダ（おみくじ文庫の .header 感） —— */
+/* —— ヘッダ：ブランドが第一信号、思想は一行の見出し —— */
 .orikata-hero {
   text-align: center;
-  padding: 1.75rem 0 1.5rem;
+  padding: 2.1rem 0 1.85rem;
   animation: orikata-fade 0.9s ease both;
+  position: relative;
+}
+
+.orikata-hero::after {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 1px;
+  margin: 1.55rem auto 0;
+  background: var(--accent-color);
+  opacity: 0.85;
 }
 
 .orikata-brand {
-  margin: 0 0 0.85rem;
-  font-size: clamp(1.85rem, 6.5vw, 2.35rem);
+  margin: 0 0 1.15rem;
+  font-size: clamp(2.15rem, 8vw, 2.85rem);
   font-weight: 400;
-  letter-spacing: 0.18em;
-  line-height: 1.35;
+  letter-spacing: 0.22em;
+  line-height: 1.25;
 }
 
 .orikata-title {
-  margin: 0 0 1rem;
-  font-size: clamp(1.15rem, 3.8vw, 1.45rem);
+  margin: 0 0 1.1rem;
+  font-size: clamp(1.05rem, 3.4vw, 1.28rem);
   font-weight: 500;
-  letter-spacing: 0.14em;
-  line-height: 1.5;
+  letter-spacing: 0.16em;
+  line-height: 1.75;
   color: var(--text-main);
 }
 
 .orikata-lede {
   margin: 0 auto;
-  max-width: 28em;
+  max-width: 26em;
   color: var(--text-sub);
   font-size: 0.95rem;
   line-height: 1.95;
   letter-spacing: 0.06em;
 }
 
+.orikata-lede--soft {
+  margin-top: 0.85rem;
+  max-width: 28em;
+  font-size: 0.88rem;
+  opacity: 0.88;
+}
+
 .orikata-hero-phone {
-  margin: 1.75rem auto 0;
-  width: min(100%, 260px);
+  margin: 1.9rem auto 0;
+  width: min(100%, 280px);
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid var(--border-color);
   background: var(--card-bg);
-  box-shadow: 0 18px 40px rgba(43, 39, 34, 0.08);
+  box-shadow: 0 22px 48px rgba(43, 39, 34, 0.09);
 }
 
 .orikata-hero-phone img {

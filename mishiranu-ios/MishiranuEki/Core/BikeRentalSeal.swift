@@ -55,8 +55,10 @@ enum BikeRentalSeal {
             mood: station.mood, radiiKm: station.radiiKm, stationIntro: station.stationIntro,
             areaAbout: station.areaAbout, walkGuide: station.walkGuide,
             historyNotes: station.historyNotes, sightseeingNotes: station.sightseeingNotes,
+            storyNotes: station.storyNotes,
             bikeRental: bike, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
+            railHint: station.railHint,
             lat: station.lat, lng: station.lng, spots: station.spots
         )
     }
@@ -94,6 +96,7 @@ enum BikeRentalSeal {
                 mood: station.mood, radiiKm: station.radiiKm, stationIntro: station.stationIntro,
                 areaAbout: station.areaAbout, walkGuide: station.walkGuide,
                 historyNotes: station.historyNotes, sightseeingNotes: station.sightseeingNotes,
+            storyNotes: station.storyNotes,
                 bikeRental: BikeRental(
                     available: !places.isEmpty,
                     summary: station.bikeRental.summary,
@@ -101,6 +104,7 @@ enum BikeRentalSeal {
                 ),
                 tourTitle: station.tourTitle,
                 catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
+                railHint: station.railHint,
                 lat: station.lat, lng: station.lng, spots: station.spots
             )
         )
