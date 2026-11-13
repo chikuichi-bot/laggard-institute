@@ -450,6 +450,7 @@ enum SpotLocator {
             var score = 0.0
             switch spot.guide {
             case .sight: score += 36
+            case .story: score += 32
             case .souvenir: score += 22
             case .rest: score += 10
             case .meal: score += 8
@@ -621,7 +622,7 @@ enum SpotLocator {
     private static func genre(for guide: GuideKind) -> String {
         switch guide {
         case .meal, .souvenir: return "gourmet"
-        case .sight: return "history"
+        case .sight, .story: return "history"
         case .rest: return "nature"
         case .tip: return "odd"
         }

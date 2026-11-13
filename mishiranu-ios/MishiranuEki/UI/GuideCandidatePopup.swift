@@ -48,7 +48,7 @@ struct GuideCandidatePopup: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 8)
 
-                Text("駅を選んでから、案内をつくります。")
+                Text("駅を選ぶと、まず物語のゆかりを無料でみます。")
                     .font(.mincho(.callout))
                     .foregroundStyle(Palette.fog)
                     .padding(.bottom, 14)
@@ -107,7 +107,7 @@ struct GuideCandidatePopup: View {
                 }
 
                 if let selected, !isLoading {
-                    Text("「\(selected.bareName)」で徒歩圏の案内をつくりますか？")
+                    Text("「\(selected.bareName)」の物語のゆかりをみますか？")
                         .font(.mincho(.callout))
                         .foregroundStyle(Palette.fog)
                         .fixedSize(horizontal: false, vertical: true)
@@ -117,7 +117,7 @@ struct GuideCandidatePopup: View {
                     Button {
                         onConfirm(selected)
                     } label: {
-                        Text("調べる")
+                        Text("みる")
                             .font(.mincho(.body, weight: .semibold))
                             .tracking(2)
                             .frame(maxWidth: .infinity)

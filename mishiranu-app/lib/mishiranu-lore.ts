@@ -417,6 +417,7 @@ export function landCorpus(station: StationSeed): string {
     station.catchCopy,
     ...(station.historyNotes ?? []).flatMap((n) => [n.title, n.body]),
     ...(station.sightseeingNotes ?? []).flatMap((n) => [n.title, n.body]),
+    ...(station.storyNotes ?? []).flatMap((n) => [n.title, n.body]),
   ]
     .filter(Boolean)
     .join("\n");
@@ -430,6 +431,7 @@ export function landWalkCorpus(station: StationSeed): string {
     station.areaAbout,
     station.catchCopy,
     ...(station.sightseeingNotes ?? []).flatMap((n) => [n.title, n.body]),
+    ...(station.storyNotes ?? []).flatMap((n) => [n.title, n.body]),
     ...(station.historyNotes ?? []).flatMap((n) => [n.title, n.body]),
   ]
     .filter(Boolean)
@@ -577,7 +579,8 @@ export function introducedVisitSpots(station: StationSeed): Spot[] {
       guideKind === "meal" ||
       guideKind === "souvenir" ||
       guideKind === "rest" ||
-      guideKind === "tip";
+      guideKind === "tip" ||
+      guideKind === "story";
     if (spot.majorWorthy || namedInLand || isUsefulGuide) {
       picks.push(spot);
     }
@@ -627,6 +630,7 @@ export function spotTrace(spot: Spot, station: StationSeed): string | null {
     ...loreSentences(station.stationIntro),
     ...loreSentences(station.areaAbout),
     ...(station.sightseeingNotes ?? []).flatMap((n) => loreSentences(n.body)),
+    ...(station.storyNotes ?? []).flatMap((n) => loreSentences(n.body)),
     ...(station.historyNotes ?? []).flatMap((n) => loreSentences(n.body)),
   ];
   for (const key of nameKeys(spot.name)) {

@@ -5,6 +5,7 @@ import {
   landscapeWalkBlurb,
   shouldRewriteLandscapeBlurb,
 } from "@/lib/mishiranu-landscape-name";
+import { ensureStoryMapSpots } from "@/lib/mishiranu-story-notes";
 import { isNonWalkInMeal } from "@/lib/mishiranu-walk-in-meal";
 
 /**
@@ -50,5 +51,5 @@ export function sealGuideIntegrity(station: StationSeed): StationSeed {
       }
     : station.bikeRental;
 
-  return { ...station, spots, bikeRental: bike };
+  return ensureStoryMapSpots({ ...station, spots, bikeRental: bike });
 }

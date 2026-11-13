@@ -27,11 +27,13 @@ import {
   mealTierFor,
   soloOkFor,
   spotGuide,
+  type AreaHistoryNote,
   type GuideKind,
   type Spot,
   type StationSeed,
   type TimeOptionId,
 } from "@/data/mishiranu-stations";
+import { storyNotesForName } from "@/lib/mishiranu-story-notes";
 import type { TourCopy } from "@/lib/mishiranu-copy";
 import {
   BUDGET_PREF_OPTIONS,
@@ -265,7 +267,9 @@ function CandidateConfirmSheet({
         <h4 id="mishiranu-candidate-title" className="mishiranu-confirm-title">
           {`「${queryLabel}」の候補`}
         </h4>
-        <p className="mishiranu-confirm-body">駅を選んでから、案内をつくります。</p>
+        <p className="mishiranu-confirm-body">
+          駅を選ぶと、まず物語のゆかりを無料でみます。
+        </p>
         <ul className="mishiranu-candidate-list">
           {items.map((item) => {
             const active = item.id === selected?.id;
@@ -289,7 +293,7 @@ function CandidateConfirmSheet({
         </ul>
         {selected ? (
           <p className="mishiranu-confirm-body mishiranu-confirm-body--after-list">
-            {`「${selected.name.replace(/駅$/u, "")}」で徒歩圏の案内をつくりますか？`}
+            {`「${selected.name.replace(/駅$/u, "")}」の物語のゆかりをみますか？`}
           </p>
         ) : null}
         <div className="mishiranu-confirm-actions">
@@ -299,7 +303,76 @@ function CandidateConfirmSheet({
             disabled={!selected}
             onClick={() => selected && onConfirm(selected)}
           >
-            調べる
+            みる
+          </button>
+          <button type="button" className="mishiranu-btn" onClick={onCancel}>
+            やめる
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StoryPeekSheet({
+  stationLabel,
+  notes,
+  coinAsk,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: {
+  stationLabel: string;
+  notes: AreaHistoryNote[];
+  coinAsk: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="mishiranu-confirm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mishiranu-story-peek-title"
+    >
+      <button
+        type="button"
+        className="mishiranu-confirm-backdrop"
+        aria-label="閉じる"
+        onClick={onCancel}
+      />
+      <div className="mishiranu-confirm-panel mishiranu-story-peek-panel">
+        <p className="mishiranu-confirm-eyebrow">見知らぬ駅 · 物語のゆかり</p>
+        <hr className="mishiranu-confirm-rule" />
+        <h4 id="mishiranu-story-peek-title" className="mishiranu-confirm-title">
+          {`「${stationLabel}」`}
+        </h4>
+        <p className="mishiranu-confirm-body">まずは無料で、物語のゆかりだけ。</p>
+        {notes.length === 0 ? (
+          <p className="mishiranu-confirm-body">
+            確かな物語のゆかりは見つかりませんでした。散歩道を調べると、土地の歩き方と一緒に見つかることがあります。
+          </p>
+        ) : (
+          <ul className="mishiranu-story-peek-list">
+            {notes.slice(0, 4).map((note) => (
+              <li key={note.title}>
+                <p className="mishiranu-story-peek-note-title">{note.title}</p>
+                <p className="mishiranu-story-peek-note-body">{note.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mishiranu-confirm-body mishiranu-confirm-body--after-list">
+          {coinAsk}
+        </p>
+        <div className="mishiranu-confirm-actions">
+          <button
+            type="button"
+            className="mishiranu-btn mishiranu-btn--primary"
+            onClick={onConfirm}
+          >
+            {confirmLabel}
           </button>
           <button type="button" className="mishiranu-btn" onClick={onCancel}>
             やめる
@@ -359,7 +432,7 @@ export default function MishiranuApp({
     kind: "locate" | "open";
     station: StationSeed;
   } | null>(null);
-  /** 駅名検索の候補一覧。選んでから AI へ */
+  /** 駅名検索の候補一覧。選んでから物語peekへ */
   const [candidateSheet, setCandidateSheet] = useState<{
     query: string;
     items: Array<{
@@ -369,6 +442,13 @@ export default function MishiranuApp({
       station?: StationSeed;
     }>;
   } | null>(null);
+  /** 無料の物語のゆかり → コインで散歩道 */
+  const [storyPeek, setStoryPeek] = useState<{
+    bare: string;
+    spoken?: string;
+    notes: AreaHistoryNote[];
+  } | null>(null);
+  const [storyPeekLoading, setStoryPeekLoading] = useState(false);
   const [skin, setSkin] = useState<MishiranuSkin>("ma");
   const [chatPhase, setChatPhase] = useState<ChatPhase>("station");
   const [messages, setMessages] = useState<ChatMsg[]>(() => [
@@ -867,13 +947,14 @@ export default function MishiranuApp({
     return "その名前では案内をつくれませんでした。別の駅名でもう一度どうぞ。";
   }
 
+  /** 新規は無料の物語peekへ。作り直し・確認後だけコイン消費。 */
   async function requestAiStation(
     rawName: string,
     spoken?: string,
     opts?: { forceRefresh?: boolean },
   ) {
     const name = rawName.trim();
-    if (!name || stationLoading) return;
+    if (!name || stationLoading || storyPeekLoading) return;
     const bare = name.replace(/駅$/u, "");
 
     // 一度調べた駅は端末から開く（毎回 API しない）。作り直しだけ forceRefresh。
@@ -887,10 +968,78 @@ export default function MishiranuApp({
         setDraft("");
         setQuery("");
         setHeroNote(null);
+        setStoryPeek(null);
         chooseStation(saved, spoken, { omitYou: true });
         return;
       }
+
+      // 無料: 物語のゆかりだけ。正本が無ければ API で調べる（コインなし）。
+      setChatPhase("station");
+      setStep("hero");
+      setDraft("");
+      setQuery(name);
+      setHeroNote(null);
+      const localNotes = storyNotesForName(bare) ?? [];
+      if (localNotes.length > 0) {
+        setStoryPeek({ bare, spoken, notes: localNotes });
+        return;
+      }
+      setStoryPeek(null);
+      setStoryPeekLoading(true);
+      setHeroNote(`「${bare}」の物語のゆかりを、無料で調べています…`);
+      try {
+        const userAi = userAiConfigFromBilling(billing);
+        const res = await fetch("/api/mishiranu/story", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            name: bare,
+            ...(userAi ? { userAi } : {}),
+          }),
+        });
+        const raw = await res.text();
+        let data: {
+          storyNotes?: AreaHistoryNote[];
+          error?: string;
+          message?: string;
+        } = {};
+        try {
+          data = raw ? (JSON.parse(raw) as typeof data) : {};
+        } catch {
+          setHeroNote(stationLookupErrorMessage(res.status, {}, raw));
+          setStoryPeek({ bare, spoken, notes: [] });
+          return;
+        }
+        if (!res.ok) {
+          setHeroNote(stationLookupErrorMessage(res.status, data, raw));
+          setStoryPeek({ bare, spoken, notes: [] });
+          return;
+        }
+        setHeroNote(null);
+        setStoryPeek({
+          bare,
+          spoken,
+          notes: Array.isArray(data.storyNotes) ? data.storyNotes : [],
+        });
+      } catch {
+        setHeroNote("物語の通信に失敗しました。通信状況をみて、もう一度どうぞ。");
+        setStoryPeek({ bare, spoken, notes: [] });
+      } finally {
+        setStoryPeekLoading(false);
+      }
+      return;
     }
+
+    await runPaidStationGeneration(bare, spoken, { forceRefresh: true });
+  }
+
+  async function runPaidStationGeneration(
+    bare: string,
+    spoken?: string,
+    opts?: { forceRefresh?: boolean },
+  ) {
+    if (!bare || stationLoading) return;
 
     const spend = tryConsumeGenerationCoin(billing);
     if (!spend.ok) {
@@ -899,16 +1048,18 @@ export default function MishiranuApp({
       setQuery(bare);
       setChatPhase("station");
       setStep("hero");
+      setStoryPeek(null);
       return;
     }
     updateBilling(spend.next);
+    setStoryPeek(null);
 
     setStationLoading(true);
     setChatPhase("station");
     setStep("hero");
-    setHeroNote(`「${bare}」のまわりを調べて、徒歩圏の案内をつくっています…`);
+    setHeroNote(`「${bare}」のまわりを調べて、散歩道の案内をつくっています…`);
     setDraft("");
-    setQuery(name);
+    setQuery(bare);
     try {
       const userAi = userAiConfigFromBilling(spend.next);
       const res = await fetch("/api/mishiranu/station", {
@@ -916,7 +1067,7 @@ export default function MishiranuApp({
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
-          name,
+          name: bare,
           ...(opts?.forceRefresh ? { forceRefresh: true } : {}),
           ...(userAi ? { userAi } : {}),
         }),
@@ -1008,7 +1159,8 @@ export default function MishiranuApp({
   function openSpot(spotId: string, opts?: { tab?: TourTab }) {
     setActiveSpotId(spotId);
     setSpotSheetOpen(true);
-    if (opts?.tab) setTourTab(opts.tab);
+    // 歩く・案内・土地から地点を選んだら地図へ移してその場所を見せる
+    setTourTab(opts?.tab ?? "map");
   }
 
   function handleComposerSubmit(event: FormEvent) {
@@ -1062,14 +1214,16 @@ export default function MishiranuApp({
                 <button
                   type="button"
                   className="mishiranu-btn mishiranu-btn--locate-text"
-                  disabled={geoLoading || stationLoading}
+                  disabled={geoLoading || stationLoading || storyPeekLoading}
                   onClick={() => locateHere()}
                 >
                   {geoLoading
                     ? "調べています…"
                     : stationLoading
                       ? "案内をつくっています…"
-                      : "この駅について"}
+                      : storyPeekLoading
+                        ? "物語を調べています…"
+                        : "この駅について"}
                 </button>
                 {!geoLoading && !stationLoading && heroNote ? (
                   <p
@@ -1145,6 +1299,32 @@ export default function MishiranuApp({
                         );
                       }
                     }}
+                  />
+                ) : null}
+                {storyPeek ? (
+                  <StoryPeekSheet
+                    stationLabel={
+                      storyPeek.bare.endsWith("駅")
+                        ? storyPeek.bare
+                        : `${storyPeek.bare}駅`
+                    }
+                    notes={storyPeek.notes}
+                    coinAsk={
+                      usesByokForGeneration(billing)
+                        ? "この先は散歩道の案内です。自分の API でつくります（コイン不要）。"
+                        : `この先は散歩道の案内です。コインを1枚使います（残り ${billing.coins} 枚）。`
+                    }
+                    confirmLabel={
+                      usesByokForGeneration(billing)
+                        ? "散歩道をつくる"
+                        : "コインで散歩道をつくる"
+                    }
+                    onConfirm={() => {
+                      const peek = storyPeek;
+                      setStoryPeek(null);
+                      void runPaidStationGeneration(peek.bare, peek.spoken);
+                    }}
+                    onCancel={() => setStoryPeek(null)}
                   />
                 ) : null}
                 <form

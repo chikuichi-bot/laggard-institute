@@ -1058,7 +1058,7 @@ struct GuidePage: View {
             return "お土産の候補はありません。門前や社務所の授与品は、現地で見つかることがあります。"
         case .rest:
             return "屋内の休み場は少なめです。川べりや公園のベンチなど、景色の休みを土地・観光からどうぞ。"
-        case .sight, .tip:
+        case .sight, .tip, .story:
             return "名所の数は少なくて大丈夫です。散歩の口実が1つあれば、降りて歩けます。土地タブもどうぞ。"
         }
     }
@@ -1192,9 +1192,10 @@ private struct GuideRow: View {
                 .foregroundStyle(Palette.fog)
                 .fixedSize(horizontal: false, vertical: true)
                 .lineLimit(5)
-            // detail が住所だけのときは、説明と重複しやすいので出さない
-            if let detail = spot.detail, !detail.isEmpty,
-               !spot.blurb.contains(detail), detail.count > 8 {
+            // detail の物語補足は blurb 末尾へ寄せ済み。住所など非物語だけ出す
+            if let detail = SpotCopy.nonStoryDetail(spot.detail),
+               detail.count > 8,
+               !SpotCopy.blurb(for: spot).contains(detail) {
                 Text(detail)
                     .font(.mincho(.footnote))
                     .foregroundStyle(Palette.mist)

@@ -108,6 +108,7 @@ enum StationLore {
         ].compactMap { $0 }
             + station.historyNotes.flatMap { [$0.title, $0.body] }
             + station.sightseeingNotes.flatMap { [$0.title, $0.body] }
+            + station.storyNotes.flatMap { [$0.title, $0.body] }
         ).joined(separator: "\n")
     }
 
@@ -120,6 +121,7 @@ enum StationLore {
             station.catchCopy,
         ].compactMap { $0 }
             + station.sightseeingNotes.flatMap { [$0.title, $0.body] }
+            + station.storyNotes.flatMap { [$0.title, $0.body] }
             + station.historyNotes.flatMap { [$0.title, $0.body] }
         ).joined(separator: "\n")
     }
@@ -150,6 +152,7 @@ enum StationLore {
             let usefulGuide =
                 spot.guide == .meal || spot.guide == .souvenir
                 || spot.guide == .rest || spot.guide == .tip
+                || spot.guide == .story
             if locked || spot.majorWorthy || namedInLand || usefulGuide {
                 picks.append(spot)
             }

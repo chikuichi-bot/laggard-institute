@@ -50,8 +50,10 @@ enum LandmarkRegistry {
     /// OSM node/4374432589。出町桝形商店街の店先。
     static let demachiFutaba = CLLocationCoordinate2D(latitude: 35.0301072, longitude: 135.7696274)
     static let demachiDelta = CLLocationCoordinate2D(latitude: 35.0301227, longitude: 135.7717415)
-    /// Apple Maps「満寿形屋」。枡形商店街（二神町179）。川端通ではない。
+    /// Apple Maps「満寿形屋」。二神町179。川端通ではない。
     static let demachiMasugataya = CLLocationCoordinate2D(latitude: 35.030249, longitude: 135.769436)
+    /// 枡形商店街（通り）。食堂と近いが、商店街ピンはここを正本のまま動かさない。
+    static let demachiMasugataArcade = CLLocationCoordinate2D(latitude: 35.030249, longitude: 135.769436)
     /// Apple Maps「加茂みたらし茶屋」。下鴨本通の西側・松ノ木町53（境内ではない）。
     static let demachiMitarashi = CLLocationCoordinate2D(latitude: 35.039632, longitude: 135.770796)
     /// 吉田キャンパス（百万遍方面）。駅やデルタに寄せない。
@@ -154,17 +156,19 @@ enum LandmarkRegistry {
         if !isEditorialName(spotName), title.contains("ふたば") {
             return Pin(id: "demachi-futaba", coordinate: demachiFutaba, walkMinutes: 3, address: "京都市上京区出町桝形商店街")
         }
+        // 商店街と満寿形屋は別ピン。フォールバックでも食堂座標に吸い込みしない。
+        if spotName.contains("満寿形") {
+            return Pin(id: "demachi-masugataya", coordinate: demachiMasugataya, walkMinutes: 4, address: "京都市上京区桝形通出町西入ル二神町179")
+        }
         if spotName.contains("枡形商店街") || spotName.contains("桝形商店街")
-            || spotName.contains("出町枡形") || spotName.contains("出町桝形") {
+            || spotName.contains("出町枡形") || spotName.contains("出町桝形")
+            || ((spotName.contains("枡形") || spotName.contains("桝形")) && !spotName.contains("満寿")) {
             return Pin(
                 id: "demachi-masugata-arcade",
-                coordinate: demachiMasugataya,
+                coordinate: demachiMasugataArcade,
                 walkMinutes: 3,
                 address: "京都市上京区出町桝形商店街"
             )
-        }
-        if spotName.contains("満寿形") || spotName.contains("ますがた") {
-            return Pin(id: "demachi-masugataya", coordinate: demachiMasugataya, walkMinutes: 4, address: "京都市上京区桝形通出町西入ル二神町179")
         }
         if spotName.contains("みたらし") {
             return Pin(id: "demachi-mitarashi", coordinate: demachiMitarashi, walkMinutes: 15, address: "京都市左京区下鴨松ノ木町53")

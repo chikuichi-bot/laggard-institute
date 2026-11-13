@@ -1,7 +1,7 @@
 export type SpotGenre = "history" | "gourmet" | "nature" | "odd";
 
-/** 観光案内マップ用の見出し（必ず出す5種） */
-export type GuideKind = "meal" | "souvenir" | "sight" | "rest" | "tip";
+/** 観光案内マップ用の見出し（物語＝撮影地・文学のゆかり） */
+export type GuideKind = "meal" | "souvenir" | "sight" | "rest" | "tip" | "story";
 
 /** ご飯の価格帯 */
 export type MealTier = "casual" | "upscale";
@@ -195,6 +195,7 @@ export const GUIDE_LABEL: Record<GuideKind, string> = {
   sight: "観光",
   rest: "休むところ",
   tip: "寄り道",
+  story: "物語",
 };
 
 export const GUIDE_COLOR: Record<GuideKind, string> = {
@@ -203,8 +204,10 @@ export const GUIDE_COLOR: Record<GuideKind, string> = {
   sight: "#5f7d6a",
   rest: "#c5a059",
   tip: "#6b8cca",
+  story: "#7a5a6e",
 };
 
+/** 地図・案内チップ。物語は土地タブ＋ピン補足なのでここに載せない。 */
 export const GUIDE_ORDER: GuideKind[] = [
   "sight",
   "meal",

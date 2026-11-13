@@ -1,11 +1,12 @@
 import Foundation
 
 enum GuideKind: String, Codable, CaseIterable, Identifiable, Hashable {
-    case sight, meal, souvenir, rest, tip
+    case sight, meal, souvenir, rest, tip, story
 
     var id: String { rawValue }
 
-    /// 案内タブの並び。観光が先頭。
+    /// 案内タブの並び。観光が先頭。物語は地図でも見せる。
+    /// 地図・案内チップ。物語は土地タブ＋ピン補足なのでここに載せない。
     static let order: [GuideKind] = [.sight, .meal, .souvenir, .rest, .tip]
 
     var label: String {
@@ -15,6 +16,7 @@ enum GuideKind: String, Codable, CaseIterable, Identifiable, Hashable {
         case .sight: return "観光"
         case .rest: return "休むところ"
         case .tip: return "寄り道"
+        case .story: return "物語"
         }
     }
 

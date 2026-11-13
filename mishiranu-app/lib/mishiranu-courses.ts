@@ -31,6 +31,7 @@ import {
   landNarrativeSpots,
 } from "@/lib/mishiranu-lore";
 import { allowsOnMap, sealMapCoordinates } from "@/lib/mishiranu-map-trust";
+import { placeNameFromStoryTitle } from "@/lib/mishiranu-story-notes";
 
 export type DayPart = "morning" | "midday" | "afternoon" | "evening" | "night";
 
@@ -337,6 +338,7 @@ function scoreSpot(
     // 散歩中心: 土地の顔・景色を先に
     if (spot.majorWorthy) score += 72;
     if (guide === "sight") score += 14;
+    if (guide === "story") score += 13;
     if (guide === "rest") score += 12;
     if (guide === "souvenir") score += 6;
     if (spot.secretWorthy) score -= 4;
@@ -597,6 +599,7 @@ function ensureLocalMajors(station: StationSeed): StationSeed {
       if (s.majorWorthy) score += 100;
       if (/ふたば|みたらし|だんご|団子/.test(s.name)) score += 60;
       if (s.guide === "sight") score += 42;
+      else if (s.guide === "story") score += 38;
       else if (s.guide === "meal") score += 28;
       else if (s.guide === "souvenir") score += 18;
       if (/大社|神宮|八幡|下鴨|賀茂|城|デルタ|公園|ふたば|市場|商店街/.test(s.name))
@@ -885,6 +888,24 @@ function mustVisitWalkSpots(station: StationSeed): Spot[] {
       }
     }
     if (found.length >= 3) break;
+  }
+  // 物語のゆかり（撮影地）もコースの顔に混ぜる
+  for (const note of station.storyNotes ?? []) {
+    if (isForeignDemachiPlace(note.title, station.name)) continue;
+    const title = placeNameFromStoryTitle(note.title);
+    if (!title || title.length < 2) continue;
+    const hit = (station.spots ?? []).find((s) =>
+      spotMatchesAnchorKeys(s.name, [title, note.title]),
+    );
+    if (
+      hit &&
+      spotNearStation(hit, station) &&
+      !found.some((f) => sameWalkPlace(f, hit))
+    ) {
+      // 地図カテゴリは他種のまま。物語は seal 側で〔物語〕補足に載る
+      found.push(hit);
+    }
+    if (found.length >= 5) break;
   }
   return found.filter((s) => spotNearStation(s, station));
 }

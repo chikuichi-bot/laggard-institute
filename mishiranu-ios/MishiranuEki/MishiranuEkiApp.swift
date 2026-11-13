@@ -22,29 +22,24 @@ struct RootView: View {
     @Environment(ThemeStore.self) private var theme
     @Environment(BillingStore.self) private var billing
 
-    private var detailConfirmTitle: String {
+    private var storyPeekStationLabel: String {
         let bare = model.pendingDetailBare
-        let label = bare.isEmpty ? "この駅" : (bare.hasSuffix("駅") ? bare : "\(bare)駅")
-        if model.contourIsDecisionUseful {
-            return "「\(label)」の輪郭"
-        }
-        return "「\(label)」を調べますか？"
+        if bare.isEmpty { return "この駅" }
+        return bare.hasSuffix("駅") ? bare : "\(bare)駅"
     }
 
-    private var detailConfirmMessage: String {
-        let ask: String = {
-            if billing.usesByokForGeneration {
-                return "詳しく調べますか？（自分の API・コイン不要）"
-            }
-            return "詳しく調べますか？コインを1枚使います（残り \(billing.coins) 枚）。"
-        }()
-        if model.contourIsDecisionUseful {
-            let contour = model.contourSummary.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !contour.isEmpty {
-                return contour + "\n\n" + ask
-            }
+    private var storyPeekCoinAsk: String {
+        if billing.usesByokForGeneration {
+            return "この先は散歩道の案内です。自分の API でつくります（コイン不要）。"
         }
-        return "地図だけでは降りる判断材料が足りません。詳しい歩き方と順番を調べます。\n\n" + ask
+        return "この先は散歩道の案内です。コインを1枚使います（残り \(billing.coins) 枚）。"
+    }
+
+    private var storyPeekConfirmLabel: String {
+        if billing.usesByokForGeneration {
+            return "散歩道をつくる"
+        }
+        return "コインで散歩道をつくる"
     }
 
     var body: some View {
@@ -64,7 +59,7 @@ struct RootView: View {
             if model.contourLoading {
                 StationGuideLoadingPopup(
                     stationName: model.query.trimmingCharacters(in: .whitespacesAndNewlines),
-                    title: "駅の輪郭をみています。",
+                    title: "物語のゆかりをみています。",
                     hints: model.previewHints,
                     onCancel: { model.cancelStationLookup() }
                 )
@@ -79,14 +74,11 @@ struct RootView: View {
                 .transition(.opacity)
                 .zIndex(40)
             } else if model.awaitingDetailConfirm {
-                GuideConfirmPopup(
-                    eyebrow: model.contourIsDecisionUseful
-                        ? "見知らぬ駅 · 輪郭"
-                        : "見知らぬ駅",
-                    title: detailConfirmTitle,
-                    message: detailConfirmMessage,
-                    confirmLabel: "詳しく調べる",
-                    cancelLabel: "やめる",
+                StoryPeekPopup(
+                    stationLabel: storyPeekStationLabel,
+                    notes: model.pendingStoryNotes,
+                    confirmLabel: storyPeekConfirmLabel,
+                    coinAsk: storyPeekCoinAsk,
                     onConfirm: { model.confirmDetailGeneration() },
                     onCancel: { model.declineDetailGeneration() }
                 )

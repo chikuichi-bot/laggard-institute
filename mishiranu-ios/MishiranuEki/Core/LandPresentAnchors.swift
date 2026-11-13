@@ -239,6 +239,7 @@ enum LandPresentAnchors {
                 case "rest": return .rest
                 case "souvenir": return .souvenir
                 case "tip": return .tip
+                case "story": return .story
                 default: return .sight
                 }
             }()

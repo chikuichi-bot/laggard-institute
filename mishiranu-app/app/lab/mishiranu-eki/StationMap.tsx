@@ -22,12 +22,24 @@ type Props = {
 };
 
 function isFixedLandmarkName(name: string): boolean {
-  return /デルタ|三角州|下鴨神社|賀茂御祖/.test(name);
+  if (/デルタ|三角州|下鴨神社|賀茂御祖/.test(name)) return true;
+  // 枡形商店街は通りの正本。満寿形屋と重ねても商店街側は動かさない。
+  if (/満寿/.test(name)) return false;
+  return /枡形商店街|桝形商店街|出町枡形|出町桝形/.test(name);
 }
 
-/** コース番号の重なり解消。デルタ等の正本は動かさず、相手側だけずらす。 */
+function isMovableShopPin(
+  point: { id: string; name?: string },
+  guideById: Map<string, string>,
+): boolean {
+  const guide = guideById.get(point.id);
+  return guide === "meal" || guide === "souvenir";
+}
+
+/** 正本（デルタ・商店街）は動かさず、ご飯／土産だけずらして両方見せる。 */
 function spreadNearbyCoursePins(
   points: Array<{ id: string; lat: number; lng: number; name?: string }>,
+  guideById: Map<string, string> = new Map(),
 ): Map<string, { lat: number; lng: number }> {
   const result = new Map<string, { lat: number; lng: number }>();
   const thresholdKm = 0.04;
@@ -48,11 +60,17 @@ function spreadNearbyCoursePins(
 
   points.forEach((point, index) => {
     if (anchored.has(point.id)) return;
+    if (!isMovableShopPin(point, guideById)) {
+      result.set(point.id, { lat: point.lat, lng: point.lng });
+      return;
+    }
     let { lat, lng } = point;
+    // 満寿形屋は南南西へ（川・駅側へ飛ばさない）
+    const baseAngleDeg = /満寿/.test(point.name ?? "") ? 200 : index * 55;
     for (let attempt = 0; attempt < 10; attempt++) {
       if (!clashes(point.id, lat, lng)) break;
-      const angle = ((index * 55 + attempt * 36) * Math.PI) / 180;
-      const dist = 24 + attempt * 6;
+      const angle = ((baseAngleDeg + attempt * 28) * Math.PI) / 180;
+      const dist = 22 + attempt * 5;
       const north = dist * Math.cos(angle);
       const east = dist * Math.sin(angle);
       lat = point.lat + north / 111_320;
@@ -68,9 +86,11 @@ function spreadNearbyCoursePins(
   return result;
 }
 
-function pinIcon(color: string, active: boolean) {
+function pinIcon(color: string, active: boolean, nudge = false) {
   const size = active ? 16 : 12;
+  const shift = nudge ? 16 : 0;
   // iconSize / iconAnchor を点の中心に一致させる（余白なし）
+  // nudge は座標を動かさず、重なった店アイコンだけ画面上でずらす
   return L.divIcon({
     className: "mishiranu-leaflet-pin",
     html: `<span style="
@@ -79,13 +99,14 @@ function pinIcon(color: string, active: boolean) {
       box-shadow:0 0 0 ${active ? 3 : 1}px ${active ? "rgba(255,106,61,0.55)" : "rgba(36,48,56,0.18)"};
     "></span>`,
     iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    iconAnchor: [size / 2 + shift, size / 2 + shift],
     popupAnchor: [0, -size / 2],
   });
 }
 
-function stepIcon(step: number, color: string, active: boolean) {
+function stepIcon(step: number, color: string, active: boolean, nudge = false) {
   const size = active ? 26 : 22;
+  const shift = nudge ? 18 : 0;
   return L.divIcon({
     className: "mishiranu-leaflet-pin",
     html: `<span class="mishiranu-leaflet-step${active ? " mishiranu-leaflet-step--active" : ""}" style="
@@ -93,7 +114,7 @@ function stepIcon(step: number, color: string, active: boolean) {
       box-sizing:border-box;
     ">${step}</span>`,
     iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    iconAnchor: [size / 2 + shift, size / 2 + shift],
     popupAnchor: [0, -size / 2],
   });
 }
@@ -206,6 +227,15 @@ export default function StationMap({
     }
 
     let cancelled = false;
+    const focusActive = (): boolean => {
+      if (!activeSpotId) return false;
+      const spot = spotById.get(activeSpotId);
+      if (!spot) return false;
+      const ll = spotLatLng(station, spot);
+      map.setView([ll.lat, ll.lng], 16, { animate: true });
+      return true;
+    };
+
     const drawCourseLine = (path: L.LatLngExpression[]) => {
       if (cancelled || !layerRef.current) return;
       L.polyline(path, {
@@ -224,11 +254,13 @@ export default function StationMap({
         lineCap: "round",
         dashArray: "1 10",
       }).addTo(layer);
-      map.fitBounds(L.latLngBounds(path), {
-        padding: [36, 36],
-        maxZoom: 16,
-        animate: false,
-      });
+      if (!focusActive()) {
+        map.fitBounds(L.latLngBounds(path), {
+          padding: [36, 36],
+          maxZoom: 16,
+          animate: false,
+        });
+      }
     };
 
     if (waypoints.length >= 2) {
@@ -247,9 +279,11 @@ export default function StationMap({
         fillColor: "#b5493a",
         fillOpacity: 0.06,
       }).addTo(layer);
-      map.setView([center.lat, center.lng], radiusKm >= 2.5 ? 14 : 15, {
-        animate: false,
-      });
+      if (!focusActive()) {
+        map.setView([center.lat, center.lng], radiusKm >= 2.5 ? 14 : 15, {
+          animate: false,
+        });
+      }
     }
 
     const stationLabel = document.createElement("span");
@@ -269,35 +303,84 @@ export default function StationMap({
       })
       .addTo(layer);
 
+    // コース＋ご飯屋など、近いピンをまとめて広げて両方見せる（満寿形屋×枡形商店街など）
+    const orderedForSpread: Array<{
+      id: string;
+      lat: number;
+      lng: number;
+      name: string;
+    }> = [];
+    for (const id of courseIds) {
+      const spot = spotById.get(id);
+      if (!spot) continue;
+      const ll = spotLatLng(station, spot);
+      orderedForSpread.push({
+        id,
+        lat: ll.lat,
+        lng: ll.lng,
+        name: spot.name,
+      });
+    }
     for (const spot of spots) {
       if (courseSet.has(spot.id)) continue;
-      const { lat, lng } = spotLatLng(station, spot);
-      const marker = L.marker([lat, lng], {
-        icon: pinIcon(GUIDE_COLOR[spotGuide(spot)], spot.id === activeSpotId),
+      const ll = spotLatLng(station, spot);
+      orderedForSpread.push({
+        id: spot.id,
+        lat: ll.lat,
+        lng: ll.lng,
+        name: spot.name,
+      });
+    }
+    const guideById = new Map(
+      orderedForSpread.map((p) => {
+        const spot = spotById.get(p.id);
+        return [p.id, spot ? spotGuide(spot) : "tip"] as const;
+      }),
+    );
+    // 座標は正本のまま。近いご飯ピンだけアイコンを画面上でずらす。
+    const displayCoords = new Map(
+      orderedForSpread.map((p) => [p.id, { lat: p.lat, lng: p.lng }]),
+    );
+    const nudged = new Set(
+      orderedForSpread
+        .filter((p) => {
+          const guide = guideById.get(p.id);
+          if (guide !== "meal" && guide !== "souvenir") return false;
+          return orderedForSpread.some((other) => {
+            if (other.id === p.id) return false;
+            return haversineKm(p, other) < 0.028;
+          });
+        })
+        .map((p) => p.id),
+    );
+
+    for (const spot of spots) {
+      if (courseSet.has(spot.id)) continue;
+      const shown = displayCoords.get(spot.id) ?? spotLatLng(station, spot);
+      const marker = L.marker([shown.lat, shown.lng], {
+        icon: pinIcon(
+          GUIDE_COLOR[spotGuide(spot)],
+          spot.id === activeSpotId,
+          nudged.has(spot.id),
+        ),
         title: spot.name,
         opacity: courseIds.length > 0 ? 0.45 : 1,
+        zIndexOffset: spotGuide(spot) === "meal" ? 160 : 100,
       });
       marker.on("click", () => onSelectRef.current(spot.id));
       marker.addTo(layer);
     }
 
-    // コース番号ピンが近いときだけ表示をずらす（線の経由点は上の実座標のまま）
-    const courseDisplay = spreadNearbyCoursePins(
-      courseIds.map((id) => {
-        const spot = spotById.get(id)!;
-        const ll = spotLatLng(station, spot);
-        return { id, lat: ll.lat, lng: ll.lng, name: spot.name };
-      }),
-    );
     courseIds.forEach((id, index) => {
       const spot = spotById.get(id);
       if (!spot) return;
-      const shown = courseDisplay.get(id) ?? spotLatLng(station, spot);
+      const shown = displayCoords.get(id) ?? spotLatLng(station, spot);
       const marker = L.marker([shown.lat, shown.lng], {
         icon: stepIcon(
           index + 1,
           GUIDE_COLOR[spotGuide(spot)],
           spot.id === activeSpotId,
+          nudged.has(id),
         ),
         title: `${index + 1}. ${spot.name}`,
         zIndexOffset: 200 + index,

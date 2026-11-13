@@ -78,6 +78,64 @@ enum StationAPIClient {
         )
     }
 
+    /// コイン不要。物語のゆかりだけ（正本／キャッシュ／grounded）。
+    static func lookupStoryNotes(
+        name: String,
+        userAi: BillingStore.UserAiPayload? = nil
+    ) async throws -> [HistoryNote] {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw StationAPIError.emptyName }
+
+        let base = await resolveBaseURL()
+        var request = URLRequest(url: base.appendingPathComponent("api/mishiranu/story"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 60
+        var payload: [String: Any] = ["name": trimmed]
+        if let userAi {
+            var ai: [String: Any] = [
+                "provider": userAi.provider,
+                "apiKey": userAi.apiKey,
+            ]
+            if let baseUrl = userAi.baseUrl { ai["baseUrl"] = baseUrl }
+            if let model = userAi.model { ai["model"] = model }
+            payload["userAi"] = ai
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+            if !(200 ... 299).contains(status) {
+                let message = (body["message"] as? String)
+                    ?? Self.fallbackMessage(status: status, error: body["error"] as? String)
+                throw StationAPIError.badStatus(status, message)
+            }
+            return parseStoryNotes(body["storyNotes"])
+        } catch let error as StationAPIError {
+            throw error
+        } catch let urlError as URLError {
+            throw StationAPIError.badStatus(
+                urlError.errorCode,
+                Self.networkFailureMessage(urlError)
+            )
+        }
+    }
+
+    private static func parseStoryNotes(_ raw: Any?) -> [HistoryNote] {
+        guard let arr = raw as? [[String: Any]] else { return [] }
+        return arr.compactMap { row in
+            let title = (row["title"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let body = (row["body"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !title.isEmpty, !body.isEmpty else { return nil }
+            return HistoryNote(title: title, body: body)
+        }
+    }
+
     /// 死んだ LAN は 2 秒で捨て、生きている先だけ本生成（最大120秒）に使う。
     private static func resolveBaseURL() async -> URL {
         #if DEBUG

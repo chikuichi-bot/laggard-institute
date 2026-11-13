@@ -959,6 +959,7 @@ enum CourseBuilder {
             if isIconicShop(spot) { score += 60 }
             switch spot.guide {
             case .sight: score += 42
+            case .story: score += 38
             case .meal: score += 28
             case .souvenir: score += 18 // 「本店」土産より名所・名物を優先
             case .rest: score += 8
@@ -1172,6 +1173,7 @@ enum CourseBuilder {
                 case "rest": return .rest
                 case "souvenir": return .souvenir
                 case "tip": return .tip
+                case "story": return .story
                 default: return .sight
                 }
             }()
@@ -1198,6 +1200,26 @@ enum CourseBuilder {
             found.append(created)
         }
         if found.count >= 2 { return found }
+
+        // 物語のゆかり（撮影地）からも顔を起こす
+        for note in station.storyNotes {
+            if DemachiTemplate.isForeignDemachiPlace(note.title, stationName: station.name) {
+                continue
+            }
+            guard let title = StoryMapSpots.placeName(fromStoryTitle: note.title) else { continue }
+            if let hit = station.spots.first(where: {
+                spotMatchesAnchorKeys($0.name, keys: [title, note.title])
+            }), DemachiTemplate.spotNearStation(hit, station: station),
+               !found.contains(where: { sameWalkPlace($0, hit) }) {
+                // カテゴリは他種のまま。物語は末尾〔物語〕のみ（表示は SpotCopy が整える）
+                let pinned = LandmarkRegistry.apply(hit, stationName: station.name)
+                found.append(pinned)
+            }
+            if found.count >= 5 { break }
+        }
+        if found.count >= 3 {
+            return found.filter { DemachiTemplate.spotNearStation($0, station: station) }
+        }
 
         // 知らない駅: 観光案内メモ（出町雛形で揃えた3点）から起こす
         for note in station.sightseeingNotes {

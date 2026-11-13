@@ -41,6 +41,7 @@ extension GuideKind {
         case .sight: return Color(hex: 0x5f7d6a)
         case .rest: return Color(hex: 0xc5a059)
         case .tip: return Color(hex: 0x6b8cca)
+        case .story: return Color(hex: 0x7a5a6e)
         }
     }
 
@@ -51,6 +52,7 @@ extension GuideKind {
         case .sight: return .photoSpot
         case .rest: return .waitingArea
         case .tip: return .ancientRoad
+        case .story: return .history
         }
     }
 }

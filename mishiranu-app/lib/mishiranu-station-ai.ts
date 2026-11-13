@@ -175,7 +175,7 @@ const STATION_SCHEMA_BLOCK = [
   "- 【真の空白駅】店・町場が本当に薄い駅は mood:empty 可。meal/souvenir は 0 件のままでよい。1.5km 超のチェーン・隣駅の店で枠を埋めない。",
   "- 【空白の歩き】店が無い駅は landform（川・用水・坂・田畑の道・橋）を firstVisitFaces の主役にする。神社・公園があれば足す。『何もない＝失敗』にせず、『店がないので風景を30分歩く駅』と catchCopy / emptyBody で肯定する。",
   "- 【散歩の口実】spots が 1〜2 件でもよい。無理に 3 役割を埋めない。1 つの landform があれば降りられる設計。",
-  "- 【物語のゆかり】駅の徒歩圏がドラマ・映画・小説・漫画の撮影地／舞台として知られるなら storyNotes に書く（作品名を正確に）。無い・不確かなら出さない。観光ランキング口調にしない。",
+  "- 【物語のゆかり】駅名＋『撮影地』『ロケ地』『舞台』『聖地』で思い浮かぶ作品があれば storyNotes に書く（作品名を正確に・最大4件）。映画・ドラマ・小説・アニメ可。徒歩圏の場所と作品を結び、いま歩いて何が見えるかを2〜4文で。無い・不確かなら []。観光ランキング口調にしない。",
   "- 【固有名の取り違え禁止】入力駅が出町柳以外なら、鴨川デルタ・下鴨神社・枡形商店街・出町ふたば・同志社大学・京都大学を本文に入れない。",
   "- empty の areaAbout は地形といまの静けさで書く（店リスト禁止）。historyNotes は 2〜4 件で足りる。",
   "- 歴史だけで終わらせない。いまの姿も、同じ段落・同じメモの中で結んで書く。",
@@ -2131,13 +2131,16 @@ function mergeGapFillIntoStation(
   if (!parsed) return station;
 
   let next = station;
+  // 物語のゆかりは土地文が厚くても空なら足す（以前は薄いときだけマージして捨てていた）
+  const parsedStory = parseNoteList(parsed.storyNotes, 4);
+  if (parsedStory?.length && !(next.storyNotes?.length ?? 0)) {
+    next = { ...next, storyNotes: parsedStory };
+  }
   if (isNarrativeThin(next)) {
     const historyNotes =
       parseNoteList(parsed.historyNotes, 9) ?? next.historyNotes;
     const sightseeingNotes =
       parseNoteList(parsed.sightseeingNotes, 8) ?? next.sightseeingNotes;
-    const storyNotes =
-      parseNoteList(parsed.storyNotes, 4) ?? next.storyNotes;
     const stationIntro = asString(parsed.stationIntro) || next.stationIntro;
     const areaAbout = asString(parsed.areaAbout) || next.areaAbout;
     const walkGuide = asString(parsed.walkGuide) || next.walkGuide;
@@ -2148,7 +2151,6 @@ function mergeGapFillIntoStation(
       walkGuide,
       historyNotes,
       sightseeingNotes,
-      storyNotes,
     };
   }
 
@@ -2196,6 +2198,107 @@ async function fillStationGapsOnce(
   return mergeGapFillIntoStation(station, filled.text);
 }
 
+/** 駅名だけで物語のゆかりを grounded 検索（コイン前の無料チラ見せ用）。 */
+export async function lookupStoryNotesForName(
+  rawName: string,
+  apiKey: string,
+  viewerSub: string,
+  meta?: { prefecture?: string; line?: string; lat?: number; lng?: number },
+): Promise<
+  | { ok: true; storyNotes: NonNullable<StationSeed["storyNotes"]> }
+  | { ok: false; error: string; message: string }
+> {
+  const bare = rawName.replace(/駅$/u, "").trim();
+  if (!bare) {
+    return {
+      ok: false,
+      error: "invalid_name",
+      message: "駅名を入力してください。",
+    };
+  }
+  const label = bare.endsWith("駅") ? bare : `${bare}駅`;
+  const place =
+    meta?.prefecture || meta?.line
+      ? `（${meta?.prefecture ?? "日本"} · ${meta?.line ?? "路線情報は要確認"}）`
+      : "";
+  const coords =
+    typeof meta?.lat === "number" && typeof meta?.lng === "number"
+      ? `\n駅座標の目安: ${meta.lat}, ${meta.lng}`
+      : "";
+  const prompt = [
+    "あなたは日本の駅の徒歩圏案内の編集者です。Google検索で実在を確認してください。",
+    "目的: この駅の徒歩圏が映画・ドラマ・小説・アニメの撮影地／舞台として知られる作品だけを storyNotes に書く。",
+    "出力は JSON のみ。観光ランキング口調禁止。推測・都市伝説・遠いスタジオは禁止。",
+    "土地の歴史・店リスト・歩き方の全文は書かない。storyNotes だけ。",
+    "",
+    `駅名: ${label}${place}${coords}`,
+    `検索のヒント: 「${bare} ロケ地」「${bare} 撮影地」「${bare} 聖地」「${bare} 映画」「${bare} ドラマ」「${bare} 小説 舞台」`,
+    "",
+    "スキーマ:",
+    '{ "storyNotes": [{ "title": "『作品名』と場所", "body": "2〜4文。作品名と、いま歩いて何が見えるか" }] }',
+    "",
+    "制約:",
+    "- 最大4件。確かなものだけ。無ければ { \"storyNotes\": [] }",
+    "- title に作品名を入れる（『』付きが望ましい）",
+    "- 出町柳以外で鴨川デルタ・下鴨・枡形・ふたばを出さない",
+  ].join("\n");
+  const filled = await callGeminiGenerate(
+    apiKey,
+    viewerSub,
+    {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
+    },
+    GEMINI_GROUNDED_MS,
+  );
+  if (!filled.ok) {
+    return {
+      ok: false,
+      error: filled.error,
+      message: filled.message,
+    };
+  }
+  const parsed = extractJsonObject(filled.text);
+  if (!parsed) {
+    return { ok: true, storyNotes: [] };
+  }
+  const storyNotes = parseNoteList(parsed.storyNotes, 4) ?? [];
+  return { ok: true, storyNotes };
+}
+
+/** BYOK で物語のゆかりだけ調べる。 */
+export async function lookupStoryNotesWithUserAi(
+  rawName: string,
+  config: UserAiConfig,
+  viewerSub: string,
+  meta?: { prefecture?: string; line?: string; lat?: number; lng?: number },
+): Promise<
+  | { ok: true; storyNotes: NonNullable<StationSeed["storyNotes"]> }
+  | { ok: false; error: string; message: string }
+> {
+  return byokRuntime.run(config, () =>
+    lookupStoryNotesForName(rawName, config.apiKey, viewerSub, meta),
+  );
+}
+
+/** 物語のゆかりだけ grounded で拾う（正本も1回目も空のとき）。 */
+async function fillStoryNotesIfEmpty(
+  station: StationSeed,
+  apiKey: string,
+  viewerSub: string,
+): Promise<StationSeed> {
+  if ((station.storyNotes?.length ?? 0) > 0) return station;
+  const looked = await lookupStoryNotesForName(station.name, apiKey, viewerSub, {
+    prefecture: station.prefecture,
+    line: station.line,
+    lat: station.lat,
+    lng: station.lng,
+  });
+  if (!looked.ok || !looked.storyNotes.length) return station;
+  return { ...station, storyNotes: looked.storyNotes };
+}
+
 /**
  * 後処理。Gemini は最大もう 1 回（穴埋め）だけ。
  * 以前の多段 expand（店・定番・名所・休みを別々）は打たない。
@@ -2209,6 +2312,7 @@ async function finalizeAiStation(
 
   let station = result.station;
   // 収録ノート（二ノ瀬・出町など）があれば土地文を正本で上書き
+  // withAreaDepth 内で物語のゆかり正本（尾道・佐原など）も載る
   station = withAreaDepth(station);
   station = refineLandProse(ensureLandPresentAnchors(station));
   station = ensureLandMentions(station);
@@ -2218,6 +2322,9 @@ async function finalizeAiStation(
     station = await fillStationGapsOnce(station, apiKey, viewerSub);
     station = ensureLandMentions(station);
   }
+  // 正本にも1回目にも無ければ、撮影地だけ grounded でもう一度
+  station = await fillStoryNotesIfEmpty(station, apiKey, viewerSub);
+  station = withAreaDepth(station);
 
   if ((station.spots?.length ?? 0) < 3) {
     return {

@@ -8,6 +8,8 @@ enum GuideIntegrity {
         next = CourseBuilder.ensureLocalMajors(next)
         next = CourseBuilder.normalizeEdibleSouvenirs(next)
         next = LandProse.refine(next)
+        // 物語のゆかりを地図ピンへ（作品名付きメモ → 場所スポット）
+        next = StoryMapSpots.ensure(on: next)
         next = DemachiTemplate.scrubContamination(on: next)
         next = WalkInMealFilter.strip(from: next)
         next = dropEditorialShops(next)

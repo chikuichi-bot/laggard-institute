@@ -187,6 +187,8 @@ export function GuideKindIcon({
       return <IconRest className={className} />;
     case "tip":
       return <IconTip className={className} />;
+    case "story":
+      return <IconSight className={className} />;
   }
 }
 

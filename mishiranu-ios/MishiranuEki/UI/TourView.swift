@@ -169,7 +169,8 @@ struct SpotSheet: View {
                     .font(.mincho(.body))
                     .lineSpacing(6)
                     .foregroundStyle(Palette.fog)
-                if let detail = spot.detail {
+                if let detail = SpotCopy.nonStoryDetail(spot.detail),
+                   !SpotCopy.blurb(for: spot, in: model.station).contains(detail) {
                     Text(detail)
                         .font(.mincho(.callout))
                         .lineSpacing(5)
@@ -177,6 +178,25 @@ struct SpotSheet: View {
                 }
                 if let station = model.station, let trace = StationLore.trace(for: spot, in: station) {
                     LoreTrace(text: trace, size: .callout)
+                }
+                // 観光のあとに、物語の紹介を別ブロックで出す（〔物語〕を本文に埋め込まない）
+                let stories = SpotCopy.storyNotes(for: spot, in: model.station)
+                if !stories.isEmpty {
+                    Text("物語のゆかり")
+                        .font(.mincho(.subheadline, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.top, 6)
+                    ForEach(Array(stories.enumerated()), id: \.offset) { _, note in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(note.title)
+                                .font(.mincho(.callout, weight: .semibold))
+                                .foregroundStyle(Palette.ink)
+                            Text(note.body)
+                                .font(.mincho(.callout))
+                                .lineSpacing(5)
+                                .foregroundStyle(Palette.fog)
+                        }
+                    }
                 }
 
                 if SpotHours.isShopLike(spot) {

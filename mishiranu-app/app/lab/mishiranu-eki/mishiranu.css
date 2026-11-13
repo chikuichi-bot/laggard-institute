@@ -3983,6 +3983,38 @@ a.mishiranu-btn {
   white-space: pre-line;
 }
 
+.mishiranu-story-peek-panel {
+  width: min(22rem, 100%);
+}
+
+.mishiranu-story-peek-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  max-height: 16rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mishiranu-story-peek-note-title {
+  margin: 0 0 0.35rem;
+  font-family: var(--mk-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--mk-ink);
+}
+
+.mishiranu-story-peek-note-body {
+  margin: 0;
+  font-family: var(--mk-display);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--mk-fog, var(--mk-mist));
+}
+
 .mishiranu-candidate-list {
   list-style: none;
   margin: 0 0 0.85rem;

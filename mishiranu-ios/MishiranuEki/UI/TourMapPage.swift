@@ -104,7 +104,10 @@ struct TourMapPage: View {
     }
 
     private func mapLegendLabel(_ kind: GuideKind) -> String {
-        kind == .rest ? "休む" : kind.label
+        switch kind {
+        case .rest: return "休む"
+        default: return kind.label
+        }
     }
 
     /// 徒歩コースと同じ上限（3.2km）。二ノ瀬から出町柳は約7.5kmなので、8kmだと吸い寄せられる。
@@ -145,92 +148,58 @@ struct TourMapPage: View {
     }
 
     private func sameMapPin(_ a: Spot, _ b: Spot) -> Bool {
-        a.id == b.id || NameMatch.score(a.name, b.name) >= 85
+        // 満寿形屋（ご飯）と枡形商店街（観光）は別。似た名でも潰さない。
+        if StoryMapSpots.areDistinctMasugataPlaces(a.name, b.name) { return false }
+        // ご飯／土産と観光が違う屋号なら、近い座標でも別ピン
+        if StoryMapSpots.areConflictingEstablishments(a, b) { return false }
+        return StoryMapSpots.samePlace(a, b) || NameMatch.score(a.name, b.name) >= 85
     }
 
+    /// 同場所は落とさず合体（物語×観光／ご飯など）。
     private func deduped(_ spots: [Spot]) -> [Spot] {
         var kept: [Spot] = []
-        for spot in spots where !kept.contains(where: { sameMapPin($0, spot) }) {
-            kept.append(spot)
+        for spot in spots {
+            if let idx = kept.firstIndex(where: { sameMapPin($0, spot) }) {
+                kept[idx] = StoryMapSpots.merge(
+                    kept[idx],
+                    with: spot,
+                    stationName: station.name
+                )
+            } else {
+                kept.append(spot)
+            }
         }
         return kept
     }
 
-    /// ピン表示用座標。線の経由点は実座標のまま。コース番号同士が近いときだけ表示を少し扇状に広げる。
+    /// ピンの地図座標は正本のまま。近い店はアイコンだけ画面上でずらす。
     private var displayCoordinates: [String: CLLocationCoordinate2D] {
-        var coords = Dictionary(uniqueKeysWithValues: mapSpots.map {
+        Dictionary(uniqueKeysWithValues: mapSpots.map {
             ($0.id, CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng))
         })
-        guard let course = model.selectedCourse, course.stops.count >= 2 else { return coords }
-        let resolved = course.stops.map { model.resolvedSpot($0.spot) }
-        let order = resolved.map(\.id)
-        // ロック座標（鴨川デルタ等）は動かさない。重なりはそれ以外をずらす。
-        let anchored = Set(
-            resolved
-                .filter { $0.coordTrust == .lock || Self.isFixedLandmarkName($0.name) }
-                .map(\.id)
-        )
-        coords = Self.spreadNearbyCoursePins(
-            order: order,
-            coordinates: coords,
-            anchoredIds: anchored
-        )
-        return coords
     }
 
-    private static func isFixedLandmarkName(_ name: String) -> Bool {
-        name.contains("デルタ") || name.contains("三角州") || name.contains("下鴨神社")
-            || name.contains("賀茂御祖")
-    }
-
-    /// 約40m以内の重なりを解消。`anchoredIds`（デルタ等の正本）は動かさず、相手側をずらす。
-    private static func spreadNearbyCoursePins(
-        order: [String],
-        coordinates: [String: CLLocationCoordinate2D],
-        anchoredIds: Set<String>
-    ) -> [String: CLLocationCoordinate2D] {
-        var result = coordinates
-        let thresholdMeters = 40.0
-        let stepMeters = 24.0
-
-        func clashes(_ id: String, _ coord: CLLocationCoordinate2D) -> String? {
-            for otherId in order where otherId != id {
-                guard let other = result[otherId] else { continue }
-                if metersBetween(coord, other) < thresholdMeters { return otherId }
+    /// 同じ場所のご飯／土産が観光ピンに隠れるとき、アイコンだけ少しずらす（座標は動かさない）。
+    private var iconNudges: [String: CGSize] {
+        let spots = mapSpots
+        var nudges: [String: CGSize] = [:]
+        var shopIndex = 0
+        for spot in spots where spot.guide == .meal || spot.guide == .souvenir {
+            let crowded = spots.contains { other in
+                guard other.id != spot.id else { return false }
+                return Self.metersBetween(
+                    CLLocationCoordinate2D(latitude: spot.lat, longitude: spot.lng),
+                    CLLocationCoordinate2D(latitude: other.lat, longitude: other.lng)
+                ) < 28
             }
-            return nil
+            guard crowded else { continue }
+            nudges[spot.id] = CGSize(
+                width: -18 - CGFloat(shopIndex) * 8,
+                height: -16 - CGFloat(shopIndex) * 6
+            )
+            shopIndex += 1
         }
-
-        // 1) 正本ピンは実座標のまま確定
-        for id in order where anchoredIds.contains(id) {
-            if let c = coordinates[id] { result[id] = c }
-        }
-
-        // 2) 正本以外だけずらす（正本と重なっても正本は動かない）
-        for (index, id) in order.enumerated() where !anchoredIds.contains(id) {
-            guard var coord = result[id] else { continue }
-            let origin = coordinates[id] ?? coord
-            for attempt in 0 ..< 10 {
-                if clashes(id, coord) == nil { break }
-                let angle = Double(index) * 55 + Double(attempt) * 36
-                coord = offsetMeters(origin, distance: stepMeters + Double(attempt) * 6, degrees: angle)
-            }
-            result[id] = coord
-        }
-
-        // 3) 正本同士が稀に近いときだけ、後の方を最小限ずらす
-        for (index, id) in order.enumerated() where anchoredIds.contains(id) {
-            guard var coord = result[id], let origin = coordinates[id] else { continue }
-            for attempt in 0 ..< 4 {
-                guard let otherId = clashes(id, coord), anchoredIds.contains(otherId) else { break }
-                let otherIndex = order.firstIndex(of: otherId) ?? 0
-                if index <= otherIndex { break }
-                let angle = Double(index) * 40 + Double(attempt) * 50
-                coord = offsetMeters(origin, distance: 18 + Double(attempt) * 6, degrees: angle)
-            }
-            result[id] = coord
-        }
-        return result
+        return nudges
     }
 
     private var walkingPath: [CLLocationCoordinate2D] {
@@ -403,6 +372,7 @@ struct TourMapPage: View {
         let spots = mapSpots
         let numbers = model.courseNumbers
         let coords = displayCoordinates
+        let nudges = iconNudges
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .bottomTrailing) {
                 Map(position: $position) {
@@ -436,14 +406,22 @@ struct TourMapPage: View {
                         StationMarker(showDeparture: model.selectedCourse != nil)
                     }
 
-                    ForEach(spots) { pin in
+                    ForEach(spots.sorted { lhs, rhs in
+                        let lhsShop = lhs.guide == .meal || lhs.guide == .souvenir
+                        let rhsShop = rhs.guide == .meal || rhs.guide == .souvenir
+                        if lhsShop == rhsShop { return false }
+                        return !lhsShop && rhsShop
+                    }) { pin in
                         let coordinate = coords[pin.id]
                             ?? CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng)
+                        let nudge = nudges[pin.id] ?? .zero
                         Annotation(
                             LandscapeSpotName.clarified(pin.name),
                             coordinate: coordinate,
                             anchor: .center
                         ) {
+                            // offset だけだと当たりが元の座標に残り、見た目のピンを押せない。
+                            // 枠を広げ、当たりはずらした円だけにする。
                             Button {
                                 model.openSpot(pin)
                             } label: {
@@ -452,8 +430,14 @@ struct TourMapPage: View {
                                     number: numbers[pin.id],
                                     active: model.activeSpot?.id == pin.id
                                 )
+                                .offset(nudge)
                             }
                             .buttonStyle(PlainHapticButtonStyle())
+                            .frame(
+                                width: 36 + abs(nudge.width) * 2,
+                                height: 36 + abs(nudge.height) * 2
+                            )
+                            .contentShape(NudgeHitCircle(nudge: nudge, diameter: 40))
                             .accessibilityLabel(
                                 numbers[pin.id].map {
                                     "\($0)番 \(pin.guide.label) \(LandscapeSpotName.clarified(pin.name))"
@@ -565,7 +549,11 @@ struct TourMapPage: View {
         }
         .onAppear {
             model.syncWalkCourse()
-            position = camera()
+            if let spot = model.activeSpot {
+                focusOnSpot(spot, animated: false)
+            } else {
+                position = camera()
+            }
             // 道なり待ちでも、経由点の仮線をすぐ出す（空のまま待たない）
             publishLegs(stubLegs(from: waypointCoordinates), key: routeKey, bumpRender: true)
             refreshWalkingPath()
@@ -578,9 +566,16 @@ struct TourMapPage: View {
         }
         .onChange(of: model.stay) { position = camera() }
         .onChange(of: routeKey) {
-            position = camera()
+            // 場所シートで地点を選んでいるときは、全体フィットで上書きしない
+            if model.activeSpot == nil {
+                position = camera()
+            }
             publishLegs(stubLegs(from: waypointCoordinates), key: routeKey, bumpRender: true)
             refreshWalkingPath()
+        }
+        .onChange(of: model.activeSpot?.id) { _, _ in
+            guard let spot = model.activeSpot else { return }
+            focusOnSpot(spot, animated: true)
         }
         .task(id: routeKey) {
             await loadWalkingPath()
@@ -622,7 +617,9 @@ struct TourMapPage: View {
             routeTaskId = key
             if bumpRender {
                 pathRenderEpoch += 1
-                position = camera()
+                if model.activeSpot == nil {
+                    position = camera()
+                }
             }
             return
         }
@@ -637,7 +634,29 @@ struct TourMapPage: View {
         routeTaskId = key
         if bumpRender, changed {
             pathRenderEpoch += 1
-            position = camera()
+            if model.activeSpot == nil {
+                position = camera()
+            }
+        }
+    }
+
+    /// 歩く／案内の「地図」から選んだ地点へ寄せる。
+    private func focusOnSpot(_ spot: Spot, animated: Bool) {
+        let resolved = model.resolvedSpot(spot)
+        guard resolved.lat != 0 || resolved.lng != 0 else { return }
+        focusingHere = false
+        focusGeneration += 1
+        let region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: resolved.lat, longitude: resolved.lng),
+            latitudinalMeters: 520,
+            longitudinalMeters: 520
+        )
+        if animated {
+            withAnimation(.easeInOut(duration: 0.4)) {
+                position = .region(region)
+            }
+        } else {
+            position = .region(region)
         }
     }
 
@@ -809,6 +828,23 @@ private struct HereYouAreMarker: View {
                 pulse = true
             }
         }
+    }
+}
+
+/// 地図ピンを画面上でずらしたとき、当たり判定をその円に合わせる。
+private struct NudgeHitCircle: Shape {
+    var nudge: CGSize
+    var diameter: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let center = CGPoint(x: rect.midX + nudge.width, y: rect.midY + nudge.height)
+        let box = CGRect(
+            x: center.x - diameter / 2,
+            y: center.y - diameter / 2,
+            width: diameter,
+            height: diameter
+        )
+        return Path(ellipseIn: box)
     }
 }
 

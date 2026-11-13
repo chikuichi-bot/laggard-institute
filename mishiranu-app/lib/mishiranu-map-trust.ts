@@ -6,6 +6,7 @@ import {
   isOnDemachiPin,
 } from "@/lib/mishiranu-demachi-template";
 import { haversineKm } from "@/lib/mishiranu-geo";
+import { collapseStoryOverlaps } from "@/lib/mishiranu-story-notes";
 
 type LandmarkLock = {
   station: string;
@@ -107,12 +108,14 @@ export function mapTrustedSpots(
   stationName: string,
   center?: LatLng | null,
 ): Spot[] {
-  return spots.filter(
+  const trusted = spots.filter(
     (s) =>
       allowsOnMap(s, stationName, center) &&
       typeof s.lat === "number" &&
       typeof s.lng === "number",
   );
+  // 物語と観光・ご飯などが同場所なら地図上は1ピンに合体
+  return collapseStoryOverlaps(trusted);
 }
 
 /**

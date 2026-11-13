@@ -89,19 +89,21 @@ final class AppModel {
     var draft = ""
     var geoLoading = false
     var stationLoading = false
-    /// コイン前チラ見せ中（本生成で上書き・保存しない）。
+    /// コイン前チラ見せ中（本生成で上書き・保存しない）。旧 MapKit 輪郭用。物語peekでは使わない。
     var isStationPreview = false
-    /// 無料輪郭を出し、「詳しく」待ち。
+    /// 無料の物語のゆかりを出し、コインで散歩道を開く待ち。
     var awaitingDetailConfirm = false
-    /// 輪郭の一行（降りる決断用）。薄いときは空。
+    /// 旧輪郭一行（互換）。物語peekでは空。
     var contourSummary: String = ""
-    /// 輪郭に決断材料があるか。無いときは偽の「気配」モーダルにしない。
+    /// 物語のゆかりが手元にあるか（空きでも確認は出す）。
     var contourIsDecisionUseful = false
     /// 詳しく調べる対象の駅名（駅なし）。
     var pendingDetailBare: String = ""
-    /// 待ちUIに出す MapKit の短い手がかり。
+    /// コイン前に見せる物語のゆかり（正本。保存しない）。
+    var pendingStoryNotes: [HistoryNote] = []
+    /// 待ちUIに出す短い手がかり。
     var previewHints: [String] = []
-    /// MapKit 輪郭の取得中（コイン前）。
+    /// 旧 MapKit 輪郭取得中。物語peekでは使わない（常に false 想定）。
     var contourLoading = false
     var tourTab: TourTab = .place
     var guideKind: GuideKind = .sight
@@ -133,13 +135,18 @@ final class AppModel {
                 )
             )
         }
-        self.stations = scrubbed
         self.now = now
-        self.stationId = saved.first?.id ?? scrubbed.first?.id ?? ""
         self.dayPart = DayPart.from(hour: Calendar.current.component(.hour, from: now()))
-        for station in scrubbed where savedStationIds.contains(station.id) {
-            _ = SavedStationStore.upsert(station)
+        // 調べ済みすべてに物語のゆかり正本＋地図ピンを載せ、ディスクへ書き戻す。
+        var sealedSaved: [Station] = []
+        for disk in saved {
+            let sealed = GuideIntegrity.seal(disk)
+            _ = SavedStationStore.upsert(sealed)
+            sealedSaved.append(sealed)
         }
+        self.savedStationIds = Set(SavedStationStore.load().map(\.id))
+        self.stations = SavedStationStore.merge(bundled: scrubbed, saved: sealedSaved)
+        self.stationId = sealedSaved.first?.id ?? scrubbed.first?.id ?? ""
     }
 
     var savedCount: Int { savedStationIds.count }
@@ -337,6 +344,7 @@ final class AppModel {
         contourSummary = ""
         contourIsDecisionUseful = false
         pendingDetailBare = ""
+        pendingStoryNotes = []
         previewHints = []
         coinConsumedForLookup = false
         courses = []
@@ -538,7 +546,7 @@ final class AppModel {
     }
 
     /// - Parameter forceRefresh: true なら保存を無視して AI で作り直す（設定の「案内を作り直す」）。
-    /// 新規は無料輪郭→「詳しく」後にコイン。作り直しは確認済みなので本生成へ。
+    /// 新規は無料の物語のゆかり→コインで散歩道。作り直しは確認済みなので本生成へ。
     func requestAiStation(_ rawName: String, spoken: String? = nil, forceRefresh: Bool = false) {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, !stationLoading, !contourLoading else { return }
@@ -557,6 +565,7 @@ final class AppModel {
                 draft = ""
                 heroNote = nil
                 awaitingDetailConfirm = false
+                pendingStoryNotes = []
                 chooseStation(scrubbed, omitYou: true, persist: true)
                 return
             }
@@ -567,58 +576,89 @@ final class AppModel {
             return
         }
 
-        // P0: 無料輪郭のみ。コインは「詳しく」のあと。
-        contourLoading = true
+        // 無料: 物語のゆかりだけポップアップ。正本が無ければ API で調べる（コインなし）。
+        pendingStationLookup?.cancel()
+        pendingStationLookup = nil
+        stationLoading = false
+        isStationPreview = false
+        discardStationPreviewIfNeeded()
         awaitingDetailConfirm = false
+        pendingDetailBare = bare
+        contourSummary = ""
+        previewHints = []
+        coinConsumedForLookup = false
         phase = .station
         query = name
         draft = ""
         heroNote = nil
         stationNotice = nil
-        isStationPreview = false
-        contourSummary = ""
-        contourIsDecisionUseful = false
-        pendingDetailBare = bare
-        previewHints = ["駅の位置を、地図で確認しています"]
-        coinConsumedForLookup = false
-        if screen != .tour {
-            screen = .hero
+        screen = .hero
+
+        let localNotes = StoryNotesCanon.notes(forName: bare)
+        if !localNotes.isEmpty {
+            pendingStoryNotes = localNotes
+            contourIsDecisionUseful = true
+            contourLoading = false
+            awaitingDetailConfirm = true
+            return
         }
 
-        pendingStationLookup?.cancel()
+        pendingStoryNotes = []
+        contourIsDecisionUseful = false
+        contourLoading = true
+        previewHints = ["物語のゆかりを、無料で調べています"]
+
         pendingStationLookup = Task { @MainActor [weak self] in
             guard let self else { return }
-            let skeleton = await StationSkeletonPreview.build(name: bare)
-            if Task.isCancelled {
+            do {
+                let notes = try await StationAPIClient.lookupStoryNotes(
+                    name: bare,
+                    userAi: BillingStore.shared.userAiPayload
+                )
+                if Task.isCancelled {
+                    self.contourLoading = false
+                    self.finishLookupCancelled()
+                    return
+                }
                 self.contourLoading = false
-                self.finishLookupCancelled()
-                return
-            }
-            self.contourLoading = false
-            if let skeleton {
-                self.applyStationPreview(skeleton.station, hints: skeleton.hints)
-                self.contourIsDecisionUseful = skeleton.isDecisionUseful
-                self.contourSummary = skeleton.isDecisionUseful ? skeleton.contourLine : ""
-                self.previewHints = skeleton.isDecisionUseful ? skeleton.hints : []
-            } else {
-                self.contourIsDecisionUseful = false
-                self.contourSummary = ""
+                self.pendingStoryNotes = notes
+                self.contourIsDecisionUseful = !notes.isEmpty
                 self.previewHints = []
+                self.awaitingDetailConfirm = true
+                self.pendingDetailBare = bare
+            } catch is CancellationError {
+                self.finishLookupCancelled()
+            } catch {
+                if Task.isCancelled {
+                    self.finishLookupCancelled()
+                    return
+                }
+                self.contourLoading = false
+                // 調べ失敗でもコイン判断の窓は開く（空の物語＋本案内CTA）。
+                self.pendingStoryNotes = []
+                self.contourIsDecisionUseful = false
+                self.previewHints = []
+                self.awaitingDetailConfirm = true
+                self.pendingDetailBare = bare
+                let message = (error as? LocalizedError)?.errorDescription?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if let message, !message.isEmpty {
+                    self.heroNote = message
+                }
             }
-            self.awaitingDetailConfirm = true
-            self.pendingDetailBare = bare
         }
     }
 
-    /// 輪郭を見たあと、コインで本案内を開く。
+    /// 物語のゆかりを見たあと、コインで散歩道（本案内）を開く。
     func confirmDetailGeneration() {
         let bare = pendingDetailBare.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !bare.isEmpty, !stationLoading else { return }
         awaitingDetailConfirm = false
+        pendingStoryNotes = []
         startPaidGeneration(bare: bare, forceRefresh: false)
     }
 
-    /// 輪郭だけでやめる（コインなし）。
+    /// 物語のゆかりだけでやめる（コインなし）。
     func declineDetailGeneration() {
         awaitingDetailConfirm = false
         contourLoading = false
@@ -628,6 +668,7 @@ final class AppModel {
         contourSummary = ""
         contourIsDecisionUseful = false
         pendingDetailBare = ""
+        pendingStoryNotes = []
         previewHints = []
         screen = .hero
         phase = .station
@@ -753,6 +794,7 @@ final class AppModel {
         contourSummary = ""
         contourIsDecisionUseful = false
         pendingDetailBare = ""
+        pendingStoryNotes = []
         let wasPreview = isStationPreview
         discardStationPreviewIfNeeded()
         if wasPreview || screen == .tour {
@@ -815,7 +857,10 @@ final class AppModel {
         // 誤ピン修正＋出町汚染落とし＋営業時間フィルタ後のコースに差し替える
         if let station {
             let fixed = GuideIntegrity.seal(station)
+            // 物語のゆかり（AreaDepth）など、スポット以外の正本差し替えも書き戻す。
             if fixed.sightseeingNotes.map(\.title) != station.sightseeingNotes.map(\.title)
+                || fixed.storyNotes.map(\.title) != station.storyNotes.map(\.title)
+                || fixed.historyNotes.map(\.title) != station.historyNotes.map(\.title)
                 || fixed.spots.count != station.spots.count
                 || fixed.spots.contains(where: { spot in
                     guard let original = station.spots.first(where: { $0.id == spot.id }) else {

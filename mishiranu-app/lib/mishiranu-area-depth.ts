@@ -4,6 +4,7 @@ import type {
 } from "@/data/mishiranu-stations";
 import { ensureLandPresentAnchors } from "@/lib/mishiranu-land-anchors";
 import { refineLandProse } from "@/lib/mishiranu-land-prose";
+import { withStoryNotes } from "@/lib/mishiranu-story-notes";
 
 export type AreaDepth = {
   stationIntro?: string;
@@ -85,28 +86,6 @@ export const AREA_DEPTH: Record<string, AreaDepth> = {
         title: "枡形商店街",
         body:
           "鯖街道の着き口として知られる短いアーケード。買う・食べる・通り過ぎるが同じ道幅で交わり、出町のいまの顔です。",
-      },
-    ],
-    storyNotes: [
-      {
-        title: "『パッチギ！』と鴨川デルタ",
-        body:
-          "映画『パッチギ！』（2004）の乱闘シーンなどで知られるのが、駅から数分の鴨川デルタです。賀茂川と高野川の合流の三角に立ってみると、画面の川幅と飛び石の向きが、いまの足場と同じ高さで戻ってきます。",
-      },
-      {
-        title: "『鴨川ホルモー』と飛び石",
-        body:
-          "万城目学の小説を映画化した『鴨川ホルモー』（2009）も、同じデルタと飛び石を舞台に使いました。ホルモーの勝負の気配は残っていませんが、亀形の飛石を渡る足取りは、いまも学生と旅人の道になっています。",
-      },
-      {
-        title: "森見登美彦と出町の川",
-        body:
-          "森見登美彦『四畳半神話大系』『夜は短し歩けよ乙女』では、京大生の夜と昼がこの川端に何度も戻ります。アニメ版でもデルタの三角が象徴の景色として描かれ、駅を出て水音に耳を澄ませると、本の中の距離感が先に来ます。",
-      },
-      {
-        title: "『たまこまーけっと』と枡形",
-        body:
-          "京都アニメーション『たまこまーけっと』『たまこラブストーリー』の舞台のひとつが、駅西の出町枡形商店街です。アーケードの短い道幅を歩くと、画面の店先の密度が、いまの買い物の足と同じになります。",
       },
     ],
   },
@@ -684,7 +663,8 @@ export function withAreaDepth(station: StationSeed): StationSeed {
             : station.storyNotes,
       }
     : station;
-  return refineLandProse(ensureLandPresentAnchors(merged));
+  // 物語のゆかりは駅横断の正本（作品名付き）を最後に載せる
+  return withStoryNotes(refineLandProse(ensureLandPresentAnchors(merged)));
 }
 
 export function paragraphsFrom(text: string | undefined): string[] {

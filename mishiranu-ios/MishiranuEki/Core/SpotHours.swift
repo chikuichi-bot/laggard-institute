@@ -15,7 +15,7 @@ enum SpotHours {
             // 「終日（屋外）」はベンチ等 → 免責不要
             let hours = cleaned(spot.hours) ?? ""
             return !hours.contains("屋外")
-        case .sight, .tip:
+        case .sight, .tip, .story:
             return false
         }
     }
