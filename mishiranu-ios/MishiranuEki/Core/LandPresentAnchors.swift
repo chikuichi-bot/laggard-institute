@@ -135,7 +135,8 @@ enum LandPresentAnchors {
             railHint: station.railHint,
             lat: station.lat,
             lng: station.lng,
-            spots: station.spots
+            spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
         return LandProse.refine(ensureVisitSpots(on: ensureSightseeing(on: withProse)))
     }
@@ -196,7 +197,8 @@ enum LandPresentAnchors {
             railHint: station.railHint,
             lat: station.lat,
             lng: station.lng,
-            spots: station.spots
+            spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
     }
 

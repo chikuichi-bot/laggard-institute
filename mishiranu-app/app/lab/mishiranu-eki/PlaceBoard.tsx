@@ -7,6 +7,7 @@ import {
   stationBaseName,
   stationNameReading,
 } from "@/data/mishiranu-station-readings";
+import { promenadeBreathScript } from "@/lib/mishiranu-promenade-breath";
 import { IconBinoculars, IconHistory, IconWalk } from "./MishiranuIcons";
 
 function readingLines(text?: string | null): string[] {
@@ -69,17 +70,20 @@ export function placeScript(
     return join(parts);
   }
   if (section === "walk") {
+    const breath = promenadeBreathScript(station);
+    if (breath) return breath;
     return station.walkGuide
       ? join(["駅から小回り。", station.walkGuide])
       : "";
   }
+  // intro → 散歩の呼吸 → 歴史／観光／物語（耳で先に歩く）
   return join([
     `${station.name}の、土地案内です。`,
     placeScript(station, "intro"),
+    placeScript(station, "walk"),
     placeScript(station, "history"),
     placeScript(station, "sight"),
     placeScript(station, "story"),
-    placeScript(station, "walk"),
   ]);
 }
 
@@ -97,7 +101,10 @@ export function PlaceBoard({
   onToggleSpeak,
 }: Props) {
   const intro = useMemo(() => readingLines(station.stationIntro), [station.stationIntro]);
-  const walk = useMemo(() => readingLines(station.walkGuide), [station.walkGuide]);
+  const walk = useMemo(() => {
+    const breath = promenadeBreathScript(station);
+    return readingLines(breath || station.walkGuide);
+  }, [station]);
   const area = useMemo(() => readingLines(station.areaAbout), [station.areaAbout]);
   const aboutTitle = stationAboutTitle(station.name);
   const nameReading = stationNameReading(station);
@@ -165,7 +172,7 @@ export function PlaceBoard({
                 (["place-sight", "目の置きどころ", "sight"] as const),
               hasStory &&
                 (["place-story", "物語のゆかり", "story"] as const),
-              hasWalk && (["place-walk", "歩き方", "walk"] as const),
+              hasWalk && (["place-walk", "散歩の呼吸", "walk"] as const),
             ].filter(Boolean) as Array<
               readonly [string, string, PlaceSpeakSection]
             >
@@ -301,8 +308,8 @@ export function PlaceBoard({
             <div className="mishiranu-place-panel-head">
               <span>{hasStory ? "05" : "04"}</span>
               <IconWalk />
-              <h3>駅から小回り</h3>
-              {sectionListenButton("walk", "駅から小回り")}
+              <h3>散歩の呼吸</h3>
+              {sectionListenButton("walk", "散歩の呼吸")}
             </div>
             {walk.map((line) => (
               <p key={line}>{line}</p>

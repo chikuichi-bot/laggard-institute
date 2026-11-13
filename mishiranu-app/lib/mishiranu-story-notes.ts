@@ -7,6 +7,51 @@ import type {
 import { isForeignDemachiPlace } from "@/lib/mishiranu-demachi-template";
 import { haversineKm } from "@/lib/mishiranu-geo";
 
+/**
+ * 無料 peek のフッター。百科で完結させず、改札を出る身体的な予感で止める。
+ * （仕様: 見知らぬ駅·次の実装指示 A）
+ */
+export const STORY_PEEK_WALK_INVITE =
+  "改札の外に、その名残を感じながら歩ける道が続いています。";
+
+/** 物語が空のときの peek 本文（歩き出しの予感を残す）。 */
+export const STORY_PEEK_EMPTY_BODY =
+  "確かな物語のゆかりは見つかりませんでした。それでも改札の外には、名前のない空気の道が続いていることがあります。";
+
+/** body 末尾がすでに歩き出し型か（重複付与を避ける）。 */
+export function bodyHasWalkInvite(body: string): boolean {
+  const t = body.trim();
+  if (!t) return false;
+  return (
+    /改札/.test(t) ||
+    /歩ける道/.test(t) ||
+    /足でたど/.test(t) ||
+    /降りて.*確かめ/.test(t) ||
+    /空気の道が続/.test(t) ||
+    /いま歩ける空気/.test(t)
+  );
+}
+
+/**
+ * 最後の note の結びが百科完結なら、歩き出しの一文を足す。
+ * UI フッターと併用してよい（フッターは常時、こちらは本文側の保険）。
+ */
+export function ensureStoryPeekWalkInvite(
+  notes: AreaHistoryNote[],
+): AreaHistoryNote[] {
+  if (!notes.length) return notes;
+  const last = notes[notes.length - 1];
+  if (bodyHasWalkInvite(last.body)) return notes;
+  const base = last.body.trim().replace(/[。．.]+$/u, "");
+  return [
+    ...notes.slice(0, -1),
+    {
+      ...last,
+      body: `${base}。${STORY_PEEK_WALK_INVITE}`,
+    },
+  ];
+}
+
 function spotKey(name: string): string {
   return name.replace(/\s+/gu, "");
 }

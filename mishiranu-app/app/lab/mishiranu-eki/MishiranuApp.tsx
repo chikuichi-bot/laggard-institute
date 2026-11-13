@@ -37,7 +37,13 @@ import {
   loadAtmosphereFirst,
   saveAtmosphereFirst,
 } from "@/lib/mishiranu-atmosphere";
-import { storyNotesForName } from "@/lib/mishiranu-story-notes";
+import {
+  STORY_PEEK_EMPTY_BODY,
+  STORY_PEEK_WALK_INVITE,
+  bodyHasWalkInvite,
+  ensureStoryPeekWalkInvite,
+  storyNotesForName,
+} from "@/lib/mishiranu-story-notes";
 import type { TourCopy } from "@/lib/mishiranu-copy";
 import {
   BUDGET_PREF_OPTIONS,
@@ -354,9 +360,7 @@ function StoryPeekSheet({
         </h4>
         <p className="mishiranu-confirm-body">まずは無料で、物語のゆかりだけ。</p>
         {notes.length === 0 ? (
-          <p className="mishiranu-confirm-body">
-            確かな物語のゆかりは見つかりませんでした。散歩道を調べると、土地の歩き方と一緒に見つかることがあります。
-          </p>
+          <p className="mishiranu-confirm-body">{STORY_PEEK_EMPTY_BODY}</p>
         ) : (
           <ul className="mishiranu-story-peek-list">
             {notes.slice(0, 4).map((note) => (
@@ -367,6 +371,12 @@ function StoryPeekSheet({
             ))}
           </ul>
         )}
+        {notes.length > 0 &&
+        !bodyHasWalkInvite(notes[notes.length - 1]?.body ?? "") ? (
+          <p className="mishiranu-story-peek-walk-invite">
+            {STORY_PEEK_WALK_INVITE}
+          </p>
+        ) : null}
         <p className="mishiranu-confirm-body mishiranu-confirm-body--after-list">
           {coinAsk}
         </p>
@@ -994,7 +1004,9 @@ export default function MishiranuApp({
       setDraft("");
       setQuery(name);
       setHeroNote(null);
-      const localNotes = storyNotesForName(bare) ?? [];
+      const localNotes = ensureStoryPeekWalkInvite(
+        storyNotesForName(bare) ?? [],
+      );
       if (localNotes.length > 0) {
         setStoryPeek({ bare, spoken, notes: localNotes });
         return;

@@ -173,7 +173,8 @@ enum AreaDepth {
                 railHint: station.railHint,
                 lat: station.lat,
                 lng: station.lng,
-                spots: station.spots
+                spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
             )
         }()
         // 物語のゆかりは駅横断の正本を最後に載せる（出町・石清水・尾道など）

@@ -59,7 +59,8 @@ enum BikeRentalSeal {
             bikeRental: bike, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
             railHint: station.railHint,
-            lat: station.lat, lng: station.lng, spots: station.spots
+            lat: station.lat, lng: station.lng, spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
     }
 
@@ -105,7 +106,8 @@ enum BikeRentalSeal {
                 tourTitle: station.tourTitle,
                 catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
                 railHint: station.railHint,
-                lat: station.lat, lng: station.lng, spots: station.spots
+                lat: station.lat, lng: station.lng, spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
             )
         )
     }

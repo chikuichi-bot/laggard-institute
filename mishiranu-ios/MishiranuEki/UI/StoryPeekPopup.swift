@@ -49,7 +49,7 @@ struct StoryPeekPopup: View {
                     .padding(.bottom, 14)
 
                 if notes.isEmpty {
-                    Text("確かな物語のゆかりは見つかりませんでした。散歩道を調べると、土地の歩き方と一緒に見つかることがあります。")
+                    Text(StoryPeekCopy.emptyBody)
                         .font(.mincho(.callout))
                         .foregroundStyle(Palette.fog)
                         .lineSpacing(5)
@@ -74,7 +74,28 @@ struct StoryPeekPopup: View {
                         }
                     }
                     .frame(maxHeight: 280)
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 12)
+                }
+
+                if StoryPeekCopy.shouldShowWalkInviteFooter(notes) {
+                    Text(StoryPeekCopy.walkInvite)
+                        .font(.mincho(.callout))
+                        .foregroundStyle(Palette.ink)
+                        .lineSpacing(5)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(Palette.warm.opacity(0.12))
+                        )
+                        .overlay(alignment: .leading) {
+                            Rectangle()
+                                .fill(Palette.warm.opacity(0.7))
+                                .frame(width: 2)
+                        }
+                        .padding(.bottom, 14)
                 }
 
                 Text(coinAsk)

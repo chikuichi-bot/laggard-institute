@@ -320,8 +320,56 @@ enum StationNormalizer {
             railHint: railHint,
             lat: lat,
             lng: lng,
-            spots: spots
+            spots: spots,
+            atmosphereCorridors: corridors(raw["corridors"] ?? raw["atmosphereCorridors"], stationLat: lat, stationLng: lng)
         )
+    }
+
+    /// API の corridors。最終の sanitize / 名もなき補完は AtmosphereCorridorCanon。
+    private static func corridors(_ raw: Any?, stationLat: Double, stationLng: Double) -> [AtmosphereCorridor] {
+        guard let arr = raw as? [Any] else { return [] }
+        var out: [AtmosphereCorridor] = []
+        var names = Set<String>()
+        for (index, item) in arr.enumerated() {
+            guard let obj = item as? [String: Any] else { continue }
+            let name = string(obj["name"])
+            guard !name.isEmpty, !AtmosphereCorridorCanon.isInventedTouristName(name) else { continue }
+            guard !names.contains(name) else { continue }
+            let pathArr = (obj["path"] as? [Any]) ?? []
+            var path: [AtmosphereCorridor.Coord] = pathArr.compactMap { p in
+                guard let c = p as? [String: Any] else { return nil }
+                let plat = number(c["lat"], fallback: .nan)
+                let plng = number(c["lng"], fallback: .nan)
+                guard plat.isFinite, plng.isFinite else { return nil }
+                return .init(lat: plat, lng: plng)
+            }
+            if path.count < 2 {
+                let mid = path.first ?? .init(lat: stationLat + 0.0007, lng: stationLng + 0.0004)
+                path = [mid, mid, mid]
+            }
+            let related = ((obj["relatedSpotNames"] as? [Any]) ?? []).compactMap { $0 as? String }
+            var kind = string(obj["kind"], fallback: "road")
+            if !["arcade", "streetscape", "riverside", "road"].contains(kind) {
+                kind = "road"
+            }
+            names.insert(name)
+            out.append(
+                AtmosphereCorridor(
+                    id: string(obj["id"], fallback: "ai-corridor-\(index + 1)"),
+                    name: name,
+                    kind: kind,
+                    blurb: string(
+                        obj["blurb"],
+                        fallback: "名前のない道を通り、足元の傾斜と風だけを感じて駅へ戻る。"
+                    ),
+                    path: Array(path.prefix(6)),
+                    relatedSpotNames: related,
+                    walkMinutes: max(3, min(15, Int(number(obj["walkMinutes"], fallback: 6).rounded())))
+                )
+            )
+            if out.count >= 4 { break }
+        }
+        return out
     }
 
     private static func spot(from raw: [String: Any], index: Int, stationLat: Double, stationLng: Double) -> Spot? {

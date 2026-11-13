@@ -103,19 +103,21 @@ struct PlacePage: View {
 
     var body: some View {
         let intro = readingLines(station.stationIntro)
-        let walk = readingLines(station.walkGuide)
+        let breath = PromenadeBreath.script(for: station, course: model.selectedCourse)
+        let walk = readingLines(breath.isEmpty ? station.walkGuide : breath)
         let area = readingLines(station.areaAbout)
         let hasIntro = !intro.isEmpty || (station.mood == .empty && station.emptyCopy != nil)
         let hasWalk = !walk.isEmpty
         let hasHistory = !area.isEmpty || !station.historyNotes.isEmpty
         let hasSight = !station.sightseeingNotes.isEmpty
         let hasStory = !station.storyNotes.isEmpty
+        let course = model.selectedCourse
 
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
-                        PlaceListenBar(narrator: narrator, station: station)
+                        PlaceListenBar(narrator: narrator, station: station, course: course)
 
                         if model.awaitingDetailConfirm || model.isStationPreview {
                             Text(
@@ -161,7 +163,7 @@ struct PlacePage: View {
                                     case .walk: return .walk
                                     }
                                 }()
-                                narrator.toggle(station: station, section: script)
+                                narrator.toggle(station: station, section: script, course: course)
                             }
                         )
 
@@ -173,7 +175,9 @@ struct PlacePage: View {
                                 accent: Palette.ink,
                                 pictogram: nil,
                                 isListening: narrator.isSpeaking(section: .intro),
-                                onListen: { narrator.toggle(station: station, section: .intro) }
+                                onListen: {
+                                    narrator.toggle(station: station, section: .intro, course: course)
+                                }
                             ) {
                                 if !intro.isEmpty {
                                     ReadingText(lines: intro)
@@ -196,7 +200,9 @@ struct PlacePage: View {
                                 accent: Palette.ink,
                                 pictogram: .history,
                                 isListening: narrator.isSpeaking(section: .history),
-                                onListen: { narrator.toggle(station: station, section: .history) }
+                                onListen: {
+                                    narrator.toggle(station: station, section: .history, course: course)
+                                }
                             ) {
                                 if !area.isEmpty {
                                     ReadingText(lines: area)
@@ -223,7 +229,9 @@ struct PlacePage: View {
                                 accent: Palette.ink,
                                 pictogram: .photoSpot,
                                 isListening: narrator.isSpeaking(section: .sight),
-                                onListen: { narrator.toggle(station: station, section: .sight) }
+                                onListen: {
+                                    narrator.toggle(station: station, section: .sight, course: course)
+                                }
                             ) {
                                 VStack(alignment: .leading, spacing: 14) {
                                     ForEach(
@@ -244,7 +252,9 @@ struct PlacePage: View {
                                 accent: Palette.ink,
                                 pictogram: .photoSpot,
                                 isListening: narrator.isSpeaking(section: .story),
-                                onListen: { narrator.toggle(station: station, section: .story) }
+                                onListen: {
+                                    narrator.toggle(station: station, section: .story, course: course)
+                                }
                             ) {
                                 VStack(alignment: .leading, spacing: 14) {
                                     ForEach(
@@ -261,11 +271,13 @@ struct PlacePage: View {
                         if hasWalk {
                             PlaceBoardPanel(
                                 number: hasStory ? "05" : "04",
-                                title: "駅から小回り",
+                                title: "散歩の呼吸",
                                 accent: Palette.moss,
                                 pictogram: .trekking,
                                 isListening: narrator.isSpeaking(section: .walk),
-                                onListen: { narrator.toggle(station: station, section: .walk) }
+                                onListen: {
+                                    narrator.toggle(station: station, section: .walk, course: course)
+                                }
                             ) {
                                 ReadingText(lines: walk)
                             }
@@ -344,7 +356,7 @@ private struct PlaceBoardIndex: View {
             push(.history, "このエリア", hasHistory, .history)
             push(.sight, "目の置きどころ", hasSight, .sight)
             push(.story, "物語のゆかり", hasStory, .story)
-            push(.walk, "歩き方", hasWalk, .walk)
+            push(.walk, "散歩の呼吸", hasWalk, .walk)
             return out
         }()
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
@@ -485,13 +497,16 @@ private struct PlaceBoardPanel<Content: View>: View {
 private struct PlaceListenBar: View {
     let narrator: PlaceNarrator
     let station: Station
+    var course: WalkCourse? = nil
 
     private var speakingAll: Bool { narrator.isSpeaking(section: .all) }
-    private var canResume: Bool { narrator.canResume(station: station, section: .all) }
+    private var canResume: Bool {
+        narrator.canResume(station: station, section: .all, course: course)
+    }
 
     var body: some View {
         Button {
-            narrator.toggle(station: station, section: .all)
+            narrator.toggle(station: station, section: .all, course: course)
         } label: {
             HStack(alignment: .center, spacing: 12) {
                 Image(systemName: speakingAll ? "stop.fill" : "speaker.wave.2.fill")
@@ -510,7 +525,7 @@ private struct PlaceListenBar: View {
                             ? "歩くタブでも、画面を消しても続きます"
                             : (canResume
                                 ? "途中から再開します · 長押しで最初から"
-                                : "歴史と今を聴きながら、小回り・大回りできます")
+                                : "駅を出て、空気の道を通り、また駅へ帰る呼吸を聴けます")
                     )
                         .font(.caption)
                         .foregroundStyle(Palette.paper.opacity(0.85))
@@ -531,7 +546,12 @@ private struct PlaceListenBar: View {
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.55).onEnded { _ in
                 guard !speakingAll else { return }
-                narrator.toggle(station: station, section: .all, fromBeginning: true)
+                narrator.toggle(
+                    station: station,
+                    section: .all,
+                    fromBeginning: true,
+                    course: course
+                )
             }
         )
         .accessibilityLabel(
@@ -542,7 +562,7 @@ private struct PlaceListenBar: View {
         .accessibilityHint(
             canResume && !speakingAll
                 ? "途中から再開します。最初から聞くときは長押し"
-                : "土地の歴史と今を読み上げます。歩くタブや画面オフでも続きが聴けます"
+                : "散歩の呼吸から土地の層まで読み上げます。画面オフでも続きが聴けます"
         )
     }
 }
@@ -551,13 +571,16 @@ private struct PlaceListenBar: View {
 private struct WalkGuideListenBar: View {
     let narrator: PlaceNarrator
     let station: Station
+    var course: WalkCourse? = nil
 
     private var speaking: Bool { narrator.isSpeaking }
-    private var canResume: Bool { narrator.canResume(station: station, section: .all) }
+    private var canResume: Bool {
+        narrator.canResume(station: station, section: .all, course: course)
+    }
 
     var body: some View {
         Button {
-            narrator.toggle(station: station, section: .all)
+            narrator.toggle(station: station, section: .all, course: course)
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: speaking ? "stop.fill" : "speaker.wave.2.fill")
@@ -653,7 +676,11 @@ struct WalkPage: View {
                     .foregroundStyle(Palette.ink)
 
                 if let station = model.station {
-                    WalkGuideListenBar(narrator: model.placeNarrator, station: station)
+                    WalkGuideListenBar(
+                        narrator: model.placeNarrator,
+                        station: station,
+                        course: model.selectedCourse
+                    )
                         .padding(.top, 6)
                 }
 
@@ -746,7 +773,11 @@ struct WalkPage: View {
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                 if let station = model.station {
-                    WalkGuideListenBar(narrator: model.placeNarrator, station: station)
+                    WalkGuideListenBar(
+                        narrator: model.placeNarrator,
+                        station: station,
+                        course: model.selectedCourse
+                    )
                         .padding(.top, 6)
                 }
                 Text("寄る場所の名前は、まだ少ないようです。地図で駅のまわりを見て、気の向く方へ少し歩き、同じ駅へ帰ってくれば、それで一周です。")

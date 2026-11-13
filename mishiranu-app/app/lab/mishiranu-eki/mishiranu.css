@@ -4015,6 +4015,17 @@ a.mishiranu-btn {
   color: var(--mk-fog, var(--mk-mist));
 }
 
+.mishiranu-story-peek-walk-invite {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.75rem;
+  font-family: var(--mk-display);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--mk-ink);
+  background: color-mix(in srgb, var(--mk-warm, #b08a5a) 12%, transparent);
+  border-left: 2px solid var(--mk-warm, #b08a5a);
+}
+
 .mishiranu-candidate-list {
   list-style: none;
   margin: 0 0 0.85rem;

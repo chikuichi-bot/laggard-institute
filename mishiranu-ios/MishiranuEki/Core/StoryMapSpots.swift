@@ -435,7 +435,8 @@ enum StoryMapSpots {
             railHint: station.railHint,
             lat: station.lat,
             lng: station.lng,
-            spots: spots
+            spots: spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
     }
 }

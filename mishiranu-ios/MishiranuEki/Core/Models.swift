@@ -236,11 +236,14 @@ struct Station: Codable, Hashable, Identifiable {
     let lat: Double
     let lng: Double
     let spots: [Spot]
+    /// 空気の道（API／正本）。無い駅は AtmosphereCorridorCanon が名もなき微地形を足す。
+    let atmosphereCorridors: [AtmosphereCorridor]
 
     enum CodingKeys: String, CodingKey {
         case id, name, nameReading, line, prefecture, region, mood, radiiKm
         case stationIntro, areaAbout, walkGuide, historyNotes, sightseeingNotes, storyNotes
         case bikeRental, tourTitle, catchCopy, emptyCopy, railHint, lat, lng, spots
+        case atmosphereCorridors
     }
 
     init(
@@ -250,7 +253,8 @@ struct Station: Codable, Hashable, Identifiable {
         sightseeingNotes: [HistoryNote], storyNotes: [HistoryNote] = [],
         bikeRental: BikeRental, tourTitle: String,
         catchCopy: String, emptyCopy: EmptyCopy?, railHint: String? = nil,
-        lat: Double, lng: Double, spots: [Spot]
+        lat: Double, lng: Double, spots: [Spot],
+        atmosphereCorridors: [AtmosphereCorridor] = []
     ) {
         self.id = id
         self.name = name
@@ -274,6 +278,7 @@ struct Station: Codable, Hashable, Identifiable {
         self.lat = lat
         self.lng = lng
         self.spots = spots
+        self.atmosphereCorridors = atmosphereCorridors
     }
 
     /// 端末保存の旧 JSON でも落ちないよう、欠けた配列は空で読む。
@@ -302,6 +307,7 @@ struct Station: Codable, Hashable, Identifiable {
         lat = try c.decode(Double.self, forKey: .lat)
         lng = try c.decode(Double.self, forKey: .lng)
         spots = try c.decodeIfPresent([Spot].self, forKey: .spots) ?? []
+        atmosphereCorridors = try c.decodeIfPresent([AtmosphereCorridor].self, forKey: .atmosphereCorridors) ?? []
     }
 
     /// 「出町柳」→「出町柳駅のこと」

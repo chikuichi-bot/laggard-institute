@@ -36,7 +36,8 @@ enum GuideIntegrity {
             bikeRental: station.bikeRental, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
             railHint: station.railHint,
-            lat: station.lat, lng: station.lng, spots: spots
+            lat: station.lat, lng: station.lng, spots: spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
     }
 }

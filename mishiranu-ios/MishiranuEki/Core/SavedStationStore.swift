@@ -119,7 +119,8 @@ enum SavedStationStore {
                 railHint: station.railHint,
                 lat: station.lat,
                 lng: station.lng,
-                spots: station.spots
+                spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
             )
         )
         return cleaned

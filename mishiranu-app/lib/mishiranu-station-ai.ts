@@ -48,6 +48,12 @@ import {
 } from "@/lib/mishiranu-landscape-name";
 import { isNonWalkInMeal } from "@/lib/mishiranu-walk-in-meal";
 import { sealGuideIntegrity } from "@/lib/mishiranu-guide-integrity";
+import { ensureStoryPeekWalkInvite } from "@/lib/mishiranu-story-notes";
+import {
+  corridorsForStation,
+  sanitizeCorridor,
+  type AtmosphereCorridor,
+} from "@/lib/mishiranu-atmosphere";
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
@@ -147,6 +153,9 @@ const STATION_SCHEMA_BLOCK = [
   "  ]（1〜3件。実在する役割だけ。町場・店が無ければ town を出さない。3件そろえなくてよい）,",
   '  "sightseeingNotes": [{ "title": "見出し", "body": "目の置きどころ。各2〜4文。何が見えるか・駅から何分か" }]（先頭は firstVisitFaces と同名・同順。続けて実用メモ。合計は顔の件数＋実用でよい。店が無い駅は「食べる」メモを無理に増やさない。別邸・二番手だけで埋めない）,',
   '  "storyNotes": [{ "title": "作品名や場所名", "body": "ドラマ・映画・小説などの撮影地／舞台。各2〜4文。駅から徒歩圏で実在確認できたものだけ。何の作品のどの場面か、いま歩いて何が見えるかを静かに書く" }]（0〜4件。無い駅は [] かキー省略。推測・都市伝説・遠いスタジオは禁止）,',
+  '  "corridors": [',
+  '    { "id": "任意", "name": "区間の呼び名", "kind": "road|streetscape|riverside|arcade", "blurb": "1〜3文。通って感じる空気", "path": [{ "lat": 0, "lng": 0 }, { "lat": 0, "lng": 0 }, { "lat": 0, "lng": 0 }], "relatedSpotNames": [], "walkMinutes": 5 }',
+  "  ]（空気の道＝点ではなく通る区間。2〜3件。商店街・名所が無い駅ほど必須。名もなき微地形でよい）,",
   '  "spots": [',
   "    {",
   '      "name": "土地文に出た正式名称、または徒歩圏の実在店名",',
@@ -174,6 +183,7 @@ const STATION_SCHEMA_BLOCK = [
   "- firstVisitFaces: 実在する役割だけ 1〜3 件。town が無ければ出さない。欠けた役割を推測で埋めない。本文にも出した正式名称を書く。",
   "- 【真の空白駅】店・町場が本当に薄い駅は mood:empty 可。meal/souvenir は 0 件のままでよい。1.5km 超のチェーン・隣駅の店で枠を埋めない。",
   "- 【空白の歩き】店が無い駅は landform（川・用水・坂・田畑の道・橋）を firstVisitFaces の主役にする。神社・公園があれば足す。『何もない＝失敗』にせず、『店がないので風景を30分歩く駅』と catchCopy / emptyBody で肯定する。",
+  "- 【空気の道 corridors】点の名所ではなく、通って感じる区間を 2〜3 本。商店街・名所川辺が無い駅では、固有観光名を捏造しない。切るもの: 線路沿いの細道／用水の低い道／住宅が畑・空き地に変わる境目／駅裏の静かな坂・擁壁沿い。name 例:『線路沿いの細道』『用水の低い道』『畑に変わる境目』。kind は主に road / streetscape。arcade・riverside は根拠があるときだけ。blurb は『何もないからこそ、足元の傾斜と風の通り道だけを感じて駅へ戻る』型。path は駅から徒歩圏の実座標3点前後。城下町・架空商店街禁止。",
   "- 【散歩の口実】spots が 1〜2 件でもよい。無理に 3 役割を埋めない。1 つの landform があれば降りられる設計。",
   "- 【物語のゆかり】駅名＋『撮影地』『ロケ地』『舞台』『聖地』で思い浮かぶ作品があれば storyNotes に書く（作品名を正確に・最大4件）。映画・ドラマ・小説・アニメ可。徒歩圏の場所と作品を結び、いま歩いて何が見えるかを2〜4文で。無い・不確かなら []。観光ランキング口調にしない。",
   "- 【固有名の取り違え禁止】入力駅が出町柳以外なら、鴨川デルタ・下鴨神社・枡形商店街・出町ふたば・同志社大学・京都大学を本文に入れない。",
@@ -509,6 +519,11 @@ export function parseAiStationPayload(
     lng,
     source: "ai",
     firstVisitFaces,
+    corridors: [],
+  };
+  station = {
+    ...station,
+    corridors: parseCorridors(parsed.corridors, station),
   };
 
   if (mood === "empty") {
@@ -587,6 +602,55 @@ function parseNoteList(
     .filter((n): n is { title: string; body: string } => !!n)
     .slice(0, limit);
   return notes.length > 0 ? notes : undefined;
+}
+
+function parseCorridors(
+  raw: unknown,
+  station: StationSeed,
+  limit = 4,
+): AtmosphereCorridor[] {
+  if (!Array.isArray(raw)) return [];
+  const out: AtmosphereCorridor[] = [];
+  const names = new Set<string>();
+  for (const [i, item] of raw.entries()) {
+    if (out.length >= limit) break;
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const path = Array.isArray(o.path)
+      ? o.path.map((p) => {
+          if (!p || typeof p !== "object") return { lat: NaN, lng: NaN };
+          const c = p as Record<string, unknown>;
+          return { lat: asNumber(c.lat, NaN), lng: asNumber(c.lng, NaN) };
+        })
+      : [];
+    const related = Array.isArray(o.relatedSpotNames)
+      ? o.relatedSpotNames.map((s) => asString(s)).filter(Boolean)
+      : [];
+    const c = sanitizeCorridor(
+      {
+        id: asString(o.id) || undefined,
+        name: asString(o.name),
+        kind: asString(o.kind, "road"),
+        blurb: asString(o.blurb),
+        path,
+        relatedSpotNames: related,
+        walkMinutes: asNumber(o.walkMinutes, 6),
+      },
+      station,
+      i,
+    );
+    if (!c || names.has(c.name)) continue;
+    names.add(c.name);
+    out.push(c);
+  }
+  return out;
+}
+
+/** API 区間 ∪ 派生 ∪ 名もなき微地形。出町正本は corridorsForStation 内で優先。 */
+function sealAtmosphereCorridors(station: StationSeed): StationSeed {
+  const fromAi = parseCorridors(station.corridors, station);
+  const merged = corridorsForStation({ ...station, corridors: fromAi });
+  return { ...station, corridors: merged.slice(0, 4) };
 }
 
 /** 運行目安。短い・確信っぽいものだけ通す（宣伝口調や長い文は捨てる）。 */
@@ -2235,11 +2299,13 @@ export async function lookupStoryNotesForName(
     `検索のヒント: 「${bare} ロケ地」「${bare} 撮影地」「${bare} 聖地」「${bare} 映画」「${bare} ドラマ」「${bare} 小説 舞台」`,
     "",
     "スキーマ:",
-    '{ "storyNotes": [{ "title": "『作品名』と場所", "body": "2〜4文。作品名と、いま歩いて何が見えるか" }] }',
+    '{ "storyNotes": [{ "title": "『作品名』と場所", "body": "2〜4文。作品名と、いま歩いて何が見えるか。最後は知識の完結で終わらせず、改札の外にその気配を足でたどれる予感を一文残す" }] }',
     "",
     "制約:",
     "- 最大4件。確かなものだけ。無ければ { \"storyNotes\": [] }",
     "- title に作品名を入れる（『』付きが望ましい）",
+    "- 各 body の結びは百科事典の要約で閉じない。例:「改札の外に、その名残を感じながら歩ける道が続いています。」",
+    "- 店リスト・散歩コース全体・コインや課金の話は書かない",
     "- 出町柳以外で鴨川デルタ・下鴨・枡形・ふたばを出さない",
   ].join("\n");
   const filled = await callGeminiGenerate(
@@ -2263,7 +2329,9 @@ export async function lookupStoryNotesForName(
   if (!parsed) {
     return { ok: true, storyNotes: [] };
   }
-  const storyNotes = parseNoteList(parsed.storyNotes, 4) ?? [];
+  const storyNotes = ensureStoryPeekWalkInvite(
+    parseNoteList(parsed.storyNotes, 4) ?? [],
+  );
   return { ok: true, storyNotes };
 }
 
@@ -2325,6 +2393,7 @@ async function finalizeAiStation(
   // 正本にも1回目にも無ければ、撮影地だけ grounded でもう一度
   station = await fillStoryNotesIfEmpty(station, apiKey, viewerSub);
   station = withAreaDepth(station);
+  station = sealAtmosphereCorridors(station);
 
   if ((station.spots?.length ?? 0) < 3) {
     return {

@@ -684,7 +684,8 @@ enum CourseBuilder {
             bikeRental: station.bikeRental, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
             railHint: station.railHint,
-            lat: station.lat, lng: station.lng, spots: spots
+            lat: station.lat, lng: station.lng, spots: spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
     }
 
@@ -834,7 +835,8 @@ enum CourseBuilder {
             bikeRental: station.bikeRental, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
             railHint: station.railHint,
-            lat: station.lat, lng: station.lng, spots: spots
+            lat: station.lat, lng: station.lng, spots: spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
     }
 
@@ -860,7 +862,8 @@ enum CourseBuilder {
             bikeRental: station.bikeRental, tourTitle: station.tourTitle,
             catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
             railHint: station.railHint,
-            lat: station.lat, lng: station.lng, spots: spots
+            lat: station.lat, lng: station.lng, spots: spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
     }
 
@@ -897,7 +900,8 @@ enum CourseBuilder {
                 bikeRental: station.bikeRental, tourTitle: station.tourTitle,
                 catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
                 railHint: station.railHint,
-                lat: station.lat, lng: station.lng, spots: station.spots + [futaba]
+                lat: station.lat, lng: station.lng, spots: station.spots + [futaba],
+            atmosphereCorridors: station.atmosphereCorridors
             )
         }
         base = normalizeEdibleSouvenirs(base)

@@ -28,7 +28,7 @@ enum PlaceScriptSection: String, CaseIterable, Identifiable {
         case .history: return "このエリアのこと"
         case .sight: return "目の置きどころ"
         case .story: return "物語のゆかり"
-        case .walk: return "駅から小回り"
+        case .walk: return "散歩の呼吸"
         }
     }
 }
@@ -79,33 +79,46 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    static func hasContent(_ section: PlaceScriptSection, in station: Station) -> Bool {
-        !script(for: station, section: section).isEmpty
+    static func hasContent(
+        _ section: PlaceScriptSection,
+        in station: Station,
+        course: WalkCourse? = nil
+    ) -> Bool {
+        !script(for: station, section: section, course: course).isEmpty
     }
 
     /// 同じ駅・同じ項目で、途中保存があれば続きから聞ける。
-    func canResume(station: Station, section: PlaceScriptSection = .all) -> Bool {
+    func canResume(
+        station: Station,
+        section: PlaceScriptSection = .all,
+        course: WalkCourse? = nil
+    ) -> Bool {
         guard let bookmark = loadBookmark() else { return false }
         guard bookmark.stationId == station.id, bookmark.section == section.rawValue else {
             return false
         }
-        let text = Self.script(for: station, section: section)
+        let text = Self.script(for: station, section: section, course: course)
         guard !text.isEmpty, bookmark.scriptDigest == Self.digest(text) else { return false }
         let total = Self.chunks(from: text).count
         return bookmark.chunkIndex > 0 && bookmark.chunkIndex < total
     }
 
     /// 画面に出す読み上げ本文（確認・デバッグ用）。
-    static func script(for station: Station, section: PlaceScriptSection = .all) -> String {
+    /// `.all` は intro → 散歩の呼吸 → 歴史／観光／物語の順（耳で先に歩く）。
+    static func script(
+        for station: Station,
+        section: PlaceScriptSection = .all,
+        course: WalkCourse? = nil
+    ) -> String {
         switch section {
         case .all:
             return [
                 "\(station.name)の、土地案内です。",
-                script(for: station, section: .intro),
-                script(for: station, section: .history),
-                script(for: station, section: .sight),
-                script(for: station, section: .story),
-                script(for: station, section: .walk),
+                script(for: station, section: .intro, course: course),
+                script(for: station, section: .walk, course: course),
+                script(for: station, section: .history, course: course),
+                script(for: station, section: .sight, course: course),
+                script(for: station, section: .story, course: course),
             ]
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
@@ -153,6 +166,8 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
             }
             return join(parts)
         case .walk:
+            let breath = PromenadeBreath.script(for: station, course: course)
+            if !breath.isEmpty { return breath }
             guard let walk = station.walkGuide, !walk.isEmpty else { return "" }
             return join(["駅から小回り。", walk])
         }
@@ -206,7 +221,12 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     /// - Parameter fromBeginning: true なら途中位置を捨てて最初から。
-    func toggle(station: Station, section: PlaceScriptSection = .all, fromBeginning: Bool = false) {
+    func toggle(
+        station: Station,
+        section: PlaceScriptSection = .all,
+        fromBeginning: Bool = false,
+        course: WalkCourse? = nil
+    ) {
         if isSpeaking || isPaused {
             if activeStationId == station.id, activeSection == section {
                 stop()
@@ -214,11 +234,21 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
             }
             stop()
         }
-        speak(station: station, section: section, fromBeginning: fromBeginning)
+        speak(
+            station: station,
+            section: section,
+            fromBeginning: fromBeginning,
+            course: course
+        )
     }
 
-    func speak(station: Station, section: PlaceScriptSection = .all, fromBeginning: Bool = false) {
-        let text = Self.script(for: station, section: section)
+    func speak(
+        station: Station,
+        section: PlaceScriptSection = .all,
+        fromBeginning: Bool = false,
+        course: WalkCourse? = nil
+    ) {
+        let text = Self.script(for: station, section: section, course: course)
         guard !text.isEmpty else { return }
         let parts = Self.chunks(from: text)
         guard !parts.isEmpty else { return }

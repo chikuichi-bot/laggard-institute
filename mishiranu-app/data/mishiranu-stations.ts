@@ -148,6 +148,19 @@ export type StationSeed = {
     lat?: number;
     lng?: number;
   }>;
+  /**
+   * 空気の道（点ではなく通る区間）。AI／正本。
+   * 無い駅はクライアントが名もなき微地形フォールバックを足す。
+   */
+  corridors?: Array<{
+    id: string;
+    name: string;
+    kind: string;
+    blurb: string;
+    path: Array<{ lat: number; lng: number }>;
+    relatedSpotNames: string[];
+    walkMinutes: number;
+  }>;
 };
 
 export function bikeRentalFor(station: StationSeed): BikeRentalInfo {

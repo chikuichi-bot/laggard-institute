@@ -601,7 +601,9 @@ final class AppModel {
         stationNotice = nil
         screen = .hero
 
-        let localNotes = StoryNotesCanon.notes(forName: bare)
+        let localNotes = StoryPeekCopy.ensureWalkInvite(
+            StoryNotesCanon.notes(forName: bare)
+        )
         if !localNotes.isEmpty {
             pendingStoryNotes = localNotes
             contourIsDecisionUseful = true
@@ -628,7 +630,7 @@ final class AppModel {
                     return
                 }
                 self.contourLoading = false
-                self.pendingStoryNotes = notes
+                self.pendingStoryNotes = StoryPeekCopy.ensureWalkInvite(notes)
                 self.contourIsDecisionUseful = !notes.isEmpty
                 self.previewHints = []
                 self.awaitingDetailConfirm = true

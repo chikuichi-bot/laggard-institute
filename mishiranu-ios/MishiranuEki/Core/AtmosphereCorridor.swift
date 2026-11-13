@@ -40,17 +40,151 @@ enum AtmosphereWalkPrefs {
 }
 
 enum AtmosphereCorridorCanon {
-    /// 駅の土地から、空気の区間を集める（正本＋アンカー由来）。
+    /// 駅の土地から、空気の区間を集める（正本＋API＋アンカー＋名もなき微地形）。
     static func corridors(for station: Station) -> [AtmosphereCorridor] {
+        let isDemachi = station.name.contains("出町柳")
+            || SavedStationStore.bareName(station.name).contains("出町柳")
         var list = canon(forStationName: station.name)
-        let named = Set(list.map(\.name))
+        var named = Set(list.map(\.name))
+        for (index, raw) in station.atmosphereCorridors.enumerated() {
+            guard let c = sanitize(raw, station: station, index: index) else { continue }
+            guard !named.contains(c.name) else { continue }
+            list.append(c)
+            named.insert(c.name)
+        }
         for derived in deriveFromAnchors(station) where !named.contains(derived.name) {
             list.append(derived)
+            named.insert(derived.name)
         }
-        for derived in deriveFromSpots(station) where !list.contains(where: { $0.name == derived.name }) {
+        for derived in deriveFromSpots(station) where !named.contains(derived.name) {
             list.append(derived)
+            named.insert(derived.name)
+        }
+        // 空白駅: 名所・商店街が無くても名もなき微地形を芯にする
+        if !isDemachi, list.count < 2 {
+            for blank in namelessBlankCorridors(for: station, count: 3) where !named.contains(blank.name) {
+                list.append(blank)
+                named.insert(blank.name)
+                if list.count >= 3 { break }
+            }
         }
         return list
+    }
+
+    static func isInventedTouristName(_ name: String) -> Bool {
+        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if n.isEmpty { return true }
+        if n.contains("城下町") { return true }
+        if n.contains("観光案内") || n.contains("観光スポット") || n.contains("名所めぐり") {
+            return true
+        }
+        if n == "商店街" || n == "市場" { return true }
+        return false
+    }
+
+    static func sanitize(
+        _ raw: AtmosphereCorridor,
+        station: Station,
+        index: Int
+    ) -> AtmosphereCorridor? {
+        let name = raw.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isInventedTouristName(name) else { return nil }
+        var kind = raw.kind.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !["arcade", "streetscape", "riverside", "road"].contains(kind) {
+            kind = "road"
+        }
+        if kind == "arcade",
+           !(name.contains("商店街") || name.contains("商店会") || name.contains("市場")
+            || name.contains("アーケード")) {
+            kind = "road"
+        }
+        let blurbProbe = name + raw.blurb
+        if kind == "riverside",
+           !(blurbProbe.contains("川") || blurbProbe.contains("用水") || blurbProbe.contains("河")
+            || blurbProbe.contains("デルタ") || blurbProbe.contains("堤") || blurbProbe.contains("河原")) {
+            kind = "road"
+        }
+        let path: [AtmosphereCorridor.Coord]
+        if raw.path.count >= 2 {
+            path = Array(raw.path.prefix(6))
+        } else if let mid = raw.path.first {
+            path = shortPath(from: station, through: mid, meters: 110)
+        } else {
+            let mid = offset(from: station, bearingDeg: 40 + Double(index) * 70, meters: 90)
+            path = shortPath(from: station, through: mid, meters: 110)
+        }
+        let mid = path[path.count / 2]
+        let km = Geo.haversineKm(
+            lat1: station.lat, lng1: station.lng,
+            lat2: mid.lat, lng2: mid.lng
+        )
+        guard km <= 1.6 else { return nil }
+        let bare = SavedStationStore.bareName(station.name)
+        let blurb = raw.blurb.trimmingCharacters(in: .whitespacesAndNewlines)
+        return AtmosphereCorridor(
+            id: raw.id.isEmpty ? "ai-\(bare)-corridor-\(index + 1)" : raw.id,
+            name: name,
+            kind: kind,
+            blurb: blurb.isEmpty
+                ? "名前のない道を通り、足元の傾斜と風だけを感じて駅へ戻る。"
+                : blurb,
+            path: path,
+            relatedSpotNames: raw.relatedSpotNames.filter { $0.count >= 2 },
+            walkMinutes: max(3, min(15, raw.walkMinutes > 0 ? raw.walkMinutes : 6))
+        )
+    }
+
+    private static func offset(
+        from station: Station,
+        bearingDeg: Double,
+        meters: Double
+    ) -> AtmosphereCorridor.Coord {
+        let rad = bearingDeg * .pi / 180
+        let dLat = (meters / 111_320) * cos(rad)
+        let cosLat = cos(station.lat * .pi / 180)
+        let dLng = (meters / (111_320 * max(cosLat, 0.2))) * sin(rad)
+        return .init(lat: station.lat + dLat, lng: station.lng + dLng)
+    }
+
+    /// 名もなき微地形（固有観光名を付けない）。
+    static func namelessBlankCorridors(for station: Station, count: Int) -> [AtmosphereCorridor] {
+        let templates: [(id: String, name: String, kind: String, blurb: String, bearing: Double, meters: Double, walk: Int)] = [
+            (
+                "rail-side",
+                "線路沿いの細道",
+                "road",
+                "何もないからこそ、線路と並ぶ細い道の傾斜と風の通り道だけを感じて駅へ戻る区間。",
+                18, 140, 6
+            ),
+            (
+                "ditch-low",
+                "用水の低い道",
+                "road",
+                "土地がわずかに低くなる用水沿い。名前のない高低差が、駅名のラベルを薄くする。",
+                125, 120, 5
+            ),
+            (
+                "field-edge",
+                "畑に変わる境目",
+                "streetscape",
+                "住宅の気配が途切れ、畑や空き地へ開く境目。用事のない角を曲がって、また駅へ帰る。",
+                230, 130, 7
+            ),
+        ]
+        let bare = SavedStationStore.bareName(station.name)
+        let n = max(0, min(3, count))
+        return templates.prefix(n).map { t in
+            let mid = offset(from: station, bearingDeg: t.bearing, meters: t.meters * 0.55)
+            return AtmosphereCorridor(
+                id: "blank-\(bare)-\(t.id)",
+                name: t.name,
+                kind: t.kind,
+                blurb: t.blurb,
+                path: shortPath(from: station, through: mid, meters: t.meters),
+                relatedSpotNames: [],
+                walkMinutes: t.walk
+            )
+        }
     }
 
     /// コースに載せる区間（選んだ立ち寄りと関連するものを優先）。

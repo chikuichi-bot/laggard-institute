@@ -51,7 +51,8 @@ enum LandProse {
             railHint: station.railHint,
             lat: station.lat,
             lng: station.lng,
-            spots: station.spots
+            spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
     }
 
@@ -133,7 +134,8 @@ enum LandProse {
             railHint: station.railHint,
             lat: station.lat,
             lng: station.lng,
-            spots: station.spots
+            spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
         )
         // AreaDepth 誤適用や AI コピーで出町の固有名が残らないように最後にもう一度落とす
         return DemachiTemplate.scrubContamination(on: refined)

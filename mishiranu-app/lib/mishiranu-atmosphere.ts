@@ -148,13 +148,175 @@ function deriveFromAnchors(station: StationSeed): AtmosphereCorridor[] {
   });
 }
 
+/** 観光地名の捏造っぽい名前（空白埋め禁止）。 */
+export function isInventedTouristCorridorName(name: string): boolean {
+  const n = name.trim();
+  if (!n) return true;
+  if (/城下町/.test(n)) return true;
+  if (/観光案内|観光スポット|名所めぐり/.test(n)) return true;
+  if (/^(商店街|市場)$/.test(n)) return true;
+  return false;
+}
+
+/** 名もなき微地形の雛形（固有名所を付けない）。 */
+const BLANK_MICRO: Array<{
+  idSuffix: string;
+  name: string;
+  kind: string;
+  blurb: string;
+  bearingDeg: number;
+  meters: number;
+  walkMinutes: number;
+}> = [
+  {
+    idSuffix: "rail-side",
+    name: "線路沿いの細道",
+    kind: "road",
+    blurb:
+      "何もないからこそ、線路と並ぶ細い道の傾斜と風の通り道だけを感じて駅へ戻る区間。",
+    bearingDeg: 18,
+    meters: 140,
+    walkMinutes: 6,
+  },
+  {
+    idSuffix: "ditch-low",
+    name: "用水の低い道",
+    kind: "road",
+    blurb:
+      "土地がわずかに低くなる用水沿い。名前のない高低差が、駅名のラベルを薄くする。",
+    bearingDeg: 125,
+    meters: 120,
+    walkMinutes: 5,
+  },
+  {
+    idSuffix: "field-edge",
+    name: "畑に変わる境目",
+    kind: "streetscape",
+    blurb:
+      "住宅の気配が途切れ、畑や空き地へ開く境目。用事のない角を曲がって、また駅へ帰る。",
+    bearingDeg: 230,
+    meters: 130,
+    walkMinutes: 7,
+  },
+];
+
+function offsetFromStation(
+  station: StationSeed,
+  bearingDeg: number,
+  meters: number,
+): { lat: number; lng: number } {
+  const origin = stationLatLng(station);
+  const rad = (bearingDeg * Math.PI) / 180;
+  const dLat = (meters / 111_320) * Math.cos(rad);
+  const dLng =
+    (meters / (111_320 * Math.cos((origin.lat * Math.PI) / 180))) *
+    Math.sin(rad);
+  return { lat: origin.lat + dLat, lng: origin.lng + dLng };
+}
+
+/** 商店街も名所も無い駅向け。最大3本。 */
+export function namelessBlankCorridors(
+  station: StationSeed,
+  count = 3,
+): AtmosphereCorridor[] {
+  const bare = bareName(station.name);
+  return BLANK_MICRO.slice(0, Math.max(0, Math.min(3, count))).map((t) => {
+    const mid = offsetFromStation(station, t.bearingDeg, t.meters * 0.55);
+    return {
+      id: `blank-${bare}-${t.idSuffix}`,
+      name: t.name,
+      kind: t.kind,
+      blurb: t.blurb,
+      path: shortPath(station, mid, t.meters),
+      relatedSpotNames: [],
+      walkMinutes: t.walkMinutes,
+    };
+  });
+}
+
+export function sanitizeCorridor(
+  raw: Partial<AtmosphereCorridor> & {
+    name?: string;
+    path?: Array<{ lat?: number; lng?: number }>;
+  },
+  station: StationSeed,
+  index: number,
+): AtmosphereCorridor | null {
+  const name = (raw.name ?? "").trim();
+  if (!name || isInventedTouristCorridorName(name)) return null;
+  let kind = (raw.kind ?? "road").trim() || "road";
+  if (!["arcade", "streetscape", "riverside", "road"].includes(kind)) {
+    kind = "road";
+  }
+  // 根拠の薄い arcade / riverside は road に落とす（空白駅の捏造防止）
+  if (kind === "arcade" && !/商店街|商店会|市場|アーケード/.test(name)) {
+    kind = "road";
+  }
+  if (
+    kind === "riverside" &&
+    !/川|用水|河|デルタ|堤|河原|川辺|川端/.test(name + (raw.blurb ?? ""))
+  ) {
+    kind = "road";
+  }
+  const bare = bareName(station.name);
+  const pathRaw = Array.isArray(raw.path) ? raw.path : [];
+  const path = pathRaw
+    .map((p) => ({
+      lat: typeof p.lat === "number" ? p.lat : NaN,
+      lng: typeof p.lng === "number" ? p.lng : NaN,
+    }))
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  const origin = stationLatLng(station);
+  const finalPath =
+    path.length >= 2
+      ? path.slice(0, 6)
+      : shortPath(
+          station,
+          path[0] ?? offsetFromStation(station, 40 + index * 70, 90),
+          110,
+        );
+  // 駅から離れすぎ／ゼロ距離は捨ててフォールバック帯に
+  const mid = finalPath[Math.floor(finalPath.length / 2)] ?? origin;
+  const km = haversineKm(origin, mid);
+  if (km > 1.6) {
+    return null;
+  }
+  const blurb = (raw.blurb ?? "").trim() ||
+    "名前のない道を通り、足元の傾斜と風だけを感じて駅へ戻る。";
+  const related = Array.isArray(raw.relatedSpotNames)
+    ? raw.relatedSpotNames.filter((s) => typeof s === "string" && s.length >= 2)
+    : [];
+  return {
+    id:
+      typeof raw.id === "string" && raw.id.trim()
+        ? raw.id.trim()
+        : `ai-${bare}-corridor-${index + 1}`,
+    name,
+    kind,
+    blurb,
+    path: finalPath,
+    relatedSpotNames: related,
+    walkMinutes: Math.max(
+      3,
+      Math.min(15, Math.round(Number(raw.walkMinutes) || 6)),
+    ),
+  };
+}
+
 export function corridorsForStation(station: StationSeed): AtmosphereCorridor[] {
   const bare = bareName(station.name);
-  const list: AtmosphereCorridor[] =
-    bare.includes("出町柳") || station.name.includes("出町柳")
-      ? [...DEMACHI]
-      : [];
+  const isDemachi = bare.includes("出町柳") || station.name.includes("出町柳");
+  const list: AtmosphereCorridor[] = isDemachi ? [...DEMACHI] : [];
   const names = new Set(list.map((c) => c.name));
+
+  // API／正本の区間（出町正本のあとに足す）
+  for (const [i, raw] of (station.corridors ?? []).entries()) {
+    const c = sanitizeCorridor(raw, station, i);
+    if (!c || names.has(c.name)) continue;
+    list.push(c);
+    names.add(c.name);
+  }
+
   for (const derived of deriveFromAnchors(station)) {
     if (!names.has(derived.name)) {
       list.push(derived);
@@ -181,6 +343,16 @@ export function corridorsForStation(station: StationSeed): AtmosphereCorridor[] 
       walkMinutes: Math.max(3, Math.min(12, spot.walkMinutes ?? 5)),
     });
     names.add(spot.name);
+  }
+
+  // 空白駅: 名所・商店街が無くても名もなき微地形を芯にする（最大3）
+  if (!isDemachi && list.length < 2) {
+    for (const blank of namelessBlankCorridors(station, 3)) {
+      if (names.has(blank.name)) continue;
+      list.push(blank);
+      names.add(blank.name);
+      if (list.length >= 3) break;
+    }
   }
   return list;
 }

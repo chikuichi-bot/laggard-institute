@@ -10,7 +10,10 @@ import {
   lookupStoryNotesForName,
   lookupStoryNotesWithUserAi,
 } from "@/lib/mishiranu-station-ai";
-import { storyNotesForName } from "@/lib/mishiranu-story-notes";
+import {
+  ensureStoryPeekWalkInvite,
+  storyNotesForName,
+} from "@/lib/mishiranu-story-notes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,7 +109,10 @@ export async function POST(request: Request) {
   const canon = storyNotesForName(name);
   if (canon?.length) {
     return Response.json(
-      { storyNotes: canon, source: "canon" },
+      {
+        storyNotes: ensureStoryPeekWalkInvite(canon),
+        source: "canon",
+      },
       { headers: NO_STORE },
     );
   }
@@ -114,7 +120,10 @@ export async function POST(request: Request) {
   const cached = await readCachedStation(name);
   if (cached?.storyNotes?.length) {
     return Response.json(
-      { storyNotes: cached.storyNotes, source: "cache" },
+      {
+        storyNotes: ensureStoryPeekWalkInvite(cached.storyNotes),
+        source: "cache",
+      },
       { headers: NO_STORE },
     );
   }
@@ -142,7 +151,10 @@ export async function POST(request: Request) {
         });
       }
       return Response.json(
-        { storyNotes: result.storyNotes, source: "byok" },
+        {
+          storyNotes: ensureStoryPeekWalkInvite(result.storyNotes),
+          source: "byok",
+        },
         { headers: NO_STORE },
       );
     } catch {
@@ -198,7 +210,10 @@ export async function POST(request: Request) {
       });
     }
     return Response.json(
-      { storyNotes: result.storyNotes, source: "ai" },
+      {
+        storyNotes: ensureStoryPeekWalkInvite(result.storyNotes),
+        source: "ai",
+      },
       { headers: NO_STORE },
     );
   } catch {
