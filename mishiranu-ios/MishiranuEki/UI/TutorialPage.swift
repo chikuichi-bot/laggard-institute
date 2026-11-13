@@ -87,16 +87,18 @@ struct TutorialPage: View {
                     withAnimation { page -= 1 }
                 } label: {
                     Text("戻る")
-                        .font(.readable(.body, weight: .semibold))
+                        .font(.readable(.callout, weight: .semibold))
                         .foregroundStyle(Palette.ink)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                         .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(Palette.line, lineWidth: 1)
                         )
                 }
                 .buttonStyle(PlainHapticButtonStyle())
+                .fixedSize(horizontal: true, vertical: false)
+                .accessibilityLabel("戻る")
             }
 
             Button {
@@ -317,7 +319,7 @@ enum TutorialCopy {
             kicker: "なにができるか · 03",
             title: "歩いたところが、道になる",
             bodies: [
-                "地図をひとつ確かめて、少し回り道をする。橋や田畑の道、名前のついていないものが、ひとつずつ目に入ってくる。",
+                "地図をひとつ確かめて、少し回り道をする。最短で急がなくてよい。橋や田畑の道、境内や川辺など、無駄に見える寄り道こそが、このアプリの魅力です。",
                 "見たことがあるようで、見たことのない角を曲がり、駅へ戻る。歩いたぶんだけ、名前は散歩道になっていく。",
             ],
             imageName: "tutorial-map",
@@ -333,7 +335,7 @@ enum TutorialCopy {
                 Step(title: "知らない駅に降りる", body: "現在地から探すか、気になっていた駅名を入れる。"),
                 Step(title: "物語のゆかりを読む", body: "土地にまつわるひとかけらを読む。ここまでは無料。"),
                 Step(title: "散歩道を開く", body: "コインを1枚使って、徒歩圏の散歩道の案内をつくる。一度つくった駅は端末に残り、開き直しにコインはいらない。"),
-                Step(title: "聴きながら歩き、駅へ帰る", body: "土地の歴史と今を耳でたどり、回り道をして同じ駅へ戻る。"),
+                Step(title: "聴きながら歩き、駅へ帰る", body: "土地の歴史と今を耳でたどり、無駄な寄り道をして同じ駅へ戻る。"),
             ]
         ),
     ]

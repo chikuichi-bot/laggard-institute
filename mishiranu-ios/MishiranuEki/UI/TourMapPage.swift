@@ -24,13 +24,14 @@ private enum TourMapBaseStyle: String, CaseIterable {
         }
     }
 
-    var mapStyle: MapStyle {
+    func mapStyle(detail: MapDetailPref) -> MapStyle {
+        let poi = detail.pointsOfInterest
         switch self {
         case .guide:
-            return .standard(pointsOfInterest: .excludingAll)
+            return .standard(pointsOfInterest: poi)
         case .photo:
             // 写真＋道路名。純粋な衛星だけだと歩きにくい。
-            return .hybrid(pointsOfInterest: .excludingAll)
+            return .hybrid(pointsOfInterest: poi)
         }
     }
 
@@ -49,6 +50,7 @@ private enum TourMapBaseStyle: String, CaseIterable {
 
 struct TourMapPage: View {
     @Environment(AppModel.self) private var model
+    @Environment(ThemeStore.self) private var theme
     let station: Station
     @AppStorage("mishiranu.tourMapBaseStyle") private var mapBaseStyleRaw = TourMapBaseStyle.guide.rawValue
     @State private var position: MapCameraPosition = .automatic
@@ -453,7 +455,7 @@ struct TourMapPage: View {
                 }
                 // 線の初回描画だけ載せ直す。コースや見た目の切替で Map を捨てると日本全体に戻る。
                 .id("tour-map-\(pathRenderEpoch)")
-                .mapStyle(mapBaseStyle.mapStyle)
+                .mapStyle(mapBaseStyle.mapStyle(detail: theme.mapDetail))
                 .mapControls {
                     MapCompass()
                     MapScaleView()
@@ -699,7 +701,11 @@ struct TourMapPage: View {
         }
         // 先に経由点線 → 道なり算出後に差し替え（地図タブを開いた瞬間から線が見える）
         publishLegs(stubLegs(from: points), key: key, bumpRender: walkingLegs.isEmpty)
-        let legs = await WalkRouteBuilder.walkingLegs(through: points)
+        let corridors = AtmosphereCorridorCanon.corridors(for: station)
+        let legs = await WalkRouteBuilder.walkingLegs(
+            through: points,
+            preferredCorridors: corridors
+        )
         guard !Task.isCancelled, routeTaskId == key else { return }
         publishLegs(legs, key: key, bumpRender: true)
     }

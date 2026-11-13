@@ -1,18 +1,28 @@
 .mishiranu {
   --mk-sans: var(--font-mishiranu-sans), "Hiragino Sans", "Yu Gothic", sans-serif;
   --mk-display: var(--mk-sans);
+  --mk-text-scale: 1;
 
   min-height: 100vh;
   min-height: 100dvh;
   color: var(--mk-ink);
   background: var(--mk-canvas);
   font-family: var(--mk-sans);
+  font-size: calc(16px * var(--mk-text-scale));
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mishiranu[data-text-size="large"] {
+  --mk-text-scale: 1.12;
+}
+
+.mishiranu[data-text-size="xlarge"] {
+  --mk-text-scale: 1.25;
 }
 
 /* 本 · 文庫の紙（トップと同じ） */
@@ -3255,14 +3265,6 @@ a.mishiranu-btn {
   z-index: 1;
 }
 
-.mishiranu-station-chrome-back-label {
-  font-family: var(--mk-display);
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  line-height: 1;
-}
-
 .mishiranu-station-chrome-back:hover,
 .mishiranu-station-chrome-back:focus-visible {
   background: color-mix(in srgb, var(--mk-ink) 6%, transparent);
@@ -3816,6 +3818,16 @@ a.mishiranu-btn {
   color: var(--mk-mist);
 }
 
+.mishiranu-place-panel-hint {
+  margin: 0.15rem 0 0;
+  font-family: var(--mk-sans);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  color: var(--mk-mist);
+}
+
 .mishiranu-place-panel-head h3 {
   margin: 0;
   font-family: var(--mk-display);
@@ -4314,7 +4326,6 @@ a.mishiranu-btn {
 }
 
 .mishiranu-tutorial-btn {
-  flex: 1;
   border-radius: 14px;
   border: 0;
   font: inherit;
@@ -4325,12 +4336,16 @@ a.mishiranu-btn {
 }
 
 .mishiranu-tutorial-btn--ghost {
+  flex: 0 0 auto;
+  padding: 0.7rem 1rem;
+  font-size: 0.92rem;
   background: transparent;
   color: var(--mk-ink, #2b2722);
   box-shadow: inset 0 0 0 1px var(--mk-line, #e3d5c1);
 }
 
 .mishiranu-tutorial-btn--warm {
+  flex: 1;
   background: var(--mk-warm, #b5493a);
   color: var(--mk-paper, #f9f4e6);
 }
@@ -4350,6 +4365,13 @@ a.mishiranu-btn {
   letter-spacing: 0.16em;
   font-weight: 600;
   color: var(--mk-warm, #b5493a);
+}
+
+.mishiranu-atmosphere-disclaimer {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: var(--mk-mist, #8a7f72);
 }
 
 .mishiranu-atmosphere-item {

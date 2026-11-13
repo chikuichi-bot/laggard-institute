@@ -160,6 +160,22 @@ export type StationSeed = {
     path: Array<{ lat: number; lng: number }>;
     relatedSpotNames: string[];
     walkMinutes: number;
+    /** 粋な寄り道: このキーの目的地の直前に区間を挟む */
+    weaveBeforeKeys?: string[];
+  }>;
+  /**
+   * 粋な寄り道（相国寺→同志社型）。検索生成で返す。
+   * finalize で corridors / spots に織り込る。
+   */
+  preferredDetours?: Array<{
+    id?: string;
+    name: string;
+    beforeKeys: string[];
+    blurb?: string;
+    lat: number;
+    lng: number;
+    path?: Array<{ lat: number; lng: number }>;
+    walkMinutes?: number;
   }>;
 };
 

@@ -4,10 +4,96 @@ import MapKit
 /// 駅→立ち寄り→駅を、徒歩の道なり（MKDirections）で結ぶ。
 /// 直線だと川の上を横切るので使わない。
 /// 帰りは往路と同じ道をなるべく避ける。
+///
+/// 思想: 最短より、土地らしい無駄な寄り道（例: 同志社へは相国寺の中を通る）。
 enum WalkRouteBuilder {
+    /// 出町→同志社: 相国寺境内を東から西へ通る経由（南の最短回りを避ける。無駄OK）。
+    private static let demachiShokokujiTraverse: [CLLocationCoordinate2D] = [
+        CLLocationCoordinate2D(latitude: 35.03305, longitude: 135.76420),
+        LandmarkRegistry.demachiShokokuji,
+        CLLocationCoordinate2D(latitude: 35.03255, longitude: 135.76135),
+    ]
+
+    /// 同志社ピンへ向かう直前に、相国寺境内の経由を挟む。
+    static func expandDemachiPreferredVias(
+        _ points: [CLLocationCoordinate2D]
+    ) -> [CLLocationCoordinate2D] {
+        guard points.count >= 2 else { return points }
+        var out: [CLLocationCoordinate2D] = []
+        for i in 0..<points.count {
+            let p = points[i]
+            out.append(p)
+            guard i + 1 < points.count else { continue }
+            let next = points[i + 1]
+            let towardDoshisha = near(next, LandmarkRegistry.demachiDoshisha, meters: 140)
+            let alreadyInTemple = near(p, LandmarkRegistry.demachiShokokuji, meters: 220)
+                || demachiShokokujiTraverse.contains(where: { near(p, $0, meters: 80) })
+            // 東側・川側から同志社へ向かうときだけ境内を挟む（帰りや西からの接近は触らない）
+            if towardDoshisha, !alreadyInTemple, p.longitude > 135.762 {
+                for via in demachiShokokujiTraverse {
+                    if let last = out.last, near(last, via, meters: 60) { continue }
+                    out.append(via)
+                }
+            }
+        }
+        return out
+    }
+
+    /// 全駅: 区間の mid が A→B のあいだにあれば、最短を避けて path 経由を挟む。
+    static func expandPreferredCorridorVias(
+        _ points: [CLLocationCoordinate2D],
+        corridors: [AtmosphereCorridor]
+    ) -> [CLLocationCoordinate2D] {
+        guard points.count >= 2, !corridors.isEmpty else { return points }
+        var out: [CLLocationCoordinate2D] = []
+        for i in 0..<points.count {
+            let p = points[i]
+            out.append(p)
+            guard i + 1 < points.count else { continue }
+            let next = points[i + 1]
+            for corridor in corridors {
+                let path = corridor.mapCoordinates
+                guard path.count >= 2 else { continue }
+                let mid = path[path.count / 2]
+                // すでに区間内にいる／経由済みなら触らない
+                if near(p, mid, meters: 120) { continue }
+                if path.contains(where: { near(p, $0, meters: 70) }) { continue }
+                guard midLiesBetween(p, next, mid: mid) else { continue }
+                for via in path {
+                    if near(via, next, meters: 55) { continue }
+                    if let last = out.last, near(last, via, meters: 55) { continue }
+                    out.append(via)
+                }
+            }
+        }
+        return out
+    }
+
+    private static func midLiesBetween(
+        _ a: CLLocationCoordinate2D,
+        _ b: CLLocationCoordinate2D,
+        mid: CLLocationCoordinate2D
+    ) -> Bool {
+        let ab = CLLocation(latitude: a.latitude, longitude: a.longitude)
+            .distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
+        guard ab > 90 else { return false }
+        let am = CLLocation(latitude: a.latitude, longitude: a.longitude)
+            .distance(from: CLLocation(latitude: mid.latitude, longitude: mid.longitude))
+        let mb = CLLocation(latitude: mid.latitude, longitude: mid.longitude)
+            .distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
+        guard am > 45, mb > 45 else { return false }
+        // 寄り道は少し長くてよい（無駄OK）。極端な遠回りだけ却下。
+        return am + mb < ab * 1.85
+    }
+
     /// 連続する道なりの断片。意図してつながらない区間だけ別配列にする。
     /// 道なりの頂点が 160m 離れていても、同じ断片なら一本の線として描く。
-    static func walkingLegs(through points: [CLLocationCoordinate2D]) async -> [[CLLocationCoordinate2D]] {
+    static func walkingLegs(
+        through points: [CLLocationCoordinate2D],
+        preferredCorridors: [AtmosphereCorridor] = []
+    ) async -> [[CLLocationCoordinate2D]] {
+        var points = expandPreferredCorridorVias(points, corridors: preferredCorridors)
+        points = expandDemachiPreferredVias(points)
         guard points.count >= 2 else { return points.isEmpty ? [] : [points] }
         var legs: [[CLLocationCoordinate2D]] = []
         var current: [CLLocationCoordinate2D] = []
@@ -69,8 +155,11 @@ enum WalkRouteBuilder {
     }
 
     /// 表示用に平坦化した道なり。切れ目の情報は `walkingLegs` を使う。
-    static func walkingPath(through points: [CLLocationCoordinate2D]) async -> [CLLocationCoordinate2D] {
-        await walkingLegs(through: points).flatMap { $0 }
+    static func walkingPath(
+        through points: [CLLocationCoordinate2D],
+        preferredCorridors: [AtmosphereCorridor] = []
+    ) async -> [CLLocationCoordinate2D] {
+        await walkingLegs(through: points, preferredCorridors: preferredCorridors).flatMap { $0 }
     }
 
     private static func roughlySame(_ a: CLLocationCoordinate2D, _ b: CLLocationCoordinate2D) -> Bool {

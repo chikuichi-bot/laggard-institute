@@ -20,9 +20,59 @@ struct AtmosphereCorridor: Hashable, Identifiable, Codable {
     let path: [Coord]
     let relatedSpotNames: [String]
     let walkMinutes: Int
+    /// 粋な寄り道: このキーの目的地の直前に区間を挟む（例: ["同志社"]）。
+    let weaveBeforeKeys: [String]
 
     var mapCoordinates: [CLLocationCoordinate2D] {
         path.map(\.cl)
+    }
+
+    init(
+        id: String,
+        name: String,
+        kind: String,
+        blurb: String,
+        path: [Coord],
+        relatedSpotNames: [String],
+        walkMinutes: Int,
+        weaveBeforeKeys: [String] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+        self.blurb = blurb
+        self.path = path
+        self.relatedSpotNames = relatedSpotNames
+        self.walkMinutes = walkMinutes
+        self.weaveBeforeKeys = weaveBeforeKeys
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, kind, blurb, path, relatedSpotNames, walkMinutes, weaveBeforeKeys
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? ""
+        name = try c.decode(String.self, forKey: .name)
+        kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? "road"
+        blurb = try c.decodeIfPresent(String.self, forKey: .blurb) ?? ""
+        path = try c.decodeIfPresent([Coord].self, forKey: .path) ?? []
+        relatedSpotNames = try c.decodeIfPresent([String].self, forKey: .relatedSpotNames) ?? []
+        walkMinutes = try c.decodeIfPresent(Int.self, forKey: .walkMinutes) ?? 6
+        weaveBeforeKeys = try c.decodeIfPresent([String].self, forKey: .weaveBeforeKeys) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(blurb, forKey: .blurb)
+        try c.encode(path, forKey: .path)
+        try c.encode(relatedSpotNames, forKey: .relatedSpotNames)
+        try c.encode(walkMinutes, forKey: .walkMinutes)
+        try c.encode(weaveBeforeKeys, forKey: .weaveBeforeKeys)
     }
 }
 
@@ -130,7 +180,8 @@ enum AtmosphereCorridorCanon {
                 : blurb,
             path: path,
             relatedSpotNames: raw.relatedSpotNames.filter { $0.count >= 2 },
-            walkMinutes: max(3, min(15, raw.walkMinutes > 0 ? raw.walkMinutes : 6))
+            walkMinutes: max(3, min(15, raw.walkMinutes > 0 ? raw.walkMinutes : 6)),
+            weaveBeforeKeys: raw.weaveBeforeKeys.filter { $0.count >= 2 }
         )
     }
 
@@ -297,6 +348,21 @@ enum AtmosphereCorridorCanon {
             ],
             relatedSpotNames: ["鴨川デルタ", "デルタ", "河川敷", "三角州", "鴨川"],
             walkMinutes: 5
+        ),
+        AtmosphereCorridor(
+            id: "demachi-shokokuji-to-doshisha",
+            name: "相国寺の境内から同志社へ",
+            kind: "streetscape",
+            blurb: "同志社へ向かうとき、今出川の南回りより境内の木立を東西に通る。無駄な寄り道が土地らしい。",
+            path: [
+                .init(lat: 35.03305, lng: 135.76420),
+                .init(lat: 35.03325, lng: 135.76270),
+                .init(lat: 35.03255, lng: 135.76135),
+                .init(lat: 35.02971, lng: 135.76072),
+            ],
+            relatedSpotNames: ["相国寺", "同志社大学", "同志社", "今出川"],
+            walkMinutes: 10,
+            weaveBeforeKeys: ["同志社"]
         ),
     ]
 

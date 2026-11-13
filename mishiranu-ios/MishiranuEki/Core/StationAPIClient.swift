@@ -321,7 +321,12 @@ enum StationNormalizer {
             lat: lat,
             lng: lng,
             spots: spots,
-            atmosphereCorridors: corridors(raw["corridors"] ?? raw["atmosphereCorridors"], stationLat: lat, stationLng: lng)
+            atmosphereCorridors: mergePreferredDetours(
+                raw["preferredDetours"],
+                into: corridors(raw["corridors"] ?? raw["atmosphereCorridors"], stationLat: lat, stationLng: lng),
+                stationLat: lat,
+                stationLng: lng
+            )
         )
     }
 
@@ -348,6 +353,8 @@ enum StationNormalizer {
                 path = [mid, mid, mid]
             }
             let related = ((obj["relatedSpotNames"] as? [Any]) ?? []).compactMap { $0 as? String }
+            let weaveBefore = ((obj["weaveBeforeKeys"] as? [Any]) ?? []).compactMap { $0 as? String }
+                .filter { $0.count >= 2 }
             var kind = string(obj["kind"], fallback: "road")
             if !["arcade", "streetscape", "riverside", "road"].contains(kind) {
                 kind = "road"
@@ -364,11 +371,72 @@ enum StationNormalizer {
                     ),
                     path: Array(path.prefix(6)),
                     relatedSpotNames: related,
-                    walkMinutes: max(3, min(15, Int(number(obj["walkMinutes"], fallback: 6).rounded())))
+                    walkMinutes: max(3, min(15, Int(number(obj["walkMinutes"], fallback: 6).rounded()))),
+                    weaveBeforeKeys: weaveBefore
                 )
             )
-            if out.count >= 4 { break }
+            if out.count >= 5 { break }
         }
+        // preferredDetours → corridors（API が別配列で返したとき）
+        return out
+    }
+
+    /// preferredDetours を空気の道として足す（コース織り込み・道なり経由用）。
+    private static func mergePreferredDetours(
+        _ raw: Any?,
+        into corridors: [AtmosphereCorridor],
+        stationLat: Double,
+        stationLng: Double
+    ) -> [AtmosphereCorridor] {
+        guard let arr = raw as? [Any] else { return corridors }
+        var out = corridors
+        var names = Set(out.map(\.name))
+        for (index, item) in arr.enumerated() {
+            guard let obj = item as? [String: Any] else { continue }
+            let name = string(obj["name"])
+            guard name.count >= 2, !names.contains(name) else { continue }
+            let before = ((obj["beforeKeys"] as? [Any]) ?? []).compactMap { $0 as? String }
+                .filter { $0.count >= 2 }
+            guard !before.isEmpty else { continue }
+            let lat = number(obj["lat"], fallback: .nan)
+            let lng = number(obj["lng"], fallback: .nan)
+            guard lat.isFinite, lng.isFinite else { continue }
+            let pathArr = (obj["path"] as? [Any]) ?? []
+            var path: [AtmosphereCorridor.Coord] = pathArr.compactMap { p in
+                guard let c = p as? [String: Any] else { return nil }
+                let plat = number(c["lat"], fallback: .nan)
+                let plng = number(c["lng"], fallback: .nan)
+                guard plat.isFinite, plng.isFinite else { return nil }
+                return .init(lat: plat, lng: plng)
+            }
+            if path.count < 2 {
+                path = [
+                    .init(lat: lat + 0.00035, lng: lng + 0.0002),
+                    .init(lat: lat, lng: lng),
+                    .init(lat: lat - 0.00025, lng: lng - 0.00035),
+                ]
+            }
+            let corridorName = "\(name)から\(before[0])へ"
+            guard !names.contains(corridorName) else { continue }
+            names.insert(corridorName)
+            names.insert(name)
+            out.insert(
+                AtmosphereCorridor(
+                    id: string(obj["id"], fallback: "preferred-\(index + 1)"),
+                    name: corridorName,
+                    kind: "streetscape",
+                    blurb: string(obj["blurb"], fallback: "\(name)を通る寄り道。最短より、土地らしい。"),
+                    path: Array(path.prefix(6)),
+                    relatedSpotNames: [name] + before,
+                    walkMinutes: max(4, min(18, Int(number(obj["walkMinutes"], fallback: 8).rounded()))),
+                    weaveBeforeKeys: before
+                ),
+                at: 0
+            )
+            if out.count >= 5 { break }
+        }
+        _ = stationLat
+        _ = stationLng
         return out
     }
 

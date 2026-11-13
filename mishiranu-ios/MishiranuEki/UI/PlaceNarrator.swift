@@ -26,9 +26,9 @@ enum PlaceScriptSection: String, CaseIterable, Identifiable {
         case .all: return "土地案内"
         case .intro: return "この駅のこと"
         case .history: return "このエリアのこと"
-        case .sight: return "目の置きどころ"
+        case .sight: return "寄るところ"
         case .story: return "物語のゆかり"
-        case .walk: return "散歩の呼吸"
+        case .walk: return "歩き方"
         }
     }
 }
@@ -104,7 +104,7 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     /// 画面に出す読み上げ本文（確認・デバッグ用）。
-    /// `.all` は intro → 散歩の呼吸 → 歴史／観光／物語の順（耳で先に歩く）。
+    /// `.all` は intro → 歩き方 → 歴史／観光／物語の順。
     static func script(
         for station: Station,
         section: PlaceScriptSection = .all,
@@ -135,20 +135,25 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
             return join(parts)
         case .history:
             var parts: [String] = []
-            let area = paragraphs(station.areaAbout)
-            if !area.isEmpty || !station.historyNotes.isEmpty {
+            // メモがあるときは概観を重ねない（同じ話題の再読を止める）
+            if !station.historyNotes.isEmpty {
                 parts.append("このエリアのこと。")
-                parts.append(contentsOf: area)
                 for note in station.historyNotes {
                     parts.append(note.title)
                     parts.append(note.body)
+                }
+            } else {
+                let area = paragraphs(station.areaAbout)
+                if !area.isEmpty {
+                    parts.append("このエリアのこと。")
+                    parts.append(contentsOf: area)
                 }
             }
             return join(parts)
         case .sight:
             var parts: [String] = []
             if !station.sightseeingNotes.isEmpty {
-                parts.append("目の置きどころ。")
+                parts.append("寄るところ。")
                 for note in station.sightseeingNotes {
                     parts.append(note.title)
                     parts.append(note.body)
@@ -166,10 +171,8 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
             }
             return join(parts)
         case .walk:
-            let breath = PromenadeBreath.script(for: station, course: course)
-            if !breath.isEmpty { return breath }
             guard let walk = station.walkGuide, !walk.isEmpty else { return "" }
-            return join(["駅から小回り。", walk])
+            return join(["歩き方。", walk])
         }
     }
 

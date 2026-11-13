@@ -867,7 +867,9 @@ final class AppModel {
         if let station {
             let fixed = GuideIntegrity.seal(station)
             // 物語のゆかり（AreaDepth）など、スポット以外の正本差し替えも書き戻す。
-            if fixed.sightseeingNotes.map(\.title) != station.sightseeingNotes.map(\.title)
+            if fixed.sightseeingNotes.map({ "\($0.title)\($0.body)" })
+                != station.sightseeingNotes.map({ "\($0.title)\($0.body)" })
+                || fixed.walkGuide != station.walkGuide
                 || fixed.storyNotes.map(\.title) != station.storyNotes.map(\.title)
                 || fixed.historyNotes.map(\.title) != station.historyNotes.map(\.title)
                 || fixed.spots.count != station.spots.count

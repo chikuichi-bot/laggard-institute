@@ -64,7 +64,73 @@ enum LandPresentAnchors {
         anchor.keys.contains { corpus.contains($0) }
     }
 
+    private static func isWrongMasugataGate(_ text: String) -> Bool {
+        guard text.contains("枡形") || text.contains("桝形") else { return false }
+        if text.contains("京阪改札のすぐ外")
+            || text.contains("改札のすぐ外")
+            || text.contains("改札近く")
+            || text.contains("駅前の短いアーケード")
+            || text.range(of: #"京阪.{0,12}すぐ"#, options: .regularExpression) != nil
+            || text.range(of: #"動線のすぐ外に[、,]?枡形"#, options: .regularExpression) != nil
+        {
+            return true
+        }
+        // 「枡形商店街です」なのに5番・出町橋が無い＝改札すぐと誤認した旧文
+        if text.contains("枡形商店街です"),
+           !text.contains("5番"), !text.contains("出町橋") {
+            return true
+        }
+        return false
+    }
+
+    /// 保存済みの誤案内（京阪改札すぐ＝枡形）を正本の行き方に直す。
+    private static func scrubWrongMasugataGateCopy(_ station: Station) -> Station {
+        let notes = station.sightseeingNotes
+        guard !notes.isEmpty else { return station }
+        guard let masugata = anchors(forStationName: station.name)
+            .first(where: { $0.name == "枡形商店街" })
+        else { return station }
+        var changed = false
+        let next = notes.map { note -> HistoryNote in
+            if isWrongMasugataGate(note.title + note.body) {
+                changed = true
+                return HistoryNote(
+                    title: "枡形商店街",
+                    body: "\(masugata.name)です。\(masugata.whereLabel)。\(masugata.present)"
+                )
+            }
+            return note
+        }
+        guard changed else { return station }
+        return Station(
+            id: station.id,
+            name: station.name,
+            nameReading: station.nameReading,
+            line: station.line,
+            prefecture: station.prefecture,
+            region: station.region,
+            mood: station.mood,
+            radiiKm: station.radiiKm,
+            stationIntro: station.stationIntro,
+            areaAbout: station.areaAbout,
+            walkGuide: station.walkGuide,
+            historyNotes: station.historyNotes,
+            sightseeingNotes: next,
+            storyNotes: station.storyNotes,
+            bikeRental: station.bikeRental,
+            tourTitle: station.tourTitle,
+            catchCopy: station.catchCopy,
+            emptyCopy: station.emptyCopy,
+            railHint: station.railHint,
+            lat: station.lat,
+            lng: station.lng,
+            spots: station.spots,
+            atmosphereCorridors: station.atmosphereCorridors
+        )
+    }
+
     static func ensure(on station: Station) -> Station {
+        var station = scrubWrongMasugataGateCopy(station)
         let list = anchors(forStationName: station.name)
         guard !list.isEmpty else {
             return LandProse.refine(ensureVisitSpots(on: station))
@@ -151,7 +217,8 @@ enum LandPresentAnchors {
             return anchor.name
         }
         func body(for anchor: Anchor) -> String {
-            [anchor.why, anchor.present].compactMap { $0 }.joined()
+            // 正式名 → 行き方 → 着いたら何があるか
+            "\(anchor.name)です。\(anchor.whereLabel)。\(anchor.present)"
         }
         func mentions(_ note: HistoryNote, _ anchor: Anchor) -> Bool {
             let blob = note.title + note.body
@@ -161,10 +228,11 @@ enum LandPresentAnchors {
         let existing = station.sightseeingNotes
         let core: [HistoryNote] = must.map { anchor in
             if let hit = existing.first(where: { mentions($0, anchor) }) {
+                let raw = hit.body.trimmingCharacters(in: .whitespacesAndNewlines)
+                let useHit = !raw.isEmpty && !isWrongMasugataGate(hit.title + raw)
                 return HistoryNote(
                     title: title(for: anchor),
-                    body: hit.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? body(for: anchor) : hit.body
+                    body: useHit ? raw : body(for: anchor)
                 )
             }
             return HistoryNote(title: title(for: anchor), body: body(for: anchor))
@@ -172,6 +240,7 @@ enum LandPresentAnchors {
         let extras = existing.filter { note in
             !DemachiTemplate.isForeignDemachiPlace(note.title, stationName: station.name)
                 && !must.contains(where: { mentions(note, $0) })
+                && !isWrongMasugataGate(note.title + note.body)
         }
         let sightseeing = Array((core + extras).prefix(7))
 

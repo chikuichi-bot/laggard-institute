@@ -142,6 +142,18 @@ import {
   saveMishiranuSkin,
   type MishiranuSkin,
 } from "./mishiranu-skin";
+import {
+  loadMapDetail,
+  loadTextSize,
+  mapDetailLabel,
+  nextMapDetail,
+  nextTextSize,
+  saveMapDetail,
+  saveTextSize,
+  textSizeLabel,
+  type MapDetailPref,
+  type TextSizePref,
+} from "./mishiranu-display";
 import "./mishiranu.css";
 
 const StationMap = dynamic(() => import("./StationMap"), {
@@ -469,6 +481,8 @@ export default function MishiranuApp({
   } | null>(null);
   const [storyPeekLoading, setStoryPeekLoading] = useState(false);
   const [skin, setSkin] = useState<MishiranuSkin>("ma");
+  const [textSize, setTextSize] = useState<TextSizePref>("system");
+  const [mapDetail, setMapDetail] = useState<MapDetailPref>("clean");
   const [chatPhase, setChatPhase] = useState<ChatPhase>("station");
   const [messages, setMessages] = useState<ChatMsg[]>(() => [
     {
@@ -511,6 +525,8 @@ export default function MishiranuApp({
   useEffect(() => {
     setSavedStations(loadStationLibrary());
     setSkin(loadMishiranuSkin());
+    setTextSize(loadTextSize());
+    setMapDetail(loadMapDetail());
     setAtmosphereFirst(loadAtmosphereFirst());
     const nextBilling = loadBillingState();
     setBilling(nextBilling);
@@ -529,6 +545,18 @@ export default function MishiranuApp({
   function chooseSkin(next: MishiranuSkin) {
     setSkin(next);
     saveMishiranuSkin(next);
+  }
+
+  function cycleTextSize() {
+    const next = nextTextSize(textSize);
+    setTextSize(next);
+    saveTextSize(next);
+  }
+
+  function cycleMapDetail() {
+    const next = nextMapDetail(mapDetail);
+    setMapDetail(next);
+    saveMapDetail(next);
   }
 
   function updateBilling(next: BillingState) {
@@ -1221,7 +1249,12 @@ export default function MishiranuApp({
   }
 
   return (
-    <div className="mishiranu" data-skin={skin}>
+    <div
+      className="mishiranu"
+      data-skin={skin}
+      data-text-size={textSize}
+      data-map-detail={mapDetail}
+    >
       <div
         className={
           step === "pick" ? "mishiranu-shell mishiranu-shell--chat" : "mishiranu-shell"
@@ -1632,13 +1665,14 @@ export default function MishiranuApp({
               {tourTab === "map" ? (
                 <div className="mishiranu-tour-page" role="tabpanel" aria-label="地図">
                   <StationMap
-                    key={`${station.id}-${skin}`}
+                    key={`${station.id}-${skin}-${mapDetail}`}
                     station={station}
                     spots={spots}
                     radiusKm={walkRadiusKmForCourse(selectedCourse)}
                     corridors={selectedCourse?.corridors ?? null}
                     activeSpotId={activeSpotId ?? activeSpot?.id ?? null}
                     courseStopIds={courseStopIds}
+                    mapDetail={mapDetail}
                     onSelect={(id) => openSpot(id)}
                   />
                   <div className="mishiranu-map-foot">
@@ -1751,6 +1785,9 @@ export default function MishiranuApp({
                       selectedCourse.corridors.length > 0 ? (
                         <div className="mishiranu-atmosphere-list">
                           <p className="mishiranu-atmosphere-kicker">空気の道</p>
+                          <p className="mishiranu-atmosphere-disclaimer">
+                            正確な道順やナビではありません。通って感じる気配の区間です。地図の破線は歩き方の輪郭で、名もなき道ほど実地と少しずれても、足のほうを信じてください。
+                          </p>
                           {selectedCourse.corridors.map((corridor) => (
                             <div
                               key={corridor.id}
@@ -1769,7 +1806,7 @@ export default function MishiranuApp({
                             <strong>約{selectedCourse.totalMinutes}分</strong>
                           </div>
                           <div>
-                            <span>目の置きどころ</span>
+                            <span>寄るところ</span>
                             <strong>{selectedCourse.stopCount}か所</strong>
                           </div>
                           <div>
@@ -2361,36 +2398,6 @@ export default function MishiranuApp({
 
                   <section
                     className="mishiranu-settings-group"
-                    aria-label="物語・寄り道"
-                  >
-                    <p className="mishiranu-settings-group-label">物語・寄り道</p>
-                    <div className="mishiranu-settings-card">
-                      <button
-                        type="button"
-                        className="mishiranu-settings-action"
-                        disabled={copyLoading}
-                        onClick={() => void loadCopy(station, timeId)}
-                      >
-                        コピーを引き直す
-                      </button>
-                      <button
-                        type="button"
-                        className="mishiranu-settings-action"
-                        onClick={() => void shareTour()}
-                      >
-                        物語をコピー
-                      </button>
-                    </div>
-                  </section>
-
-                  {shareNote ? (
-                    <p className="mishiranu-share-note" aria-live="polite">
-                      {shareNote}
-                    </p>
-                  ) : null}
-
-                  <section
-                    className="mishiranu-settings-group"
                     aria-label="見た目"
                   >
                     <p className="mishiranu-settings-group-label">見た目</p>
@@ -2435,7 +2442,7 @@ export default function MishiranuApp({
                         <span>
                           空気の道を主に歩く
                           <span className="mishiranu-settings-detail">
-                            商店街・街並み・川辺など、点では表せない区間を散歩の芯にする
+                            商店街・街並み・川辺など、点では表せない区間を散歩の芯にする。最短ナビより、土地らしい無駄な寄り道を優先。正確なナビではなく、気配の区間です
                           </span>
                         </span>
                         <input
@@ -2468,16 +2475,28 @@ export default function MishiranuApp({
                   >
                     <p className="mishiranu-settings-group-label">表示</p>
                     <div className="mishiranu-settings-card">
-                      <div className="mishiranu-settings-row">
+                      <button
+                        type="button"
+                        className="mishiranu-settings-action mishiranu-settings-action--nav"
+                        onClick={cycleTextSize}
+                        aria-label={`文字の大きさ: ${textSizeLabel(textSize)}。タップで切り替え`}
+                      >
                         <span>文字の大きさ</span>
                         <span className="mishiranu-settings-detail">
-                          システム設定に合わせる
+                          {textSizeLabel(textSize)}
                         </span>
-                      </div>
-                      <div className="mishiranu-settings-row">
+                      </button>
+                      <button
+                        type="button"
+                        className="mishiranu-settings-action mishiranu-settings-action--nav"
+                        onClick={cycleMapDetail}
+                        aria-label={`地図の詳細: ${mapDetailLabel(mapDetail)}。タップで切り替え`}
+                      >
                         <span>地図の詳細</span>
-                        <span className="mishiranu-settings-detail">準備中</span>
-                      </div>
+                        <span className="mishiranu-settings-detail">
+                          {mapDetailLabel(mapDetail)}
+                        </span>
+                      </button>
                     </div>
                   </section>
 

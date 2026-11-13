@@ -22,6 +22,7 @@ struct RootView: View {
     @Environment(ThemeStore.self) private var theme
     @Environment(BillingStore.self) private var billing
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var systemTypeSize
     /// 試験中は毎回表示。本番に戻すときは AppStorage で一度きりにする。
     @State private var showTutorial = false
 
@@ -91,8 +92,10 @@ struct RootView: View {
         }
         .tint(Palette.warm)
         .preferredColorScheme(theme.skin.preferredColorScheme)
+        .environment(\.dynamicTypeSize, theme.textSize.resolve(systemTypeSize))
         // skin 切替で .id を付けない（設定のスクロール位置が先頭へ戻るため）
         .animation(.easeInOut(duration: 0.2), value: theme.skin)
+        .animation(.easeInOut(duration: 0.15), value: theme.textSize)
         .animation(.easeInOut(duration: 0.25), value: model.screen)
         .animation(.easeInOut(duration: 0.2), value: model.stationLoading)
         .animation(.easeInOut(duration: 0.2), value: model.contourLoading)

@@ -3,20 +3,23 @@ import type { AreaHistoryNote, StationSeed } from "@/data/mishiranu-stations";
 /**
  * 土地ページの仕訳（かぶらせない）
  *
- * 01 stationIntro … 路線・乗り換え・駅前の空気（名所の「なぜ」は書かない）
- * 02 walkGuide   … 寄る順番と方角だけ（歴史・由来は書かない）
- * 03 areaAbout   … 地形・由来・いまを同じ段落で結ぶ概観（個別の詳説は書かない）
- * 03 historyNotes… 1トピック1件。各件で「昔の層→いまの見え方」を一本の糸で結ぶ
- * 04 sightseeing … 寄る・食べる・休むの実用（歴史の再説はしない）
+ * 01 stationIntro … 駅のこと＝路線・乗り換え・駅前の空気＋いつ・なぜこの駅ができたか
+ * 02 historyNotes… 1トピック1件。土地の層（地名・川・町場・大学など）。駅の開業は intro へ
+ * 03 areaAbout   … メモが無いときだけの短い概観（メモがあるときは出さない）
+ * 04 walkGuide   … 歩き方＝一本の輪（出口→通る順→駅へ戻る。方角・定番食べ方）
+ * 05 sightseeing … 寄るところ＝点の一覧（title=正式名、body=行き方＋着いたら。history 再掲禁止）
  */
 
-/** areaAbout / historyNotes の「いま↔歴史」結び方（生成・正本の共通ルール）。 */
+/** areaAbout / historyNotes の役割（生成・正本の共通ルール）。 */
 export const AREA_PRESENT_HISTORY_WEAVE = [
-  "【このエリアのこと · いまと歴史の結び方】",
-  "- 禁: 1段落目＝由来だけ／2段落目＝いまだけ、の二分割。禁: 歴史メモと現在メモを別件に分ける。",
-  "- areaAbout: 各段落のなかで、目の前の風景（いま）から地層（由来・地形・信仰・交通）へ触れ、またいまの生活の気配へ戻す。空行区切り2段落・合計360字以上。",
-  "- historyNotes: 1件につき3〜5文。必ず『なぜそうなったか』と『いま歩くとどう残っているか』を同じ本文で結ぶ。どちらか片方だけの件は不可。",
-  "- 見出しは地名・事物の名でよい。本文が橋になる。大学・学生街があれば正式名称で、いまの通学・店の気配までつなぐ。",
+  "【このエリアのこと · 重複を避ける】",
+  "- historyNotes があるとき areaAbout は書かないか、1〜2文の橋渡しだけ（メモの要約を繰り返さない）。",
+  "- historyNotes: 1件につき2〜4文。『なぜそうなったか』と『いま歩くとどう残っているか』を同じ本文で結ぶ。同じ川・同じ街・同じ大学を別件で二重に語らない。",
+  "- sightseeingNotes: 初めての人向け。各件は『正式名です。改札からの方角・徒歩何分。着いたら何があるか』の順。詩的な抽象（空気・気配・色が先に来る等）は禁止。由来は historyNotes へ。",
+  "- walkGuide: 出口→実際の通過順→方角。定番の食べ方（買ってどこで）が分かれば1文。『リズムが崩れにくい』だけの抽象は禁止。",
+  "- stationIntro（〇〇駅のこと）: 改札・乗り換え・駅前の空気に加え、いつ・なぜこの駅ができたか（開業年＋設置理由）を必ず。大学・神社・川の詳説は historyNotes へ。年が不確かなら捏造せず『大正期の延伸で』型。",
+  "- 検索生成も出町柳正本と同じ精度バー（通過順・距離の嘘禁止・寄るところ具体・定番食べ方）。",
+  "- 【無駄な寄り道】最短ナビにしない。境内・川辺・商店街の一本など、少し遠回りでも土地の顔を通る道を選ぶ。それが魅力。",
 ].join("\n");
 
 function sentencesOf(text: string): string[] {
@@ -45,6 +48,21 @@ function norm(s: string): string {
   return s.replace(/\s+/g, "").replace(/[。．、，・「」『』（）()]/g, "");
 }
 
+function titleKey(title: string): string {
+  return norm(title).replace(
+    /と|の|を|が|は|へ|に|や|及び|そして|という|について/g,
+    "",
+  );
+}
+
+function titlesOverlap(a: string, b: string): boolean {
+  const ka = titleKey(a);
+  const kb = titleKey(b);
+  if (ka.length < 3 || kb.length < 3) return false;
+  if (ka === kb) return true;
+  return ka.includes(kb) || kb.includes(ka);
+}
+
 function isNearDuplicate(a: string, b: string): boolean {
   const na = norm(a);
   const nb = norm(b);
@@ -53,7 +71,6 @@ function isNearDuplicate(a: string, b: string): boolean {
   const shorter = na.length <= nb.length ? na : nb;
   const longer = na.length <= nb.length ? nb : na;
   if (shorter.length >= 14 && longer.includes(shorter)) return true;
-  // 先頭が同じ長い文
   const n = Math.min(22, shorter.length);
   return n >= 16 && longer.startsWith(shorter.slice(0, n));
 }
@@ -115,6 +132,11 @@ function fixRiverFields(station: StationSeed): StationSeed {
     title: correctKamoRiverNaming(n.title),
     body: correctKamoRiverNaming(n.body),
   }));
+  const story = (station.storyNotes ?? []).map((n) => ({
+    ...n,
+    title: correctKamoRiverNaming(n.title),
+    body: correctKamoRiverNaming(n.body),
+  }));
   return {
     ...station,
     stationIntro: station.stationIntro
@@ -128,12 +150,13 @@ function fixRiverFields(station: StationSeed): StationSeed {
       : station.walkGuide,
     historyNotes: notes,
     sightseeingNotes: sight,
+    storyNotes: story,
   };
 }
 
 /**
  * セクション横断で同じ説明が繰り返されないよう、先勝ちで文を残す。
- * 順番: 駅のこと → 歩き方 → エリア → 歴史メモ → 観光メモ
+ * 順番: 駅のこと → 歴史メモ（正本）→ エリア概観（短く）→ 歩き方 → 観光メモ
  */
 export function refineLandProse(station: StationSeed): StationSeed {
   station = fixRiverFields(station);
@@ -142,9 +165,40 @@ export function refineLandProse(station: StationSeed): StationSeed {
   const intro = takeUnique(sentencesOf(station.stationIntro ?? ""), claimed);
   claimed = intro.claimed;
 
-  // 歩き方から、すでに駅紹介で言った文と歴史っぽい長文の重複を落とす
+  const notes: AreaHistoryNote[] = [];
+  const titles = new Set<string>();
+  for (const note of station.historyNotes ?? []) {
+    const title = note.title.trim();
+    if (!title || titles.has(title)) continue;
+    if ([...titles].some((t) => titlesOverlap(t, title))) continue;
+    const got = takeUnique(sentencesOf(note.body), claimed);
+    claimed = got.claimed;
+    if (!got.keep.length) continue;
+    titles.add(title);
+    notes.push({ title, body: joinSentences(got.keep) });
+  }
+
+  // 歴史メモがあるときは概観を畳む（同じ川・街・大学の再説を止める）
+  let areaAbout: string | undefined = station.areaAbout;
+  if (notes.length >= 2) {
+    areaAbout = undefined;
+  } else {
+    const aboutParas = (station.areaAbout ?? "")
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const aboutOut: string[] = [];
+    for (const para of aboutParas.length
+      ? aboutParas
+      : [station.areaAbout ?? ""]) {
+      const got = takeUnique(sentencesOf(para), claimed);
+      claimed = got.claimed;
+      if (got.keep.length) aboutOut.push(joinSentences(got.keep.slice(0, 3)));
+    }
+    areaAbout = aboutOut.length ? aboutOut.join("\n\n") : undefined;
+  }
+
   const walkLines = sentencesOf(station.walkGuide ?? "").filter((s) => {
-    // 歩き方に「由来・着き口の長文」を残さない（メモ側の仕事）
     if (
       (s.includes("鯖街道") || s.includes("着き口") || s.includes("由来")) &&
       s.length > 48
@@ -156,40 +210,21 @@ export function refineLandProse(station: StationSeed): StationSeed {
   const walk = takeUnique(walkLines, claimed);
   claimed = walk.claimed;
 
-  const aboutParas = (station.areaAbout ?? "")
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  const aboutOut: string[] = [];
-  for (const para of aboutParas.length ? aboutParas : [station.areaAbout ?? ""]) {
-    const got = takeUnique(sentencesOf(para), claimed);
-    claimed = got.claimed;
-    if (got.keep.length) aboutOut.push(joinSentences(got.keep));
-  }
-
-  const notes: AreaHistoryNote[] = [];
-  const titles = new Set<string>();
-  for (const note of station.historyNotes ?? []) {
-    const title = note.title.trim();
-    if (!title || titles.has(title)) continue;
-    const got = takeUnique(sentencesOf(note.body), claimed);
-    claimed = got.claimed;
-    if (!got.keep.length) continue;
-    titles.add(title);
-    notes.push({ title, body: joinSentences(got.keep) });
-  }
-
   const sight: AreaHistoryNote[] = [];
   const sightTitles = new Set<string>();
   for (const note of station.sightseeingNotes ?? []) {
     const title = note.title.trim();
     if (!title || sightTitles.has(title)) continue;
-    // 歴史メモで既に詳しく書いた内容の再掲を落とす
+    // 歴史メモと同題の再掲は落とす
+    if ([...titles].some((t) => titlesOverlap(t, title))) continue;
     const got = takeUnique(
       sentencesOf(note.body).filter((s) => {
         if (
-          (s.includes("鯖街道") || s.includes("世界遺産") || s.includes("由来")) &&
-          s.length > 40
+          (s.includes("鯖街道") ||
+            s.includes("世界遺産") ||
+            s.includes("由来") ||
+            s.includes("着き口")) &&
+          s.length > 36
         ) {
           return false;
         }
@@ -209,22 +244,20 @@ export function refineLandProse(station: StationSeed): StationSeed {
       ? joinSentences(intro.keep)
       : station.stationIntro,
     walkGuide: walk.keep.length ? joinSentences(walk.keep) : station.walkGuide,
-    areaAbout: aboutOut.length
-      ? aboutOut.join("\n\n")
-      : station.areaAbout,
+    areaAbout,
     historyNotes: notes.length ? notes : station.historyNotes,
-    sightseeingNotes: sight.length ? sight : station.sightseeingNotes,
+    sightseeingNotes: sight.length ? sight : undefined,
   };
 }
 
 /** AI プロンプト用の仕訳ルール一文。 */
 export const LAND_PROSE_ROLE_RULES = [
   "土地文の役割を分け、同じ説明を繰り返さない:",
-  "- stationIntro: 路線・乗り換え・駅前の空気だけ。名所や大学の詳しい由来は書かない。",
-  "- walkGuide: 寄る順番と方角だけ（例: 枡形→デルタ→北へ下鴨）。歴史や『なぜ有名か』は書かない。",
-  "- areaAbout: 地形・由来・いまの生活を同じ段落で結ぶ概観。個別スポットの詳説は historyNotes へ。",
-  "- historyNotes: 1見出し1トピック。各件で由来といまを結び、詳説はここだけ。",
-  "- sightseeingNotes: 先頭は firstVisitFaces（1〜3件・揃う役割だけ）。続けて実用メモ。店が無い駅は食べるメモを無理に増やさない。historyNotes の再掲は禁止。",
+  "- stationIntro: 路線・乗り換え・駅前の空気＋駅の開業年・設置理由。名所や大学の詳しい由来は書かない。",
+  "- historyNotes: 1見出し1トピック。土地の層の詳説はここだけ。同じ主題を areaAbout / sightseeing で繰り返さない。駅の開業そのものは stationIntro へ（ここでは地名・川・町場など）。",
+  "- areaAbout: historyNotes が2件以上あるときは省略か1〜2文。概観の重複禁止。",
+  "- walkGuide: 寄る順番と方角だけ。歴史や『なぜ有名か』は書かない。",
+  "- sightseeingNotes: 正式名＋方角・分＋着いたら何があるか。抽象表現禁止。historyNotes と同題の再掲は禁止。",
   "- 出町柳・鴨川デルタの川名（必須・逆転禁止）: 上流は賀茂川と高野川。合流点から南は鴨川。『合流し賀茂川へ名を変える』は誤り。",
   AREA_PRESENT_HISTORY_WEAVE,
 ].join("\n");

@@ -567,8 +567,8 @@ enum CourseBuilder {
                         soloOk: true,
                         budgetYen: "〜¥800",
                         hours: "8:30〜17:30（売切次第終了）",
-                        blurb: "出町の顔・豆餅。手土産の定番で、並んでも買う人が絶えない。",
-                        detail: "河合橋のたもと近く。朝から昼にかけて行列ができやすい。",
+                        blurb: "豆餅（きな粉）とよもぎ餅が看板。袋のまま鴨川デルタへ歩くのが定番の食べ方。",
+                        detail: "駅前・枡形で買ってデルタのベンチで食べる。朝から昼は行列ができやすい。",
                         walkMinutes: 3,
                         secretWorthy: false,
                         majorWorthy: true,
@@ -1090,8 +1090,8 @@ enum CourseBuilder {
                 ? "土地の空気を通って駅へ帰る · \(shortOrdered.count)か所"
                 : "ぶらりと回って駅へ帰る · \(shortOrdered.count)か所",
             vibe: atmosphereOn
-                ? "商店街や街並みなど、点ではない道を歩く"
-                : "駅を出て、少し回り道をして、駅へ帰る",
+                ? "最短より、土地らしい無駄な寄り道を歩く"
+                : "駅を出て、少し遠回りをして、駅へ帰る",
             spots: shortOrdered,
             station: prepared,
             dayPart: dayPart,
@@ -1109,8 +1109,8 @@ enum CourseBuilder {
                 ? "もう少し先の空気まで通って駅へ帰る · \(longOrdered.count)か所"
                 : "もう少し遠くまで回って駅へ帰る · \(longOrdered.count)か所",
             vibe: atmosphereOn
-                ? "川辺や町並みの帯を、少し長く歩く"
-                : "少し先まで回り道をして、駅へ帰る",
+                ? "川辺や境内など、少し遠回りの帯を歩く"
+                : "少し先まで遠回りをして、駅へ帰る",
             spots: longOrdered,
             station: prepared,
             dayPart: dayPart,
@@ -1361,6 +1361,48 @@ enum CourseBuilder {
         return out
     }
 
+    /// 出町: 同志社へ行くときは相国寺を直前に挟む（境内経由・無駄OK）。
+    private static func weaveDemachiShokokujiBeforeDoshisha(
+        _ spots: [Spot],
+        station: Station
+    ) -> [Spot] {
+        guard DemachiTemplate.isDemachiStationName(station.name) else { return spots }
+        guard let doshiIdx = spots.firstIndex(where: {
+            $0.name.contains("同志社")
+        }) else { return spots }
+
+        if let templeIdx = spots.firstIndex(where: { $0.name.contains("相国寺") }) {
+            if templeIdx == doshiIdx - 1 { return spots }
+            var out = spots
+            let temple = out.remove(at: templeIdx)
+            let newDoshi = out.firstIndex(where: { $0.name.contains("同志社") }) ?? max(0, doshiIdx - 1)
+            out.insert(temple, at: newDoshi)
+            return out
+        }
+
+        let temple = Spot(
+            id: "demachi-shokokuji-detour",
+            name: "相国寺",
+            genre: "history",
+            guide: .sight,
+            mealTier: .casual,
+            mealTimes: [],
+            soloOk: true,
+            budgetYen: "—",
+            hours: "境内自由（拝観施設は別）",
+            blurb: "同志社・今出川へ向かうとき、境内の木立を通る寄り道。最短の南回りより、こちらが土地らしい。",
+            detail: "東から西へ境内を抜けて烏丸方面へ。無駄な寄り道でよい。",
+            walkMinutes: 12,
+            secretWorthy: false,
+            majorWorthy: true,
+            lat: LandmarkRegistry.demachiShokokuji.latitude,
+            lng: LandmarkRegistry.demachiShokokuji.longitude
+        )
+        var out = spots
+        out.insert(temple, at: doshiIdx)
+        return out
+    }
+
     private static func buildOrdinaryVariant(
         id: String,
         title: String,
@@ -1373,7 +1415,13 @@ enum CourseBuilder {
         startHour: Int
     ) -> WalkCourse? {
         // 最後の関所: 出町の固有名がコースに残っていたら落とす
-        let clean = DemachiTemplate.filterWalkSpots(spots, station: station)
+        let clean = PreferredDetour.weave(
+            weaveDemachiShokokujiBeforeDoshisha(
+                DemachiTemplate.filterWalkSpots(spots, station: station),
+                station: station
+            ),
+            station: station
+        )
         guard !clean.isEmpty else { return nil }
         let provisional = clean.map {
             CourseStop(
@@ -1522,10 +1570,13 @@ enum CourseBuilder {
         corridors: [AtmosphereCorridor] = []
     ) -> WalkCourse? {
         guard !provisional.isEmpty else { return nil }
-        let ordered = orderStopsAsStationLoop(
-            stationLat: stationLat,
-            stationLng: stationLng,
-            spots: provisional.map(\.spot)
+        // 扇形並べのあとも、同志社の直前に相国寺を保つ（境内経由）
+        let ordered = preferShokokujiBeforeDoshisha(
+            orderStopsAsStationLoop(
+                stationLat: stationLat,
+                stationLng: stationLng,
+                spots: provisional.map(\.spot)
+            )
         )
         let built = rebuildStopsWithLegs(
             stationLat: stationLat,
@@ -1569,6 +1620,19 @@ enum CourseBuilder {
         let parts = label.split(separator: ":")
         guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
         return (h, m)
+    }
+
+    /// 同志社の直前に相国寺（扇形並べで離れても戻す）。
+    private static func preferShokokujiBeforeDoshisha(_ spots: [Spot]) -> [Spot] {
+        guard let doshiIdx = spots.firstIndex(where: { $0.name.contains("同志社") }),
+              let templeIdx = spots.firstIndex(where: { $0.name.contains("相国寺") })
+        else { return spots }
+        if templeIdx == doshiIdx - 1 { return spots }
+        var out = spots
+        let temple = out.remove(at: templeIdx)
+        let newDoshi = out.firstIndex(where: { $0.name.contains("同志社") }) ?? max(0, out.count)
+        out.insert(temple, at: newDoshi)
+        return out
     }
 
     /// 駅を始点・終点にした扇形の並び。最大の空角を帰りに使い、同じ道の往復を避ける。

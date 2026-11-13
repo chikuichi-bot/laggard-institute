@@ -58,6 +58,8 @@ enum LandmarkRegistry {
     static let demachiMitarashi = CLLocationCoordinate2D(latitude: 35.039632, longitude: 135.770796)
     /// 吉田キャンパス（百万遍方面）。駅やデルタに寄せない。
     static let demachiKyotoUniversity = CLLocationCoordinate2D(latitude: 35.0272, longitude: 135.7808)
+    /// 相国寺境内（同志社へ向かうときの寄り道。最短の南回りを避ける）。
+    static let demachiShokokuji = CLLocationCoordinate2D(latitude: 35.03325, longitude: 135.7627)
     /// 今出川キャンパス。駅やデルタに寄せない。
     static let demachiDoshisha = CLLocationCoordinate2D(latitude: 35.029714, longitude: 135.760715)
 
@@ -193,6 +195,14 @@ enum LandmarkRegistry {
                 coordinate: demachiKyotoUniversity,
                 walkMinutes: 14,
                 address: "京都市左京区吉田本町（吉田キャンパス・百万遍方面）"
+            )
+        }
+        if spotName.contains("相国寺") {
+            return Pin(
+                id: "demachi-shokokuji",
+                coordinate: demachiShokokuji,
+                walkMinutes: 12,
+                address: "京都市上京区相国寺門前町"
             )
         }
         if spotName.contains("同志社大学") {

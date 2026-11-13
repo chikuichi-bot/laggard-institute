@@ -10,6 +10,11 @@ export type AtmosphereCorridor = {
   path: Array<{ lat: number; lng: number }>;
   relatedSpotNames: string[];
   walkMinutes: number;
+  /**
+   * 粋な寄り道: コース上でこのキーに当たる目的地の直前に、
+   * この区間（経由スポット）を挟む。例: 相国寺→["同志社"]。
+   */
+  weaveBeforeKeys?: string[];
 };
 
 export const ATMOSPHERE_PREF_KEY = "mishiranu.atmosphereFirst";
@@ -72,6 +77,22 @@ const DEMACHI: AtmosphereCorridor[] = [
     ],
     relatedSpotNames: ["鴨川デルタ", "デルタ", "河川敷", "三角州", "鴨川"],
     walkMinutes: 5,
+  },
+  {
+    id: "demachi-shokokuji-to-doshisha",
+    name: "相国寺の境内から同志社へ",
+    kind: "streetscape",
+    blurb:
+      "同志社へ向かうとき、今出川の南回りより境内の木立を東西に通る。無駄な寄り道が土地らしい。",
+    path: [
+      { lat: 35.03305, lng: 135.7642 },
+      { lat: 35.03325, lng: 135.7627 },
+      { lat: 35.03255, lng: 135.76135 },
+      { lat: 35.02971, lng: 135.76072 },
+    ],
+    relatedSpotNames: ["相国寺", "同志社大学", "同志社", "今出川"],
+    walkMinutes: 10,
+    weaveBeforeKeys: ["同志社"],
   },
 ];
 
@@ -286,6 +307,13 @@ export function sanitizeCorridor(
   const related = Array.isArray(raw.relatedSpotNames)
     ? raw.relatedSpotNames.filter((s) => typeof s === "string" && s.length >= 2)
     : [];
+  const weaveRaw = Array.isArray(raw.weaveBeforeKeys)
+    ? raw.weaveBeforeKeys
+    : [];
+  const weaveBeforeKeys = weaveRaw
+    .filter((s): s is string => typeof s === "string" && s.trim().length >= 2)
+    .map((s) => s.trim())
+    .slice(0, 4);
   return {
     id:
       typeof raw.id === "string" && raw.id.trim()
@@ -300,6 +328,7 @@ export function sanitizeCorridor(
       3,
       Math.min(15, Math.round(Number(raw.walkMinutes) || 6)),
     ),
+    ...(weaveBeforeKeys.length ? { weaveBeforeKeys } : {}),
   };
 }
 

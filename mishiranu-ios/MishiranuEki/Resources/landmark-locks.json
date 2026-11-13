@@ -120,6 +120,18 @@
       "walkMinutes": 14
     },
     {
+      "id": "demachi-shokokuji",
+      "station": "出町柳",
+      "kind": "keyword",
+      "canonical": "相国寺",
+      "keywords": ["相国寺"],
+      "address": "京都市上京区相国寺門前町",
+      "osm": "nominatim:相国寺",
+      "lat": 35.03325,
+      "lng": 135.7627,
+      "walkMinutes": 12
+    },
+    {
       "id": "demachi-doshisha",
       "station": "出町柳",
       "kind": "keyword",

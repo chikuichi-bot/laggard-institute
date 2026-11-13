@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 
 /// 見た目の方向。設定で選べる。既定はトップと同じ文庫の紙。
@@ -66,6 +67,95 @@ enum AppSkin: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+/// 文字の大きさ。標準はシステム（Dynamic Type）に合わせる。
+enum TextSizePref: String, CaseIterable, Identifiable {
+    case system
+    case large
+    case xlarge
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .system: return "標準"
+        case .large: return "やや大きい"
+        case .xlarge: return "大きい"
+        }
+    }
+
+    /// システムより小さくはしない。大きめ／大きいだけ床を上げる。
+    func resolve(_ system: DynamicTypeSize) -> DynamicTypeSize {
+        switch self {
+        case .system:
+            return system
+        case .large:
+            return max(system, .xLarge)
+        case .xlarge:
+            return max(system, .xxLarge)
+        }
+    }
+
+    func next() -> TextSizePref {
+        let all = Self.allCases
+        guard let i = all.firstIndex(of: self) else { return .system }
+        return all[(i + 1) % all.count]
+    }
+
+    private static let storageKey = "mishiranu.textSize"
+
+    static func load() -> TextSizePref {
+        guard let raw = UserDefaults.standard.string(forKey: storageKey),
+              let pref = TextSizePref(rawValue: raw)
+        else { return .system }
+        return pref
+    }
+
+    static func save(_ pref: TextSizePref) {
+        UserDefaults.standard.set(pref.rawValue, forKey: storageKey)
+    }
+}
+
+/// 地図の詳細。すっきり＝施設名なし、くわしく＝Apple の施設を出す。
+enum MapDetailPref: String, CaseIterable, Identifiable {
+    case clean
+    case rich
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .clean: return "すっきり"
+        case .rich: return "くわしく"
+        }
+    }
+
+    var pointsOfInterest: PointOfInterestCategories {
+        switch self {
+        case .clean: return .excludingAll
+        case .rich: return .all
+        }
+    }
+
+    func next() -> MapDetailPref {
+        let all = Self.allCases
+        guard let i = all.firstIndex(of: self) else { return .clean }
+        return all[(i + 1) % all.count]
+    }
+
+    private static let storageKey = "mishiranu.mapDetail"
+
+    static func load() -> MapDetailPref {
+        guard let raw = UserDefaults.standard.string(forKey: storageKey),
+              let pref = MapDetailPref(rawValue: raw)
+        else { return .clean }
+        return pref
+    }
+
+    static func save(_ pref: MapDetailPref) {
+        UserDefaults.standard.set(pref.rawValue, forKey: storageKey)
+    }
+}
+
 @MainActor
 @Observable
 final class ThemeStore {
@@ -75,8 +165,18 @@ final class ThemeStore {
         didSet { AppSkin.save(skin) }
     }
 
+    var textSize: TextSizePref {
+        didSet { TextSizePref.save(textSize) }
+    }
+
+    var mapDetail: MapDetailPref {
+        didSet { MapDetailPref.save(mapDetail) }
+    }
+
     private init() {
         skin = AppSkin.load()
+        textSize = TextSizePref.load()
+        mapDetail = MapDetailPref.load()
     }
 }
 

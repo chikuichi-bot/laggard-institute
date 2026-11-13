@@ -101,6 +101,7 @@ export function landAnchorPromptBlock(stationName: string): string {
       "この駅の正本アンカーは未収録。出町柳雛形で firstVisitFaces を実在する役割だけ組み立てる（必ず3件そろえなくてよい）。",
       "町場・店が無ければ town を出さず、川・用水・坂・田畑の道・橋・神社・公園で歩く駅として書く。",
       "例の対応（出町だけ）: landform←鴨川デルタ、landmark←下鴨神社、town←枡形商店街。各駅で実在の正式名に置き換える。",
+      "精度は出町並み: walkGuide は出口→通る順→方角。sightseeing は『正式名です。行き方。着いたら』。定番食べ方が分かれば walkGuide に1文。",
       "sightseeingNotes は顔のあとに実用メモ。店が無い駅は食べるメモを無理に増やさない。",
     ].join("\n");
   }
@@ -229,7 +230,53 @@ function sightseeingTitle(anchor: LandPresentAnchor): string {
 }
 
 function sightseeingBody(anchor: LandPresentAnchor): string {
-  return [anchor.why, anchor.present].filter(Boolean).join("");
+  // 初めての人向け: 正式名 → 行き方 → 着いたら何があるか（由来は historyNotes）
+  return [`${anchor.name}です。`, anchor.where, "。", anchor.present]
+    .filter(Boolean)
+    .join("");
+}
+
+function isWrongMasugataGateCopy(text: string): boolean {
+  if (!text.includes("枡形") && !text.includes("桝形")) return false;
+  if (
+    text.includes("京阪改札のすぐ外") ||
+    text.includes("改札のすぐ外") ||
+    text.includes("改札近く") ||
+    /京阪[^。]{0,12}すぐ/.test(text) ||
+    text.includes("駅前の短いアーケード") ||
+    /動線のすぐ外に[、,]?枡形/.test(text)
+  ) {
+    return true;
+  }
+  // 「枡形商店街です」なのに5番・出町橋が無い＝改札すぐと誤認した旧文
+  if (/枡形商店街です/.test(text) && !/5番|出町橋/.test(text)) {
+    return true;
+  }
+  return false;
+}
+
+/** 保存済みの誤案内（京阪改札すぐ＝枡形）を正本の行き方に直す。 */
+export function scrubWrongMasugataGateCopy(
+  station: StationSeed,
+): StationSeed {
+  const notes = station.sightseeingNotes ?? [];
+  if (!notes.length) return station;
+  const masugata = landAnchorsFor(station.name).find(
+    (a) => a.name === "枡形商店街",
+  );
+  if (!masugata) return station;
+  let changed = false;
+  const next = notes.map((n) => {
+    if (isWrongMasugataGateCopy(`${n.title}${n.body}`)) {
+      changed = true;
+      return {
+        title: "枡形商店街",
+        body: sightseeingBody(masugata),
+      };
+    }
+    return n;
+  });
+  return changed ? { ...station, sightseeingNotes: next } : station;
 }
 
 /**
@@ -244,15 +291,21 @@ export function ensureSightseeingFromMustVisits(
     const existing = station.sightseeingNotes ?? [];
     const core = must.map((anchor) => {
       const hit = existing.find((n) => noteMentionsAnchor(n, anchor));
+      const raw = (hit?.body ?? "").trim();
+      const body =
+        raw && !isWrongMasugataGateCopy(`${hit?.title ?? ""}${raw}`)
+          ? raw
+          : sightseeingBody(anchor);
       return {
         title: sightseeingTitle(anchor),
-        body: (hit?.body ?? "").trim() || sightseeingBody(anchor),
+        body,
       };
     });
     const extras = existing.filter(
       (n) =>
         !isForeignDemachiPlace(n.title, station.name) &&
-        !must.some((a) => noteMentionsAnchor(n, a)),
+        !must.some((a) => noteMentionsAnchor(n, a)) &&
+        !isWrongMasugataGateCopy(`${n.title}${n.body}`),
     );
     return {
       ...station,
@@ -296,6 +349,7 @@ export function ensureSightseeingFromMustVisits(
  * 観光案内は mustVisit 雛形に揃える。
  */
 export function ensureLandPresentAnchors(station: StationSeed): StationSeed {
+  station = scrubWrongMasugataGateCopy(station);
   const anchors = landAnchorsFor(station.name);
   if (!anchors.length) {
     return refineLandProse(ensureLandAnchorSpots(station));

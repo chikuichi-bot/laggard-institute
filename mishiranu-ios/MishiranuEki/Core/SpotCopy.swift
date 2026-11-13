@@ -263,7 +263,7 @@ enum SpotCopy {
             return "城跡と復元された瀬見の小川。下鴨の古い水の筋が薄く見える。"
         }
         if name.contains("出町ふたば") || (name.contains("ふたば") && !name.contains("カフェ")) {
-            return "出町の顔といえば豆餅。並んでも買う人が絶えない甘味で、手土産にもなる。"
+            return "豆餅が看板。袋のまま鴨川デルタへ歩くのが定番の食べ方。"
         }
         if name.contains("石清水八幡宮") && !name.hasSuffix("駅") {
             return "男山の神域。朝廷と武家の信仰が重なる八幡の本社で、山ごとが案内になる。"

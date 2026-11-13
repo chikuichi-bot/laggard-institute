@@ -39,6 +39,7 @@ import {
   prioritizeAtmosphereSpots,
   type AtmosphereCorridor,
 } from "@/lib/mishiranu-atmosphere";
+import { weavePreferredDetours } from "@/lib/mishiranu-preferred-detour";
 
 export type DayPart = "morning" | "midday" | "afternoon" | "evening" | "night";
 
@@ -1004,9 +1005,13 @@ function buildOrdinaryVariant(
   kind: "short" | "long",
   preferAtmosphere: boolean,
 ): WalkCourse | null {
-  if (!spots.length) return null;
+  const woven = weavePreferredDetours(
+    weaveDemachiShokokujiBeforeDoshisha(spots, prepared),
+    prepared,
+  );
+  if (!woven.length) return null;
   const startHour = defaultClockHour(dayPart);
-  const provisional: CourseStop[] = spots.map((spot) => ({
+  const provisional: CourseStop[] = woven.map((spot) => ({
     spotId: spot.id,
     name: spot.name,
     guide: spotGuide(spot),
@@ -1015,31 +1020,31 @@ function buildOrdinaryVariant(
     dwellMinutes: dwellFor(spotGuide(spot), timeId),
     clockLabel: "",
   }));
-  const corridors = corridorsMatching(prepared, spots, preferAtmosphere);
+  const corridors = corridorsMatching(prepared, woven, preferAtmosphere);
   // 駅出発→立ち寄り→駅帰還の周回（同じ道の往復を避ける）
   return finishLoopCourse(
     prepared,
     startHour,
     timeId,
     provisional,
-    spots,
+    woven,
     {
       id: `ordinary-${kind}-${prepared.name.replace(/駅$/u, "")}-${dayPart}`,
       title: kind === "short" ? "駅から、小回り" : "駅から、大回り",
       subtitle: preferAtmosphere
         ? kind === "short"
-          ? `土地の空気を通って駅へ帰る · ${spots.length}か所`
-          : `もう少し先の空気まで通って駅へ帰る · ${spots.length}か所`
+          ? `土地の空気を通って駅へ帰る · ${woven.length}か所`
+          : `もう少し先の空気まで通って駅へ帰る · ${woven.length}か所`
         : kind === "short"
-          ? `ぶらりと回って駅へ帰る · ${spots.length}か所`
-          : `もう少し遠くまで回って駅へ帰る · ${spots.length}か所`,
+          ? `ぶらりと回って駅へ帰る · ${woven.length}か所`
+          : `もう少し遠くまで回って駅へ帰る · ${woven.length}か所`,
       vibe: preferAtmosphere
         ? kind === "short"
-          ? "商店街や街並みなど、点ではない道を歩く"
-          : "川辺や町並みの帯を、少し長く歩く"
+          ? "最短より、土地らしい無駄な寄り道を歩く"
+          : "川辺や境内など、少し遠回りの帯を歩く"
         : kind === "short"
-          ? "駅を出て、少し回り道をして、駅へ帰る"
-          : "少し先まで回り道をして、駅へ帰る",
+          ? "駅を出て、少し遠回りをして、駅へ帰る"
+          : "少し先まで遠回りをして、駅へ帰る",
     },
     corridors,
   );
@@ -1228,7 +1233,9 @@ function finishLoopCourse(
   if (!resolved.length) return null;
 
   const start = stationLatLng(station);
-  const ordered = orderStopsAsStationLoop(start, resolved);
+  const ordered = preferShokokujiBeforeDoshisha(
+    orderStopsAsStationLoop(start, resolved),
+  );
   const built = rebuildStopsWithLegs(start, startHour, timeId, ordered);
   const last = built[built.length - 1]!;
   const lastSpot = ordered[ordered.length - 1]!;
@@ -1265,6 +1272,56 @@ function finishLoopCourse(
     returnClockLabel,
     corridors,
   };
+}
+
+/** 同志社の直前に相国寺（扇形並べで離れても戻す）。 */
+function preferShokokujiBeforeDoshisha(spots: Spot[]): Spot[] {
+  const doshiIdx = spots.findIndex((s) => s.name.includes("同志社"));
+  const templeIdx = spots.findIndex((s) => s.name.includes("相国寺"));
+  if (doshiIdx < 0 || templeIdx < 0) return spots;
+  if (templeIdx === doshiIdx - 1) return spots;
+  const out = [...spots];
+  const [temple] = out.splice(templeIdx, 1);
+  const newDoshi = out.findIndex((s) => s.name.includes("同志社"));
+  out.splice(newDoshi >= 0 ? newDoshi : out.length, 0, temple!);
+  return out;
+}
+
+/** 出町: 同志社があるコースには相国寺を直前に足す（境内経由・無駄OK）。 */
+function weaveDemachiShokokujiBeforeDoshisha(
+  spots: Spot[],
+  station: StationSeed,
+): Spot[] {
+  if (!isDemachiStationName(station.name)) return spots;
+  const doshiIdx = spots.findIndex((s) => s.name.includes("同志社"));
+  if (doshiIdx < 0) return spots;
+  if (spots.some((s) => s.name.includes("相国寺"))) {
+    return preferShokokujiBeforeDoshisha(spots);
+  }
+  const temple: Spot = {
+    id: "demachi-shokokuji-detour",
+    name: "相国寺",
+    genre: "history",
+    guide: "sight",
+    mealTier: "casual",
+    mealTimes: [],
+    soloOk: true,
+    budgetYen: "—",
+    hours: "境内自由（拝観施設は別）",
+    blurb:
+      "同志社・今出川へ向かうとき、境内の木立を通る寄り道。最短の南回りより、こちらが土地らしい。",
+    detail: "東から西へ境内を抜けて烏丸方面へ。無駄な寄り道でよい。",
+    walkMinutes: 12,
+    secretWorthy: false,
+    majorWorthy: true,
+    lat: 35.03325,
+    lng: 135.7627,
+    x: 0.35,
+    y: 0.4,
+  };
+  const out = [...spots];
+  out.splice(doshiIdx, 0, temple);
+  return out;
 }
 
 /** 駅を始点・終点にした扇形の並び。最大の空角を帰りに使う。 */

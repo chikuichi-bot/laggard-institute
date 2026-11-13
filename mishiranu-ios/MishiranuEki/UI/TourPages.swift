@@ -103,9 +103,11 @@ struct PlacePage: View {
 
     var body: some View {
         let intro = readingLines(station.stationIntro)
-        let breath = PromenadeBreath.script(for: station, course: model.selectedCourse)
-        let walk = readingLines(breath.isEmpty ? station.walkGuide : breath)
-        let area = readingLines(station.areaAbout)
+        let walk = readingLines(station.walkGuide)
+        // 歴史メモがあるときは areaAbout を出さない（概観とメモの二重読みを止める）
+        let area = station.historyNotes.isEmpty
+            ? readingLines(station.areaAbout)
+            : [String]()
         let hasIntro = !intro.isEmpty || (station.mood == .empty && station.emptyCopy != nil)
         let hasWalk = !walk.isEmpty
         let hasHistory = !area.isEmpty || !station.historyNotes.isEmpty
@@ -172,6 +174,7 @@ struct PlacePage: View {
                                 number: "01",
                                 title: station.aboutTitle,
                                 reading: station.displayNameReading,
+                                hint: "いつ・なぜこの駅ができたかも、ここに",
                                 accent: Palette.ink,
                                 pictogram: nil,
                                 isListening: narrator.isSpeaking(section: .intro),
@@ -197,6 +200,7 @@ struct PlacePage: View {
                             PlaceBoardPanel(
                                 number: "02",
                                 title: "このエリアのこと",
+                                hint: "地名・川・町場など、土地の層",
                                 accent: Palette.ink,
                                 pictogram: .history,
                                 isListening: narrator.isSpeaking(section: .history),
@@ -225,7 +229,8 @@ struct PlacePage: View {
                         if hasSight {
                             PlaceBoardPanel(
                                 number: "03",
-                                title: "目の置きどころ",
+                                title: "寄るところ",
+                                hint: "正式名・行き方・着いたら何があるか（一つずつ）",
                                 accent: Palette.ink,
                                 pictogram: .photoSpot,
                                 isListening: narrator.isSpeaking(section: .sight),
@@ -271,7 +276,8 @@ struct PlacePage: View {
                         if hasWalk {
                             PlaceBoardPanel(
                                 number: hasStory ? "05" : "04",
-                                title: "散歩の呼吸",
+                                title: "歩き方",
+                                hint: "一本の輪。出口から通る順、駅へ戻るまで",
                                 accent: Palette.moss,
                                 pictogram: .trekking,
                                 isListening: narrator.isSpeaking(section: .walk),
@@ -354,9 +360,9 @@ private struct PlaceBoardIndex: View {
             }
             push(.intro, stationLabel, hasIntro, .intro)
             push(.history, "このエリア", hasHistory, .history)
-            push(.sight, "目の置きどころ", hasSight, .sight)
+            push(.sight, "寄るところ", hasSight, .sight)
             push(.story, "物語のゆかり", hasStory, .story)
-            push(.walk, "散歩の呼吸", hasWalk, .walk)
+            push(.walk, "歩き方", hasWalk, .walk)
             return out
         }()
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
@@ -415,6 +421,8 @@ private struct PlaceBoardPanel<Content: View>: View {
     let number: String
     let title: String
     var reading: String? = nil
+    /// 見出しの下に置く一行（役割の差を見せる）。
+    var hint: String? = nil
     let accent: Color
     let pictogram: Pictogram?
     var isListening: Bool = false
@@ -445,6 +453,13 @@ private struct PlaceBoardPanel<Content: View>: View {
                         .font(.mincho(.headline, weight: .semibold))
                         .foregroundStyle(Palette.ink)
                         .fixedSize(horizontal: false, vertical: true)
+                    if let hint, !hint.isEmpty {
+                        Text(hint)
+                            .font(.caption2)
+                            .foregroundStyle(Palette.mist)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 2)
+                    }
                 }
                 Spacer(minLength: 8)
                 if let onListen {
@@ -562,7 +577,7 @@ private struct PlaceListenBar: View {
         .accessibilityHint(
             canResume && !speakingAll
                 ? "途中から再開します。最初から聞くときは長押し"
-                : "散歩の呼吸から土地の層まで読み上げます。画面オフでも続きが聴けます"
+                : "歩き方から土地の層まで読み上げます。画面オフでも続きが聴けます"
         )
     }
 }
@@ -717,6 +732,10 @@ struct WalkPage: View {
                             .font(.readable(.caption, weight: .semibold))
                             .foregroundStyle(Palette.warm)
                             .tracking(1)
+                        Text("正確な道順やナビではありません。通って感じる気配の区間です。地図の破線は歩き方の輪郭で、名もなき道ほど実地と少しずれても、足のほうを信じてください。")
+                            .font(.readable(.caption2))
+                            .foregroundStyle(Palette.mist)
+                            .fixedSize(horizontal: false, vertical: true)
                         ForEach(course.corridors) { corridor in
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(corridor.name)
@@ -796,7 +815,7 @@ private struct WalkRouteSummary: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 summaryChip(title: "所要", value: "約\(course.totalMinutes)分")
-                summaryChip(title: "目の置きどころ", value: "\(course.stops.count)か所")
+                summaryChip(title: "寄るところ", value: "\(course.stops.count)か所")
                 summaryChip(title: "帰り", value: "同じ駅へ")
             }
             ScrollView(.horizontal, showsIndicators: false) {
@@ -1283,7 +1302,6 @@ struct SettingsPage: View {
     @Environment(ThemeStore.self) private var theme
     @Environment(BillingStore.self) private var billing
     let station: Station
-    @State private var copied = false
     @State private var confirmRebuild = false
     @State private var noticeAlert = false
 
@@ -1405,13 +1423,17 @@ struct SettingsPage: View {
                         Text("空気の道を主に歩く")
                             .font(.mincho(.body))
                             .foregroundStyle(Palette.ink)
-                        Text("商店街・街並み・川辺など、点では表せない区間を散歩の芯にする。店や名所は道の途中の層。")
+                        Text("商店街・街並み・川辺など、点では表せない区間を散歩の芯にする。最短ナビより、土地らしい無駄な寄り道を優先。正確なナビではなく、気配の区間です。")
                             .font(.readable(.caption))
                             .foregroundStyle(Palette.mist)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .tint(Palette.warm)
+                // settingsRow と同じ余白。無いと角丸 clip で文字とトグルが欠ける。
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
             }
 
             settingsGroup(title: "見た目") {
@@ -1459,24 +1481,30 @@ struct SettingsPage: View {
                 .padding(14)
             }
 
-            settingsGroup(title: "物語・寄り道") {
-                Button {
-                    UIPasteboard.general.string = model.shareText
-                    copied = true
-                } label: {
-                    settingsButtonLabel(copied ? "コピーしました" : "物語をコピー", pictogram: .information)
-                }
-                .buttonStyle(PlainHapticButtonStyle())
-
-                ShareLink(item: model.shareText) {
-                    settingsButtonLabel("共有する", pictogram: .meetingPoint)
-                }
-                .buttonStyle(PlainHapticButtonStyle())
-            }
-
             settingsGroup(title: "表示") {
-                settingsRow(title: "文字の大きさ", detail: "システム設定に合わせる")
-                settingsRow(title: "地図の詳細", detail: "準備中")
+                Button {
+                    theme.textSize = theme.textSize.next()
+                } label: {
+                    settingsButtonLabel(
+                        "文字の大きさ",
+                        pictogram: .information,
+                        detail: theme.textSize.label
+                    )
+                }
+                .buttonStyle(PlainHapticButtonStyle())
+                .accessibilityHint("タップで標準・やや大きい・大きいを切り替えます")
+
+                Button {
+                    theme.mapDetail = theme.mapDetail.next()
+                } label: {
+                    settingsButtonLabel(
+                        "地図の詳細",
+                        pictogram: .destination,
+                        detail: theme.mapDetail.label
+                    )
+                }
+                .buttonStyle(PlainHapticButtonStyle())
+                .accessibilityHint("タップですっきり・くわしくを切り替えます。くわしくは地図に施設名が出ます")
             }
 
             if model.messages.count > 1 {
@@ -1556,7 +1584,6 @@ struct SettingsPage: View {
         } message: {
             Text(model.stationNotice ?? "")
         }
-        .onChange(of: station.id) { copied = false }
     }
 
     private func settingsGroup<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {

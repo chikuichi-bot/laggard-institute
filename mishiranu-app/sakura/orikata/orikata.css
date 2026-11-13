@@ -157,6 +157,32 @@
   margin-top: 0.95rem;
 }
 
+.orikata-quote {
+  margin: 1rem 0 0;
+  padding: 0.85rem 0 0.85rem 1rem;
+  border-left: 2px solid color-mix(in srgb, var(--guide-red) 55%, transparent);
+}
+
+.orikata-quote + .orikata-prose {
+  margin-top: 1.15rem;
+}
+
+.orikata-quote p {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.85;
+  color: var(--text-main);
+}
+
+.orikata-quote cite {
+  display: block;
+  margin-top: 0.65rem;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--text-sub);
+  text-align: right;
+}
+
 .orikata-prose strong {
   font-weight: 600;
   color: var(--text-main);
@@ -218,8 +244,13 @@
   align-items: start;
 }
 
+.orikata-shot--solo {
+  margin: 1.35rem 0 0;
+  justify-items: center;
+}
+
 @media (min-width: 700px) {
-  .orikata-shot {
+  .orikata-shot:not(.orikata-shot--solo) {
     grid-template-columns: minmax(180px, 230px) 1fr;
     gap: 1.25rem;
     align-items: center;

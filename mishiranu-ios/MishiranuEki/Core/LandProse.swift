@@ -56,13 +56,44 @@ enum LandProse {
         )
     }
 
-    /// 01 駅のこと / 02 歩き方 / 03 エリア+メモ / 04 観光メモ
+    /// 01 駅のこと → 歴史メモ（正本）→ エリア概観（短く／メモがあるときは畳む）→ 歩き方 → 観光メモ
     static func refine(_ station: Station) -> Station {
-        // 正本の厚み（いまと歴史を結んだ文）を先に載せ、川名修正へ進む。
         let station = fixRiverFields(AreaDepth.overlay(on: station))
         var claimed: [String] = []
 
         let intro = takeUnique(sentences(station.stationIntro), claimed: &claimed)
+
+        var notes: [HistoryNote] = []
+        var titles = Set<String>()
+        for note in station.historyNotes {
+            let title = note.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { continue }
+            if titles.contains(where: { titlesOverlap($0, title) }) { continue }
+            guard titles.insert(title).inserted else { continue }
+            let kept = takeUnique(sentences(note.body), claimed: &claimed)
+            guard !kept.isEmpty else { continue }
+            notes.append(HistoryNote(title: title, body: join(kept)))
+        }
+
+        var areaAbout: String? = station.areaAbout
+        if notes.count >= 2 {
+            areaAbout = nil
+        } else {
+            let aboutParas = (station.areaAbout ?? "")
+                .components(separatedBy: "\n\n")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            var aboutOut: [String] = []
+            let paras = aboutParas.isEmpty ? [station.areaAbout ?? ""] : aboutParas
+            for para in paras {
+                let kept = takeUnique(sentences(para), claimed: &claimed)
+                if !kept.isEmpty {
+                    aboutOut.append(join(Array(kept.prefix(3))))
+                }
+            }
+            areaAbout = aboutOut.isEmpty ? nil : aboutOut.joined(separator: "\n\n")
+        }
+
         var walkLines = sentences(station.walkGuide).filter { line in
             if (line.contains("鯖街道") || line.contains("着き口") || line.contains("由来")),
                line.count > 48 {
@@ -72,35 +103,15 @@ enum LandProse {
         }
         let walk = takeUnique(walkLines, claimed: &claimed)
 
-        let aboutParas = (station.areaAbout ?? "")
-            .components(separatedBy: "\n\n")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        var aboutOut: [String] = []
-        let paras = aboutParas.isEmpty ? [station.areaAbout ?? ""] : aboutParas
-        for para in paras {
-            let kept = takeUnique(sentences(para), claimed: &claimed)
-            if !kept.isEmpty { aboutOut.append(join(kept)) }
-        }
-
-        var notes: [HistoryNote] = []
-        var titles = Set<String>()
-        for note in station.historyNotes {
-            let title = note.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !title.isEmpty, titles.insert(title).inserted else { continue }
-            let kept = takeUnique(sentences(note.body), claimed: &claimed)
-            guard !kept.isEmpty else { continue }
-            notes.append(HistoryNote(title: title, body: join(kept)))
-        }
-
         var sight: [HistoryNote] = []
         var sightTitles = Set<String>()
         for note in station.sightseeingNotes {
             let title = note.title.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !title.isEmpty, sightTitles.insert(title).inserted else { continue }
+            if titles.contains(where: { titlesOverlap($0, title) }) { continue }
             let filtered = sentences(note.body).filter { line in
-                if (line.contains("鯖街道") || line.contains("世界遺産") || line.contains("由来")),
-                   line.count > 40 {
+                if (line.contains("鯖街道") || line.contains("世界遺産") || line.contains("由来") || line.contains("着き口")),
+                   line.count > 36 {
                     return false
                 }
                 return true
@@ -120,10 +131,10 @@ enum LandProse {
             mood: station.mood,
             radiiKm: station.radiiKm,
             stationIntro: intro.isEmpty ? station.stationIntro : join(intro),
-            areaAbout: aboutOut.isEmpty ? station.areaAbout : aboutOut.joined(separator: "\n\n"),
+            areaAbout: areaAbout,
             walkGuide: walk.isEmpty ? station.walkGuide : join(walk),
             historyNotes: notes.isEmpty ? station.historyNotes : notes,
-            sightseeingNotes: sight.isEmpty ? station.sightseeingNotes : sight,
+            sightseeingNotes: sight,
             storyNotes: station.storyNotes.map {
                 HistoryNote(title: correctKamoRiverNaming($0.title), body: correctKamoRiverNaming($0.body))
             },
@@ -137,7 +148,6 @@ enum LandProse {
             spots: station.spots,
             atmosphereCorridors: station.atmosphereCorridors
         )
-        // AreaDepth 誤適用や AI コピーで出町の固有名が残らないように最後にもう一度落とす
         return DemachiTemplate.scrubContamination(on: refined)
     }
 
@@ -167,6 +177,22 @@ enum LandProse {
     private static func norm(_ s: String) -> String {
         s.replacingOccurrences(of: "\\s+", with: "", options: .regularExpression)
             .replacingOccurrences(of: "[。．、，・「」『』（）()]", with: "", options: .regularExpression)
+    }
+
+    private static func titleKey(_ title: String) -> String {
+        norm(title).replacingOccurrences(
+            of: "と|の|を|が|は|へ|に|や|及び|そして|という|について",
+            with: "",
+            options: .regularExpression
+        )
+    }
+
+    private static func titlesOverlap(_ a: String, _ b: String) -> Bool {
+        let ka = titleKey(a)
+        let kb = titleKey(b)
+        guard ka.count >= 3, kb.count >= 3 else { return false }
+        if ka == kb { return true }
+        return ka.contains(kb) || kb.contains(ka)
     }
 
     private static func nearDuplicate(_ a: String, _ b: String) -> Bool {

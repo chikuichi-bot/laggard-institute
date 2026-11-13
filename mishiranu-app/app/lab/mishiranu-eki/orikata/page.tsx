@@ -4,11 +4,11 @@ import OrikataStory from "./OrikataStory";
 export const metadata: Metadata = {
   title: "見知らぬ駅 — 知らない駅に降りる",
   description:
-    "知らない駅に降りる。土地の歴史と今をガイダンスで聴きながら、小回り、大回りして散策する。",
+    "名前だけ知っている駅に、私は降りる。空っぽの名前だった駅が、私の散歩道になる。",
   openGraph: {
     title: "見知らぬ駅 — 知らない駅に降りる",
     description:
-      "土地の歴史と今をガイダンスで聴きながら、小回り、大回りして散策する。空っぽだった駅を、散歩の大事な空間へ変えるアプリです。",
+      "名前だけ知っている駅に、私は降りる。空っぽの名前だった駅が、私の散歩道になる。",
     images: [{ url: "/story/orikata/map-yodo.png" }],
   },
 };

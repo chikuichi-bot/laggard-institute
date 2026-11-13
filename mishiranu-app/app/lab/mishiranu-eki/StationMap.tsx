@@ -12,6 +12,8 @@ import {
 import { haversineKm, spotLatLng, stationLatLng } from "@/lib/mishiranu-geo";
 import type { AtmosphereCorridor } from "@/lib/mishiranu-atmosphere";
 
+type MapDetailPref = "clean" | "rich";
+
 type Props = {
   station: StationSeed;
   spots: Spot[];
@@ -21,8 +23,19 @@ type Props = {
   courseStopIds?: string[] | null;
   /** 空気の区間（商店街・街並み・川辺） */
   corridors?: AtmosphereCorridor[] | null;
+  /** すっきり＝標準OSM / くわしく＝地名の多い図＋ピン名 */
+  mapDetail?: MapDetailPref;
   onSelect: (spotId: string) => void;
 };
+
+const TILE_CLEAN =
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const TILE_RICH =
+  "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const ATTR_CLEAN =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const ATTR_RICH =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 function isFixedLandmarkName(name: string): boolean {
   if (/デルタ|三角州|下鴨神社|賀茂御祖/.test(name)) return true;
@@ -150,11 +163,13 @@ export default function StationMap({
   activeSpotId,
   courseStopIds = null,
   corridors = null,
+  mapDetail = "clean",
   onSelect,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const tileRef = useRef<L.TileLayer | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
 
@@ -176,11 +191,11 @@ export default function StationMap({
 
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    const tile = L.tileLayer(TILE_CLEAN, {
+      attribution: ATTR_CLEAN,
       maxZoom: 19,
     }).addTo(map);
+    tileRef.current = tile;
 
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -198,10 +213,23 @@ export default function StationMap({
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      tileRef.current = null;
     };
     // station identity only for initial mount; updates handled below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const url = mapDetail === "rich" ? TILE_RICH : TILE_CLEAN;
+    const attr = mapDetail === "rich" ? ATTR_RICH : ATTR_CLEAN;
+    if (tileRef.current) {
+      map.removeLayer(tileRef.current);
+    }
+    const tile = L.tileLayer(url, { attribution: attr, maxZoom: 19 }).addTo(map);
+    tileRef.current = tile;
+  }, [mapDetail]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -361,6 +389,18 @@ export default function StationMap({
         .map((p) => p.id),
     );
 
+    const bindName = (marker: L.Marker, name: string) => {
+      if (mapDetail !== "rich") return;
+      const label = document.createElement("span");
+      label.textContent = name;
+      marker.bindTooltip(label, {
+        permanent: true,
+        direction: "top",
+        offset: [0, -10],
+        className: "mishiranu-leaflet-tooltip",
+      });
+    };
+
     for (const spot of spots) {
       if (courseSet.has(spot.id)) continue;
       const shown = displayCoords.get(spot.id) ?? spotLatLng(station, spot);
@@ -375,6 +415,7 @@ export default function StationMap({
         zIndexOffset: spotGuide(spot) === "meal" ? 160 : 100,
       });
       marker.on("click", () => onSelectRef.current(spot.id));
+      bindName(marker, spot.name);
       marker.addTo(layer);
     }
 
@@ -393,6 +434,7 @@ export default function StationMap({
         zIndexOffset: 200 + index,
       });
       marker.on("click", () => onSelectRef.current(spot.id));
+      bindName(marker, `${index + 1}. ${spot.name}`);
       marker.addTo(layer);
     });
 
@@ -400,7 +442,7 @@ export default function StationMap({
     return () => {
       cancelled = true;
     };
-  }, [station, spots, radiusKm, activeSpotId, courseStopIds, corridors]);
+  }, [station, spots, radiusKm, activeSpotId, courseStopIds, corridors, mapDetail]);
 
   return (
     <div className="mishiranu-map mishiranu-map--live" aria-label={`${station.name}駅周辺の地図`}>
