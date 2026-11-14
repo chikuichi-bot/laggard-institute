@@ -73,6 +73,15 @@ export function viaNameFromCorridor(corridor: AtmosphereCorridor): string {
 export function detourFromCorridor(
   corridor: AtmosphereCorridor,
 ): PreferredDetour | null {
+  // 川辺・疏水・敷地内は「通る空気」。weaveBeforeKeys 明示時だけ寄り道化。
+  if (
+    !(corridor.weaveBeforeKeys?.length) &&
+    (corridor.kind === "riverside" ||
+      corridor.kind === "grounds" ||
+      /沿い|水路|疏水|疎水|川辺|河川敷|デルタ|敷地内|境内/.test(corridor.name))
+  ) {
+    return null;
+  }
   const beforeKeys =
     (corridor.weaveBeforeKeys?.length
       ? corridor.weaveBeforeKeys

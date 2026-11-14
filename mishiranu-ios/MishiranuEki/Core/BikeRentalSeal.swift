@@ -1,19 +1,54 @@
 import Foundation
 
 /// 駅のレンタサイクルは「その駅で確認できたもの」だけ残す。他駅の店名・総称・遠いヒットは落とす。
+/// 正本: `bike-rental-locks.json`（CLEW / HELLO の駅名付きポートのみ）。
 enum BikeRentalSeal {
     /// 徒歩圏の上限（これより遠い Apple ヒットは出さない）
     static let maxWalkMinutes = 8
 
-    /// 出町柳だけ確認済みの正本。えむじかは 2026-01 閉業のため載せない。
-    private static let demachiPlaces: [BikeRentalPlace] = [
-        BikeRentalPlace(
-            name: "CLEW（クルー）京阪出町柳駅前",
-            kind: .app,
-            walkMinutes: 1,
-            note: "京阪7番出口付近のポート。アプリ登録のあとQRで解錠。ポート間の乗り捨て向き。"
-        ),
-    ]
+    private struct LockFile: Decodable {
+        struct Lock: Decodable {
+            let station: String
+            let kind: String?
+            let name: String
+            let code: String?
+            let address: String?
+            let walkMinutes: Int
+            let note: String?
+            let summary: String?
+        }
+
+        let locks: [Lock]
+    }
+
+    private static let locks: [LockFile.Lock] = {
+        guard let url = Bundle.main.url(forResource: "bike-rental-locks", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let file = try? JSONDecoder().decode(LockFile.self, from: data)
+        else { return [] }
+        return file.locks
+    }()
+
+    private static func lockedPlaces(for stationName: String) -> [BikeRentalPlace] {
+        let bare = SavedStationStore.bareName(stationName)
+        return locks.compactMap { lock in
+            guard bare.contains(lock.station) || stationName.contains(lock.station) else { return nil }
+            let kind = BikeRentalKind(rawValue: lock.kind ?? "app") ?? .app
+            return BikeRentalPlace(
+                name: lock.name,
+                kind: kind,
+                walkMinutes: lock.walkMinutes,
+                note: lock.note
+            )
+        }
+    }
+
+    private static func lockedSummary(for stationName: String) -> String? {
+        let bare = SavedStationStore.bareName(stationName)
+        return locks.first {
+            bare.contains($0.station) || stationName.contains($0.station)
+        }?.summary
+    }
 
     static func ensure(_ station: Station) -> Station {
         var places = station.bikeRental.places ?? []
@@ -24,20 +59,17 @@ enum BikeRentalSeal {
             .filter { !isClosedBikeName($0.name) }
             .filter { ($0.walkMinutes ?? 1) <= maxWalkMinutes }
 
-        if station.name.contains("出町柳") {
-            for must in demachiPlaces {
-                if !places.contains(where: { matchesCanonical($0.name, must.name) }) {
-                    places.append(must)
-                }
+        for must in lockedPlaces(for: station.name) {
+            if !places.contains(where: { matchesCanonical($0.name, must.name) }) {
+                places.append(must)
             }
         }
 
         places = dedupe(places)
         let available = !places.isEmpty
         let summary: String
-        if station.name.contains("出町柳"), available {
-            summary =
-                "駅すぐには CLEW（クルー）など、アプリで借りるポートがあります。会員登録のあとQRで解錠します。"
+        if available, let locked = lockedSummary(for: station.name) {
+            summary = locked
         } else if available {
             let names = places.map(\.name).joined(separator: "、")
             let base = station.bikeRental.summary.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -77,6 +109,7 @@ enum BikeRentalSeal {
             let kind: BikeRentalKind =
                 hit.name.localizedCaseInsensitiveContains("CLEW")
                     || hit.name.contains("クルー")
+                    || hit.name.localizedCaseInsensitiveContains("CREW")
                     || hit.name.contains("HELLO")
                     || hit.name.contains("ドコモ")
                     || hit.name.contains("シェア")
@@ -97,7 +130,7 @@ enum BikeRentalSeal {
                 mood: station.mood, radiiKm: station.radiiKm, stationIntro: station.stationIntro,
                 areaAbout: station.areaAbout, walkGuide: station.walkGuide,
                 historyNotes: station.historyNotes, sightseeingNotes: station.sightseeingNotes,
-            storyNotes: station.storyNotes,
+                storyNotes: station.storyNotes,
                 bikeRental: BikeRental(
                     available: !places.isEmpty,
                     summary: station.bikeRental.summary,
@@ -107,7 +140,7 @@ enum BikeRentalSeal {
                 catchCopy: station.catchCopy, emptyCopy: station.emptyCopy,
                 railHint: station.railHint,
                 lat: station.lat, lng: station.lng, spots: station.spots,
-            atmosphereCorridors: station.atmosphereCorridors
+                atmosphereCorridors: station.atmosphereCorridors
             )
         )
     }
@@ -116,20 +149,31 @@ enum BikeRentalSeal {
         let n = name.uppercased()
         return name.contains("レンタ") || name.contains("自転車") || name.contains("サイクル")
             || name.contains("バイクシェア") || n.contains("CLEW") || name.contains("クルー")
-            || n.contains("HELLO") || name.contains("ドコモ")
+            || n.contains("CREW") || n.contains("HELLO") || name.contains("ドコモ")
     }
 
     /// 他駅の店名・ポートを誤って載せない。
     static func belongs(to stationName: String, placeName: String) -> Bool {
         let bare = SavedStationStore.bareName(stationName)
         let place = placeName
-        // 出町柳専用の正式名は、出町柳以外では絶対に出さない
+        // ロック正本の駅以外に、その駅専用の正式名が付いていたら落とす
+        for lock in locks {
+            if place.contains(lock.station) || lock.name == place
+                || (isClewName(place) && place.contains(lock.station)) {
+                if !(bare.contains(lock.station) || stationName.contains(lock.station)) {
+                    // 出町柳専用名など
+                    if place.contains(lock.station) { return false }
+                }
+            }
+        }
         if !bare.contains("出町柳") {
             if place.contains("出町柳") || place.contains("京阪出町柳") {
                 return false
             }
         }
-        // 店名に別の駅名が入っているとき、今の駅と一致しなければ落とす
+        if !bare.contains("元田中"), place.contains("元田中") {
+            return false
+        }
         let foreignHints = ["出町柳", "三条", "四条", "宇治", "伏見", "嵐山", "奈良", "大阪", "神戸"]
         for hint in foreignHints {
             if place.contains(hint), !bare.contains(hint) {
@@ -162,7 +206,7 @@ enum BikeRentalSeal {
 
     private static func isClewName(_ name: String) -> Bool {
         let u = name.uppercased()
-        return u.contains("CLEW") || name.contains("クルー")
+        return u.contains("CLEW") || u.contains("CREW") || name.contains("クルー")
     }
 
     private static func isHelloCyclingName(_ name: String) -> Bool {
@@ -174,12 +218,13 @@ enum BikeRentalSeal {
 
     private static func displayName(_ name: String, stationName: String) -> String {
         let bare = SavedStationStore.bareName(stationName)
-        if bare.contains("出町柳") {
-            if isClewName(name) {
-                return "CLEW（クルー）京阪出町柳駅前"
+        for lock in locks {
+            guard bare.contains(lock.station) || stationName.contains(lock.station) else { continue }
+            if isClewName(name), isClewName(lock.name) {
+                return lock.name
             }
-            if isHelloCyclingName(name) {
-                return "HELLO CYCLING 京阪出町柳駅"
+            if isHelloCyclingName(name), isHelloCyclingName(lock.name) {
+                return lock.name
             }
         }
         return name

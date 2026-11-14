@@ -228,6 +228,30 @@
       "walkMinutes": 10
     },
     {
+      "id": "fujinomori-hotta-bridge",
+      "station": "藤森",
+      "kind": "keyword",
+      "canonical": "堀田橋",
+      "keywords": ["堀田橋", "疏水の橋", "疎水の橋"],
+      "address": "京都市伏見区深草堀田町（琵琶湖疏水・堀田橋）",
+      "osm": "nominatim:堀田橋 伏見",
+      "lat": 34.9568355,
+      "lng": 135.7705270,
+      "walkMinutes": 5
+    },
+    {
+      "id": "fujinomori-gokuraku-bridge",
+      "station": "藤森",
+      "kind": "keyword",
+      "canonical": "極楽橋",
+      "keywords": ["極楽橋"],
+      "address": "京都市伏見区深草極楽町（琵琶湖疏水・極楽橋）",
+      "osm": "nominatim:極楽橋 伏見",
+      "lat": 34.9560154,
+      "lng": 135.7704030,
+      "walkMinutes": 4
+    },
+    {
       "id": "sumizome-bokusenji",
       "station": "墨染",
       "kind": "keyword",
@@ -370,6 +394,54 @@
       "lat": 34.8932519,
       "lng": 135.8072475,
       "walkMinutes": 6
+    },
+    {
+      "id": "mototanaka-tanaka-jinja",
+      "station": "元田中",
+      "kind": "keyword",
+      "canonical": "田中神社",
+      "keywords": ["田中神社"],
+      "address": "京都市左京区田中里ノ前町（御蔭通）",
+      "osm": "way/725741971",
+      "lat": 35.0342721,
+      "lng": 135.7821212,
+      "walkMinutes": 4
+    },
+    {
+      "id": "mototanaka-sosui-bunsen",
+      "station": "元田中",
+      "kind": "river",
+      "canonical": "琵琶湖疏水分線",
+      "keywords": ["琵琶湖疏水分線", "疏水分線", "疏水沿い", "水路沿い"],
+      "address": "京都市左京区（元田中駅東・琵琶湖疏水分線の水路）",
+      "osm": "relation/9491923",
+      "lat": 35.0317031,
+      "lng": 135.7882387,
+      "walkMinutes": 8
+    },
+    {
+      "id": "yodo-castle-park",
+      "station": "淀",
+      "kind": "keyword",
+      "canonical": "淀城跡公園",
+      "keywords": ["淀城跡公園", "淀城跡", "淀城"],
+      "address": "京都市伏見区淀本町（淀城跡公園）",
+      "osm": "way/240772722",
+      "lat": 34.905083,
+      "lng": 135.7173784,
+      "walkMinutes": 3
+    },
+    {
+      "id": "yodo-yodo-jinja",
+      "station": "淀",
+      "kind": "keyword",
+      "canonical": "与杼神社",
+      "keywords": ["与杼神社", "與杼神社", "予杼神社", "淀神社"],
+      "address": "京都市伏見区淀本町167",
+      "osm": "way/388390166",
+      "lat": 34.9053007,
+      "lng": 135.7183786,
+      "walkMinutes": 5
     }
   ]
 }

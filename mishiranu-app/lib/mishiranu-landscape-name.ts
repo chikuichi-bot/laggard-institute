@@ -39,6 +39,8 @@ function isBareMountain(name: string): boolean {
 export function clarifyLandscapeName(raw: string): string {
   const name = raw.trim();
   if (!name) return name;
+  // 藤森の物語仮称「疏水の橋」→ 実際の橋名（水路ロックと揃える）
+  if (name === "疏水の橋" || name === "疎水の橋") return "堀田橋";
   if (hasViewpointHint(name)) return name;
   if (isBareRiver(name)) return `${name}の堤防`;
   if (isBareMountain(name)) return `${name}の眺望`;

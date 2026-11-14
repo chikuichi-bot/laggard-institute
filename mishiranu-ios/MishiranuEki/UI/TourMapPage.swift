@@ -24,14 +24,14 @@ private enum TourMapBaseStyle: String, CaseIterable {
         }
     }
 
-    func mapStyle(detail: MapDetailPref) -> MapStyle {
-        let poi = detail.pointsOfInterest
+    /// 散歩地図は常に Apple の店・施設 POI を出さない（おすすめ点と紛らわしい）。
+    func mapStyle(detail _: MapDetailPref) -> MapStyle {
         switch self {
         case .guide:
-            return .standard(pointsOfInterest: poi)
+            return .standard(pointsOfInterest: .excludingAll)
         case .photo:
             // 写真＋道路名。純粋な衛星だけだと歩きにくい。
-            return .hybrid(pointsOfInterest: poi)
+            return .hybrid(pointsOfInterest: .excludingAll)
         }
     }
 
@@ -93,20 +93,143 @@ struct TourMapPage: View {
         return "\(station.id)|\(course.id)|\(ids)"
     }
 
-    /// 地図下の一行。徒歩圏と、あればコース名だけ。
+    /// 地図下の一行。徒歩圏・コース名・所要。線は引かず、点だけ示す。
     private var mapFootLine: String {
         var parts = ["徒歩圏 約 \(formatKm(model.radiusKm)) km"]
         if let course = model.selectedCourse {
-            parts.append("\(course.title) · 番号順")
+            parts.append(course.title)
+            if course.totalMinutes > 0 {
+                parts.append("約\(course.totalMinutes)分")
+            }
+            parts.append("歩き方は自由 · 点はおすすめ")
         }
         return parts.joined(separator: " · ")
+    }
+
+    /// walkGuide 先頭（正本）。地図は点、言葉が最初の一歩を支える。
+    private var walkGuideCardText: String? {
+        WalkGuideOrientation.guideCardText(from: station.walkGuide)
+    }
+
+    /// 0番 · 改札後の入り口手がかり（線は引かない）。
+    private var entranceHint: WalkGuideOrientation.EntranceHint? {
+        guard model.selectedCourse != nil else { return nil }
+        let first = model.selectedCourse?.stops.first.map { stop -> (Double, Double) in
+            let pin = model.resolvedSpot(stop.spot)
+            return (pin.lat, pin.lng)
+        }
+        return WalkGuideOrientation.entranceHint(
+            stationLat: station.lat,
+            stationLng: station.lng,
+            walkGuide: station.walkGuide,
+            firstStop: first,
+            spots: station.spots
+        )
+    }
+
+    /// おすすめの通り・境内。線にせず、path 上の点だけ。
+    private var atmosphereHintMarks: [AtmosphereHintMark] {
+        guard let course = model.selectedCourse, !course.stops.isEmpty else { return [] }
+        let courseSpots = course.stops.map { model.resolvedSpot($0.spot) }
+        let corridors: [AtmosphereCorridor] = {
+            if !course.corridors.isEmpty { return course.corridors }
+            return AtmosphereCorridorCanon.corridors(
+                for: station,
+                matching: courseSpots,
+                preferAtmosphere: true
+            )
+        }()
+        var marks: [AtmosphereHintMark] = []
+        var seen = Set<String>()
+        for corridor in corridors {
+            let path = corridor.mapCoordinates
+            guard path.count >= 2 else { continue }
+            let shortName: String = {
+                let n = corridor.name
+                if n.count <= 10 { return n }
+                if let tip = corridor.relatedSpotNames.first, tip.count <= 10 { return tip }
+                return String(n.prefix(8))
+            }()
+            // コースに同名の立ち寄りがある通りは、ピンが正本。端のヒント点は「ずれ」に見えるので出さない。
+            let hasNamedStop = courseSpots.contains { spot in
+                spot.name.contains(corridor.name)
+                    || corridor.name.contains(spot.name)
+                    || corridor.relatedSpotNames.contains {
+                        $0.count >= 2 && (spot.name.contains($0) || $0.contains(spot.name))
+                    }
+            }
+            if hasNamedStop { continue }
+
+            // 線の代わりの点は中ほど1つ（複数点だと通りの外に見える）
+            let mid = path[path.count / 2]
+            let onStop = courseSpots.contains {
+                abs($0.lat - mid.latitude) < 0.00022
+                    && abs($0.lng - mid.longitude) < 0.00022
+            }
+            if onStop { continue }
+            let key = String(format: "%.4f,%.4f", mid.latitude, mid.longitude)
+            if seen.contains(key) { continue }
+            seen.insert(key)
+            marks.append(AtmosphereHintMark(
+                id: "\(corridor.id)-mid",
+                coordinate: mid,
+                label: shortName
+            ))
+            if marks.count >= 6 { return marks }
+        }
+        return marks
     }
 
     private func mapLegendLabel(_ kind: GuideKind) -> String {
         switch kind {
         case .rest: return "休む"
+        case .souvenir: return "土産"
+        case .tip: return "寄り道"
         default: return kind.label
         }
+    }
+
+    private func mapLegendChip(_ kind: GuideKind) -> some View {
+        HStack(spacing: 3) {
+            ZStack {
+                Circle()
+                    .fill(kind.color)
+                    .frame(width: 18, height: 18)
+                Circle()
+                    .stroke(Palette.paper, lineWidth: 1.2)
+                    .frame(width: 18, height: 18)
+                PictogramIcon(kind.pictogram, size: 10)
+                    .foregroundStyle(Palette.paper)
+            }
+            Text(mapLegendLabel(kind))
+                .font(.readable(.caption2, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity)
+        .background(
+            Capsule(style: .continuous)
+                .fill(kind.color.opacity(0.12))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(kind.color.opacity(0.35), lineWidth: 1)
+        )
+        .accessibilityLabel(kind.label)
+    }
+
+    /// 5種を1行横並び。2段・グリッドは行が潰れて重なって見えた。
+    private var mapLegendRow: some View {
+        HStack(spacing: 4) {
+            ForEach(GuideKind.order) { kind in
+                mapLegendChip(kind)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("地図の凡例")
     }
 
     /// 徒歩コースと同じ上限（3.2km）。二ノ瀬から出町柳は約7.5kmなので、8kmだと吸い寄せられる。
@@ -205,55 +328,81 @@ struct TourMapPage: View {
         walkingLegs.flatMap { $0 }
     }
 
-    /// C · 線上の矢羽。行きだけ、約140mおき。帰りには置かない。丸印にはしない。
-    private func directionArrows(
+    /// 散歩で辿る行きの道なり。帰り駅までの線は含めない。
+    private func outboundWalkPath(along legs: [[CLLocationCoordinate2D]]) -> [CLLocationCoordinate2D] {
+        outboundLegs(legs).flatMap { $0 }
+    }
+
+    /// 区間（駅→1、1→2…）のまんなかに三角を一つ。密な矢羽にはしない。
+    private func walkDirectionMarks(
         along legs: [[CLLocationCoordinate2D]],
         avoiding spots: [Spot],
         coords: [String: CLLocationCoordinate2D]
     ) -> [RouteArrow] {
-        let outbound = outboundLegs(legs)
-        guard !outbound.isEmpty else { return [] }
-        let step = 140.0
-        let inset = 55.0
-        let tail = 35.0
-        var arrows: [RouteArrow] = []
-        for leg in outbound {
-            guard leg.count >= 2 else { continue }
-            var legLength = 0.0
-            for index in 1 ..< leg.count {
-                legLength += Self.metersBetween(leg[index - 1], leg[index])
+        let path = outboundWalkPath(along: legs)
+        guard path.count >= 2 else { return [] }
+        let nodes = [stationCoordinate] + Array(waypointCoordinates.dropFirst().dropLast())
+        guard nodes.count >= 2 else { return [] }
+
+        var marks: [RouteArrow] = []
+        var searchFrom = 0
+        for index in 0 ..< (nodes.count - 1) {
+            let from = nodes[index]
+            let to = nodes[index + 1]
+            guard let startIdx = Self.nearestIndex(in: path, to: from, from: searchFrom, within: 90)
+                ?? Self.nearestIndex(in: path, to: from, from: 0, within: 140)
+            else { continue }
+            guard let endIdx = Self.nearestIndex(in: path, to: to, from: startIdx, within: 90)
+                ?? Self.nearestIndex(in: path, to: to, from: startIdx, within: 160),
+                endIdx > startIdx
+            else { continue }
+
+            var total = 0.0
+            for j in (startIdx + 1) ... endIdx {
+                total += Self.metersBetween(path[j - 1], path[j])
             }
-            guard legLength > inset + 16 else { continue }
-            let limit = max(inset, legLength - tail)
-            var walked = 0.0
-            var next = inset
-            for index in 1 ..< leg.count {
-                let start = leg[index - 1]
-                let end = leg[index]
-                let segment = Self.metersBetween(start, end)
-                if segment < 1 { continue }
-                while next <= walked + segment, next <= limit + 0.5 {
-                    let t = min(1, max(0, (next - walked) / segment))
+            guard total > 35 else {
+                searchFrom = endIdx
+                continue
+            }
+
+            // 最初の区間は駅のすぐ外（約55m）にも置き、改札を出る向きを示す
+            let targets: [Double] = index == 0 && total > 120
+                ? [min(55, total * 0.22), total * 0.55]
+                : [total * 0.5]
+
+            for target in targets {
+                var walked = 0.0
+                for j in (startIdx + 1) ... endIdx {
+                    let start = path[j - 1]
+                    let end = path[j]
+                    let segment = Self.metersBetween(start, end)
+                    if walked + segment < target {
+                        walked += segment
+                        continue
+                    }
+                    let t = segment > 0 ? (target - walked) / segment : 0
                     let coordinate = CLLocationCoordinate2D(
                         latitude: start.latitude + (end.latitude - start.latitude) * t,
                         longitude: start.longitude + (end.longitude - start.longitude) * t
                     )
-                    if !coversMarker(coordinate, spots: spots, coords: coords) {
-                        arrows.append(RouteArrow(
-                            id: arrows.count,
+                    let farEnough = marks.last.map { Self.metersBetween(coordinate, $0.coordinate) > 70 } ?? true
+                    if farEnough, !coversMarker(coordinate, spots: spots, coords: coords) {
+                        marks.append(RouteArrow(
+                            id: marks.count,
                             coordinate: coordinate,
                             degrees: Self.bearingDegrees(from: start, to: end)
                         ))
                     }
-                    next += step
+                    break
                 }
-                walked += segment
             }
+            searchFrom = endIdx
         }
-        return arrows
+        return marks
     }
 
-    /// 最後の立ち寄りに着いた断片まで。その先の駅への戻りには矢羽を置かない。
+    /// 最後の立ち寄りまで。その先の駅への戻りは散歩の行き道に含めない。
     private func outboundLegs(_ legs: [[CLLocationCoordinate2D]]) -> [[CLLocationCoordinate2D]] {
         let stops = Array(waypointCoordinates.dropFirst().dropLast())
         guard let lastStop = stops.last, !legs.isEmpty else { return legs }
@@ -301,6 +450,9 @@ struct TourMapPage: View {
                 offset == bestLeg ? Array(leg[...bestIndex]) : leg
             }
         }
+        if legs.count >= 2 {
+            return Array(legs.dropLast())
+        }
         return legs
     }
 
@@ -317,7 +469,28 @@ struct TourMapPage: View {
         return false
     }
 
-    /// 北を 0 度、時計回り。矢印の上向きと揃える。地図は北が上。
+    private static func nearestIndex(
+        in path: [CLLocationCoordinate2D],
+        to target: CLLocationCoordinate2D,
+        from start: Int,
+        within meters: Double
+    ) -> Int? {
+        guard !path.isEmpty else { return nil }
+        let from = min(max(0, start), path.count - 1)
+        var bestIndex: Int?
+        var best = Double.greatestFiniteMagnitude
+        for index in from ..< path.count {
+            let dist = metersBetween(path[index], target)
+            if dist < best {
+                best = dist
+                bestIndex = index
+            }
+            if dist <= meters * 0.35 { return index }
+        }
+        guard let bestIndex, best <= meters else { return nil }
+        return bestIndex
+    }
+
     private static func bearingDegrees(
         from start: CLLocationCoordinate2D,
         to end: CLLocationCoordinate2D
@@ -339,203 +512,174 @@ struct TourMapPage: View {
             .distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
     }
 
-    private static func offsetMeters(
-        _ origin: CLLocationCoordinate2D,
-        distance: Double,
-        degrees: Double
-    ) -> CLLocationCoordinate2D {
-        let rad = degrees * .pi / 180
-        let north = distance * cos(rad)
-        let east = distance * sin(rad)
-        let dLat = north / 111_320
-        let cosLat = cos(origin.latitude * .pi / 180)
-        let dLng = east / (111_320 * max(cosLat, 0.2))
-        return CLLocationCoordinate2D(
-            latitude: origin.latitude + dLat,
-            longitude: origin.longitude + dLng
-        )
-    }
-
-    /// 進行方向の小さな矢羽（左翼→先端→右翼）。地図の線として描き、画面オーバーレイにしない。
-    private static func chevronCoordinates(
-        at center: CLLocationCoordinate2D,
-        degrees: Double
-    ) -> [CLLocationCoordinate2D] {
-        let tip = offsetMeters(center, distance: 11, degrees: degrees)
-        let left = offsetMeters(center, distance: 10, degrees: degrees + 155)
-        let right = offsetMeters(center, distance: 10, degrees: degrees - 155)
-        return [left, tip, right]
-    }
-
     var body: some View {
         let spots = mapSpots
         let numbers = model.courseNumbers
         let coords = displayCoordinates
         let nudges = iconNudges
-        VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .bottomTrailing) {
-                Map(position: $position) {
-                    MapCircle(center: stationCoordinate, radius: model.radiusKm * 1000)
-                        .foregroundStyle(Palette.river.opacity(0.08))
-                        .stroke(Palette.river.opacity(0.45), lineWidth: 1)
+        let hintMarks = atmosphereHintMarks
+        ZStack(alignment: .bottomTrailing) {
+            Map(position: $position) {
+                MapCircle(center: stationCoordinate, radius: model.radiusKm * 1000)
+                    .foregroundStyle(Palette.river.opacity(0.08))
+                    .stroke(Palette.river.opacity(0.45), lineWidth: 1)
 
-                    // 空気の区間は歩くタブの一覧が正本。地図に直線帯を載せると道に沿わず紛らわしいので描かない。
-
-                    ForEach(Array(walkingLegs.enumerated()), id: \.offset) { _, leg in
-                        if leg.count >= 2 {
-                            MapPolyline(coordinates: leg)
-                                .stroke(
-                                    Palette.warm,
-                                    style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round, dash: [8, 6])
-                                )
-                        }
-                    }
-
-                    // 矢羽は MapPolyline（地図ネイティブ）。Canvas+continuous はパンのたび全再描画で重い。
-                    // 色は線(warm)と違う墨＋紙縁。Annotation にしない（間引き／負荷の両面）。
-                    ForEach(directionArrows(along: walkingLegs, avoiding: spots, coords: coords)) { arrow in
-                        let chevron = Self.chevronCoordinates(
-                            at: arrow.coordinate, degrees: arrow.degrees
+                // 動線の線は引かない。歩き方は自由。おすすめの通り・境内は点だけ。
+                ForEach(hintMarks) { hint in
+                    Annotation(hint.label, coordinate: hint.coordinate, anchor: .center) {
+                        AtmosphereHintPin(
+                            label: hint.label,
+                            showLabel: theme.mapDetail == .rich
                         )
-                        MapPolyline(coordinates: chevron)
-                            .stroke(Palette.paper, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-                        MapPolyline(coordinates: chevron)
-                            .stroke(Palette.ink, style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
                     }
+                    .annotationTitles(.hidden)
+                }
 
-                    Annotation(station.name, coordinate: stationCoordinate, anchor: .center) {
-                        StationMarker(showDeparture: model.selectedCourse != nil)
+                Annotation(station.name, coordinate: stationCoordinate, anchor: .center) {
+                    StationMarker(showDeparture: model.selectedCourse != nil)
+                }
+
+                if let entrance = entranceHint {
+                    Annotation(entrance.label, coordinate: entrance.coordinate, anchor: .center) {
+                        EntranceHintPin(label: entrance.label)
                     }
+                    .annotationTitles(.hidden)
+                }
 
-                    ForEach(spots.sorted { lhs, rhs in
-                        let lhsShop = lhs.guide == .meal || lhs.guide == .souvenir
-                        let rhsShop = rhs.guide == .meal || rhs.guide == .souvenir
-                        if lhsShop == rhsShop { return false }
-                        return !lhsShop && rhsShop
-                    }) { pin in
-                        let coordinate = coords[pin.id]
-                            ?? CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng)
-                        let nudge = nudges[pin.id] ?? .zero
-                        Annotation(
-                            LandscapeSpotName.clarified(pin.name),
-                            coordinate: coordinate,
-                            anchor: .center
-                        ) {
-                            // offset だけだと当たりが元の座標に残り、見た目のピンを押せない。
-                            // 枠を広げ、当たりはずらした円だけにする。
-                            Button {
-                                model.openSpot(pin)
-                            } label: {
-                                SpotPin(
-                                    kind: pin.guide,
-                                    number: numbers[pin.id],
-                                    active: model.activeSpot?.id == pin.id
-                                )
-                                .offset(nudge)
-                            }
-                            .buttonStyle(PlainHapticButtonStyle())
-                            .frame(
-                                width: 36 + abs(nudge.width) * 2,
-                                height: 36 + abs(nudge.height) * 2
+                ForEach(spots.sorted { lhs, rhs in
+                    let lhsShop = lhs.guide == .meal || lhs.guide == .souvenir
+                    let rhsShop = rhs.guide == .meal || rhs.guide == .souvenir
+                    if lhsShop == rhsShop { return false }
+                    return !lhsShop && rhsShop
+                }) { pin in
+                    let coordinate = coords[pin.id]
+                        ?? CLLocationCoordinate2D(latitude: pin.lat, longitude: pin.lng)
+                    let nudge = nudges[pin.id] ?? .zero
+                    Annotation(
+                        LandscapeSpotName.clarified(pin.name),
+                        coordinate: coordinate,
+                        anchor: .center
+                    ) {
+                        // offset だけだと当たりが元の座標に残り、見た目のピンを押せない。
+                        // 枠を広げ、当たりはずらした円だけにする。
+                        Button {
+                            model.openSpot(pin)
+                        } label: {
+                            SpotPin(
+                                kind: pin.guide,
+                                number: numbers[pin.id],
+                                active: model.activeSpot?.id == pin.id
                             )
-                            .contentShape(NudgeHitCircle(nudge: nudge, diameter: 40))
-                            .accessibilityLabel(
-                                numbers[pin.id].map {
-                                    "\($0)番 \(pin.guide.label) \(LandscapeSpotName.clarified(pin.name))"
-                                }
-                                    ?? "\(pin.guide.label) \(LandscapeSpotName.clarified(pin.name))"
-                            )
+                            .offset(nudge)
                         }
-                        .annotationTitles(.hidden)
+                        .buttonStyle(PlainHapticButtonStyle())
+                        .frame(
+                            width: 36 + abs(nudge.width) * 2,
+                            height: 36 + abs(nudge.height) * 2
+                        )
+                        .contentShape(NudgeHitCircle(nudge: nudge, diameter: 40))
+                        .accessibilityLabel(
+                            numbers[pin.id].map {
+                                "\($0)番 \(pin.guide.label) \(LandscapeSpotName.clarified(pin.name))"
+                            }
+                                ?? "\(pin.guide.label) \(LandscapeSpotName.clarified(pin.name))"
+                        )
                     }
-
-                    UserAnnotation {
-                        HereYouAreMarker(emphasized: focusingHere)
-                    }
+                    // くわしく＝私たちのピン名だけ。Apple の店名は mapStyle 側で出さない。
+                    .annotationTitles(theme.mapDetail == .rich ? .automatic : .hidden)
                 }
-                // 線の初回描画だけ載せ直す。コースや見た目の切替で Map を捨てると日本全体に戻る。
-                .id("tour-map-\(pathRenderEpoch)")
-                .mapStyle(mapBaseStyle.mapStyle(detail: theme.mapDetail))
-                .mapControls {
-                    MapCompass()
-                    MapScaleView()
-                }
 
-                VStack(spacing: 10) {
-                    Button {
-                        mapBaseStyleRaw = mapBaseStyle.toggled.rawValue
-                    } label: {
-                        Image(systemName: mapBaseStyle.toggleSymbol)
-                            .font(.body.weight(.bold))
-                            .foregroundStyle(Palette.ink)
-                            .frame(width: 22, height: 22)
-                            .padding(12)
-                            .background(Circle().fill(Palette.paper))
-                            .overlay(
-                                Circle().stroke(Palette.line, lineWidth: 1.5)
-                            )
-                            .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-                    }
-                    .accessibilityLabel(mapBaseStyle.toggled.title)
-                    .accessibilityHint(mapBaseStyle.toggled.accessibilityHint)
-
-                    Button {
-                        focusOnHere()
-                    } label: {
-                        Image(systemName: focusingHere ? "location.fill" : "location")
-                            .font(.body.weight(.bold))
-                            .foregroundStyle(focusingHere ? Color.white : hereBlue)
-                            .frame(width: 22, height: 22)
-                            .padding(12)
-                            .background(
-                                Circle()
-                                    .fill(focusingHere ? hereBlue : Palette.paper)
-                            )
-                            .overlay(
-                                Circle()
-                                    .stroke(focusingHere ? hereBlueDeep : hereBlue, lineWidth: focusingHere ? 2.5 : 2)
-                            )
-                            .shadow(color: hereBlue.opacity(focusingHere ? 0.45 : 0.2), radius: focusingHere ? 6 : 2, y: 1)
-                    }
-                    .accessibilityLabel("現在地を表示")
-                    .accessibilityHint("地図を自分の位置に寄せます")
+                UserAnnotation {
+                    HereYouAreMarker(emphasized: focusingHere)
                 }
-                .padding(12)
+            }
+            // 線の初回描画だけ載せ直す。コースや見た目の切替で Map を捨てると日本全体に戻る。
+            .id("tour-map-\(pathRenderEpoch)-\(theme.mapDetail.rawValue)")
+            .mapStyle(mapBaseStyle.mapStyle(detail: theme.mapDetail))
+            .mapControls {
+                MapCompass()
+                MapScaleView()
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                // 地図のすぐ下は凡例と一行だけ。キャッチや長い説明は土地へ。
-                FlowLayout(spacing: 6) {
-                    ForEach(GuideKind.order) { kind in
-                        HStack(spacing: 5) {
-                            ZStack {
-                                Circle()
-                                    .fill(kind.color)
-                                    .frame(width: 22, height: 22)
-                                Circle()
-                                    .stroke(Palette.paper, lineWidth: 1.5)
-                                    .frame(width: 22, height: 22)
-                                PictogramIcon(kind.pictogram, size: 12)
-                                    .foregroundStyle(Palette.paper)
-                            }
-                            Text(mapLegendLabel(kind))
-                                .font(.readable(.caption2, weight: .semibold))
-                                .foregroundStyle(Palette.ink)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
+            VStack(spacing: 10) {
+                Button {
+                    mapBaseStyleRaw = mapBaseStyle.toggled.rawValue
+                } label: {
+                    Image(systemName: mapBaseStyle.toggleSymbol)
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(Palette.ink)
+                        .frame(width: 22, height: 22)
+                        .padding(12)
+                        .background(Circle().fill(Palette.paper))
+                        .overlay(
+                            Circle().stroke(Palette.line, lineWidth: 1.5)
+                        )
+                        .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+                }
+                .accessibilityLabel(mapBaseStyle.toggled.title)
+                .accessibilityHint(mapBaseStyle.toggled.accessibilityHint)
+
+                Button {
+                    focusOnHere()
+                } label: {
+                    Image(systemName: focusingHere ? "location.fill" : "location")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(focusingHere ? Color.white : hereBlue)
+                        .frame(width: 22, height: 22)
+                        .padding(12)
                         .background(
-                            Capsule(style: .continuous)
-                                .fill(kind.color.opacity(0.12))
+                            Circle()
+                                .fill(focusingHere ? hereBlue : Palette.paper)
                         )
                         .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(kind.color.opacity(0.35), lineWidth: 1)
+                            Circle()
+                                .stroke(focusingHere ? hereBlueDeep : hereBlue, lineWidth: focusingHere ? 2.5 : 2)
                         )
-                        .accessibilityLabel(kind.label)
-                    }
+                        .shadow(color: hereBlue.opacity(focusingHere ? 0.45 : 0.2), radius: focusingHere ? 6 : 2, y: 1)
                 }
+                .accessibilityLabel("現在地を表示")
+                .accessibilityHint("地図を自分の位置に寄せます")
+            }
+            .padding(12)
+        }
+        // タブバーの上に載せる（親の safeAreaInset と積み上げて重ならない）
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(alignment: .leading, spacing: 10) {
+                if let card = walkGuideCardText {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            Text("歩き方")
+                                .font(.readable(.caption2, weight: .semibold))
+                                .foregroundStyle(Palette.warm)
+                            if let entrance = entranceHint {
+                                Text("入 · \(entrance.label)")
+                                    .font(.readable(.caption2, weight: .semibold))
+                                    .foregroundStyle(Palette.fog)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Text(card)
+                            .font(.readable(.caption2))
+                            .foregroundStyle(Palette.ink)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Palette.warm.opacity(0.08))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Palette.warm.opacity(0.28), lineWidth: 1)
+                    )
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("歩き方。\(card)")
+                }
+
+                mapLegendRow
                 Text(mapFootLine)
                     .font(.caption)
                     .foregroundStyle(Palette.fog)
@@ -543,7 +687,7 @@ struct TourMapPage: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.top, 10)
             .padding(.bottom, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.paper)
@@ -555,15 +699,10 @@ struct TourMapPage: View {
             } else {
                 position = camera()
             }
-            // 道なり待ちでも、経由点の仮線をすぐ出す（空のまま待たない）
-            publishLegs(stubLegs(from: waypointCoordinates), key: routeKey, bumpRender: true)
-            refreshWalkingPath()
         }
         .onChange(of: station.id) {
             model.syncWalkCourse()
             position = camera()
-            publishLegs(stubLegs(from: waypointCoordinates), key: routeKey, bumpRender: true)
-            refreshWalkingPath()
         }
         .onChange(of: model.stay) { position = camera() }
         .onChange(of: model.selectedCourse?.id) { position = camera() }
@@ -572,35 +711,12 @@ struct TourMapPage: View {
             if model.activeSpot == nil {
                 position = camera()
             }
-            publishLegs(stubLegs(from: waypointCoordinates), key: routeKey, bumpRender: true)
-            refreshWalkingPath()
+            walkingLegs = []
+            routeTaskId = routeKey
         }
         .onChange(of: model.activeSpot?.id) { _, _ in
             guard let spot = model.activeSpot else { return }
             focusOnSpot(spot, animated: true)
-        }
-        .task(id: routeKey) {
-            await loadWalkingPath()
-        }
-    }
-
-    private func refreshWalkingPath() {
-        // task(id:) が走るまでのあいだ、古い線を消すのはやめる。
-        // 代わりに経由点仮線を残し、道なりが来たら差し替える。
-        if routeKey != routeTaskId, walkingLegs.isEmpty {
-            let stub = stubLegs(from: waypointCoordinates)
-            if !stub.isEmpty {
-                walkingLegs = stub
-            }
-        }
-    }
-
-    /// 道なり待ちの仮線。隣り合う経由点ごとに一本（全体を無理につなげない）。
-    private func stubLegs(from points: [CLLocationCoordinate2D]) -> [[CLLocationCoordinate2D]] {
-        guard points.count >= 2 else { return [] }
-        // コース経由点は距離で切らない。隣どうしを仮線でつなぐ。
-        return (0..<(points.count - 1)).map { index in
-            [points[index], points[index + 1]]
         }
     }
 
@@ -691,23 +807,10 @@ struct TourMapPage: View {
         }
     }
 
+    /// 動線の線は描かない方針（歩き方は自由 · 点だけ）。MKDirections は呼ばない。
     @MainActor
     private func loadWalkingPath() async {
-        let key = routeKey
-        let points = waypointCoordinates
-        guard points.count >= 2 else {
-            publishLegs([], key: key, bumpRender: true)
-            return
-        }
-        // 先に経由点線 → 道なり算出後に差し替え（地図タブを開いた瞬間から線が見える）
-        publishLegs(stubLegs(from: points), key: key, bumpRender: walkingLegs.isEmpty)
-        let corridors = AtmosphereCorridorCanon.corridors(for: station)
-        let legs = await WalkRouteBuilder.walkingLegs(
-            through: points,
-            preferredCorridors: corridors
-        )
-        guard !Task.isCancelled, routeTaskId == key else { return }
-        publishLegs(legs, key: key, bumpRender: true)
+        publishLegs([], key: routeKey, bumpRender: false)
     }
 
     /// 駅とピンが収まる範囲。日本全国までは開かない。
@@ -722,8 +825,12 @@ struct TourMapPage: View {
             longitudinalMeters: min(max(model.radiusKm * 1000 * 2.3, 2_500), 12_000)
         )
         guard spots.count >= 1 else { return .region(neighborhood) }
-        let lats = [station.lat] + spots.map(\.lat)
-        let lngs = [station.lng] + spots.map(\.lng)
+        var lats = [station.lat] + spots.map(\.lat)
+        var lngs = [station.lng] + spots.map(\.lng)
+        if let entrance = entranceHint {
+            lats.append(entrance.coordinate.latitude)
+            lngs.append(entrance.coordinate.longitude)
+        }
         let minLat = lats.min()!, maxLat = lats.max()!
         let minLng = lngs.min()!, maxLng = lngs.max()!
         let rawLat = (maxLat - minLat) * 1.6
@@ -740,10 +847,100 @@ struct TourMapPage: View {
     }
 }
 
+private struct EntranceHintPin: View {
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            ZStack {
+                Circle()
+                    .fill(Palette.warm)
+                    .frame(width: 28, height: 28)
+                Circle()
+                    .stroke(Color.white, lineWidth: 2)
+                    .frame(width: 28, height: 28)
+                Text("入")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.white)
+            }
+            .shadow(color: .black.opacity(0.22), radius: 2, y: 1)
+            Text(label)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Palette.paper.opacity(0.92)))
+                .overlay(Capsule().stroke(Palette.warm.opacity(0.45), lineWidth: 1))
+        }
+        .allowsHitTesting(false)
+        .accessibilityLabel("入り口 \(label)")
+    }
+}
+
+private struct AtmosphereHintMark: Identifiable {
+    let id: String
+    let coordinate: CLLocationCoordinate2D
+    let label: String
+}
+
+/// おすすめの通り・境内の点（線にしない）。
+private struct AtmosphereHintPin: View {
+    let label: String
+    var showLabel: Bool = false
+
+    var body: some View {
+        VStack(spacing: 2) {
+            ZStack {
+                Circle()
+                    .fill(Palette.paper.opacity(0.92))
+                    .frame(width: 14, height: 14)
+                Circle()
+                    .stroke(Palette.warm.opacity(0.85), style: StrokeStyle(lineWidth: 1.6, dash: [2.5, 2]))
+                    .frame(width: 14, height: 14)
+                Circle()
+                    .fill(Palette.warm.opacity(0.55))
+                    .frame(width: 5, height: 5)
+            }
+            if showLabel {
+                Text(label)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Palette.fog)
+                    .lineLimit(1)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Palette.paper.opacity(0.88)))
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityLabel("おすすめ \(label)")
+    }
+}
+
 private struct RouteArrow: Identifiable {
     let id: Int
     let coordinate: CLLocationCoordinate2D
     let degrees: Double
+}
+
+/// 進行方向（動線オフ時は未使用。将来の再掲用に残す）。
+private struct WalkDirectionMark: View {
+    let degrees: Double
+
+    var body: some View {
+        ZStack {
+            Image(systemName: "arrowtriangle.up.fill")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(Palette.paper)
+            Image(systemName: "arrowtriangle.up.fill")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Palette.warm)
+        }
+        .rotationEffect(.degrees(degrees))
+        .shadow(color: .black.opacity(0.28), radius: 2, y: 1)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
 }
 
 private struct StationMarker: View {

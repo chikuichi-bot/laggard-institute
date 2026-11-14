@@ -29,8 +29,23 @@ enum FirstVisitFaces {
                     return true
                 }
             }
+            // 元田中 → 田中神社 のように、接頭を外した核が社寺名に入る
+            for core in stationNameCores(bare) where core.count >= 2 {
+                if n.contains(core) { return true }
+            }
         }
         return false
+    }
+
+    /// 「元田中」→「田中」、「東福寺」は触れない（残りが短すぎ／寺名そのもの）。
+    private static func stationNameCores(_ bare: String) -> [String] {
+        var cores = [bare]
+        let prefixes = ["元", "新", "旧", "本", "上", "下", "東", "西", "南", "北"]
+        if let first = bare.first.map(String.init), prefixes.contains(first) {
+            let rest = String(bare.dropFirst())
+            if rest.count >= 2 { cores.append(rest) }
+        }
+        return cores
     }
 
     /// 近所の寺・小社（初めての土地案内には出さない）。

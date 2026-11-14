@@ -17,7 +17,9 @@
     "geo:fill": "node scripts/fill-unresolved-coordinates.mjs",
     "geo:refresh": "npm run geo:geocode && npm run geo:fill && npm run geo:export-ios",
     "geo:export-ios": "node ../mishiranu-ios/scripts/export-stations.mjs",
-    "test:map-trust": "node scripts/test-map-trust.mjs"
+    "test:map-trust": "node scripts/test-map-trust.mjs",
+    "batch:land-spots": "tsx --env-file=.env.local scripts/batch-land-spots.ts",
+    "batch:land-spots:dry": "tsx --env-file=.env.local scripts/batch-land-spots.ts --dry-run"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

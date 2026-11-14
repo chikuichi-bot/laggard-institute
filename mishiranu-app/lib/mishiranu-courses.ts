@@ -29,6 +29,7 @@ import {
   ensureLandMentions,
   introducedVisitSpots,
   landNarrativeSpots,
+  landWalkCorpus,
 } from "@/lib/mishiranu-lore";
 import { allowsOnMap, sealMapCoordinates } from "@/lib/mishiranu-map-trust";
 import { placeNameFromStoryTitle } from "@/lib/mishiranu-story-notes";
@@ -728,8 +729,170 @@ function sortNearStation(spots: Spot[], station: StationSeed): Spot[] {
 }
 
 /** 短い別名の食い付きを避ける（「山崎」が「大山崎山荘」に当たる等）。 */
+/** 小回り＝土地の歩き方を約1時間で辿る（歩き＋軽い滞在＋駅帰還）。 */
+const SHORT_STROLL_BUDGET_MINUTES = 70;
+const SHORT_STROLL_MAX_STOPS = 5;
+
+function foldPlaceName(name: string): string {
+  return name.replace(/與/g, "与").replace(/予杼/g, "与杼");
+}
+
+function legWalkMinutes(
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+): number {
+  const km = haversineKm(from, to);
+  return Math.max(1, Math.min(90, Math.round((km * 1.3) / 4.5 * 60)));
+}
+
+/** 文順のまま足す。予算超えでは非 must を落として mustVisit を守る。 */
+function trimToStrollBudget(
+  spots: Spot[],
+  station: StationSeed,
+  budgetMinutes: number,
+  timeId: TimeOptionId,
+  mustProtect: Spot[] = [],
+): Spot[] {
+  if (!spots.length) return [];
+  const origin = stationOrigin(station) ?? {
+    lat: station.lat ?? 0,
+    lng: station.lng ?? 0,
+  };
+  const isMust = (spot: Spot) =>
+    mustProtect.some((m) => sameWalkPlace(m, spot));
+  const costTo = (from: { lat: number; lng: number }, spot: Spot) => {
+    const coord = spotCoord(spot);
+    if (!coord) return null;
+    return {
+      coord,
+      walk: legWalkMinutes(from, coord),
+      dwell: dwellFor(spotGuide(spot), timeId),
+      returnWalk: legWalkMinutes(coord, origin),
+    };
+  };
+  const recomputeElapsed = (list: Spot[]) => {
+    let e = 0;
+    let lat = origin.lat;
+    let lng = origin.lng;
+    for (const kept of list) {
+      const c = costTo({ lat, lng }, kept);
+      if (!c) continue;
+      e += c.walk + c.dwell;
+      lat = c.coord.lat;
+      lng = c.coord.lng;
+    }
+    return { elapsed: e, lat, lng };
+  };
+  let out: Spot[] = [];
+  let { elapsed, lat, lng } = recomputeElapsed(out);
+  for (const spot of spots) {
+    const cost = costTo({ lat, lng }, spot);
+    if (!cost) continue;
+    const projected = elapsed + cost.walk + cost.dwell + cost.returnWalk;
+    const over = out.length > 0 && projected > budgetMinutes + 8;
+    if (over) {
+      if (isMust(spot)) {
+        const dropIdx = [...out.keys()]
+          .reverse()
+          .find((i) => !isMust(out[i]!));
+        if (dropIdx != null) {
+          out = out.filter((_, i) => i !== dropIdx);
+          ({ elapsed, lat, lng } = recomputeElapsed(out));
+          const retry = costTo({ lat, lng }, spot);
+          if (!retry) continue;
+          const retryProjected =
+            elapsed + retry.walk + retry.dwell + retry.returnWalk;
+          out.push(spot);
+          if (out.length >= 2 && retryProjected > budgetMinutes + 12) break;
+          elapsed += retry.walk + retry.dwell;
+          lat = retry.coord.lat;
+          lng = retry.coord.lng;
+          if (out.length >= SHORT_STROLL_MAX_STOPS) break;
+          continue;
+        }
+        out.push(spot);
+        break;
+      }
+      break;
+    }
+    out.push(spot);
+    elapsed += cost.walk + cost.dwell;
+    lat = cost.coord.lat;
+    lng = cost.coord.lng;
+    if (out.length >= SHORT_STROLL_MAX_STOPS) break;
+  }
+  for (const m of mustProtect) {
+    if (!hasCourseCoordinate(m)) continue;
+    if (out.some((s) => sameWalkPlace(s, m))) continue;
+    if (!spots.some((s) => sameWalkPlace(s, m))) continue;
+    const dropIdx = [...out.keys()].reverse().find((i) => !isMust(out[i]!));
+    if (dropIdx != null) out[dropIdx] = m;
+    else if (out.length < SHORT_STROLL_MAX_STOPS) out.push(m);
+  }
+  const estimatedTotal = (list: Spot[]) => {
+    let e = 0;
+    let la = origin.lat;
+    let ln = origin.lng;
+    for (const s of list) {
+      const c = costTo({ lat: la, lng: ln }, s);
+      if (!c) continue;
+      e += c.walk + c.dwell;
+      la = c.coord.lat;
+      ln = c.coord.lng;
+    }
+    const last = list[list.length - 1];
+    if (last) {
+      const c = costTo({ lat: la, lng: ln }, last);
+      if (c) e += c.returnWalk;
+    }
+    return e;
+  };
+  const mustCountIn = () =>
+    out.filter((s) => isMust(s)).length;
+  while (out.length > Math.max(2, mustCountIn())) {
+    if (estimatedTotal(out) <= budgetMinutes + 12) break;
+    const dropIdx = [...out.keys()].reverse().find((i) => !isMust(out[i]!));
+    if (dropIdx == null) break;
+    out = out.filter((_, i) => i !== dropIdx);
+  }
+  if (out.length > SHORT_STROLL_MAX_STOPS) {
+    const kept: Spot[] = [];
+    for (const s of out) if (isMust(s)) kept.push(s);
+    for (const s of out) {
+      if (isMust(s)) continue;
+      if (kept.length >= SHORT_STROLL_MAX_STOPS) break;
+      kept.push(s);
+    }
+    out = kept.slice(0, SHORT_STROLL_MAX_STOPS);
+  }
+  return out.length ? out : spots.slice(0, 1);
+}
+
+/** 小回り用。ご飯・お土産・喫茶休憩は入れない。公園・デルタなど屋外は散歩の場所。 */
+function isShortStrollSpot(spot: Spot): boolean {
+  const guide = spotGuide(spot);
+  if (guide === "meal" || guide === "souvenir") return false;
+  if (guide === "rest") {
+    const n = spot.name ?? "";
+    return /公園|デルタ|三角州|河原|堤防|の森|疏水|疎水|水路|川辺|河川敷/.test(n);
+  }
+  return true;
+}
+
+/** 「ぐるりと一周」は滞在ではなく、その場を歩く分を足す。 */
+function landLoopWalkBonus(spot: Spot, walkGuide?: string | null): number {
+  const guide = walkGuide ?? "";
+  if (!/一周|ぐるり|めぐる/.test(guide)) return 0;
+  const name = spot.name ?? "";
+  if (/城跡|城址|公園/.test(name)) return 18;
+  if (/神社|寺/.test(name)) return 8;
+  return 0;
+}
+
 function namesLikelySamePlace(a: string, b: string): boolean {
   if (a === b) return true;
+  // 与杼／與杼／予杼は同一社
+  if (foldPlaceName(a) === foldPlaceName(b)) return true;
   if (/枡形|桝形/.test(a) && /枡形|桝形/.test(b) && !/満寿/.test(a) && !/満寿/.test(b)) {
     return true;
   }
@@ -962,6 +1125,40 @@ function ensureMustVisits(
   return out;
 }
 
+function spotNameKeys(name: string): string[] {
+  const trimmed = name.trim();
+  const keys = [trimmed];
+  for (const part of trimmed.split(/[（）()「」\s　・/]+/)) {
+    if (part.length >= 2) keys.push(part);
+  }
+  return keys;
+}
+
+/** 土地文に名前が出るスポットだけ（推測の近所店は入れない）。 */
+function landNamedWalkSpots(
+  station: StationSeed,
+  near: (s: Spot) => boolean,
+): Spot[] {
+  const corpus = landWalkCorpus(station);
+  return (station.spots ?? []).filter((spot) => {
+    if (!near(spot) || spot.name.endsWith("駅")) return false;
+    return spotNameKeys(spot.name).some(
+      (key) => key.length >= 2 && corpus.includes(key),
+    );
+  });
+}
+
+function landWalkBasisLabel(
+  narrative: Spot[],
+  walkGuide?: string | null,
+): string {
+  const names = narrative.slice(0, 4).map((s) => s.name);
+  if (names.length) return names.join("→");
+  const guide = (walkGuide ?? "").trim();
+  if (guide.length > 28) return `${guide.slice(0, 28)}…`;
+  return guide || "土地の歩き方";
+}
+
 function ordinaryWalkPool(station: StationSeed): Spot[] {
   const soft = (spot: Spot) =>
     /多目的|つながる|知る、感じる|コワーキング/.test(
@@ -971,7 +1168,10 @@ function ordinaryWalkPool(station: StationSeed): Spot[] {
   const near = (spot: Spot) =>
     !soft(spot) && spotNearStation(spot, station);
   const narrative = landNarrativeSpots(station).filter(near);
-  if (narrative.length >= 2) return narrative;
+  // 歩き方文がある駅: 文を骨にし、大回り用も文に名前がある場所だけ
+  if (narrative.length >= 2) {
+    return preservePoolOrder(landNamedWalkSpots(station, near), narrative);
+  }
   const introduced = introducedVisitSpots(station).filter((s) => {
     if (!near(s)) return false;
     const g = spotGuide(s);
@@ -997,6 +1197,33 @@ function ordinaryWalkPool(station: StationSeed): Spot[] {
   });
 }
 
+function hasCourseCoordinate(spot: Spot): boolean {
+  const c = spotCoord(spot);
+  if (!c) return false;
+  return Math.abs(c.lat) > 0.01 || Math.abs(c.lng) > 0.01;
+}
+
+/** preferred の順を骨にし、足りない顔だけ末尾へ足す。 */
+function preservePoolOrder(pool: Spot[], preferred: Spot[]): Spot[] {
+  const out: Spot[] = [];
+  const seen = new Set<string>();
+  for (const spot of preferred) {
+    const key = (spot.name ?? "").normalize("NFKC").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const hit = pool.find((s) => sameWalkPlace(s, spot));
+    if (hit) out.push(hit);
+    else if (hasCourseCoordinate(spot)) out.push(spot);
+  }
+  for (const spot of pool) {
+    const key = (spot.name ?? "").normalize("NFKC").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(spot);
+  }
+  return out;
+}
+
 function buildOrdinaryVariant(
   prepared: StationSeed,
   dayPart: DayPart,
@@ -1004,9 +1231,14 @@ function buildOrdinaryVariant(
   spots: Spot[],
   kind: "short" | "long",
   preferAtmosphere: boolean,
+  preserveLandOrder = false,
+  landBasis?: string,
 ): WalkCourse | null {
   const woven = weavePreferredDetours(
-    weaveDemachiShokokujiBeforeDoshisha(spots, prepared),
+    weaveDemachiShokokujiBeforeDoshisha(
+      spots.filter(hasCourseCoordinate),
+      prepared,
+    ),
     prepared,
   );
   if (!woven.length) return null;
@@ -1021,6 +1253,7 @@ function buildOrdinaryVariant(
     clockLabel: "",
   }));
   const corridors = corridorsMatching(prepared, woven, preferAtmosphere);
+  const basis = landBasis?.trim();
   // 駅出発→立ち寄り→駅帰還の周回（同じ道の往復を避ける）
   return finishLoopCourse(
     prepared,
@@ -1031,26 +1264,35 @@ function buildOrdinaryVariant(
     {
       id: `ordinary-${kind}-${prepared.name.replace(/駅$/u, "")}-${dayPart}`,
       title: kind === "short" ? "駅から、小回り" : "駅から、大回り",
-      subtitle: preferAtmosphere
+      subtitle: basis
         ? kind === "short"
-          ? `土地の空気を通って駅へ帰る · ${woven.length}か所`
-          : `もう少し先の空気まで通って駅へ帰る · ${woven.length}か所`
-        : kind === "short"
-          ? `ぶらりと回って駅へ帰る · ${woven.length}か所`
-          : `もう少し遠くまで回って駅へ帰る · ${woven.length}か所`,
-      vibe: preferAtmosphere
+          ? `散歩のみ · 約1時間 · ${basis}`
+          : `土地の歩き方をもう少し · ${basis}`
+        : preferAtmosphere
+          ? kind === "short"
+            ? `散歩のみ · 約1時間 · 土地の空気を通って駅へ帰る`
+            : `もう少し先の空気まで通って駅へ帰る · ${woven.length}か所`
+          : kind === "short"
+            ? `散歩のみ · 約1時間 · ぶらりと回って駅へ帰る`
+            : `もう少し遠くまで回って駅へ帰る · ${woven.length}か所`,
+      vibe: basis
         ? kind === "short"
-          ? "最短より、土地らしい無駄な寄り道を歩く"
-          : "川辺や境内など、少し遠回りの帯を歩く"
-        : kind === "short"
-          ? "駅を出て、少し遠回りをして、駅へ帰る"
-          : "少し先まで遠回りをして、駅へ帰る",
+          ? "ご飯も休憩も挟まず、土地の歩き方を約1時間歩く"
+          : "土地の歩き方文と、文に出た先まで歩く"
+        : preferAtmosphere
+          ? kind === "short"
+            ? "最短より、土地らしい無駄な寄り道を歩く"
+            : "川辺や境内など、少し遠回りの帯を歩く"
+          : kind === "short"
+            ? "駅を出て、少し遠回りをして、駅へ帰る"
+            : "少し先まで遠回りをして、駅へ帰る",
     },
     corridors,
+    preserveLandOrder,
   );
 }
 
-/** ショート＝mustVisit 雛形。ロング＝雛形＋先。歩き順は道なり最適化。 */
+/** ショート＝mustVisit 雛形。ロング＝雛形＋先。歩き方文があるときは文順が正本。 */
 export function buildFirstVisitOrdinaryCourses(
   station: StationSeed,
   dayPart: DayPart,
@@ -1060,32 +1302,56 @@ export function buildFirstVisitOrdinaryCourses(
     ensureLocalMajors(scrubForeignDemachiContamination(station)),
   );
   const scrubbedPrepared = scrubForeignDemachiContamination(prepared);
-  const must = mustVisitWalkSpots(scrubbedPrepared).filter((s) =>
-    spotNearStation(s, scrubbedPrepared),
+  const narrative = landNarrativeSpots(scrubbedPrepared).filter(
+    (s) =>
+      spotNearStation(s, scrubbedPrepared) &&
+      hasCourseCoordinate(s) &&
+      isShortStrollSpot(s),
   );
-  let pool = ordinaryWalkPool(scrubbedPrepared).filter((s) =>
-    spotNearStation(s, scrubbedPrepared),
+  const usingLandOrder = narrative.length >= 2;
+  const mustAll = mustVisitWalkSpots(scrubbedPrepared).filter(
+    (s) => spotNearStation(s, scrubbedPrepared) && hasCourseCoordinate(s),
   );
-  for (const spot of must) {
+  // 小回りは散歩のみ（ご飯・休憩店なし）。must も散歩の顔だけ。
+  const must = mustAll.filter(isShortStrollSpot);
+  let pool = ordinaryWalkPool(scrubbedPrepared).filter(
+    (s) => spotNearStation(s, scrubbedPrepared) && hasCourseCoordinate(s),
+  );
+  for (const spot of mustAll) {
     if (!pool.some((s) => sameWalkPlace(s, spot))) pool = [...pool, spot];
   }
   if (!pool.length) return [];
-  const near = sortNearStation(pool, scrubbedPrepared);
-  // 雛形がある駅はショート＝mustVisit そのもの（出町方式: 土地の顔3点など）。
-  const shortRaw =
-    must.length >= 2
+  const near = usingLandOrder
+    ? preservePoolOrder(pool, narrative)
+    : sortNearStation(pool, scrubbedPrepared);
+  const nearStroll = near.filter(isShortStrollSpot);
+  // 小回り ≈ 1時間の散歩のみ。ご飯・休憩は入れない。文順＋時間予算。
+  const shortBone = usingLandOrder
+    ? ensureMustVisits(narrative, must, scrubbedPrepared, SHORT_STROLL_MAX_STOPS)
+    : must.length >= 2
       ? must
       : ensureMustVisits(
-          near.slice(0, Math.min(3, near.length)),
+          nearStroll.slice(0, SHORT_STROLL_MAX_STOPS),
           must,
           scrubbedPrepared,
-          Math.min(3, near.length),
+          SHORT_STROLL_MAX_STOPS,
         );
-  const shortSet = shortRaw.filter((s) => spotNearStation(s, scrubbedPrepared));
+  const shortSet = trimToStrollBudget(
+    shortBone.filter(
+      (s) =>
+        spotNearStation(s, scrubbedPrepared) &&
+        hasCourseCoordinate(s) &&
+        isShortStrollSpot(s),
+    ),
+    scrubbedPrepared,
+    SHORT_STROLL_BUDGET_MINUTES,
+    "1h",
+    must,
+  );
   if (!shortSet.length) return [];
   const longCap = Math.min(
     Math.max(STAY_MAX_STOPS[timeId], 5),
-    Math.max(near.length, shortSet.length),
+    Math.max(near.length, shortSet.length + 2),
     6,
   );
   const longSet = ensureMustVisits(
@@ -1093,27 +1359,29 @@ export function buildFirstVisitOrdinaryCourses(
     must,
     scrubbedPrepared,
     longCap,
-  ).filter((s) => spotNearStation(s, scrubbedPrepared));
+  ).filter((s) => spotNearStation(s, scrubbedPrepared) && hasCourseCoordinate(s));
   const preferAtmosphere = loadAtmosphereFirst();
   const allCorridors = corridorsForStation(scrubbedPrepared);
-  const shortOrdered = prioritizeAtmosphereSpots(
-    shortSet,
-    allCorridors,
-    preferAtmosphere,
-  );
-  const longOrdered = prioritizeAtmosphereSpots(
-    longSet,
-    allCorridors,
-    preferAtmosphere,
-  );
+  const landBasis = usingLandOrder
+    ? landWalkBasisLabel(narrative, scrubbedPrepared.walkGuide)
+    : undefined;
+  // 歩き方文順は空気スコアで並べ替えない
+  const shortOrdered = usingLandOrder
+    ? shortSet
+    : prioritizeAtmosphereSpots(shortSet, allCorridors, preferAtmosphere);
+  const longOrdered = usingLandOrder
+    ? longSet
+    : prioritizeAtmosphereSpots(longSet, allCorridors, preferAtmosphere);
   const out: WalkCourse[] = [];
   const short = buildOrdinaryVariant(
     scrubbedPrepared,
     dayPart,
-    timeId,
+    "1h",
     shortOrdered,
     "short",
     preferAtmosphere,
+    usingLandOrder,
+    landBasis,
   );
   if (short) out.push(short);
   if (longOrdered.length > shortOrdered.length) {
@@ -1124,6 +1392,8 @@ export function buildFirstVisitOrdinaryCourses(
       longOrdered,
       "long",
       preferAtmosphere,
+      usingLandOrder,
+      landBasis,
     );
     if (long) out.push(long);
   }
@@ -1222,6 +1492,7 @@ function finishLoopCourse(
   extraSpots: Spot[],
   meta: { id: string; title: string; subtitle: string; vibe: string },
   corridors: AtmosphereCorridor[] = [],
+  preserveLandOrder = false,
 ): WalkCourse | null {
   if (stops.length === 0) return null;
   const byId = new Map<string, Spot>();
@@ -1229,14 +1500,21 @@ function finishLoopCourse(
   for (const s of extraSpots) byId.set(s.id, s);
   const resolved = stops
     .map((s) => byId.get(s.spotId))
-    .filter((s): s is Spot => !!s && spotCoord(s) != null);
+    .filter((s): s is Spot => !!s && hasCourseCoordinate(s));
   if (!resolved.length) return null;
 
   const start = stationLatLng(station);
+  // 歩き方文があるときは文順のまま。無いときだけ扇形＋2-opt。
   const ordered = preferShokokujiBeforeDoshisha(
-    orderStopsAsStationLoop(start, resolved),
+    preserveLandOrder ? resolved : orderStopsAsStationLoop(start, resolved),
   );
-  const built = rebuildStopsWithLegs(start, startHour, timeId, ordered);
+  const built = rebuildStopsWithLegs(
+    start,
+    startHour,
+    timeId,
+    ordered,
+    station.walkGuide,
+  );
   const last = built[built.length - 1]!;
   const lastSpot = ordered[ordered.length - 1]!;
   const lastLl = spotCoord(lastSpot)!;
@@ -1405,6 +1683,7 @@ function rebuildStopsWithLegs(
   startHour: number,
   timeId: TimeOptionId,
   spots: Spot[],
+  walkGuide?: string | null,
 ): CourseStop[] {
   const out: CourseStop[] = [];
   let hour = startHour;
@@ -1413,13 +1692,22 @@ function rebuildStopsWithLegs(
   for (const spot of spots) {
     const ll = spotCoord(spot)!;
     const km = haversineKm(cur, ll);
-    const walk = Math.max(1, Math.min(90, Math.round((km * 1.3) / 4.5 * 60)));
+    const loopWalk =
+      timeId === "1h" ? landLoopWalkBonus(spot, walkGuide) : 0;
+    const walk = Math.max(
+      1,
+      Math.min(90, Math.round((km * 1.3) / 4.5 * 60) + loopWalk),
+    );
     minute += walk;
     hour += Math.floor(minute / 60);
     minute %= 60;
     const clockLabel = formatClock(hour, minute);
     const guide = spotGuide(spot);
-    const dwell = dwellFor(guide, timeId);
+    // 小回りは立ち寄り滞在を短く（散歩の時間を主にする）
+    const dwell =
+      timeId === "1h"
+        ? Math.max(4, dwellFor(guide, timeId) - 2)
+        : dwellFor(guide, timeId);
     out.push({
       spotId: spot.id,
       name: spot.name,

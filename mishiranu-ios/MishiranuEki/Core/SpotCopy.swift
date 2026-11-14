@@ -188,7 +188,7 @@ enum SpotCopy {
 
     /// 地図・シートに出す名前（川の総称だけを避ける）。
     static func displayName(for spot: Spot) -> String {
-        LandscapeSpotName.clarified(spot.name)
+        LandscapeSpotName.clarified(StoryMapSpots.scrubBrokenStoryPlaceName(spot.name))
     }
 
     static func compose(name: String, guide: GuideKind, address: String?) -> String {

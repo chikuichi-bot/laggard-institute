@@ -16,7 +16,7 @@ export const TUTORIAL_SEEN_KEY = "mishiranu.tutorialSeen";
 type Props = {
   onFinished?: () => void;
   finishLabel?: string;
-  /** 設定内では戻る、初回オーバーレイではとばす */
+  /** 設定内では戻る、初回オーバーレイでは × でとばす */
   showSkip?: boolean;
   onBack?: () => void;
 };
@@ -48,10 +48,11 @@ export default function TutorialBoard({
         {showSkip && onFinished && !isLast ? (
           <button
             type="button"
-            className="mishiranu-tutorial-textbtn"
+            className="mishiranu-tutorial-textbtn mishiranu-tutorial-close"
             onClick={onFinished}
+            aria-label="とばす"
           >
-            とばす
+            ×
           </button>
         ) : (
           <span />
@@ -66,35 +67,74 @@ export default function TutorialBoard({
           {item.showBrand ? (
             <p className="mishiranu-tutorial-brand">見知らぬ駅</p>
           ) : null}
-          <h3
-            className={
-              item.showBrand
-                ? "mishiranu-tutorial-title mishiranu-tutorial-title--center"
-                : "mishiranu-tutorial-title"
-            }
-          >
-            {item.title}
-          </h3>
-          {item.quote ? (
-            <blockquote className="mishiranu-tutorial-quote">
-              <p>{item.quote}</p>
-              {item.quoteBy ? (
-                <cite className="mishiranu-tutorial-quote-by">{item.quoteBy}</cite>
-              ) : null}
-            </blockquote>
-          ) : null}
-          {item.bodies.map((body) => (
-            <p
-              key={body.slice(0, 24)}
-              className={
-                item.showBrand
-                  ? "mishiranu-tutorial-body mishiranu-tutorial-body--center"
-                  : "mishiranu-tutorial-body"
-              }
+          {item.verseLines?.length ? (
+            <div
+              className={[
+                "mishiranu-tutorial-verse",
+                item.verseMotion
+                  ? `mishiranu-tutorial-verse--${item.verseMotion}`
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              lang="ja"
+              aria-label="帰りの縦書き3列"
             >
-              {body}
-            </p>
-          ))}
+              {item.verseLines.map((line, i) => (
+                <p
+                  key={line}
+                  className="mishiranu-tutorial-verse-line"
+                  style={{ ["--i" as string]: i }}
+                >
+                  {item.verseMotion === "chars"
+                    ? Array.from(line).map((ch, c) => (
+                        <span
+                          key={`${i}-${c}`}
+                          className="mishiranu-tutorial-verse-ch"
+                          style={{ ["--c" as string]: c }}
+                        >
+                          {ch}
+                        </span>
+                      ))
+                    : line}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <>
+              <h3
+                className={
+                  item.showBrand
+                    ? "mishiranu-tutorial-title mishiranu-tutorial-title--center"
+                    : "mishiranu-tutorial-title"
+                }
+              >
+                {item.title}
+              </h3>
+              {item.quote ? (
+                <blockquote className="mishiranu-tutorial-quote">
+                  <p>{item.quote}</p>
+                  {item.quoteBy ? (
+                    <cite className="mishiranu-tutorial-quote-by">
+                      {item.quoteBy}
+                    </cite>
+                  ) : null}
+                </blockquote>
+              ) : null}
+              {item.bodies.map((body) => (
+                <p
+                  key={body.slice(0, 24)}
+                  className={
+                    item.showBrand
+                      ? "mishiranu-tutorial-body mishiranu-tutorial-body--center"
+                      : "mishiranu-tutorial-body"
+                  }
+                >
+                  {body}
+                </p>
+              ))}
+            </>
+          )}
           {item.imageSrc ? (
             <div className="mishiranu-tutorial-phone">
               <Image

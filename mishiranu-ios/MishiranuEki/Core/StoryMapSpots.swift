@@ -4,25 +4,55 @@ import Foundation
 /// 同じ場所に観光・ご飯などがあるときは別ピンにせず合体する。
 enum StoryMapSpots {
     /// タイトル「『作品』と場所」から場所名を取る。取れなければ nil。
+    /// 「たまこまーけっと」のように作品名の中の「と」は区切りに使わない。
     static func placeName(fromStoryTitle title: String) -> String? {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-        if let range = trimmed.range(of: "と") {
-            let after = String(trimmed[range.upperBound...])
+        // 『作品名』と場所 — 閉じ鉤のあとにある「と」だけを区切りにする
+        if let close = trimmed.range(of: "』"),
+           let joiner = trimmed.range(of: "と", range: close.upperBound ..< trimmed.endIndex)
+        {
+            let after = String(trimmed[joiner.upperBound...])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if let polished = polishPlace(after) { return polished }
         }
         // 『作品名』だけのときは場所にしない
         if trimmed.hasPrefix("『") { return nil }
+        // フック無しの「作者『作品』と場所」など、最後の「と」も試す（作品内のとより後ろ）
+        if let close = trimmed.range(of: "』", options: .backwards),
+           let joiner = trimmed.range(of: "と", range: close.upperBound ..< trimmed.endIndex)
+        {
+            let after = String(trimmed[joiner.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let polished = polishPlace(after) { return polished }
+        }
         return polishPlace(trimmed)
     }
 
+    /// 誤切り出しで残った「』と疏水の橋」などを場所名に直す。
+    static func scrubBrokenStoryPlaceName(_ name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("』と") {
+            return String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if trimmed.hasPrefix("』") {
+            return String(trimmed.drop(while: { $0 == "』" || $0 == "と" }))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return trimmed
+    }
+
     private static func polishPlace(_ raw: String) -> String? {
-        var s = raw
+        var s = scrubBrokenStoryPlaceName(raw)
             .replacingOccurrences(of: "など", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard s.count >= 2 else { return nil }
+        if s.hasPrefix("『") || s.hasPrefix("』") || s.hasPrefix("「") || s.hasPrefix("」") {
+            return nil
+        }
         if s == "枡形" || s == "桝形" { s = "枡形商店街" }
+        // 藤森の物語「疏水の橋」は水路に架かる堀田橋（街区の仮座標に落とさない）
+        if s == "疏水の橋" || s == "疎水の橋" { s = "堀田橋" }
         // 抽象すぎる語は地図にしない
         let weak = ["川", "海", "町", "入口", "顔", "層", "空気", "朝ドラの海", "出町の川"]
         if weak.contains(s) { return nil }
@@ -286,7 +316,38 @@ enum StoryMapSpots {
             return rebuilt(station, spots: collapsed)
         }
 
-        var spots = station.spots
+        var spots = station.spots.map { spot -> Spot in
+            let fixed = scrubBrokenStoryPlaceName(spot.name)
+            guard fixed != spot.name, !fixed.isEmpty else { return spot }
+            var blurb = spot.blurb
+            if blurb.hasPrefix("』") {
+                if let period = blurb.firstIndex(of: "。") {
+                    let head = scrubBrokenStoryPlaceName(String(blurb[..<period]))
+                    blurb = head + String(blurb[period...])
+                } else {
+                    blurb = scrubBrokenStoryPlaceName(blurb)
+                }
+            }
+            return Spot(
+                id: spot.id,
+                name: fixed,
+                genre: spot.genre,
+                guide: spot.guide,
+                mealTier: spot.mealTier,
+                mealTimes: spot.mealTimes,
+                soloOk: spot.soloOk,
+                budgetYen: spot.budgetYen,
+                hours: spot.hours,
+                blurb: blurb,
+                detail: spot.detail,
+                walkMinutes: spot.walkMinutes,
+                secretWorthy: spot.secretWorthy,
+                majorWorthy: spot.majorWorthy,
+                lat: spot.lat,
+                lng: spot.lng,
+                coordTrust: spot.coordTrust
+            )
+        }
         var added = 0
         for note in notes {
             if DemachiTemplate.isForeignDemachiPlace(note.title, stationName: station.name) {

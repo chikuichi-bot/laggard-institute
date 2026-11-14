@@ -295,10 +295,6 @@ export function PricingBoard({
                   <span className="mishiranu-pricing-pack-label">
                     {pack.label} · {pack.coins}枚
                   </span>
-                  <span className="mishiranu-pricing-pack-sub">
-                    1駅あたり約
-                    {formatYen(Math.round(pack.priceYen / pack.coins))}
-                  </span>
                 </span>
                 <span className="mishiranu-pricing-pack-price">
                   {busy ? "処理中…" : formatYen(pack.priceYen)}

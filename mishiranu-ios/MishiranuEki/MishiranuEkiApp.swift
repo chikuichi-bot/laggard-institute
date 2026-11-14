@@ -116,6 +116,7 @@ struct RootView: View {
             TutorialPage(onFinished: {
                 showTutorial = false
             }, finishLabel: "はじめる")
+            .presentationBackground(Palette.canvas)
         }
         .onChange(of: model.screen) { _, screen in
             if screen != .tour {

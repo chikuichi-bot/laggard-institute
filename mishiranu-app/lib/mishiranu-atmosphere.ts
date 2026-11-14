@@ -42,10 +42,11 @@ const DEMACHI: AtmosphereCorridor[] = [
     kind: "arcade",
     blurb:
       "短いアーケードを一本通り抜ける。店の点ではなく、道幅と人の密度そのものが土地の顔。",
+    // 正本ロック 35.030249, 135.769436。端を広げすぎると目印がずれる。
     path: [
-      { lat: 35.02995, lng: 135.77015 },
-      { lat: 35.03025, lng: 135.76944 },
-      { lat: 35.03048, lng: 135.76895 },
+      { lat: 35.03018, lng: 135.76978 },
+      { lat: 35.030249, lng: 135.769436 },
+      { lat: 35.03032, lng: 135.7691 },
     ],
     relatedSpotNames: ["枡形商店街", "桝形商店街", "枡形", "ふたば", "満寿形"],
     walkMinutes: 4,
@@ -57,9 +58,9 @@ const DEMACHI: AtmosphereCorridor[] = [
     blurb:
       "若狭から塩鯖が都へ入る最後の町場だった記憶が、枡形の名と細い道に残る。名所の点ではなく、曲がり角ごとの気配を歩く。",
     path: [
-      { lat: 35.03005, lng: 135.7698 },
-      { lat: 35.03055, lng: 135.7691 },
-      { lat: 35.031, lng: 135.7687 },
+      { lat: 35.03012, lng: 135.7697 },
+      { lat: 35.030249, lng: 135.769436 },
+      { lat: 35.0304, lng: 135.76915 },
     ],
     relatedSpotNames: ["枡形", "鯖街道", "若狭街道", "町場"],
     walkMinutes: 6,
@@ -81,7 +82,7 @@ const DEMACHI: AtmosphereCorridor[] = [
   {
     id: "demachi-shokokuji-to-doshisha",
     name: "相国寺の境内から同志社へ",
-    kind: "streetscape",
+    kind: "grounds",
     blurb:
       "同志社へ向かうとき、今出川の南回りより境内の木立を東西に通る。無駄な寄り道が土地らしい。",
     path: [
@@ -96,11 +97,106 @@ const DEMACHI: AtmosphereCorridor[] = [
   },
 ];
 
+/** お寺・神社・公園・城跡など、外周ではなく敷地内を歩きたい場所。 */
+export function isGroundsExplorableName(name: string): boolean {
+  const n = name.trim();
+  if (n.length < 2) return false;
+  if (/本店|食堂|茶屋|カフェ|喫茶|旅館|ホテル|弁当/.test(n)) return false;
+  if (/城跡|城址|史跡/.test(n)) return true;
+  if (/公園|庭園|御苑|植物園/.test(n)) return true;
+  if (/神社|神宮|大社|天満宮/.test(n)) return true;
+  if (/寺$|院$|寺院|仁王門/.test(n)) return true;
+  if (/境内|参道/.test(n)) return true;
+  return false;
+}
+
+function groundsRadiusMeters(name: string, walkMinutes: number): number {
+  let base = 62;
+  if (/城跡|城址|公園|御苑/.test(name)) base = 95;
+  else if (/庭園|植物園/.test(name)) base = 80;
+  else if (/神社|神宮/.test(name)) base = 70;
+  const fromWalk = Math.max(4, Math.min(18, walkMinutes)) * 5.5;
+  return Math.min(140, Math.max(base, fromWalk));
+}
+
+/** ピン周辺の敷地内一周（北東入口寄りから時計回り）。 */
+export function groundsLoopPath(
+  center: { lat: number; lng: number },
+  radiusMeters: number,
+  count = 7,
+): Array<{ lat: number; lng: number }> {
+  const n = Math.max(5, Math.min(10, count));
+  const cosLat = Math.max(Math.cos((center.lat * Math.PI) / 180), 0.2);
+  return Array.from({ length: n }, (_, i) => {
+    const ang = -Math.PI / 4 + (i * 2 * Math.PI) / n;
+    const rLat = radiusMeters * (0.92 + 0.08 * Math.cos(ang * 2));
+    const rLng = radiusMeters * 1.12;
+    return {
+      lat: center.lat + (rLat * Math.cos(ang)) / 111_320,
+      lng: center.lng + (rLng * Math.sin(ang)) / (111_320 * cosLat),
+    };
+  });
+}
+
+export function groundsCorridorForSpot(spot: Spot): AtmosphereCorridor | null {
+  if (!isGroundsExplorableName(spot.name)) return null;
+  if (spot.lat == null || spot.lng == null) return null;
+  if (spot.lat === 0 && spot.lng === 0) return null;
+  const walk = spot.walkMinutes ?? 8;
+  const radius = groundsRadiusMeters(spot.name, walk);
+  return {
+    id: `grounds-${spot.id}`,
+    name: `${spot.name}の敷地内`,
+    kind: "grounds",
+    blurb: `外周の車道ではなく、${spot.name}の敷地・園内を通って歩く。`,
+    path: groundsLoopPath({ lat: spot.lat, lng: spot.lng }, radius),
+    relatedSpotNames: [spot.name],
+    walkMinutes: Math.max(5, Math.min(16, walk || 8)),
+  };
+}
+
+export function groundsCorridorsForSpots(spots: Spot[]): AtmosphereCorridor[] {
+  const out: AtmosphereCorridor[] = [];
+  const seen = new Set<string>();
+  for (const spot of spots) {
+    if (seen.has(spot.name)) continue;
+    const c = groundsCorridorForSpot(spot);
+    if (!c) continue;
+    seen.add(spot.name);
+    out.push(c);
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+/** 元田中正本: 歩き方文の「疏水分線の水路沿い」（OSM relation/9491923）。 */
+const MOTOTANAKA: AtmosphereCorridor[] = [
+  {
+    id: "mototanaka-sosui-bunsen",
+    name: "琵琶湖疏水分線の水路沿い",
+    kind: "riverside",
+    blurb:
+      "駅の東側を南北に走る疏水分線。点ではなく、水路沿いの小道を一本通る空気。",
+    path: [
+      { lat: 35.029045, lng: 135.788465 },
+      { lat: 35.029907, lng: 135.788278 },
+      { lat: 35.030842, lng: 135.788178 },
+      { lat: 35.031703, lng: 135.788239 },
+      { lat: 35.032533, lng: 135.788832 },
+      { lat: 35.033438, lng: 135.788856 },
+    ],
+    relatedSpotNames: ["琵琶湖疏水分線", "疏水分線", "疏水", "水路"],
+    walkMinutes: 10,
+  },
+];
+
 export function isAtmosphereSpot(spot: Spot): boolean {
   const n = spot.name;
   if (/商店街|商店会|市場/.test(n)) return true;
   if (/街並み|町並み|鯖街道/.test(n)) return true;
   if (/通り|川端|河川敷|デルタ|三角州/.test(n)) return true;
+  if (/疏水|疎水|水路/.test(n)) return true;
+  if (isGroundsExplorableName(n)) return true;
   return false;
 }
 
@@ -266,7 +362,7 @@ export function sanitizeCorridor(
   const name = (raw.name ?? "").trim();
   if (!name || isInventedTouristCorridorName(name)) return null;
   let kind = (raw.kind ?? "road").trim() || "road";
-  if (!["arcade", "streetscape", "riverside", "road"].includes(kind)) {
+  if (!["arcade", "streetscape", "riverside", "road", "grounds"].includes(kind)) {
     kind = "road";
   }
   // 根拠の薄い arcade / riverside は road に落とす（空白駅の捏造防止）
@@ -277,6 +373,9 @@ export function sanitizeCorridor(
     kind === "riverside" &&
     !/川|用水|河|デルタ|堤|河原|川辺|川端/.test(name + (raw.blurb ?? ""))
   ) {
+    kind = "road";
+  }
+  if (kind === "grounds" && !isGroundsExplorableName(name)) {
     kind = "road";
   }
   const bare = bareName(station.name);
@@ -290,7 +389,7 @@ export function sanitizeCorridor(
   const origin = stationLatLng(station);
   const finalPath =
     path.length >= 2
-      ? path.slice(0, 6)
+      ? path.slice(0, kind === "grounds" ? 10 : 6)
       : shortPath(
           station,
           path[0] ?? offsetFromStation(station, 40 + index * 70, 90),
@@ -335,10 +434,15 @@ export function sanitizeCorridor(
 export function corridorsForStation(station: StationSeed): AtmosphereCorridor[] {
   const bare = bareName(station.name);
   const isDemachi = bare.includes("出町柳") || station.name.includes("出町柳");
-  const list: AtmosphereCorridor[] = isDemachi ? [...DEMACHI] : [];
+  const isMototanaka = bare.includes("元田中") || station.name.includes("元田中");
+  const list: AtmosphereCorridor[] = isDemachi
+    ? [...DEMACHI]
+    : isMototanaka
+      ? [...MOTOTANAKA]
+      : [];
   const names = new Set(list.map((c) => c.name));
 
-  // API／正本の区間（出町正本のあとに足す）
+  // API／正本の区間（出町・元田中正本のあとに足す）
   for (const [i, raw] of (station.corridors ?? []).entries()) {
     const c = sanitizeCorridor(raw, station, i);
     if (!c || names.has(c.name)) continue;
@@ -355,9 +459,13 @@ export function corridorsForStation(station: StationSeed): AtmosphereCorridor[] 
   for (const spot of station.spots ?? []) {
     if (!isAtmosphereSpot(spot) || spot.lat == null || spot.lng == null) continue;
     if (names.has(spot.name)) continue;
+    if (isGroundsExplorableName(spot.name)) {
+      // grounds は下で専用ループを足す
+      continue;
+    }
     const kind = /商店街/.test(spot.name)
       ? "arcade"
-      : /デルタ|川/.test(spot.name)
+      : /デルタ|川|疏水|疎水|水路/.test(spot.name)
         ? "riverside"
         : /街並|町並|鯖街道/.test(spot.name)
           ? "streetscape"
@@ -374,8 +482,24 @@ export function corridorsForStation(station: StationSeed): AtmosphereCorridor[] 
     names.add(spot.name);
   }
 
+  for (const grounds of groundsCorridorsForSpots(station.spots ?? [])) {
+    const tip = grounds.relatedSpotNames[0] ?? grounds.name;
+    const already = list.some(
+      (c) =>
+        c.kind === "grounds" &&
+        (c.relatedSpotNames.some(
+          (k) => k.length >= 2 && (tip.includes(k) || k.includes(tip)),
+        ) ||
+          c.name.includes(tip) ||
+          tip.includes(c.name)),
+    );
+    if (already || names.has(grounds.name)) continue;
+    list.push(grounds);
+    names.add(grounds.name);
+  }
+
   // 空白駅: 名所・商店街が無くても名もなき微地形を芯にする（最大3）
-  if (!isDemachi && list.length < 2) {
+  if (!isDemachi && !isMototanaka && list.length < 2) {
     for (const blank of namelessBlankCorridors(station, 3)) {
       if (names.has(blank.name)) continue;
       list.push(blank);

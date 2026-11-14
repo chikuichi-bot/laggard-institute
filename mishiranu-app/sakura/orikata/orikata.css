@@ -60,11 +60,101 @@
 }
 
 .orikata-brand {
-  margin: 0 0 1.15rem;
+  margin: 1.35rem 0 1.15rem;
   font-size: clamp(2.15rem, 8vw, 2.85rem);
   font-weight: 400;
   letter-spacing: 0.22em;
   line-height: 1.25;
+}
+
+/* 2ページ目相当：本文セクション先頭のブランド */
+.orikata-brand--section {
+  text-align: center;
+  font-size: clamp(1.35rem, 4vw, 1.7rem);
+  margin: 0 0 1.25rem;
+}
+
+/* トップ縦書き · 3列固定（右→左）· 速度は文字ごと基準 */
+.orikata-verse {
+  --cv-start: 0.28s;
+  --cv-col: 1.55s;
+  --cv-col-dur: 1.65s;
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  direction: rtl;
+  justify-content: center;
+  align-items: start;
+  column-gap: clamp(1.2rem, 4vw, 1.85rem);
+  margin: 0.6rem auto 1.6rem;
+  width: 100%;
+  color: var(--text-main);
+}
+
+.orikata-verse-line {
+  margin: 0;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  white-space: nowrap;
+  direction: ltr;
+  font-size: clamp(0.88rem, 2.5vw, 1.06rem);
+  font-weight: 500;
+  line-height: 1.85;
+  letter-spacing: 0.1em;
+}
+
+.orikata-verse--lines .orikata-verse-line {
+  opacity: 0;
+  transform: translateY(0.55em);
+  animation: orikata-verse-line var(--cv-col-dur) ease forwards;
+  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+}
+
+.orikata-verse--curtain .orikata-verse-line {
+  clip-path: inset(0 0 100% 0);
+  animation: orikata-verse-curtain var(--cv-col-dur)
+    cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+}
+
+.orikata-verse--window .orikata-verse-line {
+  opacity: 0;
+  transform: translateX(0.7em);
+  filter: blur(2.5px);
+  animation: orikata-verse-window var(--cv-col-dur) ease forwards;
+  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+}
+
+@keyframes orikata-verse-line {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orikata-verse-curtain {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes orikata-verse-window {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orikata-verse--lines .orikata-verse-line,
+  .orikata-verse--curtain .orikata-verse-line,
+  .orikata-verse--window .orikata-verse-line {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+    clip-path: none;
+  }
 }
 
 .orikata-title {

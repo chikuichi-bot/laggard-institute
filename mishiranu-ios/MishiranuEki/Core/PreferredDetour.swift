@@ -71,6 +71,21 @@ enum PreferredDetour {
     }
 
     static func detour(from corridor: AtmosphereCorridor) -> Item? {
+        // 川辺・疏水・敷地内は通る空気。weaveBeforeKeys 明示時だけ寄り道化（相国寺→同志社型）。
+        if corridor.weaveBeforeKeys.isEmpty,
+           corridor.kind == "riverside"
+            || corridor.kind == "grounds"
+            || corridor.name.contains("沿い")
+            || corridor.name.contains("水路")
+            || corridor.name.contains("疏水")
+            || corridor.name.contains("疎水")
+            || corridor.name.contains("川辺")
+            || corridor.name.contains("河川敷")
+            || corridor.name.contains("デルタ")
+            || corridor.name.contains("敷地内")
+            || corridor.name.contains("境内") {
+            return nil
+        }
         let beforeKeys: [String] = {
             if !corridor.weaveBeforeKeys.isEmpty {
                 return corridor.weaveBeforeKeys.filter { $0.count >= 2 }

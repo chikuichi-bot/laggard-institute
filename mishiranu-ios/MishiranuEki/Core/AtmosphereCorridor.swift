@@ -110,6 +110,19 @@ enum AtmosphereCorridorCanon {
             list.append(derived)
             named.insert(derived.name)
         }
+        // 寺・公園・城跡: 敷地内を歩く grounds（正本 path が無い駅でも自動）
+        for grounds in groundsCorridors(forSpots: station.spots) {
+            let tip = grounds.relatedSpotNames.first ?? grounds.name
+            let already = list.contains { corridor in
+                guard corridor.kind == "grounds" else { return false }
+                return corridor.relatedSpotNames.contains {
+                    $0.count >= 2 && (tip.contains($0) || $0.contains(tip))
+                } || corridor.name.contains(tip) || tip.contains(corridor.name)
+            }
+            if already || named.contains(grounds.name) { continue }
+            list.append(grounds)
+            named.insert(grounds.name)
+        }
         // 空白駅: 名所・商店街が無くても名もなき微地形を芯にする
         if !isDemachi, list.count < 2 {
             for blank in namelessBlankCorridors(for: station, count: 3) where !named.contains(blank.name) {
@@ -140,7 +153,7 @@ enum AtmosphereCorridorCanon {
         let name = raw.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isInventedTouristName(name) else { return nil }
         var kind = raw.kind.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !["arcade", "streetscape", "riverside", "road"].contains(kind) {
+        if !["arcade", "streetscape", "riverside", "road", "grounds"].contains(kind) {
             kind = "road"
         }
         if kind == "arcade",
@@ -154,9 +167,12 @@ enum AtmosphereCorridorCanon {
             || blurbProbe.contains("デルタ") || blurbProbe.contains("堤") || blurbProbe.contains("河原")) {
             kind = "road"
         }
+        if kind == "grounds", !isGroundsExplorableName(name) {
+            kind = "road"
+        }
         let path: [AtmosphereCorridor.Coord]
         if raw.path.count >= 2 {
-            path = Array(raw.path.prefix(6))
+            path = Array(raw.path.prefix(kind == "grounds" ? 10 : 6))
         } else if let mid = raw.path.first {
             path = shortPath(from: station, through: mid, meters: 110)
         } else {
@@ -265,10 +281,107 @@ enum AtmosphereCorridorCanon {
         if n.contains("街並み") || n.contains("町並み") || n.contains("鯖街道") { return true }
         if n.contains("通り") || n.contains("川端") || n.contains("河川敷") { return true }
         if n.contains("デルタ") || n.contains("三角州") { return true }
+        // 水路そのもの（元田中の疏水分線など）。点ではなく通る空気。
+        if n.contains("疏水") || n.contains("疎水") || n.contains("水路") { return true }
+        if isGroundsExplorableName(n) { return true }
         if spot.guide == .sight || spot.guide == .tip {
             if n.contains("坂") || n.contains("道") { return true }
         }
         return false
+    }
+
+    /// お寺・神社・公園・城跡など、外周道路ではなく敷地内を歩きたい場所。
+    static func isGroundsExplorableName(_ name: String) -> Bool {
+        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard n.count >= 2 else { return false }
+        if n.contains("本店") || n.contains("食堂") || n.contains("茶屋")
+            || n.contains("カフェ") || n.contains("喫茶") || n.contains("旅館")
+            || n.contains("ホテル") || n.contains("弁当") {
+            return false
+        }
+        if n.contains("城跡") || n.contains("城址") || n.contains("史跡") { return true }
+        if n.contains("公園") || n.contains("庭園") || n.contains("御苑") || n.contains("植物園") {
+            return true
+        }
+        if n.contains("神社") || n.contains("神宮") || n.contains("大社") || n.contains("天満宮") {
+            return true
+        }
+        if n.hasSuffix("寺") || n.hasSuffix("院") || n.contains("寺院") || n.contains("仁王門") {
+            return true
+        }
+        if n.contains("境内") || n.contains("参道") { return true }
+        return false
+    }
+
+    /// ピン周辺の敷地内一周（実測 path が無い駅用）。北東入口寄りから時計回り。
+    static func groundsLoopPath(
+        centerLat: Double,
+        centerLng: Double,
+        radiusMeters: Double,
+        count: Int = 7
+    ) -> [AtmosphereCorridor.Coord] {
+        let n = max(5, min(10, count))
+        let cosLat = max(cos(centerLat * .pi / 180), 0.2)
+        return (0..<n).map { i in
+            // 北東（入口っぽい）から時計回り
+            let ang = -Double.pi / 4 + Double(i) * 2 * .pi / Double(n)
+            let rLat = radiusMeters * (0.92 + 0.08 * cos(ang * 2))
+            let rLng = radiusMeters * 1.12
+            let dLat = (rLat * cos(ang)) / 111_320
+            let dLng = (rLng * sin(ang)) / (111_320 * cosLat)
+            return .init(lat: centerLat + dLat, lng: centerLng + dLng)
+        }
+    }
+
+    static func groundsRadiusMeters(forName name: String, walkMinutes: Int) -> Double {
+        let n = name
+        var base: Double = 62
+        if n.contains("城跡") || n.contains("城址") || n.contains("公園") || n.contains("御苑") {
+            base = 95
+        } else if n.contains("庭園") || n.contains("植物園") {
+            base = 80
+        } else if n.contains("神社") || n.contains("神宮") {
+            base = 70
+        }
+        let fromWalk = Double(max(4, min(18, walkMinutes))) * 5.5
+        return min(140, max(base, fromWalk))
+    }
+
+    /// コース立ち寄りから敷地内帯を足す（駅 spots に無い土地文ピン用）。
+    static func groundsCorridors(forSpots spots: [Spot]) -> [AtmosphereCorridor] {
+        var out: [AtmosphereCorridor] = []
+        var seen = Set<String>()
+        for spot in spots {
+            guard isGroundsExplorableName(spot.name) else { continue }
+            guard spot.lat != 0 || spot.lng != 0 else { continue }
+            let key = spot.name
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            guard let c = groundsCorridor(for: spot) else { continue }
+            out.append(c)
+            if out.count >= 6 { break }
+        }
+        return out
+    }
+
+    static func groundsCorridor(for spot: Spot) -> AtmosphereCorridor? {
+        guard isGroundsExplorableName(spot.name) else { return nil }
+        guard spot.lat != 0 || spot.lng != 0 else { return nil }
+        let radius = groundsRadiusMeters(forName: spot.name, walkMinutes: spot.walkMinutes)
+        let path = groundsLoopPath(
+            centerLat: spot.lat,
+            centerLng: spot.lng,
+            radiusMeters: radius
+        )
+        return AtmosphereCorridor(
+            id: "grounds-\(spot.id)",
+            name: "\(spot.name)の敷地内",
+            kind: "grounds",
+            blurb: "外周の車道ではなく、\(spot.name)の敷地・園内を通って歩く。",
+            path: path,
+            relatedSpotNames: [spot.name],
+            walkMinutes: max(5, min(16, spot.walkMinutes > 0 ? spot.walkMinutes : 8))
+        )
     }
 
     /// 空気優先のとき、区間に紐づく顔を先に並べる。
@@ -305,6 +418,13 @@ enum AtmosphereCorridorCanon {
         if bare.contains("出町柳") || name.contains("出町柳") {
             return demachiCorridors
         }
+        if bare.contains("元田中") || name.contains("元田中") {
+            return mototanakaCorridors
+        }
+        // 「淀屋橋」などに吸われないよう、駅名は淀だけ。
+        if bare == "淀" || name == "淀駅" {
+            return yodoCorridors
+        }
         return []
     }
 
@@ -315,10 +435,11 @@ enum AtmosphereCorridorCanon {
             name: "枡形商店街",
             kind: "arcade",
             blurb: "短いアーケードを一本通り抜ける。店の点ではなく、道幅と人の密度そのものが土地の顔。",
+            // 正本は LandmarkRegistry.demachiMasugataArcade（通りの中ほど）。端を広げすぎると目印がずれる。
             path: [
-                .init(lat: 35.02995, lng: 135.77015),
-                .init(lat: 35.03025, lng: 135.76944),
-                .init(lat: 35.03048, lng: 135.76895),
+                .init(lat: 35.03018, lng: 135.76978),
+                .init(lat: 35.030249, lng: 135.769436),
+                .init(lat: 35.03032, lng: 135.76910),
             ],
             relatedSpotNames: ["枡形商店街", "桝形商店街", "枡形", "ふたば", "満寿形"],
             walkMinutes: 4
@@ -328,10 +449,11 @@ enum AtmosphereCorridorCanon {
             name: "鯖街道の着き口まわり",
             kind: "streetscape",
             blurb: "若狭から塩鯖が都へ入る最後の町場だった記憶が、枡形の名と細い道に残る。名所の点ではなく、曲がり角ごとの気配を歩く。",
+            // 枡形アーケードと同帯。北へ大きく外さない（目印ずれ防止）。
             path: [
-                .init(lat: 35.03005, lng: 135.76980),
-                .init(lat: 35.03055, lng: 135.76910),
-                .init(lat: 35.03100, lng: 135.76870),
+                .init(lat: 35.03012, lng: 135.76970),
+                .init(lat: 35.030249, lng: 135.769436),
+                .init(lat: 35.03040, lng: 135.76915),
             ],
             relatedSpotNames: ["枡形", "鯖街道", "若狭街道", "町場"],
             walkMinutes: 6
@@ -352,7 +474,7 @@ enum AtmosphereCorridorCanon {
         AtmosphereCorridor(
             id: "demachi-shokokuji-to-doshisha",
             name: "相国寺の境内から同志社へ",
-            kind: "streetscape",
+            kind: "grounds",
             blurb: "同志社へ向かうとき、今出川の南回りより境内の木立を東西に通る。無駄な寄り道が土地らしい。",
             path: [
                 .init(lat: 35.03305, lng: 135.76420),
@@ -363,6 +485,54 @@ enum AtmosphereCorridorCanon {
             relatedSpotNames: ["相国寺", "同志社大学", "同志社", "今出川"],
             walkMinutes: 10,
             weaveBeforeKeys: ["同志社"]
+        ),
+    ]
+
+    /// 淀: 歩き方文の「石垣と内堀の周りをぐるりと一周」。OSM way/240772722 の園内。
+    /// MKDirections は外周道路に逃げるので、園内の散歩線を正本にする。
+    private static let yodoCorridors: [AtmosphereCorridor] = [
+        AtmosphereCorridor(
+            id: "yodo-castle-moat-loop",
+            name: "淀城跡の石垣と内堀まわり",
+            kind: "grounds",
+            blurb: "改札から南西の城跡へ入り、石垣と内堀の縁を一周する。外周の車道ではなく、園内を歩く空気。",
+            path: [
+                // 園内の歩道寄り（堀水面・外周車道に落とさない）。北東入口→時計回り。
+                .init(lat: 34.90548, lng: 135.71810),
+                .init(lat: 34.90550, lng: 135.71770),
+                .init(lat: 34.90535, lng: 135.71735),
+                .init(lat: 34.90512, lng: 135.71725),
+                .init(lat: 34.90492, lng: 135.71740),
+                .init(lat: 34.90485, lng: 135.71775),
+                .init(lat: 34.90495, lng: 135.71810),
+                .init(lat: 34.90518, lng: 135.71828),
+                .init(lat: 34.90535, lng: 135.71832), // 与杼神社寄り
+            ],
+            relatedSpotNames: [
+                "淀城跡公園", "淀城跡", "淀城", "与杼神社", "與杼神社", "予杼神社",
+            ],
+            walkMinutes: 18
+        ),
+    ]
+
+    /// 元田中正本: 歩き方文の「疏水分線の水路沿い」を線にする（OSM relation/9491923）。
+    private static let mototanakaCorridors: [AtmosphereCorridor] = [
+        AtmosphereCorridor(
+            id: "mototanaka-sosui-bunsen",
+            name: "琵琶湖疏水分線の水路沿い",
+            kind: "riverside",
+            blurb: "駅の東側を南北に走る疏水分線。点ではなく、水路沿いの小道を一本通る空気。",
+            path: [
+                // OSM way 378872734 付近 · 南→北（駅から約630–790m 東）
+                .init(lat: 35.029045, lng: 135.788465),
+                .init(lat: 35.029907, lng: 135.788278),
+                .init(lat: 35.030842, lng: 135.788178),
+                .init(lat: 35.031703, lng: 135.788239),
+                .init(lat: 35.032533, lng: 135.788832),
+                .init(lat: 35.033438, lng: 135.788856),
+            ],
+            relatedSpotNames: ["琵琶湖疏水分線", "疏水分線", "疏水", "水路"],
+            walkMinutes: 10
         ),
     ]
 
@@ -398,10 +568,16 @@ enum AtmosphereCorridorCanon {
     private static func deriveFromSpots(_ station: Station) -> [AtmosphereCorridor] {
         station.spots.compactMap { spot -> AtmosphereCorridor? in
             guard isAtmosphereSpot(spot) else { return nil }
+            // 寺・公園は groundsCorridors 側（敷地内一周）。短い road 帯にしない。
+            if isGroundsExplorableName(spot.name) { return nil }
             guard spot.lat != 0 || spot.lng != 0 else { return nil }
             let kind: String = {
                 if spot.name.contains("商店街") { return "arcade" }
-                if spot.name.contains("デルタ") || spot.name.contains("川") { return "riverside" }
+                if spot.name.contains("デルタ") || spot.name.contains("川")
+                    || spot.name.contains("疏水") || spot.name.contains("疎水")
+                    || spot.name.contains("水路") {
+                    return "riverside"
+                }
                 if spot.name.contains("街並") || spot.name.contains("町並") || spot.name.contains("鯖街道") {
                     return "streetscape"
                 }

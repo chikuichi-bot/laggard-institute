@@ -56,6 +56,17 @@ export function isWorshipName(name: string): boolean {
   return /寺$|神社$|神宮$|大社$|寺院$|神社/.test(name);
 }
 
+function stationNameCores(bare: string): string[] {
+  const cores = [bare];
+  const prefixes = ["元", "新", "旧", "本", "上", "下", "東", "西", "南", "北"];
+  const first = bare.slice(0, 1);
+  if (prefixes.includes(first)) {
+    const rest = bare.slice(1);
+    if (rest.length >= 2) cores.push(rest);
+  }
+  return cores;
+}
+
 export function isGuidebookWorship(
   name: string,
   stationName?: string,
@@ -65,6 +76,14 @@ export function isGuidebookWorship(
   if (stationName) {
     const bare = bareStationName(stationName);
     if (bare.length >= 2 && name.includes(bare)) return true;
+    // 元田中 → 田中神社 のように、接頭を外した核が社寺名に入る
+    if (
+      stationNameCores(bare).some(
+        (core) => core.length >= 2 && name.includes(core),
+      )
+    ) {
+      return true;
+    }
   }
   return false;
 }

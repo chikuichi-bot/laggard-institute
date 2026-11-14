@@ -177,8 +177,8 @@ const samples: Array<{ id: string; name: string; blurb: string; marks: Mark[] }>
   },
   {
     id: "mid",
-    name: "B · 区間のまんなか",
-    blurb: "北の一本、1の手前、2の手前。行きの区間に三角が一つずつです。",
+    name: "B · 区間のまんなか（散歩コース）",
+    blurb: "行きの道なり実線＋区間に三角一つ。密な矢羽は使わない。帰りは描かない。",
     marks: [
       ...marksAt(north, [northLen * 0.5]),
       ...marksAt(toOne, [oneLen * 0.55]),

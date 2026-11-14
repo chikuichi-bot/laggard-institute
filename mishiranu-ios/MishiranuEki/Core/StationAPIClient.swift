@@ -48,8 +48,10 @@ enum StationAPIClient {
 
     #if DEBUG
     private static func debugBaseCandidates() -> [URL] {
-        // いまの Mac LAN → 以前の固定 → 本番。届かない先は短時間で諦める。
+        // いまの Mac LAN → ホットスポット帯 → 以前の固定 → 本番。届かない先は短時間で諦める。
+        // IP は DHCP / テザリングで変わる。届かないときは `node scripts/cap-local-url.mjs` で確認して先頭へ。
         [
+            "http://172.20.10.7:3010",
             "http://192.168.0.5:3010",
             "http://192.168.0.8:3010",
             productionURL.absoluteString,

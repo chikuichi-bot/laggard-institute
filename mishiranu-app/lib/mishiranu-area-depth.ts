@@ -2,6 +2,30 @@ import type {
   AreaHistoryNote,
   StationSeed,
 } from "@/data/mishiranu-stations";
+import {
+  EIZAN_LAND_DEPTH,
+  EIZAN_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-eizan-land-depth";
+import {
+  KEIHAN_LAND_DEPTH,
+  KEIHAN_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-keihan-land-depth";
+import {
+  RANDEN_LAND_DEPTH,
+  RANDEN_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-randen-land-depth";
+import {
+  HANKYU_LAND_DEPTH,
+  HANKYU_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-hankyu-land-depth";
+import {
+  SAGANO_LAND_DEPTH,
+  SAGANO_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-sagano-land-depth";
+import {
+  KARASUMA_LAND_DEPTH,
+  KARASUMA_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-karasuma-land-depth";
 import { ensureLandPresentAnchors } from "@/lib/mishiranu-land-anchors";
 import { refineLandProse } from "@/lib/mishiranu-land-prose";
 import { withStoryNotes } from "@/lib/mishiranu-story-notes";
@@ -583,6 +607,12 @@ export const AREA_DEPTH: Record<string, AreaDepth> = {
       },
     ],
   },
+  ...EIZAN_LAND_DEPTH,
+  ...KEIHAN_LAND_DEPTH,
+  ...RANDEN_LAND_DEPTH,
+  ...HANKYU_LAND_DEPTH,
+  ...SAGANO_LAND_DEPTH,
+  ...KARASUMA_LAND_DEPTH,
 };
 
 /** AI 生成の id が揺んでも、駅名で厚みノートを当てる。 */
@@ -590,12 +620,24 @@ const AREA_DEPTH_BY_NAME: Record<string, string> = {
   出町柳: "demachiyanagi",
   中書島: "chushojima",
   二ノ瀬: "ninose",
+  ...EIZAN_LAND_DEPTH_BY_NAME,
+  ...KEIHAN_LAND_DEPTH_BY_NAME,
+  ...RANDEN_LAND_DEPTH_BY_NAME,
+  ...HANKYU_LAND_DEPTH_BY_NAME,
+  ...SAGANO_LAND_DEPTH_BY_NAME,
+  ...KARASUMA_LAND_DEPTH_BY_NAME,
 };
 
 function areaDepthFor(station: StationSeed): AreaDepth | undefined {
   const byId = AREA_DEPTH[station.id];
   if (byId) return byId;
-  const bare = station.name.replace(/駅$/u, "").trim();
+  return lookupAreaDepthByName(station.name);
+}
+
+/** 駅名だけで収録土地文を引く（生成前の分岐用）。 */
+export function lookupAreaDepthByName(rawName: string): AreaDepth | undefined {
+  const bare = rawName.replace(/駅$/u, "").trim();
+  if (!bare) return undefined;
   const mapped = AREA_DEPTH_BY_NAME[bare];
   if (mapped) return AREA_DEPTH[mapped];
   // AI の駅名揺れ（「京阪出町柳」等）。駅名がキーを含むときだけ（逆方向は出町誤爆の温床）
@@ -605,6 +647,154 @@ function areaDepthFor(station: StationSeed): AreaDepth | undefined {
     }
   }
   return undefined;
+}
+
+/**
+ * 土地文ストックとして「もう十分」か。
+ * 生成時は spots 寄りにし、穴埋め Search を土地理由で打たない。
+ */
+export function isRichLandDepth(depth: AreaDepth | undefined): boolean {
+  if (!depth) return false;
+  const intro = (depth.stationIntro ?? "").trim().length;
+  const walk = (depth.walkGuide ?? "").trim().length;
+  const hist = depth.historyNotes?.length ?? 0;
+  return intro >= 80 && walk >= 60 && hist >= 2;
+}
+
+/**
+ * 土地文ストック駅の spots バッチ正本名（docs/land-stock 見出しと一致）。
+ * 別名キーは BY_NAME にあるが、キャッシュ鍵はここで一本化する。
+ */
+export const LAND_STOCK_SPOT_BATCH: ReadonlyArray<{
+  line: "eizan" | "keihan" | "randen" | "hankyu" | "sagano" | "karasuma";
+  name: string;
+}> = [
+  // 叡山 14
+  { line: "eizan", name: "元田中" },
+  { line: "eizan", name: "茶山・京都芸術大学" },
+  { line: "eizan", name: "一乗寺" },
+  { line: "eizan", name: "修学院" },
+  { line: "eizan", name: "宝ヶ池" },
+  { line: "eizan", name: "三宅八幡" },
+  { line: "eizan", name: "八瀬比叡山口" },
+  { line: "eizan", name: "八幡前" },
+  { line: "eizan", name: "岩倉" },
+  { line: "eizan", name: "木野" },
+  { line: "eizan", name: "京都精華大前" },
+  { line: "eizan", name: "市原" },
+  { line: "eizan", name: "貴船口" },
+  { line: "eizan", name: "鞍馬" },
+  // 京阪 21
+  { line: "keihan", name: "神宮丸太町" },
+  { line: "keihan", name: "三条" },
+  { line: "keihan", name: "祇園四条" },
+  { line: "keihan", name: "清水五条" },
+  { line: "keihan", name: "七条" },
+  { line: "keihan", name: "鳥羽街道" },
+  { line: "keihan", name: "伏見稲荷" },
+  { line: "keihan", name: "深草" },
+  { line: "keihan", name: "藤森" },
+  { line: "keihan", name: "墨染" },
+  { line: "keihan", name: "丹波橋" },
+  { line: "keihan", name: "伏見桃山" },
+  { line: "keihan", name: "淀" },
+  { line: "keihan", name: "石清水八幡宮" },
+  { line: "keihan", name: "観月橋" },
+  { line: "keihan", name: "桃山南口" },
+  { line: "keihan", name: "六地蔵" },
+  { line: "keihan", name: "木幡" },
+  { line: "keihan", name: "黄檗" },
+  { line: "keihan", name: "三室戸" },
+  { line: "keihan", name: "宇治" },
+  // 嵐電 15
+  { line: "randen", name: "四条大宮" },
+  { line: "randen", name: "西大路三条" },
+  { line: "randen", name: "山ノ内" },
+  { line: "randen", name: "嵐電天神川" },
+  { line: "randen", name: "蚕ノ社" },
+  { line: "randen", name: "帷子ノ辻" },
+  { line: "randen", name: "撮影所前" },
+  { line: "randen", name: "鹿王院" },
+  { line: "randen", name: "嵐電嵯峨" },
+  { line: "randen", name: "嵐山" },
+  { line: "randen", name: "御室仁和寺" },
+  { line: "randen", name: "妙心寺" },
+  { line: "randen", name: "龍安寺" },
+  { line: "randen", name: "等持院・立命館大学衣笠キャンパス前" },
+  { line: "randen", name: "北野白梅町" },
+  // 阪急 12（嵐山は阪急表記で嵐電と鍵を分ける）
+  { line: "hankyu", name: "京都河原町" },
+  { line: "hankyu", name: "烏丸" },
+  { line: "hankyu", name: "大宮" },
+  { line: "hankyu", name: "西院" },
+  { line: "hankyu", name: "西京極" },
+  { line: "hankyu", name: "桂" },
+  { line: "hankyu", name: "東向日" },
+  { line: "hankyu", name: "洛西口" },
+  { line: "hankyu", name: "長岡天神" },
+  { line: "hankyu", name: "上桂" },
+  { line: "hankyu", name: "松尾大社" },
+  { line: "hankyu", name: "嵐山（阪急）" },
+  // JR嵯峨野 5
+  { line: "sagano", name: "二条" },
+  { line: "sagano", name: "円町" },
+  { line: "sagano", name: "花園" },
+  { line: "sagano", name: "太秦" },
+  { line: "sagano", name: "嵯峨嵐山" },
+  // 地下鉄烏丸・洛内 7
+  { line: "karasuma", name: "鞍馬口" },
+  { line: "karasuma", name: "今出川" },
+  { line: "karasuma", name: "丸太町" },
+  { line: "karasuma", name: "烏丸御池" },
+  { line: "karasuma", name: "四条" },
+  { line: "karasuma", name: "五条" },
+  { line: "karasuma", name: "京都" },
+];
+
+export function listLandStockSpotBatchTargets(opts?: {
+  line?: (typeof LAND_STOCK_SPOT_BATCH)[number]["line"];
+}): typeof LAND_STOCK_SPOT_BATCH {
+  const line = opts?.line;
+  return line
+    ? LAND_STOCK_SPOT_BATCH.filter((t) => t.line === line)
+    : LAND_STOCK_SPOT_BATCH;
+}
+
+/** 収録土地文から、spots 生成用の殻を作る。 */
+export function stationShellFromLandDepth(
+  rawName: string,
+  depth: AreaDepth,
+): StationSeed {
+  const name = rawName.replace(/駅$/u, "").trim() || rawName.trim();
+  const mappedId = AREA_DEPTH_BY_NAME[name];
+  const id =
+    mappedId ??
+    `ai-${name}`
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48);
+  return {
+    id: id || "station",
+    name,
+    line: "路線情報は要確認",
+    prefecture: "日本",
+    region: "近畿",
+    mood: "story",
+    radiiKm: [0.9, 1.0, 1.2],
+    stationIntro: depth.stationIntro,
+    areaAbout: undefined,
+    walkGuide: depth.walkGuide,
+    historyNotes: depth.historyNotes,
+    sightseeingNotes: depth.sightseeingNotes,
+    storyNotes: depth.storyNotes,
+    tourTitle: `${name}の徒歩圏を、ゆるく歩く`,
+    catchCopy: "降りた場所から、予定のない寄り道を。",
+    spots: [],
+    lat: 35.0,
+    lng: 135.0,
+    source: "ai",
+  };
 }
 
 /**
@@ -656,22 +846,31 @@ export function withAreaDepth(station: StationSeed): StationSeed {
           (extra.historyNotes?.length ?? 0) >= 2
             ? undefined
             : (extra.areaAbout ?? station.areaAbout),
-        // 歩き方は AI 解析を優先。空／旧順（枡形→デルタ）のときだけ正本。食べ方はデルタ定番へ
+        // 土地文ストックがある駅は walkGuide 正本。無い駅だけ AI。食べ方はデルタ定番へ
         walkGuide: (() => {
           const ai = (station.walkGuide ?? "").trim();
-          const canon = extra.walkGuide;
-          const pick =
-            ai && !isWrongDemachiWalkOrder(ai) ? ai : (canon ?? station.walkGuide);
-          return pick ? scrubDemachiWalkFood(pick) : pick;
+          const canon = (extra.walkGuide ?? "").trim();
+          const pick = isRichLandDepth(extra)
+            ? (extra.walkGuide ?? station.walkGuide)
+            : ai && !isWrongDemachiWalkOrder(ai)
+              ? ai
+              : (extra.walkGuide ?? station.walkGuide);
+          if (!pick) return pick;
+          const bare = station.name.replace(/駅$/u, "");
+          const isDemachi =
+            bare.includes("出町柳") || station.name.includes("出町柳");
+          return isDemachi ? scrubDemachiWalkFood(pick) : pick;
         })(),
         historyNotes: extra.historyNotes ?? station.historyNotes,
-        // 寄るところ: 出町など正本カードがある駅は具体を優先。他は AI、空なら正本
+        // 寄るところ: 土地文ストック／出町は正本。他は AI、空なら正本
         sightseeingNotes: (() => {
           const depthSight = extra.sightseeingNotes;
           const ai = station.sightseeingNotes ?? [];
           const bare = station.name.replace(/駅$/u, "");
           const preferDepth =
-            bare.includes("出町柳") || station.name.includes("出町柳");
+            bare.includes("出町柳") ||
+            station.name.includes("出町柳") ||
+            isRichLandDepth(extra);
           if (preferDepth && depthSight?.length) return depthSight;
           if (ai.length > 0) return ai;
           return depthSight ?? ai;

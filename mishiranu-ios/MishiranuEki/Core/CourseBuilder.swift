@@ -153,7 +153,8 @@ enum CourseBuilder {
         used: Set<String>,
         prefs: MealPrefs?,
         style: CourseStyle,
-        forceGuide: GuideKind?
+        forceGuide: GuideKind?,
+        stationName: String? = nil
     ) -> Double {
         if used.contains(spot.id) { return -1 }
         if !mealFitsForCourse(spot, dayPart: dayPart) { return -1 }
@@ -169,7 +170,7 @@ enum CourseBuilder {
         case .walk:
             // 散歩中心: 土地の顔・景色を先に
             if spot.majorWorthy { score += 72 }
-            score += landmarkFameScore(spot) * 0.4
+            score += landmarkFameScore(spot, stationName: stationName) * 0.4
             if spot.guide == .sight { score += 14 }
             if spot.guide == .rest { score += 12 }
             if spot.guide == .souvenir { score += 6 }
@@ -240,7 +241,8 @@ enum CourseBuilder {
         elapsed: Int,
         budgetMinutes: Int,
         stay: StayOption,
-        forceGuide: GuideKind?
+        forceGuide: GuideKind?,
+        stationName: String? = nil
     ) -> Spot? {
         var best: Spot?
         var bestScore = -1.0
@@ -254,7 +256,8 @@ enum CourseBuilder {
                 used: used,
                 prefs: prefs,
                 style: style,
-                forceGuide: forceGuide
+                forceGuide: forceGuide,
+                stationName: stationName
             )
             if score > bestScore {
                 bestScore = score
@@ -272,7 +275,8 @@ enum CourseBuilder {
         startHour: Int,
         prefs: MealPrefs?,
         style: CourseStyle,
-        avoid: Set<String>
+        avoid: Set<String>,
+        stationName: String? = nil
     ) -> [CourseStop] {
         var prefer = initialPrefer
         var used = avoid
@@ -287,7 +291,10 @@ enum CourseBuilder {
         if style == .walk {
             let faces = pool
                 .filter(\.majorWorthy)
-                .sorted { landmarkFameScore($0) > landmarkFameScore($1) }
+                .sorted {
+                    landmarkFameScore($0, stationName: stationName)
+                        > landmarkFameScore($1, stationName: stationName)
+                }
             for face in faces where stops.count < maxStops {
                 let cost = face.walkMinutes + dwellMinutes(face.guide, stay: stay)
                 if used.contains(face.id) { continue }
@@ -318,7 +325,8 @@ enum CourseBuilder {
             elapsed: elapsed,
             budgetMinutes: budgetMinutes,
             stay: stay,
-            forceGuide: primary
+            forceGuide: primary,
+            stationName: stationName
            ) {
             appendStop(
                 first,
@@ -343,7 +351,8 @@ enum CourseBuilder {
                 elapsed: elapsed,
                 budgetMinutes: budgetMinutes,
                 stay: stay,
-                forceGuide: nil
+                forceGuide: nil,
+                stationName: stationName
             ) else { break }
 
             appendStop(
@@ -377,9 +386,9 @@ enum CourseBuilder {
         return stops
     }
 
-    private static func isLandmarkName(_ name: String) -> Bool {
-        if FirstVisitFaces.isNeighborhoodWorship(name) { return false }
-        return FirstVisitFaces.isGuidebookWorship(name)
+    private static func isLandmarkName(_ name: String, stationName: String? = nil) -> Bool {
+        if FirstVisitFaces.isNeighborhoodWorship(name, stationName: stationName) { return false }
+        return FirstVisitFaces.isGuidebookWorship(name, stationName: stationName)
             || FirstVisitFaces.isOrdinaryPublicFace(name)
             || name.contains("城") || name.contains("宮")
     }
@@ -406,14 +415,14 @@ enum CourseBuilder {
     }
 
     /// 散歩中心向けの「ベタさ」。近いだけの小社より、土地の顔になる名所を上げる。
-    private static func landmarkFameScore(_ spot: Spot) -> Double {
+    private static func landmarkFameScore(_ spot: Spot, stationName: String? = nil) -> Double {
         let n = spot.name
         let blob = n + spot.blurb + (spot.detail ?? "")
         var score = 0.0
         if spot.majorWorthy { score += 40 }
         if spot.guide == .sight { score += 8 }
-        // ガイドブック級の社寺・普通の公共の顔
-        if FirstVisitFaces.isGuidebookWorship(n) { score += 55 }
+        // ガイドブック級の社寺・普通の公共の顔（駅名核つき: 元田中→田中神社）
+        if FirstVisitFaces.isGuidebookWorship(n, stationName: stationName) { score += 55 }
         // 鴨川デルタは出町柳で必ず行く顔（城跡・参道より先）
         if n.contains("デルタ") || n.contains("三角州") { score += 70 }
         if FirstVisitFaces.isOrdinaryPublicFace(n) || n.contains("合流") { score += 45 }
@@ -425,7 +434,7 @@ enum CourseBuilder {
         if blob.contains("名物") || blob.contains("銘菓") || blob.contains("顔") { score += 16 }
         if isIconicShop(spot) || (isEdibleOmiyage(spot) && spot.guide == .souvenir) { score += 38 }
         // 近所の寺・小社・脇社・近所カフェは出さない
-        if FirstVisitFaces.isNeighborhoodWorship(n) { score -= 80 }
+        if FirstVisitFaces.isNeighborhoodWorship(n, stationName: stationName) { score -= 80 }
         if n.contains("幸神社") || n.contains("境内社") || n.contains("摂社") { score -= 60 }
         if isGenericNeighborhoodCafe(spot) { score -= 50 }
         // 近さは弱い補正（有名度のあとに）
@@ -695,17 +704,23 @@ enum CourseBuilder {
 
         let majors = base.spots.filter(\.majorWorthy)
         let landmarks = (majors.filter {
-            $0.guide == .sight || $0.guide == .rest || isLandmarkName($0.name)
+            $0.guide == .sight || $0.guide == .rest || isLandmarkName($0.name, stationName: base.name)
         }
             + base.spots.filter {
-                $0.guide == .sight || $0.guide == .rest || isLandmarkName($0.name)
+                $0.guide == .sight || $0.guide == .rest || isLandmarkName($0.name, stationName: base.name)
             })
             .reduce(into: [Spot]()) { acc, s in
                 if !acc.contains(where: { $0.id == s.id }) { acc.append(s) }
             }
-            .sorted { landmarkFameScore($0) > landmarkFameScore($1) }
+            .sorted {
+                landmarkFameScore($0, stationName: base.name)
+                    > landmarkFameScore($1, stationName: base.name)
+            }
         let foods = base.spots.filter { isFoodGuide($0.guide) }
-            .sorted { landmarkFameScore($0) > landmarkFameScore($1) }
+            .sorted {
+                landmarkFameScore($0, stationName: base.name)
+                    > landmarkFameScore($1, stationName: base.name)
+            }
         let iconicFoods: [Spot] = {
             var list: [Spot] = []
             if let futaba = base.spots.first(where: { isFutabaShop($0.name) }) {
@@ -1027,7 +1042,8 @@ enum CourseBuilder {
         }
     }
 
-    /// ショート（手短）とロング（ゆったり）。候補は近い顔から選び、歩き順は道なり最適化。
+    /// ショート（手短）とロング（ゆったり）。
+    /// 土地の「歩き方」文があるときは文順が正本。無いときだけ近い順＋扇形並べ。
     static func firstVisitOrdinaryCourses(
         for station: Station,
         dayPart: DayPart,
@@ -1043,93 +1059,178 @@ enum CourseBuilder {
                 )
             )
         )
-        let must = DemachiTemplate.filterWalkSpots(mustVisitWalkSpots(in: prepared), station: prepared)
+        let nearGate: (Spot) -> Bool = {
+            !isGenericNeighborhoodCafe($0)
+                && DemachiTemplate.spotNearStation($0, station: prepared)
+        }
+        let narrative = StationLore.landNarrativeSpots(in: prepared)
+            .filter(nearGate)
+            .filter(hasCourseCoordinate)
+            .filter(isShortStrollSpot)
+        let usingLandOrder = narrative.count >= 2
+
+        let mustAll = DemachiTemplate.filterWalkSpots(mustVisitWalkSpots(in: prepared), station: prepared)
+            .filter(hasCourseCoordinate)
+        // 小回りは散歩のみ（ご飯・休憩店なし）。must も散歩の顔だけ。
+        let must = mustAll.filter(isShortStrollSpot)
         var pool = DemachiTemplate.filterWalkSpots(ordinaryWalkPool(in: prepared), station: prepared)
-        for spot in must where !pool.contains(where: { sameWalkPlace($0, spot) }) {
+            .filter(hasCourseCoordinate)
+        for spot in mustAll where !pool.contains(where: { sameWalkPlace($0, spot) }) {
             pool.append(spot)
         }
         guard !pool.isEmpty else { return [] }
 
-        let near = sortNearStation(pool, station: prepared)
-        // 雛形がある駅はショート＝mustVisit そのもの（出町方式: 土地の顔3点など）。
-        // 出町固有名が他駅に混ざって must が空になったら near に落ちる。
-        let shortRaw: [Spot] =
-            must.count >= 2
-            ? must
-            : ensureMustVisits(
-                Array(near.prefix(min(3, near.count))),
+        // 歩き方文がある: 文の登場順を保つ。無い: 駅から近い順。
+        let near = usingLandOrder
+            ? preservePoolOrder(pool, preferred: narrative)
+            : sortNearStation(pool, station: prepared)
+        let nearStroll = near.filter(isShortStrollSpot)
+        // 小回り ≈ 1時間の散歩のみ。ご飯・休憩は入れない。文順＋時間予算。
+        let shortBone: [Spot] =
+            usingLandOrder
+            ? ensureMustVisits(
+                narrative,
                 must: must,
                 station: prepared,
-                cap: min(3, near.count)
+                cap: Self.shortStrollMaxStops
             )
-        let shortSet = DemachiTemplate.filterWalkSpots(shortRaw, station: prepared)
-        let longCap = min(max(stay.maxCourseStops, 5), max(near.count, shortSet.count), 6)
-        let longSet = DemachiTemplate.filterWalkSpots(
-            ensureMustVisits(
-                Array(near.prefix(longCap)), must: must, station: prepared, cap: longCap
-            ),
-            station: prepared
+            : must.count >= 2
+            ? must
+            : ensureMustVisits(
+                Array(nearStroll.prefix(Self.shortStrollMaxStops)),
+                must: must,
+                station: prepared,
+                cap: Self.shortStrollMaxStops
+            )
+        let shortRaw = trimToStrollBudget(
+            DemachiTemplate.filterWalkSpots(shortBone, station: prepared)
+                .filter(hasCourseCoordinate)
+                .filter(isShortStrollSpot),
+            station: prepared,
+            budgetMinutes: Self.shortStrollBudgetMinutes,
+            stayForDwell: .oneHour,
+            mustProtect: must
         )
+        let shortSet = shortRaw
+        let longCap = min(max(stay.maxCourseStops, 5), max(near.count, shortSet.count + 2), 6)
+        let longBone = ensureMustVisits(
+            Array(near.prefix(longCap)),
+            must: must,
+            station: prepared,
+            cap: longCap
+        )
+        let longSet = DemachiTemplate.filterWalkSpots(longBone, station: prepared)
+            .filter(hasCourseCoordinate)
         guard !shortSet.isEmpty else { return [] }
         let startHour = dayPart.defaultClockHour
         let bare = SavedStationStore.bareName(prepared.name)
         let atmosphereOn = AtmosphereWalkPrefs.preferAtmosphere
         let allCorridors = AtmosphereCorridorCanon.corridors(for: prepared)
-        let shortOrdered = AtmosphereCorridorCanon.prioritize(
-            shortSet, corridors: allCorridors, preferAtmosphere: atmosphereOn
-        )
-        let longOrdered = AtmosphereCorridorCanon.prioritize(
-            longSet, corridors: allCorridors, preferAtmosphere: atmosphereOn
-        )
+        let landBasis = landWalkBasisLabel(narrative: narrative, walkGuide: prepared.walkGuide)
+        // 歩き方文順は空気スコアで並べ替えない（疏水沿いなどが後ろへ飛ばない）
+        let shortOrdered = usingLandOrder
+            ? shortSet
+            : AtmosphereCorridorCanon.prioritize(
+                shortSet, corridors: allCorridors, preferAtmosphere: atmosphereOn
+            )
+        let longOrdered = usingLandOrder
+            ? longSet
+            : AtmosphereCorridorCanon.prioritize(
+                longSet, corridors: allCorridors, preferAtmosphere: atmosphereOn
+            )
 
         var out: [WalkCourse] = []
+        // 小回りは常に「約1時間の散歩」予算（軽い滞在）で組む
         if let short = buildOrdinaryVariant(
             id: "ordinary-short-\(bare)-\(dayPart.rawValue)",
             title: "駅から、小回り",
-            subtitle: atmosphereOn
-                ? "土地の空気を通って駅へ帰る · \(shortOrdered.count)か所"
-                : "ぶらりと回って駅へ帰る · \(shortOrdered.count)か所",
-            vibe: atmosphereOn
-                ? "最短より、土地らしい無駄な寄り道を歩く"
-                : "駅を出て、少し遠回りをして、駅へ帰る",
+            subtitle: usingLandOrder
+                ? "散歩のみ · 約1時間 · \(landBasis)"
+                : (atmosphereOn
+                    ? "散歩のみ · 約1時間 · 土地の空気を通って駅へ帰る"
+                    : "散歩のみ · 約1時間 · ぶらりと回って駅へ帰る"),
+            vibe: usingLandOrder
+                ? "ご飯も休憩も挟まず、土地の歩き方を約1時間歩く"
+                : (atmosphereOn
+                    ? "最短より、土地らしい無駄な寄り道を歩く"
+                    : "駅を出て、少し遠回りをして、駅へ帰る"),
             spots: shortOrdered,
             station: prepared,
             dayPart: dayPart,
-            stay: stay,
-            startHour: startHour
+            stay: .oneHour,
+            startHour: startHour,
+            preserveLandOrder: usingLandOrder
         ) {
             out.append(short)
         }
-        // ロングはショートより多いときだけ別コースにする
+        // ロングはショートより多いときだけ。足す場所も土地文に名前があるものだけ。
         if longOrdered.count > shortOrdered.count,
            let long = buildOrdinaryVariant(
             id: "ordinary-long-\(bare)-\(dayPart.rawValue)",
             title: "駅から、大回り",
-            subtitle: atmosphereOn
-                ? "もう少し先の空気まで通って駅へ帰る · \(longOrdered.count)か所"
-                : "もう少し遠くまで回って駅へ帰る · \(longOrdered.count)か所",
-            vibe: atmosphereOn
-                ? "川辺や境内など、少し遠回りの帯を歩く"
-                : "少し先まで遠回りをして、駅へ帰る",
+            subtitle: usingLandOrder
+                ? "土地の歩き方をもう少し · \(landBasis)"
+                : (atmosphereOn
+                    ? "もう少し先の空気まで通って駅へ帰る · \(longOrdered.count)か所"
+                    : "もう少し遠くまで回って駅へ帰る · \(longOrdered.count)か所"),
+            vibe: usingLandOrder
+                ? "土地の歩き方文と、文に出た先まで歩く"
+                : (atmosphereOn
+                    ? "川辺や境内など、少し遠回りの帯を歩く"
+                    : "少し先まで遠回りをして、駅へ帰る"),
             spots: longOrdered,
             station: prepared,
             dayPart: dayPart,
             stay: stay,
-            startHour: startHour
+            startHour: startHour,
+            preserveLandOrder: usingLandOrder
         ) {
             out.append(long)
         } else if out.isEmpty, let only = buildOrdinaryVariant(
             id: "ordinary-short-\(bare)-\(dayPart.rawValue)",
             title: "駅から、小回り",
-            subtitle: "ぶらりと回って駅へ帰る",
+            subtitle: "約1時間 · ぶらりと回って駅へ帰る",
             vibe: "駅を出て、少し回り道をして、駅へ帰る",
-            spots: ensureMustVisits(near, must: must, station: prepared, cap: near.count),
+            spots: trimToStrollBudget(
+                ensureMustVisits(near, must: must, station: prepared, cap: near.count),
+                station: prepared,
+                budgetMinutes: Self.shortStrollBudgetMinutes,
+                stayForDwell: .oneHour,
+                mustProtect: must
+            ),
             station: prepared,
             dayPart: dayPart,
-            stay: stay,
-            startHour: startHour
+            stay: .oneHour,
+            startHour: startHour,
+            preserveLandOrder: usingLandOrder
         ) {
             out.append(only)
+        }
+        return out
+    }
+
+    /// コース線に使える座標があるか（0,0 や欠損は線を壊す）。
+    private static func hasCourseCoordinate(_ spot: Spot) -> Bool {
+        abs(spot.lat) > 0.01 || abs(spot.lng) > 0.01
+    }
+
+    /// preferred の順を骨にし、足りない顔だけ末尾へ足す。
+    private static func preservePoolOrder(_ pool: [Spot], preferred: [Spot]) -> [Spot] {
+        var out: [Spot] = []
+        var seen = Set<String>()
+        for spot in preferred {
+            let key = NameMatch.normalize(spot.name)
+            guard !key.isEmpty, seen.insert(key).inserted else { continue }
+            if let hit = pool.first(where: { sameWalkPlace($0, spot) }) {
+                out.append(hit)
+            } else if hasCourseCoordinate(spot) {
+                out.append(spot)
+            }
+        }
+        for spot in pool {
+            let key = NameMatch.normalize(spot.name)
+            guard !key.isEmpty, seen.insert(key).inserted else { continue }
+            out.append(spot)
         }
         return out
     }
@@ -1143,6 +1244,28 @@ enum CourseBuilder {
         firstVisitOrdinaryCourses(for: station, dayPart: dayPart, stay: stay).first
     }
 
+    /// コース字幕用。歩き方文の寄る順を短く示す。
+    private static func landWalkBasisLabel(narrative: [Spot], walkGuide: String?) -> String {
+        let names = narrative.prefix(4).map(\.name)
+        if !names.isEmpty { return names.joined(separator: "→") }
+        let guide = (walkGuide ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if guide.count > 28 { return String(guide.prefix(28)) + "…" }
+        return guide.isEmpty ? "土地の歩き方" : guide
+    }
+
+    /// 土地の歩き方・歴史・観光メモに名前が出るスポットだけ（推測の近所店は入れない）。
+    private static func landNamedWalkSpots(in station: Station, near: (Spot) -> Bool) -> [Spot] {
+        let corpus = StationLore.landWalkCorpus(station)
+        return station.spots.filter { spot in
+            guard near(spot), !spot.name.hasSuffix("駅"), !PlaceNoise.isNoise(spot.name) else {
+                return false
+            }
+            return StationLore.nameKeys(spot.name).contains { key in
+                key.count >= 2 && corpus.contains(key)
+            }
+        }
+    }
+
     private static func ordinaryWalkPool(in station: Station) -> [Spot] {
         // 歩くコースは土地文の名前が正本。地図用の lock/Apple は必須にしない
         // （未確定座標でも道順は出す。地図ピンは MapPinTrust 側で別判定）。
@@ -1151,7 +1274,10 @@ enum CourseBuilder {
                 && DemachiTemplate.spotNearStation($0, station: station)
         }
         let narrative = StationLore.landNarrativeSpots(in: station).filter(near)
-        if narrative.count >= 2 { return narrative }
+        // 歩き方文がある駅: 文を骨にし、大回り用も「文に名前がある場所」だけ足す
+        if narrative.count >= 2 {
+            return preservePoolOrder(landNamedWalkSpots(in: station, near: near), preferred: narrative)
+        }
 
         let introduced = StationLore.introducedVisitSpots(in: station).filter {
             near($0)
@@ -1295,6 +1421,12 @@ enum CourseBuilder {
 
     private static func namesLikelySamePlace(_ a: String, _ b: String) -> Bool {
         if a == b { return true }
+        // 与杼／與杼／予杼は同一社
+        let fold: (String) -> String = {
+            $0.replacingOccurrences(of: "與", with: "与")
+                .replacingOccurrences(of: "予杼", with: "与杼")
+        }
+        if fold(a) == fold(b) { return true }
         if a.contains("枡形") || a.contains("桝形"),
            b.contains("枡形") || b.contains("桝形"),
            !a.contains("満寿"), !b.contains("満寿") {
@@ -1323,6 +1455,164 @@ enum CourseBuilder {
             }
             return false
         }
+    }
+
+    /// 小回り＝土地の歩き方を約1時間で辿る（歩き＋軽い滞在＋駅帰還）。
+    private static let shortStrollBudgetMinutes = 70
+    private static let shortStrollMaxStops = 5
+
+    /// 文順のまま足す。予算超えでは非 must を落として mustVisit を守る。
+    private static func trimToStrollBudget(
+        _ spots: [Spot],
+        station: Station,
+        budgetMinutes: Int,
+        stayForDwell: StayOption,
+        mustProtect: [Spot] = []
+    ) -> [Spot] {
+        guard !spots.isEmpty else { return [] }
+        func isMust(_ spot: Spot) -> Bool {
+            mustProtect.contains { sameWalkPlace($0, spot) }
+        }
+        func strollCost(fromLat: Double, fromLng: Double, to: Spot) -> (walk: Int, dwell: Int) {
+            let km = Geo.haversineKm(
+                lat1: fromLat, lng1: fromLng, lat2: to.lat, lng2: to.lng
+            )
+            let walk = max(1, min(90, Int((km * 1.3 / 4.5 * 60).rounded())))
+            return (walk, dwellMinutes(to.guide, stay: stayForDwell))
+        }
+        func returnWalk(from: Spot) -> Int {
+            let km = Geo.haversineKm(
+                lat1: from.lat, lng1: from.lng,
+                lat2: station.lat, lng2: station.lng
+            )
+            return max(1, min(90, Int((km * 1.3 / 4.5 * 60).rounded())))
+        }
+        var out: [Spot] = []
+        var lat = station.lat
+        var lng = station.lng
+        var elapsed = 0
+        for spot in spots {
+            let cost = strollCost(fromLat: lat, fromLng: lng, to: spot)
+            let projected = elapsed + cost.walk + cost.dwell + returnWalk(from: spot)
+            let over = !out.isEmpty && projected > budgetMinutes + 8
+            if over {
+                if isMust(spot) {
+                    // 直前の非 must を外して枠を空ける
+                    if let dropIdx = out.indices.last(where: { !isMust(out[$0]) }) {
+                        out.remove(at: dropIdx)
+                        // 経過を文頭から再計算
+                        elapsed = 0
+                        lat = station.lat
+                        lng = station.lng
+                        for kept in out {
+                            let c = strollCost(fromLat: lat, fromLng: lng, to: kept)
+                            elapsed += c.walk + c.dwell
+                            lat = kept.lat
+                            lng = kept.lng
+                        }
+                        let retry = strollCost(fromLat: lat, fromLng: lng, to: spot)
+                        let retryProjected =
+                            elapsed + retry.walk + retry.dwell + returnWalk(from: spot)
+                        if out.count >= 2, retryProjected > budgetMinutes + 12 {
+                            // must でも入らないときは、must だけ残す方針で追加して打ち切り
+                            out.append(spot)
+                            break
+                        }
+                        out.append(spot)
+                        elapsed += retry.walk + retry.dwell
+                        lat = spot.lat
+                        lng = spot.lng
+                        if out.count >= shortStrollMaxStops { break }
+                        continue
+                    }
+                    // もう非 must が無い → must は残す
+                    out.append(spot)
+                    break
+                }
+                break
+            }
+            out.append(spot)
+            elapsed += cost.walk + cost.dwell
+            lat = spot.lat
+            lng = spot.lng
+            if out.count >= shortStrollMaxStops { break }
+        }
+        // must が骨にあって落ちていたら、非 must を外して差し込む
+        for m in mustProtect where hasCourseCoordinate(m) {
+            if out.contains(where: { sameWalkPlace($0, m) }) { continue }
+            guard spots.contains(where: { sameWalkPlace($0, m) }) else { continue }
+            if let dropIdx = out.indices.last(where: { !isMust(out[$0]) }) {
+                out[dropIdx] = m
+            } else if out.count < shortStrollMaxStops {
+                out.append(m)
+            }
+        }
+        // 予算を大きく超える非 must を後ろから落とす（must は残す）
+        func estimatedTotal(_ list: [Spot]) -> Int {
+            var e = 0
+            var la = station.lat
+            var ln = station.lng
+            for s in list {
+                let c = strollCost(fromLat: la, fromLng: ln, to: s)
+                e += c.walk + c.dwell
+                la = s.lat
+                ln = s.lng
+            }
+            if let last = list.last { e += returnWalk(from: last) }
+            return e
+        }
+        while out.count > max(2, mustProtect.filter({ m in
+            out.contains(where: { sameWalkPlace($0, m) })
+        }).count) {
+            if estimatedTotal(out) <= budgetMinutes + 12 { break }
+            guard let dropIdx = out.indices.last(where: { !isMust(out[$0]) }) else { break }
+            out.remove(at: dropIdx)
+        }
+        if out.count > shortStrollMaxStops {
+            // must を優先して残す
+            var kept: [Spot] = []
+            for s in out where isMust(s) { kept.append(s) }
+            for s in out where !isMust(s) {
+                if kept.count >= shortStrollMaxStops { break }
+                kept.append(s)
+            }
+            out = Array(kept.prefix(shortStrollMaxStops))
+        }
+        return out.isEmpty ? Array(spots.prefix(1)) : out
+    }
+
+    /// 小回り用。ご飯・お土産・喫茶休憩は入れない。公園・デルタなど屋外は散歩の場所。
+    private static func isShortStrollSpot(_ spot: Spot) -> Bool {
+        switch spot.guide {
+        case .meal, .souvenir:
+            return false
+        case .rest:
+            // 公園・川辺・疏水は休憩店ではなく歩きの顔
+            let n = spot.name
+            if n.contains("公園") || n.contains("デルタ") || n.contains("三角州")
+                || n.contains("河原") || n.contains("堤防") || n.contains("の森")
+                || n.contains("疏水") || n.contains("疎水") || n.contains("水路")
+                || n.contains("川辺") || n.contains("河川敷")
+            {
+                return true
+            }
+            return false
+        case .sight, .tip, .story:
+            return !isGenericNeighborhoodCafe(spot)
+        }
+    }
+
+    /// 「ぐるりと一周」は滞在ではなく、その場を歩く分を足す。
+    private static func landLoopWalkBonus(for spot: Spot, walkGuide: String?) -> Int {
+        let guide = walkGuide ?? ""
+        guard guide.contains("一周") || guide.contains("ぐるり") || guide.contains("めぐる")
+        else { return 0 }
+        let name = spot.name
+        if name.contains("城跡") || name.contains("城址") || name.contains("公園") {
+            return 18
+        }
+        if name.contains("神社") || name.contains("寺") { return 8 }
+        return 0
     }
 
     /// mustVisit が落ちないよう、遠い候補と入れ替えてセットに残す。
@@ -1412,12 +1702,13 @@ enum CourseBuilder {
         station: Station,
         dayPart: DayPart,
         stay: StayOption,
-        startHour: Int
+        startHour: Int,
+        preserveLandOrder: Bool = false
     ) -> WalkCourse? {
         // 最後の関所: 出町の固有名がコースに残っていたら落とす
         let clean = PreferredDetour.weave(
             weaveDemachiShokokujiBeforeDoshisha(
-                DemachiTemplate.filterWalkSpots(spots, station: station),
+                DemachiTemplate.filterWalkSpots(spots, station: station).filter(hasCourseCoordinate),
                 station: station
             ),
             station: station
@@ -1427,7 +1718,9 @@ enum CourseBuilder {
             CourseStop(
                 spot: $0,
                 walkMinutes: $0.walkMinutes,
-                dwellMinutes: dwellMinutes($0.guide, stay: stay),
+                dwellMinutes: stay == .oneHour
+                    ? max(4, dwellMinutes($0.guide, stay: stay) - 2)
+                    : dwellMinutes($0.guide, stay: stay),
                 clockLabel: ""
             )
         }
@@ -1447,7 +1740,9 @@ enum CourseBuilder {
             stationLng: station.lng,
             startHour: startHour,
             stay: stay,
-            corridors: corridors
+            corridors: corridors,
+            preserveLandOrder: preserveLandOrder,
+            walkGuide: station.walkGuide
         )
     }
 
@@ -1484,12 +1779,24 @@ enum CourseBuilder {
                 )
             )
         )
-        // 土地紹介で触れた場所だけをまわり方の正本にする
-        let introduced = StationLore.introducedVisitSpots(in: prepared)
+        // 正本は土地の「歩き方」文順（walkGuide）。無いときだけ紹介で触れた場所へ落とす。
+        let near: (Spot) -> Bool = {
+            !isGenericNeighborhoodCafe($0)
+                && DemachiTemplate.spotNearStation($0, station: prepared)
+                && hasCourseCoordinate($0)
+        }
+        let narrative = StationLore.landNarrativeSpots(in: prepared).filter(near)
+        let usingLandOrder = narrative.count >= 2
+        let introduced = StationLore.introducedVisitSpots(in: prepared).filter(near)
         let introducedIds = Set(introduced.map(\.id))
-        let walkPool = prepared.spots(for: stay).filter { introducedIds.contains($0.id) }
-        let fallbackPool = prepared.spots(for: stay)
-        let landPool = walkPool.count >= 2 ? walkPool : (introduced.isEmpty ? fallbackPool : introduced)
+        let fromIntroduced = prepared.spots(for: stay).filter { introducedIds.contains($0.id) && near($0) }
+        let fallbackPool = prepared.spots(for: stay).filter(near)
+        let landPool: [Spot] = {
+            if usingLandOrder { return narrative }
+            if fromIntroduced.count >= 2 { return fromIntroduced }
+            if !introduced.isEmpty { return introduced }
+            return fallbackPool
+        }()
         // コース用は朝でもランチを残す。案内タブの全件表示とは別。閉店店は入れない。
         let pool = landPool.filter {
             mealFitsForCourse($0, dayPart: dayPart)
@@ -1513,16 +1820,42 @@ enum CourseBuilder {
                 prefer = template.prefer
             }
 
-            let rawStops = pickStops(
-                pool: source,
-                prefer: prefer,
-                dayPart: dayPart,
-                stay: stay,
-                startHour: startHour,
-                prefs: prefs,
-                style: template.style,
-                avoid: claimed
-            )
+            // 歩くテンプレ＋歩き方文: 文順のまま頭から取る（有名度ピックで崩さない）
+            let rawStops: [CourseStop]
+            if usingLandOrder, template.style == .walk {
+                let maxStops = stay.maxCourseStops
+                var elapsed = 0
+                var built: [CourseStop] = []
+                var hour = startHour
+                var minute = 0
+                for spot in source where built.count < maxStops {
+                    if claimed.contains(spot.id) { continue }
+                    let cost = spot.walkMinutes + dwellMinutes(spot.guide, stay: stay)
+                    if elapsed + cost > budget + 8 { continue }
+                    appendStop(
+                        spot,
+                        stops: &built,
+                        used: &claimed,
+                        elapsed: &elapsed,
+                        cursorHour: &hour,
+                        cursorMinute: &minute,
+                        stay: stay
+                    )
+                }
+                rawStops = built
+            } else {
+                rawStops = pickStops(
+                    pool: source,
+                    prefer: prefer,
+                    dayPart: dayPart,
+                    stay: stay,
+                    startHour: startHour,
+                    prefs: prefs,
+                    style: template.style,
+                    avoid: claimed,
+                    stationName: prepared.name
+                )
+            }
             guard !rawStops.isEmpty else { return nil }
             let course = finishLoopCourse(
                 id: "\(template.id)-\(stay.rawValue)-\(dayPart.rawValue)",
@@ -1533,7 +1866,8 @@ enum CourseBuilder {
                 stationLat: prepared.lat,
                 stationLng: prepared.lng,
                 startHour: startHour,
-                stay: stay
+                stay: stay,
+                preserveLandOrder: usingLandOrder && template.style == .walk
             )
             guard var course = course else { return nil }
             for stop in course.stops.prefix(2) {
@@ -1557,6 +1891,7 @@ enum CourseBuilder {
     }
 
     /// 駅出発→立ち寄り→駅帰還のコースを組み立てる。
+    /// preserveLandOrder: 土地の歩き方文順を保つ（扇形・2-opt で並べ替えない）。
     private static func finishLoopCourse(
         id: String,
         title: String,
@@ -1567,23 +1902,31 @@ enum CourseBuilder {
         stationLng: Double,
         startHour: Int,
         stay: StayOption,
-        corridors: [AtmosphereCorridor] = []
+        corridors: [AtmosphereCorridor] = [],
+        preserveLandOrder: Bool = false,
+        walkGuide: String? = nil
     ) -> WalkCourse? {
         guard !provisional.isEmpty else { return nil }
-        // 扇形並べのあとも、同志社の直前に相国寺を保つ（境内経由）
+        let rawSpots = provisional.map(\.spot).filter(hasCourseCoordinate)
+        guard !rawSpots.isEmpty else { return nil }
+        // 歩き方文があるときは文順のまま。無いときだけ扇形＋2-opt。
+        // どちらも同志社の直前に相国寺を保つ（境内経由）。
         let ordered = preferShokokujiBeforeDoshisha(
-            orderStopsAsStationLoop(
-                stationLat: stationLat,
-                stationLng: stationLng,
-                spots: provisional.map(\.spot)
-            )
+            preserveLandOrder
+                ? rawSpots
+                : orderStopsAsStationLoop(
+                    stationLat: stationLat,
+                    stationLng: stationLng,
+                    spots: rawSpots
+                )
         )
         let built = rebuildStopsWithLegs(
             stationLat: stationLat,
             stationLng: stationLng,
             startHour: startHour,
             stay: stay,
-            spots: ordered
+            spots: ordered,
+            walkGuide: walkGuide
         )
         guard let last = built.last else { return nil }
         let returnKm = Geo.haversineKm(
@@ -1744,7 +2087,8 @@ enum CourseBuilder {
         stationLng: Double,
         startHour: Int,
         stay: StayOption,
-        spots: [Spot]
+        spots: [Spot],
+        walkGuide: String? = nil
     ) -> [CourseStop] {
         var out: [CourseStop] = []
         var hour = startHour
@@ -1753,13 +2097,19 @@ enum CourseBuilder {
         var lng = stationLng
         for spot in spots {
             let km = Geo.haversineKm(lat1: lat, lng1: lng, lat2: spot.lat, lng2: spot.lng)
-            // 道なり係数 1.3 · 徒歩 4.5km/h
-            let walk = max(1, min(90, Int((km * 1.3 / 4.5 * 60).rounded())))
+            // 道なり係数 1.3 · 徒歩 4.5km/h。小回りは「一周」分を徒歩に足す。
+            let loopWalk = stay == .oneHour
+                ? landLoopWalkBonus(for: spot, walkGuide: walkGuide)
+                : 0
+            let walk = max(1, min(90, Int((km * 1.3 / 4.5 * 60).rounded()) + loopWalk))
             minute += walk
             hour += minute / 60
             minute %= 60
             let clock = formatClock(hour: hour % 24, minute: minute)
-            let dwell = dwellMinutes(spot.guide, stay: stay)
+            // 小回りは立ち寄り滞在を短く（散歩の時間を主にする）
+            let dwell = stay == .oneHour
+                ? max(4, dwellMinutes(spot.guide, stay: stay) - 2)
+                : dwellMinutes(spot.guide, stay: stay)
             out.append(
                 CourseStop(spot: spot, walkMinutes: walk, dwellMinutes: dwell, clockLabel: clock)
             )

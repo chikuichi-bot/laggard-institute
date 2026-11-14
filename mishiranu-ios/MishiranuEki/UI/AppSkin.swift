@@ -115,7 +115,8 @@ enum TextSizePref: String, CaseIterable, Identifiable {
     }
 }
 
-/// 地図の詳細。すっきり＝施設名なし、くわしく＝Apple の施設を出す。
+/// 地図の詳細。すっきり＝番号ピンだけ、くわしく＝おすすめの名前も出す。
+/// Apple の店・施設 POI はどちらでも出さない（散歩の点と紛らわしい）。
 enum MapDetailPref: String, CaseIterable, Identifiable {
     case clean
     case rich
@@ -130,10 +131,8 @@ enum MapDetailPref: String, CaseIterable, Identifiable {
     }
 
     var pointsOfInterest: PointOfInterestCategories {
-        switch self {
-        case .clean: return .excludingAll
-        case .rich: return .all
-        }
+        // 設定のどちらでも Apple POI は抑える。TourMap は mapStyle 側でも excludingAll。
+        .excludingAll
     }
 
     func next() -> MapDetailPref {

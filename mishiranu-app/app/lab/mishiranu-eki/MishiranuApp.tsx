@@ -77,6 +77,7 @@ import {
 import {
   findNearestStation,
   haversineKm,
+  spotLatLng,
   stationLatLng,
 } from "@/lib/mishiranu-geo";
 import {
@@ -154,6 +155,10 @@ import {
   type MapDetailPref,
   type TextSizePref,
 } from "./mishiranu-display";
+import {
+  entranceHint,
+  guideCardText,
+} from "@/lib/mishiranu-walk-guide-map";
 import "./mishiranu.css";
 
 const StationMap = dynamic(() => import("./StationMap"), {
@@ -1690,7 +1695,11 @@ export default function MishiranuApp({
                           <span className="mishiranu-legend-icon">
                             <GuideKindIcon kind={kind} />
                           </span>
-                          {kind === "rest" ? "休む" : GUIDE_LABEL[kind]}
+                          {kind === "rest"
+                            ? "休む"
+                            : kind === "souvenir"
+                              ? "土産"
+                              : GUIDE_LABEL[kind]}
                         </li>
                       ))}
                     </ul>
@@ -1698,12 +1707,48 @@ export default function MishiranuApp({
                       {[
                         `徒歩圏 約 ${walkRadiusKmForCourse(selectedCourse)} km`,
                         selectedCourse
-                          ? `${selectedCourse.title} · 番号順`
+                          ? `${selectedCourse.title} · 歩き方は自由 · 点はおすすめ`
                           : null,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
+                    {(() => {
+                      const card = guideCardText(station.walkGuide);
+                      if (!card || !selectedCourse) return null;
+                      const firstId = courseStopIds?.[0];
+                      const firstSpot = firstId
+                        ? (spots.find((s) => s.id === firstId) ??
+                          station.spots.find((s) => s.id === firstId))
+                        : null;
+                      const firstLl = firstSpot
+                        ? spotLatLng(station, firstSpot)
+                        : null;
+                      const origin = stationLatLng(station);
+                      const entrance = entranceHint({
+                        stationLat: origin.lat,
+                        stationLng: origin.lng,
+                        walkGuide: station.walkGuide,
+                        firstStop: firstLl,
+                        spots: station.spots,
+                      });
+                      return (
+                        <div
+                          className="mishiranu-map-walk-card"
+                          aria-label={`歩き方。${card}`}
+                        >
+                          <p className="mishiranu-map-walk-card-kicker">
+                            歩き方
+                          </p>
+                          <p className="mishiranu-map-walk-card-body">{card}</p>
+                          {entrance ? (
+                            <p className="mishiranu-map-walk-card-entrance">
+                              入 · {entrance.label}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ) : null}
@@ -1726,6 +1771,15 @@ export default function MishiranuApp({
                         <CourseIcon courseId={selectedCourse.id} />
                         {selectedCourse.title}
                       </h3>
+                      {selectedCourse.subtitle ? (
+                        <p className="mishiranu-walk-basis">{selectedCourse.subtitle}</p>
+                      ) : null}
+                      {station?.walkGuide &&
+                      selectedCourse.id.includes("ordinary-") ? (
+                        <p className="mishiranu-walk-basis mishiranu-walk-basis--guide">
+                          {station.walkGuide}
+                        </p>
+                      ) : null}
                       <button
                         type="button"
                         className={`mishiranu-walk-listen${placeSpeaking ? " mishiranu-walk-listen--on" : ""}`}

@@ -358,7 +358,7 @@ export const STORY_NOTES_CANON: Record<string, AreaHistoryNote[]> = {
         "京都アニメーション『たまこまーけっと』では、京阪藤森駅の北改札や駅そばの琵琶湖疏水の橋が何度も画面に出ます。ホームを出て疏水沿いの堀田橋へ歩くと、物語の始まりの距離感が、いまの足と同じになります。",
     },
     {
-      title: "『たまこまーけっと』と疏水の橋",
+      title: "『たまこまーけっと』と堀田橋",
       body:
         "堀田橋・キトロ橋・師団橋は、たまこたちが通る疏水沿いの定番です。藤森駅から数分で橋の欄干に立て、画面の水路の幅と電車の音が、いまの深草の空気に重なります。",
     },
@@ -460,20 +460,34 @@ export function withStoryNotes(station: StationSeed): StationSeed {
 export function placeNameFromStoryTitle(title: string): string | null {
   const trimmed = title.trim();
   if (!trimmed) return null;
-  const idx = trimmed.indexOf("と");
-  if (idx >= 0) {
-    const after = trimmed.slice(idx + 1).trim();
-    const polished = polishStoryPlace(after);
-    if (polished) return polished;
+  // 『作品名』と場所 — 「たまこまーけっと」内の「と」は区切りにしない
+  const close = trimmed.indexOf("』");
+  if (close >= 0) {
+    const joiner = trimmed.indexOf("と", close + 1);
+    if (joiner >= 0) {
+      const polished = polishStoryPlace(trimmed.slice(joiner + 1).trim());
+      if (polished) return polished;
+    }
   }
   if (trimmed.startsWith("『")) return null;
   return polishStoryPlace(trimmed);
 }
 
+/** 誤切り出し「』と疏水の橋」などを直す。 */
+export function scrubBrokenStoryPlaceName(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed.startsWith("』と")) return trimmed.slice(2).trim();
+  if (trimmed.startsWith("』")) return trimmed.replace(/^[』と]+/u, "").trim();
+  return trimmed;
+}
+
 function polishStoryPlace(raw: string): string | null {
-  let s = raw.replace(/など$/u, "").trim();
+  let s = scrubBrokenStoryPlaceName(raw).replace(/など$/u, "").trim();
   if (s.length < 2) return null;
+  if (/^[『』「」]/u.test(s)) return null;
   if (s === "枡形" || s === "桝形") s = "枡形商店街";
+  // 藤森の物語「疏水の橋」は水路に架かる堀田橋（街区の仮座標に落とさない）
+  if (s === "疏水の橋" || s === "疎水の橋") s = "堀田橋";
   const weak = ["川", "海", "町", "入口", "顔", "層", "空気", "朝ドラの海", "出町の川"];
   if (weak.includes(s)) return null;
   if (/の川$|の海$/u.test(s)) return null;
@@ -490,7 +504,17 @@ function polishStoryPlace(raw: string): string | null {
  */
 export function ensureStoryMapSpots(station: StationSeed): StationSeed {
   const notes = station.storyNotes ?? [];
-  let spots = [...(station.spots ?? [])];
+  let spots = (station.spots ?? []).map((spot) => {
+    const name = scrubBrokenStoryPlaceName(spot.name);
+    if (name === spot.name) return spot;
+    let blurb = spot.blurb ?? "";
+    if (blurb.startsWith("』")) {
+      const cut = blurb.indexOf("。");
+      const head = scrubBrokenStoryPlaceName(cut >= 0 ? blurb.slice(0, cut) : blurb);
+      blurb = cut >= 0 ? `${head}${blurb.slice(cut)}` : head;
+    }
+    return { ...spot, name, blurb };
+  });
   if (!notes.length) {
     const collapsed = collapseStoryOverlaps(spots);
     if (collapsed.length === spots.length) {

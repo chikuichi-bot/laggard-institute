@@ -10,9 +10,8 @@ struct StationChromeHeader: View {
 
     private var pillCorner: CGFloat {
         switch theme.skin {
-        case .ma: return 0
-        case .board: return 4
-        case .topo: return 2
+        case .ma: return 0 // 下線だけの見出し（枠にしない）
+        case .board, .topo: return 12
         }
     }
 
@@ -65,11 +64,10 @@ struct StationChromeHeader: View {
                 Button {
                     model.goHero()
                 } label: {
-                    // 文言なし。英語の top は違和感。行き先は「駅を探し直す」。
-                    Image(systemName: "chevron.left")
+                    // 行き先は「駅を探し直す」。← は階層戻りに見えるので虫眼鏡。
+                    Image(systemName: "magnifyingglass")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Palette.ink)
-                        .padding(.trailing, 4)
                         .frame(minWidth: 44, minHeight: 32, alignment: .leading)
                         .contentShape(Rectangle())
                 }

@@ -139,14 +139,16 @@ enum StationLore {
         for spot in sealed.spots {
             if spot.name.hasSuffix("駅") { continue }
             if PlaceNoise.isNoise(spot.name) { continue }
-            if FirstVisitFaces.isNeighborhoodWorship(spot.name, stationName: sealed.name) {
-                continue
-            }
             let key = NameMatch.normalize(spot.name)
             guard !key.isEmpty, seen.insert(key).inserted else { continue }
             let locked = LandmarkRegistry.isLocked(spot, stationName: sealed.name)
             let namedInLand = nameKeys(spot.name).contains { key in
                 key.count >= 2 && corpus.contains(key)
+            }
+            // 土地文に出た社寺は「近所の小社」扱いで落とさない（元田中の田中神社など）
+            if !namedInLand,
+               FirstVisitFaces.isNeighborhoodWorship(spot.name, stationName: sealed.name) {
+                continue
             }
             // 案内・地図: 名所印・土地文に加え、ご飯／土産／休む／ちょい寄りも落とさない
             let usefulGuide =
@@ -213,9 +215,7 @@ enum StationLore {
         for spot in sealed.spots {
             if spot.name.hasSuffix("駅") { continue }
             if PlaceNoise.isNoise(spot.name) { continue }
-            if FirstVisitFaces.isNeighborhoodWorship(spot.name, stationName: sealed.name) {
-                continue
-            }
+            // 本文に出ている時点で土地の顔（近所の小社フィルタはここでは使わない）
             let idKey = NameMatch.normalize(spot.name)
             guard !idKey.isEmpty, !claimed.contains(idKey) else { continue }
             let offsets = nameKeys(spot.name).compactMap { token -> Int? in

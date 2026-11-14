@@ -374,14 +374,9 @@ struct PricingPage: View {
                                 .font(.title3)
                                 .foregroundStyle(Palette.warm)
                                 .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("\(pack.label) · \(pack.coins)枚")
-                                    .font(.mincho(.body))
-                                    .foregroundStyle(Palette.ink)
-                                Text("1駅あたり約¥\(pack.priceYen / max(pack.coins, 1))")
-                                    .font(.readable(.caption2))
-                                    .foregroundStyle(Palette.mist)
-                            }
+                            Text("\(pack.label) · \(pack.coins)枚")
+                                .font(.mincho(.body))
+                                .foregroundStyle(Palette.ink)
                             Spacer(minLength: 0)
                             Text(
                                 billing.busyProductId == pack.id

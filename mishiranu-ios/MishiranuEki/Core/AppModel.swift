@@ -138,15 +138,12 @@ final class AppModel {
         self.now = now
         self.dayPart = DayPart.from(hour: Calendar.current.component(.hour, from: now()))
         // 調べ済みすべてに物語のゆかり正本＋地図ピンを載せ、ディスクへ書き戻す。
-        var sealedSaved: [Station] = []
-        for disk in saved {
-            let sealed = GuideIntegrity.seal(disk)
-            _ = SavedStationStore.upsert(sealed)
-            sealedSaved.append(sealed)
-        }
-        self.savedStationIds = Set(SavedStationStore.load().map(\.id))
-        self.stations = SavedStationStore.merge(bundled: scrubbed, saved: sealedSaved)
-        self.stationId = sealedSaved.first?.id ?? scrubbed.first?.id ?? ""
+        // 1件ずつ upsert すると毎回先頭に寄せて並びが逆転するので、順序はそのまま一括書き戻し。
+        let sealedSaved = saved.map { GuideIntegrity.seal($0) }
+        let written = SavedStationStore.replacePreservingOrder(sealedSaved)
+        self.savedStationIds = Set(written.map(\.id))
+        self.stations = SavedStationStore.merge(bundled: scrubbed, saved: written)
+        self.stationId = written.first?.id ?? scrubbed.first?.id ?? ""
     }
 
     var savedCount: Int { savedStationIds.count }

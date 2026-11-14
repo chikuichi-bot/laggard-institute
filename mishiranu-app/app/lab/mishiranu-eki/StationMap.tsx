@@ -11,6 +11,7 @@ import {
 } from "@/data/mishiranu-stations";
 import { haversineKm, spotLatLng, stationLatLng } from "@/lib/mishiranu-geo";
 import type { AtmosphereCorridor } from "@/lib/mishiranu-atmosphere";
+import { entranceHint } from "@/lib/mishiranu-walk-guide-map";
 
 type MapDetailPref = "clean" | "rich";
 
@@ -135,25 +136,16 @@ function stepIcon(step: number, color: string, active: boolean, nudge = false) {
   });
 }
 
-/** 徒歩の道なり（OSRM foot）。直線だと川の上を横切るので使わない。 */
-async function footRoutePath(
-  points: Array<{ lat: number; lng: number }>,
-): Promise<L.LatLngExpression[] | null> {
-  if (points.length < 2) return null;
-  const coords = points.map((p) => `${p.lng},${p.lat}`).join(";");
-  const url = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      routes?: Array<{ geometry?: { coordinates?: number[][] } }>;
-    };
-    const line = data.routes?.[0]?.geometry?.coordinates;
-    if (!line?.length) return null;
-    return line.map(([lng, lat]) => [lat, lng] as L.LatLngExpression);
-  } catch {
-    return null;
-  }
+function entranceIcon(label: string) {
+  return L.divIcon({
+    className: "mishiranu-leaflet-pin",
+    html: `<span style="display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none">
+      <span style="width:26px;height:26px;border-radius:50%;background:#9a3d31;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font:700 11px/1 system-ui,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.25)">入</span>
+      <span style="max-width:7.5em;padding:1px 5px;border-radius:999px;background:rgba(249,244,230,.94);border:1px solid rgba(154,61,49,.45);color:#2a2420;font:600 9px/1.2 system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</span>
+    </span>`,
+    iconSize: [28, 44],
+    iconAnchor: [14, 14],
+  });
 }
 
 export default function StationMap({
@@ -244,19 +236,6 @@ export default function StationMap({
 
     const courseIds = (courseStopIds ?? []).filter((id) => spotById.has(id));
     const courseSet = new Set(courseIds);
-    // 駅出発 → 立ち寄り → 駅帰還
-    const waypoints: Array<{ lat: number; lng: number }> = [
-      { lat: center.lat, lng: center.lng },
-    ];
-    for (const id of courseIds) {
-      const spot = spotById.get(id);
-      if (!spot) continue;
-      const ll = spotLatLng(station, spot);
-      waypoints.push({ lat: ll.lat, lng: ll.lng });
-    }
-    if (courseIds.length > 0) {
-      waypoints.push({ lat: center.lat, lng: center.lng });
-    }
 
     let cancelled = false;
     const focusActive = (): boolean => {
@@ -268,53 +247,115 @@ export default function StationMap({
       return true;
     };
 
-    // 空気の区間は歩くタブの一覧が正本。地図に直線帯を載せると道に沿わず紛らわしいので描かない。
-    void corridors;
+    // 動線の線は引かない。歩き方は自由。おすすめの通り・境内は点だけ。
+    const hintBounds: L.LatLngExpression[] = [[center.lat, center.lng]];
+    for (const id of courseIds) {
+      const spot = spotById.get(id);
+      if (!spot) continue;
+      const ll = spotLatLng(station, spot);
+      hintBounds.push([ll.lat, ll.lng]);
+    }
 
-    const drawCourseLine = (path: L.LatLngExpression[]) => {
-      if (cancelled || !layerRef.current) return;
-      L.polyline(path, {
+    const firstCourse = courseIds[0] ? spotById.get(courseIds[0]) : null;
+    const firstLl = firstCourse ? spotLatLng(station, firstCourse) : null;
+    const entrance =
+      courseIds.length > 0
+        ? entranceHint({
+            stationLat: center.lat,
+            stationLng: center.lng,
+            walkGuide: station.walkGuide,
+            firstStop: firstLl,
+            spots: [...spotById.values()],
+          })
+        : null;
+    if (entrance) {
+      hintBounds.push([entrance.lat, entrance.lng]);
+      L.marker([entrance.lat, entrance.lng], {
+        icon: entranceIcon(entrance.label),
+        title: `入 · ${entrance.label}`,
+        zIndexOffset: 250,
+        interactive: false,
+      }).addTo(layer);
+    }
+
+    const courseSpotNames = new Set(
+      courseIds.map((id) => spotById.get(id)?.name).filter(Boolean) as string[],
+    );
+    const relatedCorridor = (c: AtmosphereCorridor) => {
+      if (!courseSpotNames.size) return false;
+      return c.relatedSpotNames.some((key) =>
+        [...courseSpotNames].some(
+          (n) => key.length >= 2 && (n.includes(key) || key.includes(n)),
+        ),
+      );
+    };
+    let hintCount = 0;
+    for (const corridor of corridors ?? []) {
+      if (courseIds.length > 0 && !relatedCorridor(corridor)) continue;
+      const path = corridor.path ?? [];
+      if (path.length < 2) continue;
+      // コースに同名立ち寄りがある通りはピンが正本。端ヒントは「ずれ」に見えるので出さない。
+      const hasNamedStop = [...courseSpotNames].some(
+        (n) =>
+          n.includes(corridor.name) ||
+          corridor.name.includes(n) ||
+          corridor.relatedSpotNames.some(
+            (k) => k.length >= 2 && (n.includes(k) || k.includes(n)),
+          ),
+      );
+      if (hasNamedStop) continue;
+      const mid = path[Math.floor(path.length / 2)];
+      const onStop = [...courseSpotNames].some((n) => {
+        const spot = [...spotById.values()].find((s) => s.name === n);
+        if (!spot || spot.lat == null || spot.lng == null) return false;
+        return (
+          Math.abs(spot.lat - mid.lat) < 0.00022 &&
+          Math.abs(spot.lng - mid.lng) < 0.00022
+        );
+      });
+      if (onStop) continue;
+      const shortName =
+        corridor.name.length <= 10
+          ? corridor.name
+          : (corridor.relatedSpotNames[0]?.slice(0, 10) ??
+            corridor.name.slice(0, 8));
+      hintBounds.push([mid.lat, mid.lng]);
+      L.circleMarker([mid.lat, mid.lng], {
+        radius: 5,
         color: "#9a3d31",
-        weight: 4,
-        opacity: 0.88,
-        lineJoin: "round",
-        lineCap: "round",
-        className: "mishiranu-leaflet-course",
-      }).addTo(layer);
-      L.polyline(path, {
-        color: "#f9f4e6",
         weight: 1.5,
-        opacity: 0.95,
-        lineJoin: "round",
-        lineCap: "round",
-        dashArray: "1 10",
-      }).addTo(layer);
-      if (!focusActive()) {
-        map.fitBounds(L.latLngBounds(path), {
+        dashArray: "2 2",
+        fillColor: "#f9f4e6",
+        fillOpacity: 0.95,
+      })
+        .bindTooltip(shortName, {
+          permanent: mapDetail === "rich",
+          direction: "top",
+          offset: [0, -6],
+          className: "mishiranu-leaflet-tooltip",
+        })
+        .addTo(layer);
+      hintCount += 1;
+      if (hintCount >= 6) break;
+    }
+
+    L.circle([center.lat, center.lng], {
+      radius: radiusKm * 1000,
+      color: "#b5493a",
+      weight: 1.5,
+      dashArray: "4 6",
+      fillColor: "#b5493a",
+      fillOpacity: 0.06,
+    }).addTo(layer);
+
+    if (!focusActive()) {
+      if (hintBounds.length >= 2) {
+        map.fitBounds(L.latLngBounds(hintBounds), {
           padding: [36, 36],
           maxZoom: 16,
           animate: false,
         });
-      }
-    };
-
-    if (waypoints.length >= 2) {
-      void footRoutePath(waypoints).then((routed) => {
-        const path =
-          routed ??
-          waypoints.map((p) => [p.lat, p.lng] as L.LatLngExpression);
-        drawCourseLine(path);
-      });
-    } else {
-      L.circle([center.lat, center.lng], {
-        radius: radiusKm * 1000,
-        color: "#b5493a",
-        weight: 1.5,
-        dashArray: "4 6",
-        fillColor: "#b5493a",
-        fillOpacity: 0.06,
-      }).addTo(layer);
-      if (!focusActive()) {
+      } else {
         map.setView([center.lat, center.lng], radiusKm >= 2.5 ? 14 : 15, {
           animate: false,
         });

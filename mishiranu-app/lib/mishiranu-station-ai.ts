@@ -14,7 +14,13 @@ import { GUIDE_ORDER, REGIONS } from "@/data/mishiranu-stations";
 import { fuzzLatLngForExternal } from "@/lib/mishiranu-geo";
 import { beginPaidAiCall } from "@/lib/mishiranu-rate-limit";
 import landmarkLocks from "@/data/landmark-locks.json";
-import { withAreaDepth } from "@/lib/mishiranu-area-depth";
+import { applyBikeRentalLocks } from "@/lib/mishiranu-bike-locks";
+import {
+  isRichLandDepth,
+  lookupAreaDepthByName,
+  stationShellFromLandDepth,
+  withAreaDepth,
+} from "@/lib/mishiranu-area-depth";
 import {
   isEditorialPlaceName,
   placeTitle,
@@ -220,6 +226,24 @@ const STATION_SCHEMA_BLOCK = [
 const PLACES_FROM_LAND_SCHEMA = [
   "スキーマ:",
   "{",
+  '  "name": "駅名（駅を付けない）",',
+  '  "nameReading": "ひらがな読み",',
+  '  "line": "路線名（検索で確認）",',
+  '  "prefecture": "都道府県",',
+  '  "region": "北海道|東北|関東|中部|近畿|中国|四国|九州",',
+  '  "mood": "story|empty",',
+  '  "lat": 駅の緯度,',
+  '  "lng": 駅の経度,',
+  '  "tourTitle": "28字以内",',
+  '  "catchCopy": "40字以内",',
+  '  "railHint": "確信があるときだけ1文。不確かなら省略",',
+  '  "bikeRental": { "available": boolean, "summary": "1〜2文", "places": [] },',
+  '  "firstVisitFaces": [',
+  '    { "role": "landform|landmark|town", "name": "正式名", "where": "位置", "why": "1文", "present": "1文", "walkMinutes": 5, "lat": 0, "lng": 0 }',
+  "  ],",
+  '  "corridors": [],',
+  '  "preferredDetours": [],',
+  '  "storyNotes": [],',
   '  "spots": [',
   "    {",
   '      "name": "土地の文章に出た正式名称、またはその土地の実在店名",',
@@ -242,14 +266,15 @@ const PLACES_FROM_LAND_SCHEMA = [
   "}",
   "",
   "制約:",
+  "- 【禁止】stationIntro / areaAbout / walkGuide / historyNotes / sightseeingNotes は出力しない（正本の土地文を使う）。",
   "- 【最重要・名所】spots の名所・地形・町場は、渡した土地の文章に登場する正式名称を先に全部起こす。文章に無い名所を先にリストしない。",
   "- 【最重要・店】meal/souvenir は Google検索で実在確認できた正式店名だけ。生活感に合わせて推測で埋めない。不確かなら 0件でよい。",
   "- spots: 名所（sight 等）を厚く。meal 0〜4、souvenir 0〜3。rest/tip は無理に増やさない。",
   "- firstVisitFaces がある点は majorWorthy true。役割が欠けていても名所が確かならよい。",
   "- 店が無い土地文なら meal/souvenir を足さない（遠方チェーン禁止）。",
   "- 出町柳以外で鴨川デルタ・下鴨・枡形・ふたば等を出さない。",
-  "- 出町柳の枡形は京阪改札のすぐ外ではない（デルタを通って5番方面→出町橋西へ徒歩約5分）。walkGuide はデルタ→枡形の順。",
-  "- lat/lng は本物。駅へ寄せない。徒歩25分超は出さない。",
+  "- 出町柳の枡形は京阪改札のすぐ外ではない（デルタを通って5番方面→出町橋西へ徒歩約5分）。",
+  "- 駅の lat/lng と spots の lat/lng は本物。spots を駅へ寄せない。徒歩25分超は出さない。",
 ].join("\n");
 
 function buildStationPrompt(rawName: string): string {
@@ -288,15 +313,15 @@ function buildPlacesFromLandPrompt(station: StationSeed): string {
     .join("\n");
   return [
     "あなたは日本の駅の徒歩圏を案内する編集者です。",
-    "【順番】土地の文章はすでにできている。その文章に書いた正式名称から、地図と案内の場所（spots）を起こす。",
+    "Google検索で実在を確認し、地図・案内の spots を作ってください。",
+    "【順番】土地の文章はすでにできている（正本）。書き換えない。正式名称から spots を起こす。",
     WANDER_TONE_RULES,
     "出力は JSON のみ。",
     "",
-    `駅名: ${station.name}（${station.prefecture} · ${station.line}）`,
-    `駅座標: ${station.lat}, ${station.lng}`,
-    `firstVisitFaces: ${faces || "（なし）"}`,
+    `駅名: ${station.name}`,
+    `firstVisitFaces（参考）: ${faces || "（なし・土地文から起こす）"}`,
     "",
-    "—— 土地の文章（正本）——",
+    "—— 土地の文章（正本・書き換え禁止）——",
     `stationIntro: ${station.stationIntro ?? ""}`,
     `areaAbout: ${station.areaAbout ?? ""}`,
     `walkGuide: ${station.walkGuide ?? ""}`,
@@ -485,10 +510,10 @@ export function parseAiStationPayload(
       asString(parsed.stationIntro).length >= 80 ||
       (parseNoteList(parsed.historyNotes, 3)?.length ?? 0) >= 2;
     if (!hasLand) {
-      return {
-        error: "empty_spots",
-        message: "案内スポットを作れませんでした。別の駅名で試してください。",
-      };
+    return {
+      error: "empty_spots",
+      message: "案内スポットを作れませんでした。別の駅名で試してください。",
+    };
     }
   }
 
@@ -1592,76 +1617,32 @@ const BIKE_FOREIGN_HINTS = [
   "神戸",
 ] as const;
 
-/** その駅にある実在貸出だけ残す。他駅名・総称・遠すぎる徒歩は落とす。 */
+/** その駅にある実在貸出だけ残す。他駅名・総称・遠すぎる徒歩は落とす。正本は bike-rental-locks.json。 */
 function sanitizeBikeRentals(station: StationSeed): StationSeed {
-  const isDemachi = /出町柳/.test(station.name);
   const generics = /駅前のレンタ|枡形・駅前のレンタ|周辺のレンタ|貸自転車$/;
-  let places = [...(station.bikeRental?.places ?? [])].filter((p) => {
+  const places = [...(station.bikeRental?.places ?? [])].filter((p) => {
     if (!p.name || BIKE_GENERIC.test(p.name) || generics.test(p.name)) {
       return false;
     }
     // えむじかは 2026-01 閉業
     if (/えむじか/.test(p.name)) return false;
     if (typeof p.walkMinutes === "number" && p.walkMinutes > 8) return false;
-    if (!isDemachi && /出町柳|京阪出町柳/.test(p.name)) return false;
+    if (!/出町柳/.test(station.name) && /出町柳|京阪出町柳/.test(p.name)) {
+      return false;
+    }
     for (const hint of BIKE_FOREIGN_HINTS) {
       if (p.name.includes(hint) && !station.name.includes(hint)) return false;
     }
     return true;
   });
 
-  if (isDemachi) {
-    const clew = {
-      kind: "app" as const,
-      name: "CLEW（クルー）京阪出町柳駅前",
-      walkMinutes: 1,
-      note: "京阪7番出口付近のポート。アプリ登録のあとQRで解錠。",
-    };
-    if (!places.some((p) => /CLEW|クルー|CREW/i.test(p.name))) {
-      places.push(clew);
-    }
-  }
-
-  // 同じ系統は1件。徒歩が短い方を残す（HELLO CYCLING の総称と駅名付きなど）。
-  places = [...places].sort(
-    (a, b) => (a.walkMinutes ?? 99) - (b.walkMinutes ?? 99),
-  );
-  const seen = new Set<string>();
-  places = places
-    .filter((p) => {
-      const key = /CLEW|クルー|CREW/i.test(p.name)
-        ? `clew:${isDemachi ? "demachi" : p.name}`
-        : /HELLO|ハロー/.test(p.name)
-          ? "hello"
-          : p.name;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .map((p) =>
-      isDemachi && /HELLO|ハロー/.test(p.name)
-        ? { ...p, name: "HELLO CYCLING 京阪出町柳駅" }
-        : p,
-    );
-
-  const available = places.length > 0;
-  const summary = available
-    ? isDemachi
-      ? "駅すぐには CLEW（クルー）など、アプリで借りるポートがあります。会員登録のあとQRで解錠します。"
-      : station.bikeRental?.summary &&
-          station.bikeRental.summary.length >= 12 &&
-          !/未確認|使えることがあります|えむじか/.test(station.bikeRental.summary)
-        ? station.bikeRental.summary
-        : `この駅で確認できた貸出は次のとおりです（${places.map((p) => p.name).join("、")}）。`
-    : "この駅で確認できたレンタサイクルは、いまのところありません。観光案内所や駅掲示も見てください。";
-
   return {
     ...station,
-    bikeRental: {
-      available,
-      summary,
-      places: available ? places : undefined,
-    },
+    bikeRental: applyBikeRentalLocks(station.name, {
+      available: places.length > 0,
+      summary: station.bikeRental?.summary ?? "",
+      places,
+    }),
   };
 }
 
@@ -2153,29 +2134,83 @@ function mergePlacesFromLandText(
   text: string,
 ): StationSeed {
   const parsed = extractJsonObject(text);
-  if (!parsed || !Array.isArray(parsed.spots)) return station;
-  const extras = parsed.spots
-    .map((raw, i) => parseSpot(raw, (station.spots?.length ?? 0) + i))
-    .filter((s): s is Spot => !!s)
-    .filter((s) => !isForeignDemachiPlace(s.name, station.name));
-  if (!extras.length) return station;
+  if (!parsed) return station;
 
-  const existing = [...(station.spots ?? [])];
+  let next: StationSeed = { ...station };
+  const line = asString(parsed.line);
+  if (line && line !== "路線情報は要確認") next = { ...next, line };
+  const prefecture = asString(parsed.prefecture);
+  if (prefecture && prefecture !== "日本") {
+    next = { ...next, prefecture };
+  }
+  const regionRaw = asString(parsed.region);
+  if (regionRaw && REGION_SET.has(regionRaw)) {
+    next = { ...next, region: regionRaw as StationSeed["region"] };
+  }
+  const nameReading = asString(parsed.nameReading);
+  if (nameReading) next = { ...next, nameReading };
+  const lat = asNumber(parsed.lat, next.lat ?? 35.0);
+  const lng = asNumber(parsed.lng, next.lng ?? 135.0);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    next = { ...next, lat, lng };
+  }
+  const mood: StationMood = parsed.mood === "empty" ? "empty" : next.mood;
+  next = { ...next, mood };
+  const tourTitle = asString(parsed.tourTitle).slice(0, 28);
+  if (tourTitle) next = { ...next, tourTitle };
+  const catchCopy = asString(parsed.catchCopy).slice(0, 40);
+  if (catchCopy) next = { ...next, catchCopy };
+  const railHint = sanitizeRailHint(asString(parsed.railHint));
+  if (railHint) next = { ...next, railHint };
+  const bike = parseBike(parsed.bikeRental);
+  if (bike) next = { ...next, bikeRental: bike };
+  const faces = parseFirstVisitFaces(parsed.firstVisitFaces);
+  if (faces?.length) next = { ...next, firstVisitFaces: faces };
+  const storyNotes = parseNoteList(parsed.storyNotes, 4);
+  if (storyNotes?.length && !(next.storyNotes?.length ?? 0)) {
+    next = { ...next, storyNotes };
+  }
+  if (Array.isArray(parsed.corridors)) {
+    next = {
+      ...next,
+      corridors: parseCorridors(parsed.corridors, next),
+    };
+  }
+  if (Array.isArray(parsed.preferredDetours)) {
+    next = {
+      ...next,
+      preferredDetours:
+        parsed.preferredDetours as StationSeed["preferredDetours"],
+    };
+  }
+
+  if (!Array.isArray(parsed.spots)) return next;
+  const extras = parsed.spots
+    .map((raw, i) => parseSpot(raw, (next.spots?.length ?? 0) + i))
+    .filter((s): s is Spot => !!s)
+    .filter((s) => !isForeignDemachiPlace(s.name, next.name));
+  if (!extras.length) return next;
+
+  const existing = [...(next.spots ?? [])];
   const names = new Set(existing.map((s) => s.name));
   for (const spot of extras) {
     if (names.has(spot.name)) continue;
     names.add(spot.name);
     existing.push(spot);
   }
-  return { ...station, spots: existing.slice(0, 22) };
+  return { ...next, spots: existing.slice(0, 22) };
 }
 
 /**
  * 1回目で足りていれば 2 回目（穴埋め＝Search 付き）を打たない。
  * 穴埋めは「土地文・名所」が薄いときだけ。店・休み・major の枚数合わせでは打たない
  * （店は MapKit／ロック、major はヒューリスティックで後段が補う）。
+ * 収録土地文がある駅は土地理由では打たず、sight spots 不足のときだけ。
  */
 function needsGapFill(station: StationSeed): boolean {
+  if (isRichLandDepth(lookupAreaDepthByName(station.name))) {
+    return countGuide(station, "sight") < 2;
+  }
   if (isNarrativeThin(station)) return true;
   if (countGuide(station, "sight") < 2) return true;
   // 検索駅も出町並み精度へ（歩き方・目の置きどころが抽象なら穴埋め）
@@ -2537,6 +2572,13 @@ async function finalizeAiStation(
   station = refineLandProse(ensureLandPresentAnchors(station));
   station = snapLandmarkCoordinates(station);
   station = sealGuideIntegrity(station);
+  // 関所後の間引きで 3 未満になったら失敗（土地寄り→通常生成フォールバックの判定用）
+  if ((station.spots?.length ?? 0) < 3) {
+    return {
+      error: "empty_spots",
+      message: "案内スポットを作れませんでした。別の駅名で試してください。",
+    };
+  }
   return { station, source: "ai" };
 }
 
@@ -2832,8 +2874,8 @@ async function generateFromPrompt(
     return grounded.ok
       ? finalizeAiStation(
           stationFromGeminiText(grounded.text, fallbackName),
-          apiKey,
-          viewerSub,
+        apiKey,
+        viewerSub,
         )
       : { error: fast.error, message: fast.message };
   }
@@ -2844,11 +2886,70 @@ async function generateFromPrompt(
   );
 }
 
+/**
+ * 収録土地文がある駅: 土地は正本のまま、Search は spots／殻メタだけ。
+ * （フル土地生成＋土地穴埋め Search を避ける）
+ */
+async function generateGuideFromLandStock(
+  rawName: string,
+  apiKey: string,
+  viewerSub: string,
+): Promise<AiStationResult | { error: string; message: string }> {
+  const depth = lookupAreaDepthByName(rawName);
+  if (!isRichLandDepth(depth) || !depth) {
+    return generateFromPrompt(
+      buildStationPrompt(rawName),
+      rawName,
+      apiKey,
+      viewerSub,
+    );
+  }
+  const seed = stationShellFromLandDepth(rawName, depth);
+  const withPlaces = await expandPlacesFromLand(seed, apiKey, viewerSub);
+  if ((withPlaces.spots?.length ?? 0) < 1) {
+    // spots が空なら通常生成へフォールバック（Search 失敗時など）
+    return generateFromPrompt(
+      buildStationPrompt(rawName),
+      rawName,
+      apiKey,
+      viewerSub,
+    );
+  }
+  // 土地文は正本を維持（モデルが触っていても戻す）
+  const locked: StationSeed = {
+    ...withPlaces,
+    stationIntro: depth.stationIntro ?? withPlaces.stationIntro,
+    areaAbout: undefined,
+    walkGuide: depth.walkGuide ?? withPlaces.walkGuide,
+    historyNotes: depth.historyNotes ?? withPlaces.historyNotes,
+    sightseeingNotes: depth.sightseeingNotes ?? withPlaces.sightseeingNotes,
+    storyNotes: depth.storyNotes ?? withPlaces.storyNotes,
+  };
+  const finalized = await finalizeAiStation(
+    { station: locked, source: "ai" },
+    apiKey,
+    viewerSub,
+  );
+  // spots 寄りだけだと 1〜2 件で関所落ちすることがある → 通常生成へ（土地は finalize 内 withAreaDepth で戻る）
+  if ("error" in finalized && finalized.error === "empty_spots") {
+    return generateFromPrompt(
+      buildStationPrompt(rawName),
+      rawName,
+      apiKey,
+      viewerSub,
+    );
+  }
+  return finalized;
+}
+
 export async function generateStationGuideWithGemini(
   rawName: string,
   apiKey: string,
   viewerSub: string,
 ): Promise<AiStationResult | { error: string; message: string }> {
+  if (isRichLandDepth(lookupAreaDepthByName(rawName))) {
+    return generateGuideFromLandStock(rawName, apiKey, viewerSub);
+  }
   return generateFromPrompt(
     buildStationPrompt(rawName),
     rawName,
@@ -2863,14 +2964,17 @@ export async function generateStationGuideWithUserAi(
   config: UserAiConfig,
   viewerSub: string,
 ): Promise<AiStationResult | { error: string; message: string }> {
-  return byokRuntime.run(config, () =>
-    generateFromPrompt(
+  return byokRuntime.run(config, () => {
+    if (isRichLandDepth(lookupAreaDepthByName(rawName))) {
+      return generateGuideFromLandStock(rawName, config.apiKey, viewerSub);
+    }
+    return generateFromPrompt(
       buildStationPrompt(rawName),
       rawName,
       config.apiKey,
       viewerSub,
-    ),
-  );
+    );
+  });
 }
 
 export async function generateNearbyStationWithGemini(

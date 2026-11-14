@@ -8,29 +8,31 @@
 一度できたものをここに置いて配れば、2人目から先は生成が走りません。
 
 
-1. アップロード
----------------
-FileZilla で、このフォルダの中身をさくらへ置きます。
+1. アップロード（推奨）
+----------------------
+リポジトリ直下:
+
+  ./scripts/upload-sakura-cache.sh
+
+合言葉は `.lolipop-private-auth/mishiranu-cache-token.txt` に自動作成され、
+さくら `~/www/mishiranu-cache/cache-token.txt` と同期します（Git 外）。
+
+手動の場合（FileZilla）:
 
   さくら : grayjaguar21.sakura.ne.jp
   上げ先 : ~/www/mishiranu-cache/
   公開URL: https://lagado.jp/mishiranu-cache
-  上げる : put.php  .htaccess
+  上げる : put.php  .htaccess  cache-token.txt
 
 v1/ フォルダは put.php が自動で作ります。先に作らなくて構いません。
 lagado2026 のような Basic 認証はここには掛けません（アプリが直接読むため）。
 
 
-2. 合言葉を置く
----------------
-同じ ~/www/mishiranu-cache/ に cache-token.txt を1つ作り、
-長い文字列を1行だけ書きます。作り方の例:
-
-  openssl rand -hex 24
-
-.htaccess で外から読めないようにしてありますが、念のため推測しにくい文字列に
-してください。この中身をアプリ側の MISHIRANU_CACHE_TOKEN に入れます。
-Vault にもリポジトリにも書きません（さくら移行ノートと同じ扱い）。
+2. 合言葉
+---------
+自動スクリプト利用時は触らなくてよい。
+手動なら `openssl rand -hex 24` で作り、アプリ側の MISHIRANU_CACHE_TOKEN と同じにする。
+Vault にもリポジトリにも書きません。
 
 
 3. 書き込み権限
@@ -41,11 +43,14 @@ PHP が v1/ を作って JSON を書けるようにするためです。
 
 4. アプリ側の設定
 -----------------
-案内 API を動かしている側（いまは mishiranu-eki.apps.grok.bot）の環境変数に
-2つ足します。
+案内 API を動かしている側の環境変数に 2つ足します。
 
   MISHIRANU_CACHE_URL=https://lagado.jp/mishiranu-cache
-  MISHIRANU_CACHE_TOKEN=cache-token.txt と同じ文字列
+  MISHIRANU_CACHE_TOKEN=合言葉と同じ文字列
+
+- ローカル開発: `mishiranu-app/.env.local`（upload スクリプト後に URL/TOKEN を入れる）
+- 本番（Cursor Apps `mishiranu-eki.apps.grok.bot`）: Publish Settings の Environment に同じ2つ
+- iPhone DEBUG は Mac の `npm run dev`（3010）の `.env.local` を読む
 
 どちらも未設定なら、キャッシュを使わず今までどおり毎回生成します。
 さくらが落ちても案内は止まりません（読みも書きも失敗は黙って無視します）。

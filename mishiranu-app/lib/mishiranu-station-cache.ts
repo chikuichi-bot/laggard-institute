@@ -25,6 +25,10 @@ const READ_TIMEOUT_MS = 2_500;
 const WRITE_TIMEOUT_MS = 5_000;
 const MAX_BYTES = 512 * 1024;
 
+/** Cloudflare の Browser Integrity が空 UA / bot UA を 403 にするので付ける。 */
+const CACHE_UA =
+  "MishiranuEkiCache/1.0 (+https://lagado.jp/mishiranu-cache; compatible; Mozilla/5.0)";
+
 type CacheEntry = {
   schema: string;
   savedAt: number;
@@ -79,7 +83,10 @@ export async function readCachedStation(
   const url = `${base}/${CACHE_SCHEMA}/${cacheKey(rawName)}.json`;
   const response = await fetchWithTimeout(
     url,
-    { cache: "no-store" },
+    {
+      cache: "no-store",
+      headers: { "user-agent": CACHE_UA },
+    },
     READ_TIMEOUT_MS,
   );
   if (!response?.ok) return null;
@@ -129,9 +136,15 @@ export async function writeCachedStation(
       headers: {
         "content-type": "application/json",
         "x-mishiranu-cache-token": secret,
+        "user-agent": CACHE_UA,
       },
       body,
     },
     WRITE_TIMEOUT_MS,
   );
+}
+
+/** 運用確認用。URL が生きていて読めるか。 */
+export function cacheConfigured(): boolean {
+  return Boolean(baseUrl());
 }

@@ -93,6 +93,7 @@ enum LandmarkRegistry {
             // 「鴨川公園」はデルタ正本に吸わせない（合流点の座標はデルタ専用）
             if title.contains("公園") { return false }
             let river = title.contains("デルタ") || title.contains("河川敷") || title.contains("三角州")
+                || title.contains("疏水") || title.contains("疎水") || title.contains("水路")
                 || (title.contains("鴨川") && (title.contains("川端") || title.contains("川沿い")))
             return river
                 && !title.contains("カフェ") && !title.contains("茶房")

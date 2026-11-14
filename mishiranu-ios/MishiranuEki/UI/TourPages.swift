@@ -407,8 +407,9 @@ private struct PlaceBoardIndex: View {
                     .accessibilityLabel(listening ? "\(item.label)の読み上げを止める" : "\(item.label)を聞く")
                 }
                 .background(Palette.paper)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(listening ? Palette.warm : Palette.line, lineWidth: listening ? 1.5 : 1)
                 )
                 .opacity(item.enabled ? 1 : 0.45)
@@ -497,12 +498,19 @@ private struct PlaceBoardPanel<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.paper)
         .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(accent)
-                .frame(width: 4)
+            UnevenRoundedRectangle(
+                topLeadingRadius: 12,
+                bottomLeadingRadius: 12,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 0,
+                style: .continuous
+            )
+            .fill(accent)
+            .frame(width: 4)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            Rectangle()
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color(hex: 0xd8c9b2), lineWidth: 1)
         )
     }
@@ -553,7 +561,7 @@ private struct PlaceListenBar: View {
             .padding(.horizontal, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(speakingAll ? Palette.warmDeep : Palette.warm)
             )
         }
@@ -689,6 +697,24 @@ struct WalkPage: View {
                 Text(course.title)
                     .font(.mincho(.title2, weight: .semibold))
                     .foregroundStyle(Palette.ink)
+                if !course.subtitle.isEmpty {
+                    Text(course.subtitle)
+                        .font(.readable(.caption))
+                        .foregroundStyle(Palette.fog)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
+                if let guide = model.station?.walkGuide?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                   !guide.isEmpty,
+                   course.id.contains("ordinary-")
+                {
+                    Text(guide)
+                        .font(.readable(.caption2))
+                        .foregroundStyle(Palette.mist)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 4)
+                }
 
                 if let station = model.station {
                     WalkGuideListenBar(
@@ -1463,11 +1489,11 @@ struct SettingsPage: View {
                                 .padding(12)
                                 .foregroundStyle(theme.skin == skin ? Palette.paper : Palette.ink)
                                 .background(
-                                    RoundedRectangle(cornerRadius: theme.skin == .ma ? 4 : 10, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .fill(theme.skin == skin ? Palette.warm : Palette.canvas)
                                 )
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: theme.skin == .ma ? 4 : 10, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .stroke(
                                             theme.skin == skin ? Color.clear : Palette.line,
                                             lineWidth: 1
@@ -1504,7 +1530,7 @@ struct SettingsPage: View {
                     )
                 }
                 .buttonStyle(PlainHapticButtonStyle())
-                .accessibilityHint("タップですっきり・くわしくを切り替えます。くわしくは地図に施設名が出ます")
+                .accessibilityHint("タップですっきり・くわしくを切り替えます。くわしくはおすすめの名前を出し、Appleの店は出しません")
             }
 
             if model.messages.count > 1 {

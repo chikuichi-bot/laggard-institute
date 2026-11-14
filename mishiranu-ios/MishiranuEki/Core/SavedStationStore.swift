@@ -137,7 +137,25 @@ enum SavedStationStore {
         var next = load().filter {
             $0.id != sealed.id && bareName($0.name) != bare
         }
+        // 最近調べた／開いた駅を先頭に
         next.insert(sealed, at: 0)
+        return write(next)
+    }
+
+    /// 起動時の関所直しなど。並び（新しいものが先）は変えずにまとめて書き戻す。
+    @discardableResult
+    static func replacePreservingOrder(_ stations: [Station]) -> [Station] {
+        var seen = Set<String>()
+        var next: [Station] = []
+        for raw in stations {
+            let sealed = sealedForLibrary(raw)
+            if retiredIds.contains(raw.id), retiredIds.contains(sealed.id) { continue }
+            let key = bareName(sealed.name)
+            guard !key.isEmpty, !seen.contains(key), !seen.contains(sealed.id) else { continue }
+            seen.insert(key)
+            seen.insert(sealed.id)
+            next.append(sealed)
+        }
         return write(next)
     }
 

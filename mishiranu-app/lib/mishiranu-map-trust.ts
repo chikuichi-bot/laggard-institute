@@ -42,7 +42,7 @@ function lockMatches(name: string, lock: LandmarkLock): boolean {
     // 「鴨川公園」はデルタ正本（合流点）に吸わせない
     if (title.includes("公園")) return false;
     const river =
-      /デルタ|河川敷|三角州/.test(title) ||
+      /デルタ|河川敷|三角州|疏水|疎水|水路/.test(title) ||
       (/鴨川/.test(title) && /川端|川沿い/.test(title));
     return river && !/カフェ|茶房|ふたば/.test(title) && !title.endsWith("店");
   }

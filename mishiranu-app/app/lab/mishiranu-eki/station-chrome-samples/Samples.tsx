@@ -43,9 +43,20 @@ function BackSymbol() {
   return (
     <button type="button" className="sc-back" aria-label="駅を探し直す">
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <circle
+          cx="10.5"
+          cy="10.5"
+          r="6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
         <path
-          fill="currentColor"
-          d="M14.7 5.3a1 1 0 0 1 0 1.4L9.4 12l5.3 5.3a1 1 0 1 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          d="M15.2 15.2 20 20"
         />
       </svg>
     </button>
@@ -257,7 +268,7 @@ export default function StationChromeSamples() {
         <p className="sc-eyebrow">見知らぬ駅 · UI lab</p>
         <h1>駅ヘッドを統一する · 3案</h1>
         <p>
-          「探し直す」は文言をやめ、戻る記号だけにしました。駅名は小さく、同じ部品で地図・土地・歩くを揃えます。下のタブで3画面を切り替えられます。
+          「探し直す」は文言をやめ、虫眼鏡だけにしました（←だと階層戻りに見えるため）。駅名は小さく、同じ部品で地図・土地・歩くを揃えます。下のタブで3画面を切り替えられます。
         </p>
       </header>
 

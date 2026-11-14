@@ -160,6 +160,7 @@ const PLACE_SUFFIXES = [
   "公園",
   "デルタ",
   "河原",
+  "堤防",
   "桟橋",
   "灯台",
   "城跡",
@@ -180,7 +181,7 @@ const PLACE_SUFFIXES = [
 const ARCADE_STEMS = ["枡形", "桝形"] as const;
 
 function normalizeKey(name: string): string {
-  return name.replace(/\s+/g, "");
+  return name.replace(/\s+/g, "").replace(/與/g, "与").replace(/予杼/g, "与杼");
 }
 
 /** 「出町枡形商店街」→ 枡形 / 枡形商店街 も土地文照合用に。 */

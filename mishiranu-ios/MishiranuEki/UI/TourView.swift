@@ -96,7 +96,7 @@ struct TourTabBar: View {
                     .background {
                         if active {
                             RoundedRectangle(
-                                cornerRadius: theme.skin == .ma ? 4 : (theme.skin == .board ? 10 : 8),
+                                cornerRadius: 12,
                                 style: .continuous
                             )
                             .stroke(Palette.warm, lineWidth: theme.skin == .ma ? 1.5 : 2)

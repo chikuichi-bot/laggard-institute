@@ -5,6 +5,8 @@ export type TutorialStepCopy = {
   body: string;
 };
 
+export type TutorialVerseMotion = "lines" | "chars" | "curtain" | "window";
+
 export type TutorialPageCopy = {
   kicker?: string;
   title: string;
@@ -14,30 +16,53 @@ export type TutorialPageCopy = {
   imageSrc?: string;
   imageAlt?: string;
   steps?: TutorialStepCopy[];
+  /** 「見知らぬ駅」ブランド。詩のページには出さない（その次から） */
   showBrand?: boolean;
+  /** 縦書き本文（右→左の3列）。あるときは title/bodies よりこちらを表に出す */
+  verseLines?: readonly string[];
+  verseMotion?: TutorialVerseMotion;
 };
+
+/** トップの縦書き3列（ユーザー原文のまま · 右→左） */
+export const COMMUTE_VERSE_LINES = [
+  "夜の京阪電車",
+  "淀屋橋駅で特急の一番前運転席の反対側に座る",
+  "駅が通過していき街の明かりが流れていく",
+] as const;
+
+/** トップ縦書きモーション（2026-11-13 淡島様 · 4 · 窓の通過） */
+export const COMMUTE_VERSE_MOTION: TutorialVerseMotion = "window";
 
 export const TUTORIAL_PAGES: TutorialPageCopy[] = [
   {
+    showBrand: false,
+    title: "知らない駅に降りてみる",
+    bodies: [],
+    verseLines: COMMUTE_VERSE_LINES,
+    verseMotion: COMMUTE_VERSE_MOTION,
+  },
+  {
     showBrand: true,
-    title: "知らない駅に降りる",
+    title: "知らない駅に降りてみる",
     bodies: [
       "名前だけ知っている駅に、私は降りる。",
-      "空っぽの名前だった駅が、私の散歩道になる。",
+      "名前だけのからっぽだった駅が、私の散歩道になる。",
     ],
   },
   {
+    showBrand: true,
     kicker: "はじまり",
     title: "名前を知って、見なくなった駅",
     quote:
       "子どもに「あれは鳥だよ」と言葉を教えたその日から、子どもはもう、あの鳥を見なくなってしまいます。",
     quoteBy: "── ジッドゥ・クリシュナムルティ",
     bodies: [
-      "電車の窓に、知らない駅名が何度も流れます。私はその名前を読み、それで分かったつもりになって、降りません。",
+      "いつもは、その名前を読むだけで通り過ぎる。分かったつもりになって、降りない。",
       "名前だけが残り、その土地の姿を、私は一度も見ていない。駅は、私にとって存在しないもののようになっていました。",
     ],
   },
   {
+    showBrand: true,
     kicker: "なにができるか · 01",
     title: "ホームに、一度降りる",
     bodies: [
@@ -48,8 +73,9 @@ export const TUTORIAL_PAGES: TutorialPageCopy[] = [
     imageAlt: "到着確認の画面",
   },
   {
+    showBrand: true,
     kicker: "なにができるか · 02",
-    title: "名前の奥から、声が聞こえる",
+    title: "土地の案内を声で聴く",
     bodies: [
       "改札を出て、イヤホンをつける。散歩道の案内を開くと、この土地の成り立ちと、いまの空気を、声で読み上げてくれる。",
       "スマホはポケットにしまって、私は顔を上げる。聴いているうちに、ただの文字だった名前に、目の前の川や坂が重なっていく。",
@@ -58,6 +84,7 @@ export const TUTORIAL_PAGES: TutorialPageCopy[] = [
     imageAlt: "土地の案内と読み上げ",
   },
   {
+    showBrand: true,
     kicker: "なにができるか · 03",
     title: "歩いたところが、道になる",
     bodies: [
@@ -68,6 +95,7 @@ export const TUTORIAL_PAGES: TutorialPageCopy[] = [
     imageAlt: "徒歩圏の地図と動線",
   },
   {
+    showBrand: true,
     kicker: "使い方",
     title: "同じ名前が、違って見える",
     bodies: [
@@ -75,7 +103,7 @@ export const TUTORIAL_PAGES: TutorialPageCopy[] = [
     ],
     steps: [
       {
-        title: "知らない駅に降りる",
+        title: "知らない駅に降りてみる",
         body: "現在地から探すか、気になっていた駅名を入れる。",
       },
       {
