@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#f8f5ee"/>
+  <g transform="translate(112 88) scale(5)">
+    <!-- 川（岸） -->
+    <path d="M52 4 C50 28, 52 48, 56 64 C60 76, 64 84, 70 90
+             M148 20 C128 34, 108 50, 90 68 C82 76, 76 84, 70 90
+             M70 90 C72 108, 74 126, 76 144 C77 154, 78 160, 80 168"
+          fill="none" stroke="#2a241c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+          stroke-opacity="0.55"/>
+    <!-- 道網 -->
+    <g fill="none" stroke="#2a241c" stroke-width="2.1" stroke-linecap="square" stroke-opacity="0.32">
+      <path d="M2 132 H158"/>
+      <path d="M34 4 V164"/>
+      <path d="M142 4 V164"/>
+      <path d="M88 98 V164"/>
+      <path d="M6 36 H48"/>
+      <path d="M6 58 H50"/>
+      <path d="M6 82 H52"/>
+      <path d="M6 108 H54"/>
+      <path d="M100 40 H140"/>
+      <path d="M98 62 H144"/>
+      <path d="M96 88 H146"/>
+      <path d="M100 112 H148"/>
+      <path d="M18 8 V128"/>
+      <path d="M46 8 V128"/>
+      <path d="M108 8 V128"/>
+      <path d="M128 8 V160"/>
+    </g>
+    <!-- 駅 -->
+    <rect x="88.5" y="78.5" width="9" height="9" rx="1.2"
+          fill="#f8f5ee" stroke="#2a241c" stroke-width="2.2"/>
+  </g>
+</svg>

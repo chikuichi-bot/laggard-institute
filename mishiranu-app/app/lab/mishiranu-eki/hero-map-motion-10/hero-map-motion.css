@@ -1,0 +1,333 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600&display=swap");
+
+.hmm-page {
+  --ink: #1f1b17;
+  --paper: #f9f4e6;
+  --canvas: #f5eedc;
+  --fog: #4a433a;
+  --line: #e3d5c1;
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+  padding: 1.5rem 1.2rem 4rem;
+}
+
+.hmm-head {
+  max-width: 54rem;
+  margin: 0 auto 1.6rem;
+}
+
+.hmm-kicker {
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.hmm-title {
+  margin: 0 0 0.55rem;
+  font-weight: 500;
+  font-size: clamp(1.55rem, 4vw, 2.1rem);
+}
+
+.hmm-lead {
+  margin: 0;
+  max-width: 40em;
+  line-height: 1.75;
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
+}
+
+.hmm-grid {
+  max-width: 72rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.35rem;
+}
+
+.hmm-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.9rem 0.9rem 1rem;
+}
+
+.hmm-slot {
+  position: relative;
+  aspect-ratio: 160 / 168;
+  overflow: hidden;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--canvas) 70%, white);
+}
+
+.hmm-slot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hmm-bank {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 42%, transparent);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hmm-road {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 22%, transparent);
+  stroke-width: 1.35;
+  stroke-linecap: square;
+}
+
+.hmm-station {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+.hmm-card h2 {
+  margin: 0.75rem 0 0.28rem;
+  font-size: 1.02rem;
+  font-weight: 500;
+}
+
+.hmm-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--ink) 68%, transparent);
+}
+
+.hmm-look {
+  margin: 0 0 0.35rem !important;
+  font-size: 0.84rem !important;
+  color: color-mix(in srgb, var(--ink) 78%, transparent) !important;
+}
+
+.hmm-look strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.hmm-card--still {
+  border-style: dashed;
+}
+
+.hmm-num {
+  display: inline-block;
+  margin-right: 0.35rem;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--ink) 48%, transparent);
+}
+
+/* 1 · 駅の息 */
+.hmm--breath .hmm-station {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hmm-breath 3.2s ease-in-out infinite;
+}
+
+@keyframes hmm-breath {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.78);
+  }
+}
+
+/* 2 · 川の流れ */
+.hmm--flow .hmm-bank {
+  stroke-dasharray: 4 7;
+  animation: hmm-flow 9s linear infinite;
+}
+
+@keyframes hmm-flow {
+  to {
+    stroke-dashoffset: -140;
+  }
+}
+
+/* 3 · 通りのひと粒 */
+.hmm-walker {
+  fill: var(--ink);
+  offset-path: path("M2 132 H158");
+  offset-rotate: 0deg;
+  animation: hmm-walk 8s linear infinite;
+}
+
+@keyframes hmm-walk {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  94% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+/* 4 · 駅からの波紋 */
+.hmm-ripple {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 55%, transparent);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hmm-ripple 4.5s ease-out infinite;
+}
+
+@keyframes hmm-ripple {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.75;
+  }
+  75% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+/* 5 · 薄い霧 */
+.hmm-mist {
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  animation: hmm-mist 8s ease-in-out infinite alternate;
+}
+
+@keyframes hmm-mist {
+  from {
+    transform: translateX(-12%);
+    opacity: 0.45;
+  }
+  to {
+    transform: translateX(14%);
+    opacity: 0.8;
+  }
+}
+
+/* 6 · 合流のきらめき */
+.hmm-glint {
+  fill: var(--ink);
+  offset-path: path(
+    "M52 4 C50 28, 52 48, 56 64 C60 76, 64 84, 70 90 C72 108, 74 126, 76 144"
+  );
+  offset-rotate: 0deg;
+  animation: hmm-glint 6.5s ease-in-out infinite;
+}
+
+@keyframes hmm-glint {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.55;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+/* 7 · 路地が薄く点く */
+.hmm--alleys .hmm-road-soft {
+  stroke: color-mix(in srgb, var(--ink) 18%, transparent);
+  stroke-width: 1.5;
+  animation: hmm-alleys 3.8s ease-in-out infinite;
+}
+
+.hmm--alleys .hmm-road-soft:nth-of-type(2) {
+  animation-delay: 0.7s;
+}
+.hmm--alleys .hmm-road-soft:nth-of-type(3) {
+  animation-delay: 1.4s;
+}
+.hmm--alleys .hmm-road-soft:nth-of-type(4) {
+  animation-delay: 2.1s;
+}
+
+@keyframes hmm-alleys {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 8 · 風でわずかに揺れる */
+.hmm--sway .hmm-map-root {
+  transform-origin: 50% 55%;
+  animation: hmm-sway 4.5s ease-in-out infinite;
+}
+
+@keyframes hmm-sway {
+  0%,
+  100% {
+    transform: rotate(-1.1deg) translateY(0);
+  }
+  50% {
+    transform: rotate(1.1deg) translateY(-1.2px);
+  }
+}
+
+/* 9 · 点の灯り */
+.hmm-lamp {
+  fill: var(--ink);
+  animation: hmm-lamp 4.2s ease-in-out infinite;
+}
+
+@keyframes hmm-lamp {
+  0%,
+  35%,
+  100% {
+    opacity: 0.05;
+  }
+  50%,
+  65% {
+    opacity: 1;
+  }
+}
+
+/* 10 · 地図の呼吸 */
+.hmm--paper .hmm-map-root {
+  animation: hmm-paper 4.8s ease-in-out infinite;
+}
+
+@keyframes hmm-paper {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hmm-page * {
+    animation: none !important;
+  }
+}

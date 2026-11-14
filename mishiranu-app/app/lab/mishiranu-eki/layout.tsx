@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "見知らぬ駅",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
   },
 };
 

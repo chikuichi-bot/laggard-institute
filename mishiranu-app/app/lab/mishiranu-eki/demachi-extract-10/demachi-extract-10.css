@@ -1,0 +1,25 @@
+.da10-fig .road--net {
+  stroke: color-mix(in srgb, var(--ink) 22%, transparent);
+  stroke-width: 1.35;
+  fill: none;
+  stroke-linecap: square;
+}
+
+.da10-fig .road--net-thin {
+  stroke: color-mix(in srgb, var(--ink) 16%, transparent);
+  stroke-width: 0.75;
+  fill: none;
+}
+
+.da10-fig .wash {
+  fill: color-mix(in srgb, var(--river) 16%, transparent);
+  stroke: none;
+}
+
+.da10-fig .line-only {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 48%, transparent);
+  stroke-width: 1.05;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

@@ -2,6 +2,33 @@ import type {
   AreaHistoryNote,
   StationSeed,
 } from "@/data/mishiranu-stations";
+import {
+  EIZAN_LAND_DEPTH,
+  EIZAN_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-eizan-land-depth";
+import {
+  KEIHAN_LAND_DEPTH,
+  KEIHAN_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-keihan-land-depth";
+import {
+  RANDEN_LAND_DEPTH,
+  RANDEN_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-randen-land-depth";
+import {
+  HANKYU_LAND_DEPTH,
+  HANKYU_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-hankyu-land-depth";
+import {
+  SAGANO_LAND_DEPTH,
+  SAGANO_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-sagano-land-depth";
+import {
+  KARASUMA_LAND_DEPTH,
+  KARASUMA_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-karasuma-land-depth";
+import { ensureLandPresentAnchors } from "@/lib/mishiranu-land-anchors";
+import { refineLandProse } from "@/lib/mishiranu-land-prose";
+import { withStoryNotes } from "@/lib/mishiranu-story-notes";
 
 export type AreaDepth = {
   stationIntro?: string;
@@ -9,6 +36,8 @@ export type AreaDepth = {
   walkGuide?: string;
   historyNotes?: AreaHistoryNote[];
   sightseeingNotes?: AreaHistoryNote[];
+  /** ドラマ・映画・文学の撮影地／舞台（徒歩圏・確かなもの） */
+  storyNotes?: AreaHistoryNote[];
 };
 
 /**
@@ -17,110 +46,118 @@ export type AreaDepth = {
  */
 export const AREA_DEPTH: Record<string, AreaDepth> = {
   demachiyanagi: {
+    // 01 駅のこと — 路線・駅前＋いつなぜできたか
     stationIntro:
-      "京阪本線と叡山電鉄が隣り合う、鴨川デルタのたもと。地下の京阪から地上の叡電へ乗り換える動線のすぐ外に、枡形商店街と川端が続きます。甘いものの匂い、水音、学生の足音が同じ半径にあり、観光の起点にも日常の寄り道にもなる駅です。半日あれば下鴨まで足を延ばせ、1時間でもデルタと枡形だけで土地の骨格がわかります。",
-    areaAbout: [
-      "賀茂川と高野川が合流する三角の土地が、この界隈の骨格です。御所の北側にひらけた「出町」は、都の外縁として人の出入りと市の気配を長く引き受けてきました。いまも枡形の短いアーケードに、近所・学生・旅人が同じ速度で交わります。",
-      "北へ向かえば糺の森と下鴨神社、南へ向かえば河原町今出川の角。川沿いを歩けば治水と信仰の風景が続き、商店街を歩けば紙ものや揚げものの匂いが残ります。観光パンフレットの「名所」より先に、日常の距離感が案内になってくれる場所です。",
-    ].join("\n\n"),
+      "京阪本線と叡山電鉄が隣り合う、鴨川デルタのたもと。叡電側は大正14年（1925年）、京都電燈の鞍馬線として出町柳付近が開業し、北山へ向かう山の線の起点になりました。京阪側は平成元年（1989年）、鴨東線（三条〜出町柳）の開業で地下駅が置かれ、都心・大阪方面と叡電が隣り合う結節点になりました。いま地下の京阪から地上の叡電へ乗り換える駅で、甘いものの匂いと水音、自転車の群れが同じ半径にあります。観光の起点にも、日常の寄り道にもなります。",
+    // 概観は historyNotes が担う（同じ川・街・大学を二重に書かない）
+    areaAbout: undefined,
+    // 02 歩き方 — 順番と方角だけ（デルタを通って枡形）
     walkGuide:
-      "駅を出たらまず枡形で方角を合わせ、鴨川デルタで二つの川の合流を見るのがわかりやすい導入です。時間があるときは北の並木から下鴨へ。食べるものは駅前で済ませて川端へ持っていくと、滞在のリズムが崩れにくいです。",
+      "京阪は5番出口から鴨川デルタの合流を通り、出町橋を西へ渡って枡形商店街へ。時間があるときは北の並木から下鴨へ。東は百万遍・京都大学方面。南西の同志社大学へは、相国寺の中を通っていく（最短の南回りより境内の方が土地らしい）。食べ物は駅前で買って、鴨川デルタで食べるのがおすすめです。",
     historyNotes: [
       {
         title: "「出町」の名",
         body:
-          "京の都の外縁に「出た町」としてひらけた地名です。御所の北側、今出川あたりから先の町場を指し、市や人の出入りの場として長く使われてきました。駅名の「柳」は、川端の風景と結びついて残った語感でもあります。",
+          "京の都の外縁に「出た町」としてひらけた地名で、御所の北側・今出川あたりから先の町場を指し、市や人の出入りの場として長く使われてきました。駅名の「柳」は川端の風景と結びついた語感でもあり、いま枡形を歩くと、用事と寄り道が同じ道幅で行き交うその外縁の役割が、言葉より先に体でわかります。",
       },
       {
         title: "鴨川デルタと二つの川",
         body:
-          "西側を賀茂川、東側を高野川が流れ、三角州のような地形をつくります。川筋は治水と信仰の両方に関わり、下鴨神社の森へと続く景色の入口にもなっています。水音の向きを聞けば、どちらの川に近いかが体でわかります。",
+          "西側の上流を賀茂川、東側を高野川と呼び、合流点から南は鴨川になります。三角州のような地形は治水と信仰の両方に関わり、下鴨の森へ続く景色の入口でもありました。いまベンチや水遊びの人が居るのも同じ三角で、水音の向きを聞けばどちらの川に近いかが体でわかります。",
+      },
+      {
+        title: "枡形商店街と鯖街道",
+        body:
+          "枡形商店街は、鯖街道（若狭街道）の京都側の終点・着き口として知られます。若狭の塩鯖が都へ入る最後の町場だった距離感が、短いアーケードの幅に残っています。買う・食べる・通り過ぎるが同じ道で起きるのは昔の着き口の続きで、甘いものの匂いはいまの出町の顔です。",
       },
       {
         title: "下鴨と糺の森",
         body:
-          "北方の下鴨神社（賀茂御祖神社）と糺の森は、古くからこの土地の聖域です。世界遺産「古都京都の文化財」の一部で、参道の木立は駅からでも気配を感じられます。森の手前の並木だけでも、半日コースの芯になります。",
+          "北方の下鴨神社（賀茂御祖神社）と糺の森は、古くからこの土地の聖域で、世界遺産「古都京都の文化財」の一部です。参道の木立は駅からも気配が届き、半日コースの芯になるのも、聖域が日常の北の方角として残っているからです。",
       },
       {
-        title: "鉄道の結節点へ",
+        title: "京都大学と通学の東",
         body:
-          "叡山電鉄の終点として山へ、京阪本線で都心・大阪方面へ。地下の京阪と地上の叡電が隣り合ういまの姿は、近代以降に重ねられた交通の層です。ホームの端に立つと、行き先が二方向に割れる気配がよくわかります。",
+          "東の百万遍・吉田に広がる京都大学は、近代以降に厚くなった学びの層です。キャンパスは駅のすぐ隣ではありませんが、学生の自転車・古本・喫茶の流れが駅前と川端まで届き、出町から見て「東＝学び」の方角がいまでも空気を決めています。",
       },
       {
-        title: "枡形の市の名残",
+        title: "同志社大学と今出川",
         body:
-          "枡形商店街は短いながら、昔の市の距離感をいまに残しています。店の入れ替わりはあっても、買う・食べる・通り過ぎるが同じ道幅で起きる点は変わりません。観光の「目的地」より、生活の導線として歩いた方が土地に馴染みます。",
+          "南西の今出川に同志社大学のキャンパスがあり、烏丸今出川まわりの通学路が近代の学問都市の骨格を支えてきました。その流れは出町側の川端や定食屋の客層にもつながり、乗り換え客と学生が同じベンチを分け合う景色になっています。",
       },
     ],
+    // 寄るところ — 正式名＋行き方＋着いたら（具体カード）
     sightseeingNotes: [
       {
-        title: "まず見るなら",
+        title: "鴨川デルタ",
         body:
-          "鴨川デルタの三角と、枡形のアーケード。この二つで「川」と「町」の関係がつかめます。写真より、水音と店の匂いのコントラストを覚えると、あとで下鴨へ歩いたときに景色がつながりやすいです。",
+          "鴨川デルタです。京阪5番出口を出てすぐ北〜東の合流の三角へ歩けます（徒歩約2〜3分）。賀茂川と高野川が一つになる縁で、水音と空が開けます。食べ物は駅前で買って、ここで食べるのが定番です。",
       },
       {
-        title: "時間があるとき",
+        title: "枡形商店街",
         body:
-          "下鴨神社・糺の森まで足を延ばすと、駅前の日常から聖域の木立へ景色が一段階変わります。帰りは川端を南へ戻ると、同じ半日でも往復の印象が違います。",
+          "枡形商店街です。5番出口からデルタの合流を通り、出町橋を西へ渡ると短いアーケードに入ります（徒歩約5分）。買う・食べる・通り過ぎるが同じ道幅で起きます。",
       },
       {
-        title: "食べる・休むの目安",
+        title: "下鴨神社・糺の森",
         body:
-          "ふたばの餅は持ち歩き向き。珈琲やパンは百万遍寄り、休みは出町座や川端のベンチが使いやすいです。夜に寄せるなら河原町今出川方面の定食・京料理が選択肢になります。",
+          "下鴨神社（賀茂御祖神社）と糺の森です。駅から北の並木・参道へ進み、徒歩15〜20分ほど。木立の参道が続き、半日コースの北の芯になります。",
+      },
+      {
+        title: "相国寺",
+        body:
+          "相国寺です。同志社・今出川へ向かうとき、境内の木立を東西に通る寄り道になります（駅から南西へ徒歩10分前後）。最短の南回りより、こちらが土地らしい通り方です。",
       },
     ],
   },
   chushojima: {
     stationIntro:
-      "京阪本線と宇治線が分かれる、伏見の結節点。ホームを出るとすぐに御香宮の参道へ歩け、少し足を伸ばせば濠川の水面と酒蔵の入口が続きます。乗り換えの駅でありながら、水路と神社の気配が濃く、伏見観光の「手前」ではなく、すでに伏見の中に立っている感覚があります。",
-    areaAbout: [
-      "中書島の名は、豊臣秀吉の家臣・松村対馬守の官名「中書」に由来すると伝えられます。島の字は、水路に囲まれた土地の記憶です。宇治川派流と濠川が伏見の物流を支え、酒造の町を水面からつないできた場所で、いまも石岸と柳の影にその層が残っています。",
-      "駅の北側に御香宮、水路沿いに十石舟の風景、さらに歩くと三栖閘門や酒蔵通りの入口へ。観光の本線は伏見桃山寄りに厚くなりますが、中書島は「分岐の静けさ」から伏見へ入る入口としてちょうどよい密度です。電車の発車音と水音が近い距離で同居しています。",
-    ].join("\n\n"),
+      "京阪本線と宇治線が分かれる、伏見の結節点。京阪の中書島駅は大正3年（1914年）に開業し、水路と町場のあいだに駅が置かれました。のちに宇治線が分岐し、本線と宇治方面をここで分ける役割が厚くなりました。ホームを出るとすぐに御香宮の参道へ歩け、少し足を伸ばせば濠川の水面と酒蔵の入口が続きます。乗り換えの駅でありながら、水路と神社の気配が濃く、すでに伏見の中に立っている感覚があります。",
+    areaAbout: undefined,
     walkGuide:
       "駅を出たらまず御香宮で方角と香りの伝説を押さえ、そのあと濠川へ下りると伏見の水路がわかりやすいです。半日あるなら閘門方面か酒蔵入口まで伸ばし、食べる・土産は帰り道の駅前でまとめると荷物が軽く済みます。",
     historyNotes: [
       {
         title: "中書島の名",
         body:
-          "秀吉家臣・松村対馬守（中書）が居を構えたことに由来する地名とされます。島の字は、水路に囲まれた土地の記憶です。地名そのものが、すでにこの場所の地形説明になっています。",
+          "秀吉家臣・松村対馬守（中書）が居を構えたことに由来する地名とされ、島の字は水路に囲まれた土地の記憶です。地名そのものが地形説明になっており、いま駅前から水面を見下ろすと、その「島」の感覚がいまでも先に来ます。",
       },
       {
         title: "水運と伏見",
         body:
-          "宇治川派流・濠川は伏見の物流を支えた水路です。物資と酒が水面を行き来した時代の延長に、いまの十石舟や蔵の景観があります。岸の石積みを見ると、観光の装飾より土木の実用が先に見えます。",
+          "宇治川派流・濠川は伏見の物流を支えた水路で、物資と酒が水面を行き来した時代の延長に、いまの十石舟や蔵の景観があります。岸の石積みを見ると観光の装飾より土木の実用が先に見え、歩く足がそのまま水運の跡を踏む感じです。",
       },
       {
         title: "御香宮と「香の水」",
         body:
-          "御香宮神社は、芳しい水の伝説で知られる古社です。伏見の名の由来にも重ねて語られることがあり、駅からすぐの距離に「水の町」の入口が開いています。参道の石灯籠と境内の静けさは、乗り換え客にもちょうどよい一休みになります。",
+          "御香宮神社は芳しい水の伝説で知られる古社で、伏見の名の由来にも重ねて語られてきました。駅からすぐの距離に「水の町」の入口が開き、参道の石灯籠と境内の静けさは、乗り換え客の一休みにもちょうどよいいまの距離感です。",
       },
       {
         title: "京阪の分岐点",
         body:
-          "本線と宇治線がここで分かれます。ホーム端に立つと、行き先が二枚の地図に割れる気配がします。交通の結節であることと、水路の結節であることが重なっているのが、中書島らしい構造です。",
+          "本線と宇治線がここで分かれ、ホーム端に立つと行き先が二枚の地図に割れる気配がします。近代の鉄道結節と、それ以前の水路の結節が重なっているのが中書島らしい構造で、いま発車メロディの向こうに水音が残るのもその重なりです。",
       },
       {
         title: "酒造の手前",
         body:
-          "伏見の酒蔵めぐりの本場はもう少し先に広がりますが、中書島はその手前の呼吸を整える場所です。粕漬けや小瓶の土産をここで見つけてから蔵の町へ入ると、歩くテンポが急ぎすぎません。",
+          "伏見の酒蔵めぐりの本場は桃山寄りにもう少し先へ広がってきましたが、中書島はその手前で呼吸を整える場所として残っています。粕漬けや小瓶の土産をここで見つけてから蔵の町へ入ると、歩くテンポが急ぎすぎません。",
       },
     ],
     sightseeingNotes: [
       {
-        title: "まず見るなら",
+        title: "駅から徒歩すぐ・北",
         body:
-          "御香宮の参道と境内、濠川の石岸。神社で「香」の話を、水路で「運ぶ」話を受け取ると、伏見の二本の軸が短時間でつかめます。",
+          "御香宮神社です。改札を出て北の参道へ入ると、石灯籠と境内が続きます。伏見の入口として最初に立ち寄りやすい場所です。",
       },
       {
-        title: "時間があるとき",
+        title: "駅から水路へ",
         body:
-          "三栖閘門公園方面へ水路をたどると、高低差と土木の遺産が見えてきます。酒蔵通りまで足を延ばすなら、帰りは京阪の別駅を使う選択肢もあります。",
+          "濠川の岸です。駅から少し歩くと水面と石積みが見えます。十石舟が通ることもあり、伏見の水路が体でわかります。",
       },
       {
         title: "食べる・休むの目安",
         body:
-          "昼は駅前の定食・うどん、朝は御香宮近くの軽い食事、夜は酒席寄りの一軒が候補です。休みは境内の木陰が使いやすく、土産は酒粕まわりが荷物になりにくいです。",
+          "昼は駅前の定食やうどん、休みは御香宮の境内の木陰が使いやすいです。酒蔵方面へ足を延ばすなら、帰りは別の京阪駅も使えます。",
       },
     ],
   },
@@ -524,19 +561,328 @@ export const AREA_DEPTH: Record<string, AreaDepth> = {
       },
     ],
   },
+  ninose: {
+    stationIntro:
+      "叡山電鉄鞍馬線の山あいの無人駅。昭和初期（1928〜29年ごろ）に北山へ人を運ぶ線が敷かれ、二ノ瀬はその途中の停留所として置かれました。終着の観光駅ではなく、谷の呼吸を整える中間の駅です。ホームに立つと、すぐに川と木立の気配がまわり、電車の合間の静けさが案内の入口になります。短い滞在でも「余白の駅」であることが体でわかります。",
+    areaAbout: undefined,
+    walkGuide:
+      "駅を出たらまず二ノ瀬川の水音で方角をとり、短い滞在なら駅前の山道を往復するだけで十分です。時間があるときは北の貴船神社まで石段と川沿いをたどります。食べる・休むは貴船側か、電車で一駅動いてからでも遅くありません。",
+    historyNotes: [
+      {
+        title: "叡電の山あい",
+        body:
+          "叡山電鉄鞍馬線は、京都の北山へ人を運ぶための細い線として敷かれました。二ノ瀬はその途中の無人駅として残り、観光の終着ではなく谷の呼吸を整える停留所の役割を持っています。列車が去ったあとの静けさが、いまもこの駅の歴史の感触です。",
+      },
+      {
+        title: "二ノ瀬川の気配",
+        body:
+          "駅のすぐそばを流れる渓流が、長いあいだ土地の骨格でした。治水の大きな話や広い河川敷はなく、水音そのものが方角と距離感を教え、ホームから川へ視線を落とすだけで山あいの駅だとわかります。耳が先の案内は、いまでも変わりません。",
+      },
+      {
+        title: "貴船への道",
+        body:
+          "北の貴船神社までは徒歩でおよそ30〜40分。石段と川沿いが続き、参拝は境内に着く前から始まる道筋です。二ノ瀬は貴船口の手前で一度息を整える場所として残っており、急がずに歩くと谷の濃さが体に残ります。",
+      },
+      {
+        title: "無人駅の層",
+        body:
+          "改札のないホーム、少ない本数、通り過ぎるだけの時間は、山あいの鉄道が残した運用の形です。用事のなさが景色になっており、観光情報を厚くしすぎない方が土地に合います。電車の時刻表が、いまもいちばん実用的な案内板です。",
+      },
+    ],
+    sightseeingNotes: [
+      {
+        title: "ホームのすぐそば",
+        body:
+          "二ノ瀬川です。ホームを出ると渓流と木立がすぐ目の前にあります。短い滞在なら、ここで水音を聞いて戻っても十分です。",
+      },
+      {
+        title: "北へ徒歩30〜40分",
+        body:
+          "貴船神社です。川沿いと石段を北へ進みます。本宮までの道が長く、時間があるときの行き先になります。",
+      },
+      {
+        title: "食べる・休むの目安",
+        body:
+          "駅前に定番の食堂はほとんどありません。食べる・休むは貴船側の川床や茶店、または電車で一駅動いてから探す方が現実的です。",
+      },
+    ],
+  },
+  ...EIZAN_LAND_DEPTH,
+  ...KEIHAN_LAND_DEPTH,
+  ...RANDEN_LAND_DEPTH,
+  ...HANKYU_LAND_DEPTH,
+  ...SAGANO_LAND_DEPTH,
+  ...KARASUMA_LAND_DEPTH,
 };
 
-export function withAreaDepth(station: StationSeed): StationSeed {
-  const extra = AREA_DEPTH[station.id];
-  if (!extra) return station;
+/** AI 生成の id が揺んでも、駅名で厚みノートを当てる。 */
+const AREA_DEPTH_BY_NAME: Record<string, string> = {
+  出町柳: "demachiyanagi",
+  中書島: "chushojima",
+  二ノ瀬: "ninose",
+  ...EIZAN_LAND_DEPTH_BY_NAME,
+  ...KEIHAN_LAND_DEPTH_BY_NAME,
+  ...RANDEN_LAND_DEPTH_BY_NAME,
+  ...HANKYU_LAND_DEPTH_BY_NAME,
+  ...SAGANO_LAND_DEPTH_BY_NAME,
+  ...KARASUMA_LAND_DEPTH_BY_NAME,
+};
+
+function areaDepthFor(station: StationSeed): AreaDepth | undefined {
+  const byId = AREA_DEPTH[station.id];
+  if (byId) return byId;
+  return lookupAreaDepthByName(station.name);
+}
+
+/** 駅名だけで収録土地文を引く（生成前の分岐用）。 */
+export function lookupAreaDepthByName(rawName: string): AreaDepth | undefined {
+  const bare = rawName.replace(/駅$/u, "").trim();
+  if (!bare) return undefined;
+  const mapped = AREA_DEPTH_BY_NAME[bare];
+  if (mapped) return AREA_DEPTH[mapped];
+  // AI の駅名揺れ（「京阪出町柳」等）。駅名がキーを含むときだけ（逆方向は出町誤爆の温床）
+  for (const [key, id] of Object.entries(AREA_DEPTH_BY_NAME)) {
+    if (key.length >= 2 && bare.includes(key)) {
+      return AREA_DEPTH[id];
+    }
+  }
+  return undefined;
+}
+
+/**
+ * 土地文ストックとして「もう十分」か。
+ * 生成時は spots 寄りにし、穴埋め Search を土地理由で打たない。
+ */
+export function isRichLandDepth(depth: AreaDepth | undefined): boolean {
+  if (!depth) return false;
+  const intro = (depth.stationIntro ?? "").trim().length;
+  const walk = (depth.walkGuide ?? "").trim().length;
+  const hist = depth.historyNotes?.length ?? 0;
+  return intro >= 80 && walk >= 60 && hist >= 2;
+}
+
+/**
+ * 土地文ストック駅の spots バッチ正本名（docs/land-stock 見出しと一致）。
+ * 別名キーは BY_NAME にあるが、キャッシュ鍵はここで一本化する。
+ */
+export const LAND_STOCK_SPOT_BATCH: ReadonlyArray<{
+  line: "eizan" | "keihan" | "randen" | "hankyu" | "sagano" | "karasuma";
+  name: string;
+}> = [
+  // 叡山 14
+  { line: "eizan", name: "元田中" },
+  { line: "eizan", name: "茶山・京都芸術大学" },
+  { line: "eizan", name: "一乗寺" },
+  { line: "eizan", name: "修学院" },
+  { line: "eizan", name: "宝ヶ池" },
+  { line: "eizan", name: "三宅八幡" },
+  { line: "eizan", name: "八瀬比叡山口" },
+  { line: "eizan", name: "八幡前" },
+  { line: "eizan", name: "岩倉" },
+  { line: "eizan", name: "木野" },
+  { line: "eizan", name: "京都精華大前" },
+  { line: "eizan", name: "市原" },
+  { line: "eizan", name: "貴船口" },
+  { line: "eizan", name: "鞍馬" },
+  // 京阪 21
+  { line: "keihan", name: "神宮丸太町" },
+  { line: "keihan", name: "三条" },
+  { line: "keihan", name: "祇園四条" },
+  { line: "keihan", name: "清水五条" },
+  { line: "keihan", name: "七条" },
+  { line: "keihan", name: "鳥羽街道" },
+  { line: "keihan", name: "伏見稲荷" },
+  { line: "keihan", name: "深草" },
+  { line: "keihan", name: "藤森" },
+  { line: "keihan", name: "墨染" },
+  { line: "keihan", name: "丹波橋" },
+  { line: "keihan", name: "伏見桃山" },
+  { line: "keihan", name: "淀" },
+  { line: "keihan", name: "石清水八幡宮" },
+  { line: "keihan", name: "観月橋" },
+  { line: "keihan", name: "桃山南口" },
+  { line: "keihan", name: "六地蔵" },
+  { line: "keihan", name: "木幡" },
+  { line: "keihan", name: "黄檗" },
+  { line: "keihan", name: "三室戸" },
+  { line: "keihan", name: "宇治" },
+  // 嵐電 15
+  { line: "randen", name: "四条大宮" },
+  { line: "randen", name: "西大路三条" },
+  { line: "randen", name: "山ノ内" },
+  { line: "randen", name: "嵐電天神川" },
+  { line: "randen", name: "蚕ノ社" },
+  { line: "randen", name: "帷子ノ辻" },
+  { line: "randen", name: "撮影所前" },
+  { line: "randen", name: "鹿王院" },
+  { line: "randen", name: "嵐電嵯峨" },
+  { line: "randen", name: "嵐山" },
+  { line: "randen", name: "御室仁和寺" },
+  { line: "randen", name: "妙心寺" },
+  { line: "randen", name: "龍安寺" },
+  { line: "randen", name: "等持院・立命館大学衣笠キャンパス前" },
+  { line: "randen", name: "北野白梅町" },
+  // 阪急 12（嵐山は阪急表記で嵐電と鍵を分ける）
+  { line: "hankyu", name: "京都河原町" },
+  { line: "hankyu", name: "烏丸" },
+  { line: "hankyu", name: "大宮" },
+  { line: "hankyu", name: "西院" },
+  { line: "hankyu", name: "西京極" },
+  { line: "hankyu", name: "桂" },
+  { line: "hankyu", name: "東向日" },
+  { line: "hankyu", name: "洛西口" },
+  { line: "hankyu", name: "長岡天神" },
+  { line: "hankyu", name: "上桂" },
+  { line: "hankyu", name: "松尾大社" },
+  { line: "hankyu", name: "嵐山（阪急）" },
+  // JR嵯峨野 5
+  { line: "sagano", name: "二条" },
+  { line: "sagano", name: "円町" },
+  { line: "sagano", name: "花園" },
+  { line: "sagano", name: "太秦" },
+  { line: "sagano", name: "嵯峨嵐山" },
+  // 地下鉄烏丸・洛内 7
+  { line: "karasuma", name: "鞍馬口" },
+  { line: "karasuma", name: "今出川" },
+  { line: "karasuma", name: "丸太町" },
+  { line: "karasuma", name: "烏丸御池" },
+  { line: "karasuma", name: "四条" },
+  { line: "karasuma", name: "五条" },
+  { line: "karasuma", name: "京都" },
+];
+
+export function listLandStockSpotBatchTargets(opts?: {
+  line?: (typeof LAND_STOCK_SPOT_BATCH)[number]["line"];
+}): typeof LAND_STOCK_SPOT_BATCH {
+  const line = opts?.line;
+  return line
+    ? LAND_STOCK_SPOT_BATCH.filter((t) => t.line === line)
+    : LAND_STOCK_SPOT_BATCH;
+}
+
+/** 収録土地文から、spots 生成用の殻を作る。 */
+export function stationShellFromLandDepth(
+  rawName: string,
+  depth: AreaDepth,
+): StationSeed {
+  const name = rawName.replace(/駅$/u, "").trim() || rawName.trim();
+  const mappedId = AREA_DEPTH_BY_NAME[name];
+  const id =
+    mappedId ??
+    `ai-${name}`
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48);
   return {
-    ...station,
-    stationIntro: extra.stationIntro ?? station.stationIntro,
-    areaAbout: extra.areaAbout ?? station.areaAbout,
-    walkGuide: extra.walkGuide ?? station.walkGuide,
-    historyNotes: extra.historyNotes ?? station.historyNotes,
-    sightseeingNotes: extra.sightseeingNotes ?? station.sightseeingNotes,
+    id: id || "station",
+    name,
+    line: "路線情報は要確認",
+    prefecture: "日本",
+    region: "近畿",
+    mood: "story",
+    radiiKm: [0.9, 1.0, 1.2],
+    stationIntro: depth.stationIntro,
+    areaAbout: undefined,
+    walkGuide: depth.walkGuide,
+    historyNotes: depth.historyNotes,
+    sightseeingNotes: depth.sightseeingNotes,
+    storyNotes: depth.storyNotes,
+    tourTitle: `${name}の徒歩圏を、ゆるく歩く`,
+    catchCopy: "降りた場所から、予定のない寄り道を。",
+    spots: [],
+    lat: 35.0,
+    lng: 135.0,
+    source: "ai",
   };
+}
+
+/**
+ * 収録ノートがある駅は、土地文を正本の厚みで上書きする。
+ * （歴史だけでなく、いまの姿・大学など編集済みの文を優先）
+ * 観光案内は ensureLandPresentAnchors 側で mustVisit 雛形に揃える。
+ */
+/** 出町柳: 枡形へ先に行ってからデルタ、の旧順を正す。 */
+export function isWrongDemachiWalkOrder(text: string): boolean {
+  if (!text.includes("枡形") || !text.includes("デルタ")) return false;
+  // 「枡形へ。その足でデルタ」型
+  if (/枡形商店街へ[。．]?\s*その足で.*デルタ/.test(text)) return true;
+  // デルタを通る／先に見る、が無く、枡形がデルタより先に出る
+  if (!/デルタを通|デルタの合流を通|デルタで.*枡形|デルタ.*枡形/.test(text)) {
+    const iMasu = text.search(/枡形/);
+    const iDelta = text.search(/デルタ/);
+    if (iMasu >= 0 && iDelta >= 0 && iMasu < iDelta) return true;
+  }
+  return false;
+}
+
+const DEMACHI_FOOD_AT_DELTA =
+  "食べ物は駅前で買って、鴨川デルタで食べるのがおすすめです。";
+
+/** 「駅前で済ませて川端へ」など旧い食べ方を、駅前で買ってデルタで食べる、に直す。 */
+export function scrubDemachiWalkFood(text: string): string {
+  let next = text;
+  if (/駅前で済ませて/.test(next) || /川端へ持って/.test(next)) {
+    next = next.replace(
+      /食べるものは駅前で済ませて[^。]*。|食べ物は駅前で済ませて[^。]*。/g,
+      DEMACHI_FOOD_AT_DELTA,
+    );
+    next = next.replace(/川端へ持っていくと[^。]*。/g, "");
+  }
+  // 出町の歩き方に「駅前で買ってデルタで食べる」が無いときは定番を足す
+  if (!/デルタで食べ|デルタへ持|袋のまま|駅前で買って/.test(next)) {
+    next = `${next.trim()}${DEMACHI_FOOD_AT_DELTA}`;
+  }
+  return next.replace(/\s{2,}/g, " ").trim();
+}
+
+export function withAreaDepth(station: StationSeed): StationSeed {
+  const extra = areaDepthFor(station);
+  const merged = extra
+    ? {
+        ...station,
+        stationIntro: extra.stationIntro ?? station.stationIntro,
+        areaAbout:
+          (extra.historyNotes?.length ?? 0) >= 2
+            ? undefined
+            : (extra.areaAbout ?? station.areaAbout),
+        // 土地文ストックがある駅は walkGuide 正本。無い駅だけ AI。食べ方はデルタ定番へ
+        walkGuide: (() => {
+          const ai = (station.walkGuide ?? "").trim();
+          const canon = (extra.walkGuide ?? "").trim();
+          const pick = isRichLandDepth(extra)
+            ? (extra.walkGuide ?? station.walkGuide)
+            : ai && !isWrongDemachiWalkOrder(ai)
+              ? ai
+              : (extra.walkGuide ?? station.walkGuide);
+          if (!pick) return pick;
+          const bare = station.name.replace(/駅$/u, "");
+          const isDemachi =
+            bare.includes("出町柳") || station.name.includes("出町柳");
+          return isDemachi ? scrubDemachiWalkFood(pick) : pick;
+        })(),
+        historyNotes: extra.historyNotes ?? station.historyNotes,
+        // 寄るところ: 土地文ストック／出町は正本。他は AI、空なら正本
+        sightseeingNotes: (() => {
+          const depthSight = extra.sightseeingNotes;
+          const ai = station.sightseeingNotes ?? [];
+          const bare = station.name.replace(/駅$/u, "");
+          const preferDepth =
+            bare.includes("出町柳") ||
+            station.name.includes("出町柳") ||
+            isRichLandDepth(extra);
+          if (preferDepth && depthSight?.length) return depthSight;
+          if (ai.length > 0) return ai;
+          return depthSight ?? ai;
+        })(),
+        storyNotes:
+          extra.storyNotes && extra.storyNotes.length > 0
+            ? extra.storyNotes
+            : station.storyNotes,
+      }
+    : station;
+  // 物語のゆかりは駅横断の正本（作品名付き）を最後に載せる
+  return withStoryNotes(refineLandProse(ensureLandPresentAnchors(merged)));
 }
 
 export function paragraphsFrom(text: string | undefined): string[] {

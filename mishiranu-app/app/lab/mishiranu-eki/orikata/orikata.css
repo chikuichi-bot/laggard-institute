@@ -1,0 +1,503 @@
+/* おみくじ文庫のUI正本に寄せる（和紙・明朝・淡いカード・静かな青） */
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&display=swap");
+
+.orikata {
+  --bg-color: #f5eedc;
+  --card-bg: #f9f4e6;
+  --border-color: #e3d5c1;
+  --text-main: #2b2722;
+  --text-sub: #827b72;
+  --icon-color: #6b8cca;
+  --accent-color: #c1b4a4;
+  --premium-gold: #c5a059;
+  --guide-red: #b5493a;
+  --display: "Shippori Mincho", "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", serif;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  color: var(--text-main);
+  background: var(--bg-color);
+  font-family: var(--display);
+  font-weight: 400;
+  line-height: 1.9;
+  letter-spacing: 0.04em;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+
+.orikata * {
+  box-sizing: border-box;
+}
+
+.orikata a {
+  color: inherit;
+}
+
+.orikata-shell {
+  width: min(800px, 100%);
+  margin: 0 auto;
+  padding: max(1.5rem, env(safe-area-inset-top)) 1.25rem
+    calc(3rem + env(safe-area-inset-bottom));
+}
+
+/* —— ヘッダ：ブランドが第一信号、思想は一行の見出し —— */
+.orikata-hero {
+  text-align: center;
+  padding: 2.1rem 0 1.85rem;
+  animation: orikata-fade 0.9s ease both;
+  position: relative;
+}
+
+.orikata-hero::after {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 1px;
+  margin: 1.55rem auto 0;
+  background: var(--accent-color);
+  opacity: 0.85;
+}
+
+.orikata-brand {
+  margin: 1.35rem 0 1.15rem;
+  font-size: clamp(2.15rem, 8vw, 2.85rem);
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  line-height: 1.25;
+}
+
+/* 2ページ目相当：本文セクション先頭のブランド */
+.orikata-brand--section {
+  text-align: center;
+  font-size: clamp(1.35rem, 4vw, 1.7rem);
+  margin: 0 0 1.25rem;
+}
+
+/* トップ縦書き · 3列固定（右→左）· 速度は文字ごと基準 */
+.orikata-verse {
+  --cv-start: 0.28s;
+  --cv-col: 1.55s;
+  --cv-col-dur: 1.65s;
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  direction: rtl;
+  justify-content: center;
+  align-items: start;
+  column-gap: clamp(1.2rem, 4vw, 1.85rem);
+  margin: 0.6rem auto 1.6rem;
+  width: 100%;
+  color: var(--text-main);
+}
+
+.orikata-verse-line {
+  margin: 0;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  white-space: nowrap;
+  direction: ltr;
+  font-size: clamp(0.88rem, 2.5vw, 1.06rem);
+  font-weight: 500;
+  line-height: 1.85;
+  letter-spacing: 0.1em;
+}
+
+.orikata-verse--lines .orikata-verse-line {
+  opacity: 0;
+  transform: translateY(0.55em);
+  animation: orikata-verse-line var(--cv-col-dur) ease forwards;
+  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+}
+
+.orikata-verse--curtain .orikata-verse-line {
+  clip-path: inset(0 0 100% 0);
+  animation: orikata-verse-curtain var(--cv-col-dur)
+    cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+}
+
+.orikata-verse--window .orikata-verse-line {
+  opacity: 0;
+  transform: translateX(0.7em);
+  filter: blur(2.5px);
+  animation: orikata-verse-window var(--cv-col-dur) ease forwards;
+  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+}
+
+@keyframes orikata-verse-line {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orikata-verse-curtain {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes orikata-verse-window {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orikata-verse--lines .orikata-verse-line,
+  .orikata-verse--curtain .orikata-verse-line,
+  .orikata-verse--window .orikata-verse-line {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+    clip-path: none;
+  }
+}
+
+.orikata-title {
+  margin: 0 0 1.1rem;
+  font-size: clamp(1.05rem, 3.4vw, 1.28rem);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.75;
+  color: var(--text-main);
+}
+
+.orikata-lede {
+  margin: 0 auto;
+  max-width: 26em;
+  color: var(--text-sub);
+  font-size: 0.95rem;
+  line-height: 1.95;
+  letter-spacing: 0.06em;
+}
+
+.orikata-lede--soft {
+  margin-top: 0.85rem;
+  max-width: 28em;
+  font-size: 0.88rem;
+  opacity: 0.88;
+}
+
+.orikata-hero-phone {
+  margin: 1.9rem auto 0;
+  width: min(100%, 280px);
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  box-shadow: 0 22px 48px rgba(43, 39, 34, 0.09);
+}
+
+.orikata-hero-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* —— 本文カード —— */
+.orikata-section {
+  margin: 1.15rem 0 0;
+  padding: 1.55rem 1.35rem 1.7rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  animation: orikata-fade 0.85s ease both;
+}
+
+.orikata-section:nth-of-type(2) {
+  animation-delay: 0.05s;
+}
+.orikata-section:nth-of-type(3) {
+  animation-delay: 0.1s;
+}
+.orikata-section:nth-of-type(4) {
+  animation-delay: 0.15s;
+}
+.orikata-section:nth-of-type(5) {
+  animation-delay: 0.2s;
+}
+
+.orikata-kicker {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  color: var(--icon-color);
+}
+
+.orikata-h2 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.2rem, 3.5vw, 1.45rem);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.55;
+}
+
+.orikata-prose {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.98rem;
+  opacity: 0.92;
+}
+
+.orikata-prose + .orikata-prose {
+  margin-top: 0.95rem;
+}
+
+.orikata-quote {
+  margin: 1rem 0 0;
+  padding: 0.85rem 0 0.85rem 1rem;
+  border-left: 2px solid color-mix(in srgb, var(--guide-red) 55%, transparent);
+}
+
+.orikata-quote + .orikata-prose {
+  margin-top: 1.15rem;
+}
+
+.orikata-quote p {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.85;
+  color: var(--text-main);
+}
+
+.orikata-quote cite {
+  display: block;
+  margin-top: 0.65rem;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--text-sub);
+  text-align: right;
+}
+
+.orikata-prose strong {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.orikata-split {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .orikata-split {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+  }
+}
+
+.orikata-panel {
+  padding: 1.05rem 1rem 1.15rem;
+  background: rgba(245, 238, 220, 0.65);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.orikata-panel h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+.orikata-panel p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  line-height: 1.85;
+}
+
+.orikata-panel--lit {
+  background: rgba(107, 140, 202, 0.1);
+  border-color: rgba(107, 140, 202, 0.28);
+}
+
+.orikata-panel--lit h3 {
+  color: #4d6aa0;
+}
+
+/* —— スクショ列 —— */
+.orikata-gallery {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1.35rem;
+}
+
+.orikata-shot {
+  display: grid;
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.orikata-shot--solo {
+  margin: 1.35rem 0 0;
+  justify-items: center;
+}
+
+@media (min-width: 700px) {
+  .orikata-shot:not(.orikata-shot--solo) {
+    grid-template-columns: minmax(180px, 230px) 1fr;
+    gap: 1.25rem;
+    align-items: center;
+  }
+}
+
+.orikata-phone {
+  margin: 0 auto;
+  width: min(100%, 230px);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  box-shadow: 0 14px 32px rgba(43, 39, 34, 0.07);
+}
+
+.orikata-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.orikata-shot__copy h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+.orikata-shot__copy p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.92rem;
+  line-height: 1.85;
+}
+
+/* —— 降り方リスト —— */
+.orikata-steps {
+  display: grid;
+  gap: 0;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orikata-steps li {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.orikata-steps li:last-child {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.orikata-steps span {
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  color: var(--icon-color);
+  padding-top: 0.15rem;
+}
+
+.orikata-steps strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+.orikata-steps p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+}
+
+/* —— 閉じ —— */
+.orikata-closing {
+  text-align: center;
+}
+
+.orikata-closing .orikata-h2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.orikata-closing .orikata-prose {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 34em;
+  text-align: left;
+}
+
+.orikata-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 6px 14px rgba(43, 39, 34, 0.08);
+}
+
+.orikata-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 1.45rem;
+  padding: 0.85rem 1.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: var(--text-main);
+  text-decoration: none;
+  letter-spacing: 0.12em;
+  font-size: 0.95rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.orikata-cta:hover {
+  transform: translateY(-1px);
+  border-color: var(--icon-color);
+  color: #4d6aa0;
+}
+
+.orikata-cta small {
+  color: var(--text-sub);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.orikata-foot {
+  margin: 1.75rem 0 0;
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+}
+
+@keyframes orikata-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orikata-hero,
+  .orikata-section {
+    animation: none;
+  }
+}

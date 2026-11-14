@@ -4,7 +4,7 @@ import { ServiceWorkerRegister } from "./lab/mishiranu-eki/IosInstall";
 export const metadata: Metadata = {
   title: "見知らぬ駅",
   description:
-    "降りた駅の、徒歩圏だけを、物語にする。思いがけない寄り道のプロトタイプ。",
+    "名前だけ知っている駅に、私は降りる。名前だけのからっぽだった駅が、私の散歩道になる。",
   applicationName: "見知らぬ駅",
   manifest: "/manifest.webmanifest",
   appleWebApp: {

@@ -2,11 +2,14 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.3（現行プロト準拠） |
+| 版 | 0.3（歴史・詳細。現行の評価用は下記） |
 | 更新 | 2026-11-10（Asia/Tokyo） |
 | 公開URL（Cursor Apps） | https://mishiranu-eki.apps.grok.bot |
 | 研究所ページ | `/lab/mishiranu-eki`（lagado.jp 統合も想定） |
 | ひとこと | 降りた駅の、徒歩圏だけを、物語にする。 |
+
+**他AIに「知らない駅で降りられるか」を聞くときの正本:**  
+[見知らぬ駅 — 他AI向け評価用仕様](./mishiranu-eki-for-review.md)（2026-11-13 · v1.0）
 
 関連メモ: [プロダクトブリーフ](./mishiranu-eki.md)
 

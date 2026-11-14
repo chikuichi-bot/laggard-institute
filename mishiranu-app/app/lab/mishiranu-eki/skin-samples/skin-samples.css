@@ -1,0 +1,850 @@
+/* Lab chrome (outside phones) */
+.sk-page {
+  min-height: 100vh;
+  background: #e8eaee;
+  color: #1c1f24;
+  font-family: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.sk-page-hero {
+  max-width: 42rem;
+  margin: 0 auto 1.4rem;
+}
+
+.sk-page-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.sk-page-hero h1 {
+  margin: 0 0 0.55rem;
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.sk-page-hero p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.65;
+  font-size: 0.95rem;
+}
+
+.sk-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  max-width: 56rem;
+  margin: 0 auto 0.85rem;
+}
+
+.sk-switch--sub {
+  margin-bottom: 1.1rem;
+}
+
+.sk-switch-btn {
+  appearance: none;
+  border: 1px solid #c5cad3;
+  background: #f4f5f7;
+  color: #4b5563;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.sk-switch-btn--on {
+  background: #1c1f24;
+  border-color: #1c1f24;
+  color: #f4f5f7;
+}
+
+.sk-explain {
+  max-width: 42rem;
+  margin: 0 auto 1rem;
+  color: #4b5563;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.sk-explain p {
+  margin: 0 0 0.35rem;
+}
+
+.sk-why {
+  color: #6b7280;
+  font-size: 0.84rem;
+}
+
+.sk-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  max-width: 68rem;
+  margin: 0 auto 2rem;
+  align-items: start;
+}
+
+.sk-phone {
+  margin: 0;
+}
+
+.sk-bezel {
+  background: #111317;
+  border-radius: 28px;
+  padding: 10px;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 22%);
+}
+
+.sk-notch {
+  width: 34%;
+  height: 8px;
+  margin: 0 auto 8px;
+  border-radius: 999px;
+  background: #050607;
+}
+
+.sk-screen {
+  border-radius: 20px;
+  overflow: hidden;
+  min-height: 540px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sk-phone figcaption {
+  margin-top: 0.65rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.sk-note {
+  max-width: 42rem;
+  margin: 0 auto;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.sk-note a {
+  color: #334155;
+}
+
+/* Shared structure inside phones */
+.sk-body,
+.sk-hero {
+  flex: 1;
+  min-height: 540px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sk-chrome {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.7rem 0.55rem;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.sk-chrome-top {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.sk-back {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.sk-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  flex: 0 0 auto;
+}
+
+.sk-course {
+  font-size: 0.74rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sk-meta {
+  margin: 0;
+  font-size: 0.64rem;
+  line-height: 1.25;
+}
+
+.sk-chrome .sk-meta {
+  padding-left: 2.25rem;
+}
+
+.sk-map {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.sk-map-ring {
+  position: absolute;
+  inset: 18% 14% 24% 16%;
+  border-radius: 42% 48% 40% 45%;
+}
+
+.sk-pin {
+  position: absolute;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+}
+
+.sk-foot {
+  padding: 0.65rem 0.85rem 0.75rem;
+}
+
+.sk-foot p:first-child {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.sk-place {
+  flex: 1;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.7rem;
+  align-content: start;
+}
+
+.sk-listen {
+  appearance: none;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.sk-index {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.sk-index span {
+  border-radius: 8px;
+  padding: 0.65rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.sk-place-lead {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.sk-place-copy {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.sk-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  padding: 0.35rem 0.15rem 0.45rem;
+}
+
+.sk-tab {
+  display: grid;
+  justify-items: center;
+  gap: 0.18rem;
+  font-size: 0.58rem;
+}
+
+.sk-tab i {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 4px;
+  opacity: 0.55;
+}
+
+.sk-tab--on i {
+  opacity: 1;
+}
+
+.sk-hero {
+  padding: 2.4rem 1.15rem 1.4rem;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.sk-eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sk-hero-title {
+  margin: 0;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+.sk-hero-lead {
+  margin: 0 0 0.55rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  max-width: 22rem;
+}
+
+.sk-cta {
+  appearance: none;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 650;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sk-cta--ghost {
+  background: transparent !important;
+}
+
+/* =========================
+   A · ホームの時刻表
+   ========================= */
+.sk-phone--board {
+  --bg: #12151a;
+  --panel: #1a1f28;
+  --ink: #e8edf5;
+  --fog: #9aa6b8;
+  --line: #2a3342;
+  --accent: #f0b429;
+  --accent-ink: #12151a;
+  --map: linear-gradient(165deg, #1c2430, #243041 45%, #1a222e);
+  --ring: color-mix(in srgb, #3d8bfd 28%, transparent);
+  --pin: #f0b429;
+  --pin-b: #3d8bfd;
+  --sans: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+}
+
+.sk-phone--board .sk-screen {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+.sk-phone--board .sk-chrome,
+.sk-phone--board .sk-foot,
+.sk-phone--board .sk-tabs {
+  background: var(--panel);
+  border-color: var(--line);
+}
+
+.sk-phone--board .sk-chrome {
+  border-bottom: 1px solid var(--line);
+}
+
+.sk-phone--board .sk-back {
+  color: var(--ink);
+}
+
+.sk-phone--board .sk-pill {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--sans);
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+}
+
+.sk-phone--board .sk-course,
+.sk-phone--board .sk-meta,
+.sk-phone--board .sk-place-copy {
+  color: var(--fog);
+}
+
+.sk-phone--board .sk-map {
+  background: var(--map);
+}
+
+.sk-phone--board .sk-map-ring {
+  background: var(--ring);
+  border: 1px dashed color-mix(in srgb, #3d8bfd 55%, transparent);
+}
+
+.sk-phone--board .sk-pin {
+  background: var(--pin);
+  color: #12151a;
+  border-radius: 3px;
+  border-color: #1a1f28;
+}
+
+.sk-phone--board .sk-pin--b {
+  background: var(--pin-b);
+  color: #fff;
+}
+
+.sk-phone--board .sk-foot {
+  border-top: 1px solid var(--line);
+}
+
+.sk-phone--board .sk-foot p:first-child {
+  font-family: var(--sans);
+  color: var(--fog);
+}
+
+.sk-phone--board .sk-tabs {
+  border-top: 1px solid var(--line);
+}
+
+.sk-phone--board .sk-tab {
+  color: var(--fog);
+}
+
+.sk-phone--board .sk-tab i {
+  background: var(--fog);
+}
+
+.sk-phone--board .sk-tab--on {
+  color: var(--accent);
+}
+
+.sk-phone--board .sk-tab--on i {
+  background: var(--accent);
+}
+
+.sk-phone--board .sk-place {
+  background: var(--bg);
+}
+
+.sk-phone--board .sk-listen {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 4px;
+}
+
+.sk-phone--board .sk-index span {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.sk-phone--board .sk-hero {
+  background:
+    linear-gradient(180deg, transparent 20%, rgb(18 21 26 / 92%) 70%),
+    radial-gradient(80% 50% at 70% 20%, #2a3a55 0%, transparent 60%),
+    linear-gradient(160deg, #0e1218, #1a2433);
+}
+
+.sk-phone--board .sk-eyebrow {
+  color: var(--accent);
+}
+
+.sk-phone--board .sk-hero-title {
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.sk-phone--board .sk-hero-lead {
+  color: var(--fog);
+}
+
+.sk-phone--board .sk-cta {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 4px;
+}
+
+.sk-phone--board .sk-cta--ghost {
+  color: var(--ink);
+  border: 1px solid var(--line) !important;
+}
+
+/* =========================
+   B · 車窓の霧
+   ========================= */
+.sk-phone--window {
+  --bg: #dfe8ef;
+  --panel: color-mix(in srgb, #f4f8fb 88%, transparent);
+  --ink: #243041;
+  --fog: #5d6d7e;
+  --line: color-mix(in srgb, #8aa0b4 35%, transparent);
+  --accent: #3a6d8c;
+  --map: linear-gradient(165deg, #c5d5e2, #aec4d4 40%, #9bb4c8);
+  --ring: color-mix(in srgb, #6f9bb8 35%, transparent);
+  --pin: #3a6d8c;
+  --pin-b: #6a8f7a;
+  --display: "Iowan Old Style", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --sans: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+}
+
+.sk-phone--window .sk-screen {
+  background:
+    radial-gradient(120% 80% at 20% 0%, #f2f7fb 0%, transparent 55%),
+    linear-gradient(180deg, #e8f0f6, #d2dde7);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+.sk-phone--window .sk-chrome {
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.sk-phone--window .sk-back {
+  color: var(--ink);
+}
+
+.sk-phone--window .sk-pill {
+  background: color-mix(in srgb, #243041 82%, #3a6d8c);
+  color: #f4f8fb;
+  font-family: var(--display);
+  font-weight: 600;
+}
+
+.sk-phone--window .sk-course {
+  color: var(--fog);
+  font-family: var(--display);
+}
+
+.sk-phone--window .sk-meta,
+.sk-phone--window .sk-place-copy {
+  color: var(--fog);
+}
+
+.sk-phone--window .sk-map {
+  background: var(--map);
+}
+
+.sk-phone--window .sk-map::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 40% at 70% 30%, rgb(255 255 255 / 45%), transparent 70%),
+    linear-gradient(180deg, transparent 40%, rgb(180 200 215 / 35%));
+  pointer-events: none;
+}
+
+.sk-phone--window .sk-map-ring {
+  background: var(--ring);
+  filter: blur(1px);
+}
+
+.sk-phone--window .sk-pin {
+  background: var(--pin);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 35%);
+}
+
+.sk-phone--window .sk-pin--b {
+  background: var(--pin-b);
+}
+
+.sk-phone--window .sk-foot,
+.sk-phone--window .sk-tabs {
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+}
+
+.sk-phone--window .sk-foot p:first-child {
+  font-family: var(--display);
+  color: var(--fog);
+}
+
+.sk-phone--window .sk-tab {
+  color: var(--fog);
+}
+
+.sk-phone--window .sk-tab i {
+  background: var(--fog);
+  border-radius: 999px;
+}
+
+.sk-phone--window .sk-tab--on {
+  color: var(--accent);
+}
+
+.sk-phone--window .sk-tab--on i {
+  background: var(--accent);
+}
+
+.sk-phone--window .sk-place {
+  background: transparent;
+}
+
+.sk-phone--window .sk-listen {
+  background: var(--accent);
+  color: #f4f8fb;
+  border-radius: 999px;
+}
+
+.sk-phone--window .sk-index span {
+  background: rgb(255 255 255 / 55%);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.sk-phone--window .sk-place-lead {
+  font-family: var(--display);
+}
+
+.sk-phone--window .sk-hero {
+  background:
+    linear-gradient(180deg, transparent 10%, rgb(210 221 231 / 88%) 62%),
+    radial-gradient(90% 55% at 30% 20%, #f7fbfe 0%, transparent 60%),
+    linear-gradient(160deg, #b7c9d8, #8fa9bc);
+}
+
+.sk-phone--window .sk-eyebrow {
+  color: var(--accent);
+}
+
+.sk-phone--window .sk-hero-title {
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.sk-phone--window .sk-hero-lead {
+  color: var(--fog);
+}
+
+.sk-phone--window .sk-cta {
+  background: var(--accent);
+  color: #f4f8fb;
+  border-radius: 999px;
+}
+
+.sk-phone--window .sk-cta--ghost {
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, #243041 22%, transparent) !important;
+}
+
+/* =========================
+   C · ポケット地形図
+   ========================= */
+.sk-phone--topo {
+  --bg: #e6e2d6;
+  --panel: #efece2;
+  --ink: #2c3328;
+  --fog: #5c6556;
+  --line: #c9c4b4;
+  --accent: #4f6b4a;
+  --map: linear-gradient(165deg, #d7d2c2, #c8c2ae 40%, #b8b39c);
+  --ring: color-mix(in srgb, #4f6b4a 22%, transparent);
+  --pin: #8b4a3a;
+  --pin-b: #3d5f78;
+  --sans: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+.sk-phone--topo .sk-screen {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 23px,
+      color-mix(in srgb, #4f6b4a 5%, transparent) 24px
+    ),
+    var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+.sk-phone--topo .sk-chrome,
+.sk-phone--topo .sk-foot,
+.sk-phone--topo .sk-tabs {
+  background: var(--panel);
+  border-color: var(--line);
+}
+
+.sk-phone--topo .sk-chrome {
+  border-bottom: 1px solid var(--line);
+}
+
+.sk-phone--topo .sk-back {
+  color: var(--ink);
+}
+
+.sk-phone--topo .sk-pill {
+  background: var(--ink);
+  color: var(--panel);
+  font-family: var(--sans);
+  font-weight: 700;
+  border-radius: 2px;
+  letter-spacing: 0.06em;
+}
+
+.sk-phone--topo .sk-course {
+  color: var(--fog);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+}
+
+.sk-phone--topo .sk-meta,
+.sk-phone--topo .sk-place-copy {
+  color: var(--fog);
+  font-family: var(--mono);
+}
+
+.sk-phone--topo .sk-map {
+  background:
+    repeating-radial-gradient(
+      circle at 40% 45%,
+      transparent 0 18px,
+      color-mix(in srgb, #4f6b4a 10%, transparent) 19px 20px
+    ),
+    var(--map);
+}
+
+.sk-phone--topo .sk-map-ring {
+  background: transparent;
+  border: 1.5px solid color-mix(in srgb, #4f6b4a 55%, transparent);
+  border-radius: 50%;
+  inset: 22% 18% 28% 20%;
+}
+
+.sk-phone--topo .sk-pin {
+  background: var(--pin);
+  color: #fff;
+  border-radius: 2px;
+  border-color: var(--panel);
+}
+
+.sk-phone--topo .sk-pin--b {
+  background: var(--pin-b);
+}
+
+.sk-phone--topo .sk-foot {
+  border-top: 1px solid var(--line);
+}
+
+.sk-phone--topo .sk-foot p:first-child {
+  font-family: var(--sans);
+  color: var(--fog);
+}
+
+.sk-phone--topo .sk-tabs {
+  border-top: 1px solid var(--line);
+}
+
+.sk-phone--topo .sk-tab {
+  color: var(--fog);
+}
+
+.sk-phone--topo .sk-tab i {
+  background: var(--fog);
+  border-radius: 1px;
+}
+
+.sk-phone--topo .sk-tab--on {
+  color: var(--accent);
+}
+
+.sk-phone--topo .sk-tab--on i {
+  background: var(--accent);
+}
+
+.sk-phone--topo .sk-place {
+  background: transparent;
+}
+
+.sk-phone--topo .sk-listen {
+  background: var(--accent);
+  color: #f3f0e6;
+  border-radius: 2px;
+  font-family: var(--sans);
+}
+
+.sk-phone--topo .sk-index span {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+}
+
+.sk-phone--topo .sk-place-lead {
+  font-family: var(--sans);
+  letter-spacing: 0.04em;
+}
+
+.sk-phone--topo .sk-hero {
+  background:
+    linear-gradient(180deg, transparent 25%, color-mix(in srgb, #e6e2d6 92%, transparent) 70%),
+    repeating-radial-gradient(
+      circle at 60% 30%,
+      transparent 0 22px,
+      color-mix(in srgb, #4f6b4a 12%, transparent) 23px 24px
+    ),
+    linear-gradient(155deg, #d9d3c2, #b7b39f);
+}
+
+.sk-phone--topo .sk-eyebrow {
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.sk-phone--topo .sk-hero-title {
+  font-family: var(--sans);
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.sk-phone--topo .sk-hero-lead {
+  color: var(--fog);
+}
+
+.sk-phone--topo .sk-cta {
+  background: var(--ink);
+  color: var(--panel);
+  border-radius: 2px;
+}
+
+.sk-phone--topo .sk-cta--ghost {
+  color: var(--ink);
+  border: 1px solid var(--line) !important;
+}

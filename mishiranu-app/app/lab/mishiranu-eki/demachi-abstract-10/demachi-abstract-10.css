@@ -1,0 +1,346 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600&display=swap");
+
+.da10 {
+  --ink: #2a241c;
+  --paper: #f8f5ee;
+  --mist: #8a7d6b;
+  --river: #6a8294;
+  --green: #6e7f68;
+  min-height: 100vh;
+  background: #12100e;
+  color: #f3efe6;
+  font-family: "Shippori Mincho", serif;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.da10 * {
+  box-sizing: border-box;
+}
+
+.da10-head {
+  max-width: 1100px;
+  margin: 0 auto 1.25rem;
+}
+
+.da10-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: #b7ad9e;
+}
+
+.da10-head h1 {
+  margin: 0.25rem 0 0.5rem;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-weight: 500;
+}
+
+.da10-lead {
+  margin: 0;
+  max-width: 42rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #d2c8b8;
+}
+
+.da10-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-width: 1100px;
+  margin: 0 auto 1.25rem;
+}
+
+.da10-tabs a {
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #3a342c;
+  background: #1c1914;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+}
+
+.da10-tabs a.is-on {
+  background: #e8dfd0;
+  color: #171512;
+  border-color: #e8dfd0;
+}
+
+.da10-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.da10-card {
+  background: #1a1713;
+  border: 1px solid #2e2922;
+  border-radius: 18px;
+  padding: 0.85rem;
+}
+
+.da10-card h2 {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.da10-card p {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #b7ad9e;
+}
+
+.da10-phone {
+  width: 100%;
+  aspect-ratio: 9 / 19.2;
+  max-height: 520px;
+  margin: 0 auto;
+  border-radius: 28px;
+  padding: 8px;
+  background: #0c0b09;
+}
+
+.da10-notch {
+  width: 72px;
+  height: 14px;
+  margin: 0 auto 4px;
+  border-radius: 0 0 10px 10px;
+  background: #0c0b09;
+}
+
+.da10-screen {
+  height: calc(100% - 4px);
+  margin-top: -14px;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.da10-hero {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 2.2rem 1rem 1rem;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.da10-hero h1 {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  height: 7.6rem;
+  margin: 0;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  text-orientation: mixed;
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  line-height: 1;
+}
+
+.da10-map-slot {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0.1rem 0.1rem 0.3rem;
+  overflow: hidden;
+}
+
+.da10-map-slot svg {
+  width: auto;
+  height: 100%;
+  max-height: 100%;
+  max-width: 82%;
+}
+
+.da10-dock {
+  flex: 0 0 auto;
+}
+
+.da10-dock button {
+  width: 100%;
+  min-height: 2.4rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: 0.16em;
+}
+
+.da10-dock label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  margin-top: 0.6rem;
+}
+
+.da10-dock span {
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: var(--mist);
+}
+
+.da10-dock input {
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
+  background: transparent;
+  padding: 0.22rem 0;
+  color: var(--mist);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.da10-foot {
+  margin: 0.45rem 0 0;
+  font-size: 0.55rem;
+  color: var(--mist);
+}
+
+.da10-fig .river {
+  fill: none;
+  stroke: color-mix(in srgb, var(--river) 48%, transparent);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.da10-fig .river--thin {
+  stroke-width: 5.5;
+}
+
+.da10-fig .river--wide {
+  stroke-width: 14;
+}
+
+.da10-fig .river--pale {
+  stroke: color-mix(in srgb, var(--river) 28%, transparent);
+}
+
+.da10-fig .bank {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 42%, transparent);
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.da10-fig .road {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 34%, transparent);
+  stroke-width: 1.1;
+  stroke-linecap: square;
+}
+
+.da10-fig .road--faint {
+  stroke: color-mix(in srgb, var(--ink) 16%, transparent);
+  stroke-width: 0.7;
+}
+
+.da10-fig .road--bold {
+  stroke: color-mix(in srgb, var(--ink) 48%, transparent);
+  stroke-width: 1.6;
+}
+
+.da10-fig .alley {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 22%, transparent);
+  stroke-width: 0.65;
+  stroke-dasharray: 1.3 2;
+}
+
+.da10-fig .rail {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 55%, transparent);
+  stroke-width: 1.05;
+  stroke-linecap: round;
+  stroke-dasharray: 2.2 1.6;
+}
+
+.da10-fig .bridge {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 58%, transparent);
+  stroke-width: 1.7;
+}
+
+.da10-fig .forest {
+  fill: color-mix(in srgb, var(--green) 18%, transparent);
+  stroke: color-mix(in srgb, var(--green) 45%, transparent);
+  stroke-width: 0.8;
+}
+
+.da10-fig .forest--solid {
+  fill: color-mix(in srgb, var(--green) 32%, transparent);
+}
+
+.da10-fig .gyoen {
+  fill: color-mix(in srgb, var(--green) 14%, transparent);
+  stroke: color-mix(in srgb, var(--green) 40%, transparent);
+  stroke-width: 0.85;
+}
+
+.da10-fig .gyoen--bold {
+  fill: color-mix(in srgb, var(--green) 26%, transparent);
+  stroke-width: 1.2;
+}
+
+.da10-fig .delta {
+  fill: color-mix(in srgb, var(--green) 22%, transparent);
+  stroke: color-mix(in srgb, var(--ink) 28%, transparent);
+  stroke-width: 0.7;
+}
+
+.da10-fig .delta--mark {
+  fill: color-mix(in srgb, var(--ink) 8%, transparent);
+  stroke: var(--ink);
+  stroke-width: 1.1;
+}
+
+.da10-fig .block {
+  fill: color-mix(in srgb, var(--ink) 4%, transparent);
+  stroke: color-mix(in srgb, var(--ink) 24%, transparent);
+  stroke-width: 0.65;
+}
+
+.da10-fig .block--faint {
+  fill: transparent;
+  stroke: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.da10-fig .parcel {
+  fill: color-mix(in srgb, var(--ink) 38%, transparent);
+}
+
+.da10-fig .hatch {
+  fill: none;
+  stroke: color-mix(in srgb, var(--river) 35%, transparent);
+  stroke-width: 0.55;
+}
+
+.da10-fig .station {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+.da10-fig .station--lg {
+  stroke-width: 1.5;
+}
+
+.da10-fig .plaza {
+  fill: color-mix(in srgb, var(--ink) 5%, transparent);
+  stroke: color-mix(in srgb, var(--ink) 40%, transparent);
+  stroke-width: 0.9;
+}
+
+.da10-solo {
+  max-width: 420px;
+  margin: 0 auto;
+}

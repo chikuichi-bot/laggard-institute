@@ -1,0 +1,349 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600&display=swap");
+
+.hm-page {
+  min-height: 100vh;
+  background: #171512;
+  color: #f3efe6;
+  font-family: "Shippori Mincho", serif;
+  padding: 1.5rem 1.25rem 4rem;
+}
+
+.hm-head {
+  max-width: 72rem;
+  margin: 0 auto 1.5rem;
+}
+
+.hm-head-kicker {
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  color: #b7ad9e;
+}
+
+.hm-head-title {
+  margin: 0 0 0.5rem;
+  font-weight: 500;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+.hm-head-lead {
+  margin: 0 0 1rem;
+  max-width: 40em;
+  line-height: 1.7;
+  color: #d2c8b8;
+}
+
+.hm-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.hm-tabs button {
+  border: 1px solid #3a342c;
+  background: transparent;
+  color: #e8e0d4;
+  border-radius: 999px;
+  padding: 0.32rem 0.7rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.hm-tabs button.is-on {
+  background: #f3efe6;
+  color: #171512;
+  border-color: #f3efe6;
+}
+
+.hm-grid {
+  max-width: 78rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.8rem 1.1rem;
+}
+
+.hm-grid--one {
+  max-width: 28rem;
+}
+
+.hm-card h2 {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 1.02rem;
+  font-weight: 500;
+}
+
+.hm-card-copy p {
+  margin: 0;
+  color: #d8d0c4;
+  line-height: 1.55;
+  font-size: 0.88rem;
+}
+
+.hm-phone {
+  width: min(100%, 280px);
+  height: 580px;
+  border-radius: 32px;
+  padding: 10px;
+  background: #0c0b09;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.hm-notch {
+  width: 84px;
+  height: 16px;
+  margin: 0 auto 6px;
+  border-radius: 0 0 12px 12px;
+  background: #0c0b09;
+  position: relative;
+  z-index: 2;
+}
+
+.hm-screen {
+  height: calc(100% - 6px);
+  margin-top: -16px;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.hm-hero {
+  --ink: #2a241c;
+  --paper: #f8f5ee;
+  --mist: #8a7d6b;
+  --fog: #5c5348;
+  --river: color-mix(in srgb, #2a241c 38%, transparent);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem 1.2rem 1.15rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Shippori Mincho", serif;
+  box-sizing: border-box;
+}
+
+.hm-hero h1 {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  height: 8.8rem;
+  margin: 0;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  text-orientation: mixed;
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  line-height: 1;
+  width: max-content;
+}
+
+.hm-map-slot {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.15rem 0.35rem;
+  overflow: hidden;
+}
+
+.hm-map-slot svg {
+  width: auto;
+  height: 100%;
+  max-height: 100%;
+  max-width: 78%;
+  overflow: hidden;
+}
+
+.hm-dock {
+  flex: 0 0 auto;
+}
+
+.hm-hero button {
+  width: 100%;
+  min-height: 2.7rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.hm-hero form {
+  margin-top: 0.75rem;
+}
+
+.hm-hero label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.hm-hero label span {
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  color: var(--mist);
+}
+
+.hm-hero input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
+  background: transparent;
+  padding: 0.28rem 0;
+  border-radius: 0;
+  font: inherit;
+  color: var(--mist);
+  outline: none;
+}
+
+.hm-hero-foot {
+  margin: 0.55rem 0 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--mist);
+  line-height: 1.45;
+}
+
+.hm-fig .hm-stroke {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 42%, transparent);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hm-fig .hm-stroke--bold {
+  stroke: color-mix(in srgb, var(--ink) 55%, transparent);
+  stroke-width: 2.6;
+}
+
+.hm-fig .hm-stroke--hair {
+  stroke-width: 1;
+  stroke: color-mix(in srgb, var(--ink) 32%, transparent);
+}
+
+.hm-fig .hm-stroke--dash {
+  stroke-dasharray: 1.2 3.4;
+  stroke-width: 1.35;
+}
+
+.hm-fig .hm-stroke--soft {
+  stroke: color-mix(in srgb, var(--ink) 14%, transparent);
+  stroke-width: 5;
+}
+
+.hm-fig .hm-fill {
+  fill: color-mix(in srgb, #6b7f8f 18%, transparent);
+  stroke: none;
+}
+
+.hm-fig .hm-dot {
+  fill: var(--ink);
+}
+
+.hm-fig .hm-ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 55%, transparent);
+  stroke-width: 1.1;
+}
+
+.hm-fig--hatch .hm-stroke {
+  stroke-width: 0.85;
+  stroke: color-mix(in srgb, var(--ink) 36%, transparent);
+}
+
+.hm-fig--breath .hm-stroke {
+  stroke: color-mix(in srgb, var(--ink) 28%, transparent);
+  stroke-width: 1.15;
+}
+
+.hm-fig .hm-river {
+  fill: none;
+  stroke: color-mix(in srgb, #6a8294 42%, transparent);
+  stroke-width: 11;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hm-fig .hm-river--pale {
+  stroke: color-mix(in srgb, #6a8294 28%, transparent);
+  stroke-width: 13;
+}
+
+.hm-fig .hm-river--thin {
+  stroke-width: 6;
+}
+
+.hm-fig .hm-river--wide {
+  stroke-width: 16;
+}
+
+.hm-fig--weight .hm-bank {
+  stroke-width: 1.35;
+}
+
+.hm-fig .hm-bank {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 46%, transparent);
+  stroke-width: 1.05;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hm-fig .hm-street {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 32%, transparent);
+  stroke-width: 0.85;
+  stroke-linecap: square;
+}
+
+.hm-fig .hm-street--faint {
+  stroke: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.hm-fig .hm-street--dash {
+  stroke-dasharray: 1.4 2.2;
+  stroke-width: 0.7;
+}
+
+.hm-fig .hm-block {
+  fill: color-mix(in srgb, var(--ink) 4%, transparent);
+  stroke: color-mix(in srgb, var(--ink) 26%, transparent);
+  stroke-width: 0.7;
+}
+
+.hm-fig .hm-block--faint {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.hm-fig .hm-bridge {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 55%, transparent);
+  stroke-width: 1.6;
+  stroke-linecap: square;
+}
+
+.hm-fig .hm-hatch {
+  fill: none;
+  stroke: color-mix(in srgb, #5d7384 55%, transparent);
+  stroke-width: 0.7;
+  stroke-linecap: round;
+}
+
+.hm-fig .hm-parcel {
+  fill: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.hm-fig .hm-station {
+  fill: var(--paper, #f8f5ee);
+  stroke: var(--ink);
+  stroke-width: 1.15;
+}
