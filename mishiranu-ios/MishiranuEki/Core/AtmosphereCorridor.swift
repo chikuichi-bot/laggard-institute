@@ -134,6 +134,11 @@ enum AtmosphereCorridorCanon {
         return list
     }
 
+    /// 手で確かめた正本の区間か（path が実在の道に沿う）。
+    static func isCanon(_ corridor: AtmosphereCorridor, stationName: String) -> Bool {
+        canon(forStationName: stationName).contains { $0.id == corridor.id || $0.name == corridor.name }
+    }
+
     static func isInventedTouristName(_ name: String) -> Bool {
         let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if n.isEmpty { return true }

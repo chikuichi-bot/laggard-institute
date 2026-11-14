@@ -142,13 +142,18 @@ enum StationAPIClient {
     private static func resolveBaseURL() async -> URL {
         #if DEBUG
         for candidate in debugBaseCandidates() {
-            let isLan = candidate.host?.hasPrefix("192.168.") == true
-                || candidate.host == "localhost"
-                || candidate.host == "127.0.0.1"
+            let host = candidate.host ?? ""
+            let isLan = host.hasPrefix("192.168.")
+                || host.hasPrefix("172.")
+                || host.hasPrefix("10.")
+                || host == "localhost"
+                || host == "127.0.0.1"
             if !isLan {
                 return candidate
             }
-            if await isReachable(candidate, timeout: 2) {
+            let ok = await isReachable(candidate, timeout: 2)
+            print("[MishiranuAPI] probe \(candidate.absoluteString) -> \(ok)")
+            if ok {
                 return candidate
             }
         }
@@ -165,6 +170,9 @@ enum StationAPIClient {
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             return (200 ... 499).contains(status)
         } catch {
+            #if DEBUG
+            print("[MishiranuAPI] probe error \(base.absoluteString): \(error)")
+            #endif
             return false
         }
     }

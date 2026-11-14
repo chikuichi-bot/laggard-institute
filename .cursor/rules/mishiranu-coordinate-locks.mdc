@@ -33,6 +33,14 @@
    - `mishiranu-app/data/landmark-locks.json`  
    - `mishiranu-ios/MishiranuEki/Resources/landmark-locks.json`  
 5. 可能なら `scripts/verify-landmark-locks.swift` を走らせる  
+6. **`npm run audit:locks`（mishiranu-app）で ok を確認する。** 同名の OSM 地物（道 way・橋・境内の面・店ノード）からの距離を測る。near / far / missing は理由を書くまで採用しない。Nominatim の先頭ヒット（住所の通り名が一致しただけの学校・銀行）を lock にしない
+
+### 実行時のピン（ロック以外）
+
+- 散歩コースの番号ピンも `MapPinTrust.allowsOnMap` を通す（AI 仮座標の立ち寄りは文だけ）
+- 空気の道の点は、正本 corridor か、地図に出せるピンから 80m 以内の中点だけ
+- Apple 名前一致はバス停・駐車場・学校・病院・銀行などの種別を拒否（`SpotLocator.isWrongKindHit`）
+- 駅中心はサーバー（OSM railway）とアプリ（MapKit「○○駅」）の両方で先に照合する  
 
 ## 禁止
 

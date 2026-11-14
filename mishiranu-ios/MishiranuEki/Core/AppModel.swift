@@ -510,7 +510,16 @@ final class AppModel {
     /// 保存済み駅も再採取する（昔の AI 仮座標・半径外で落ちたみたらし等が残るため）。
     private func relocateIfNeeded(_ station: Station) {
         Task { [weak self] in
-            let located = GuideIntegrity.seal(await SpotLocator.refine(station))
+            // 駅中心だけ先に直して見せる。周辺の採取は数十件の検索で時間がかかる。
+            let centered = GuideIntegrity.seal(await SpotLocator.withVerifiedCenter(station))
+            if let self, !Task.isCancelled,
+               centered.lat != station.lat || centered.lng != station.lng {
+                self.remember(centered, persist: true)
+                if self.phase == .ready || self.screen == .tour {
+                    self.applyOrdinaryWalk(for: centered)
+                }
+            }
+            let located = GuideIntegrity.seal(await SpotLocator.refine(centered))
             guard let self, !Task.isCancelled, self.stationId == station.id || self.stations.contains(where: { $0.id == station.id }) else { return }
             self.remember(located, persist: true)
             // 座標確定後にメジャー印付きでまわり方を組み直す
@@ -721,11 +730,12 @@ final class AppModel {
         pendingStationLookup = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let station = try await StationAPIClient.lookupStation(
+                let fetched = try await StationAPIClient.lookupStation(
                     name: bare,
                     userAi: BillingStore.shared.userAiPayload,
                     forceRefresh: forceRefresh
                 )
+                let station = await SpotLocator.withVerifiedCenter(fetched)
                 if Task.isCancelled {
                     self.finishLookupCancelled()
                     return

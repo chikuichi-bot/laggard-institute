@@ -397,11 +397,21 @@ struct HeroView: View {
         Task {
             do {
                 let location = try await locator.requestOnce()
-                if let station = model.finishLocate(
-                    lat: location.coordinate.latitude,
-                    lng: location.coordinate.longitude
-                ) {
+                let lat = location.coordinate.latitude
+                let lng = location.coordinate.longitude
+                if let station = model.finishLocate(lat: lat, lng: lng) {
                     pendingConfirm = .locate(station)
+                    return
+                }
+                let label = "現在地の近く"
+                candidateSheet = CandidateSheet(query: label, items: [], loading: true)
+                let items = await StationCandidateSearch.nearby(lat: lat, lng: lng)
+                guard candidateSheet?.query == label else { return }
+                if items.isEmpty {
+                    candidateSheet = nil
+                } else {
+                    model.heroNote = nil
+                    candidateSheet = CandidateSheet(query: label, items: items, loading: false)
                 }
             } catch let failure as LocateFailure {
                 model.failLocate(failure)

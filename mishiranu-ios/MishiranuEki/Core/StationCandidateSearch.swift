@@ -88,6 +88,48 @@ enum StationCandidateSearch {
         return Array(out.prefix(limit))
     }
 
+    /// 現在地のまわりの駅を Apple 地図から近い順に。保存駅が近くに無いとき用。
+    static func nearby(lat: Double, lng: Double, limit: Int = 5) async -> [StationNameCandidate] {
+        let here = CLLocation(latitude: lat, longitude: lng)
+        let request = MKLocalPointsOfInterestRequest(center: here.coordinate, radius: 3000)
+        request.pointOfInterestFilter = MKPointOfInterestFilter(including: [.publicTransport])
+        guard let response = try? await MKLocalSearch(request: request).start() else { return [] }
+
+        var rows: [(name: String, km: Double)] = []
+        var seen = Set<String>()
+        for item in response.mapItems {
+            guard let full = item.name?.trimmingCharacters(in: .whitespacesAndNewlines) else { continue }
+            // 「出町柳駅（京阪）」の路線注記は外して一つにまとめる。
+            let raw = full
+                .replacingOccurrences(of: #"\s*[（(].*[)）]\s*$"#, with: "", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            // バス停・タクシー乗り場（「出町柳駅前 - Eのりば」等）は除き、駅名そのものだけ。
+            let notStation = ["のりば", "乗り場", "乗場", "バス", "タクシー", "停留所", "駅前"]
+            guard raw.hasSuffix("駅"), raw.count > 1,
+                  !notStation.contains(where: { raw.contains($0) })
+            else { continue }
+            let k = key(raw)
+            guard !k.isEmpty, !seen.contains(k) else { continue }
+            seen.insert(k)
+            let km = here.distance(from: CLLocation(
+                latitude: item.placemark.coordinate.latitude,
+                longitude: item.placemark.coordinate.longitude
+            )) / 1000
+            rows.append((raw, km))
+        }
+        return rows
+            .sorted { $0.km < $1.km }
+            .prefix(limit)
+            .map {
+                StationNameCandidate(
+                    id: "near-\(key($0.name))",
+                    name: $0.name,
+                    detail: "現在地から\(Geo.distanceLabel(km: $0.km))",
+                    knownStation: nil
+                )
+            }
+    }
+
     private static func key(_ name: String) -> String {
         let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return (n.hasSuffix("駅") ? String(n.dropLast()) : n).lowercased()

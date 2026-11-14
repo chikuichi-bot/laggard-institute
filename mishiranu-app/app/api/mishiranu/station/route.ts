@@ -9,6 +9,7 @@ import {
   readCachedStation,
   writeCachedStation,
 } from "@/lib/mishiranu-station-cache";
+import { withVerifiedCenter } from "@/lib/mishiranu-station-center";
 import {
   generateStationGuideWithGemini,
   generateStationGuideWithUserAi,
@@ -116,9 +117,12 @@ export async function POST(request: Request) {
   if (!forceRefresh) {
     const cached = await readCachedStation(name);
     if (cached) {
+      // 古いキャッシュの AI 駅中心がずれていたら、直して置き直す
+      const fixed = await withVerifiedCenter(cached);
+      if (fixed.moved) await writeCachedStation(name, fixed.station);
       // 古いキャッシュに配食・川の総称が残っていても、返す前に関所を通す
       return Response.json(
-        { station: sealGuideIntegrity(cached), source: "ai" },
+        { station: sealGuideIntegrity(fixed.station), source: "ai" },
         { headers: NO_STORE },
       );
     }
@@ -196,8 +200,9 @@ export async function POST(request: Request) {
     }
     // 次の人のために置く。書けなくても案内は返す。
     // BYOK 側では書かない（相手のモデル次第で品質が揺れるため）。
-    await writeCachedStation(name, result.station);
-    return Response.json(result, { headers: NO_STORE });
+    const fixed = await withVerifiedCenter(result.station);
+    await writeCachedStation(name, fixed.station);
+    return Response.json({ ...result, station: fixed.station }, { headers: NO_STORE });
   } catch {
     return Response.json(
       {

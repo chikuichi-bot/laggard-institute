@@ -20,6 +20,33 @@ enum SpotLocator {
     private static let maxRestSpots = 4
     private static let maxTipSpots = 1
 
+    /// 駅中心だけ先に正本へ（ロック or Apple の鉄道駅）。周辺の採取を待たずに地図を正しい駅に置く。
+    static func withVerifiedCenter(_ station: Station) async -> Station {
+        let center: CLLocationCoordinate2D
+        if let locked = LandmarkRegistry.lockedStationCenter(name: station.name) {
+            center = locked
+        } else {
+            let seed = CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng)
+            let want = "\(SavedStationStore.bareName(station.name))駅"
+            let queries = Array(stationQueries(station.name).prefix(1))
+            var hit = await bestMatch(
+                queries: queries, want: want, around: seed,
+                maxKm: 18, stationOnly: true, minimumScore: 92
+            )
+            if hit == nil {
+                hit = await bestMatch(
+                    queries: queries, want: want, around: seed,
+                    maxKm: 80, stationOnly: true, minimumScore: 92
+                )
+            }
+            guard let hit else { return station }
+            center = hit.coordinate
+        }
+        let moved = abs(station.lat - center.latitude) > 0.00005
+            || abs(station.lng - center.longitude) > 0.00005
+        return moved ? station.relocated(center: center, spots: station.spots) : station
+    }
+
     static func refine(_ station: Station) async -> Station {
         let lockedCenter = LandmarkRegistry.lockedStationCenter(name: station.name)
         let seedCenter = lockedCenter
@@ -568,6 +595,8 @@ enum SpotLocator {
 
     private static func guide(for place: ApplePlace) -> GuideKind? {
         let n = place.name
+        // 学校・病院・駐車場は散歩の案内にしない（「○○学園」が「園」で名所に化ける）
+        if isWrongKindHit(want: "", name: n, category: place.category) { return nil }
         // 喫茶・カフェは休むところ（ご飯の定食屋と混ぜない）
         if CourseBuilder.isSitDownCafe(n) { return .rest }
         if let category = place.category {
@@ -798,6 +827,8 @@ enum SpotLocator {
                         name: name,
                         category: item.pointOfInterestCategory
                     ) else { continue }
+                } else if isWrongKindHit(want: want, name: name, category: item.pointOfInterestCategory) {
+                    continue
                 }
                 // 検索文（店名＋駅名）ではなく、欲しい店名だけで採点する。
                 // 駅名が入ったクエリだと、結果が駅や別の短い地名に吸われる。
@@ -830,6 +861,38 @@ enum SpotLocator {
         if isWorshipNotStation(name) { return false }
         if name.hasSuffix("駅") { return true }
         if category == .publicTransport, name.contains("駅") { return true }
+        return false
+    }
+
+    /// 名所・通り・橋を探しているのに、似た名前のバス停・駐車場・学校などに当たったら採らない
+    /// （「直違橋」→バス停、「○○通」→学校の代表点、の型）。
+    private static func isWrongKindHit(
+        want: String,
+        name: String,
+        category: MKPointOfInterestCategory?
+    ) -> Bool {
+        let wantsSchool = ["学校", "大学", "学院", "学園", "高校", "中学", "小学"].contains { want.contains($0) }
+        let wantsStation = want.hasSuffix("駅")
+        if !wantsStation {
+            if category == .publicTransport { return true }
+            // 「進々堂 京大北門前」のような店は種別が付くので、種別なしの「○○前」だけ停留所とみなす
+            if category == nil, name.hasSuffix("前"), !want.hasSuffix("前") { return true }
+            if ["バス停", "停留所", "のりば", "乗り場"].contains(where: { name.contains($0) }) { return true }
+        }
+        if !wantsSchool {
+            if category == .school || category == .university { return true }
+            if ["学校", "学院", "学園", "高校", "中学", "小学", "幼稚園", "保育園"].contains(where: { name.contains($0) }) {
+                return true
+            }
+        }
+        let neverSights: Set<MKPointOfInterestCategory> = [
+            .parking, .hospital, .pharmacy, .gasStation, .evCharger, .atm, .bank,
+            .postOffice, .police, .fireStation, .laundry, .carRental,
+        ]
+        if let category, neverSights.contains(category),
+           !want.contains("駐車") && !want.contains("病院") && !want.contains("銀行") && !want.contains("郵便") {
+            return true
+        }
         return false
     }
 
