@@ -115,6 +115,11 @@ export type StationSeed = {
   sightseeingNotes?: AreaHistoryNote[];
   /** ドラマ・映画・小説などの撮影地／舞台（徒歩圏・確かなものだけ） */
   storyNotes?: AreaHistoryNote[];
+  /**
+   * 土地文正本のうえに重ねる「いま」メモ（日付つきパッチ）。
+   * 正本は触らない。店情報は入れない。
+   */
+  nowNotes?: Array<{ date: string; body: string }>;
   /** レンタサイクルの有無（未設定時は未確認として表示） */
   bikeRental?: BikeRentalInfo;
   tourTitle: string;

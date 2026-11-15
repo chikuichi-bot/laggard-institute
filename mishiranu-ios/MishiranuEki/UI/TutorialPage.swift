@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// ホームページ（orikata）紹介を、アプリ内のページ分けチュートリアルにしたもの。
+/// ページ送りは「ゆるく」フェード: いまの頁が消えて → 短い紙色 → 次が同じ場所に現れる（被らない）。
 struct TutorialPage: View {
     var onFinished: (() -> Void)? = nil
     /// 設定から開いたときは閉じるボタン、初回は「はじめる」。
@@ -8,6 +9,7 @@ struct TutorialPage: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var page = 0
+    @State private var pass = TutorialSoftPassState()
 
     private let pages = TutorialCopy.pages
 
@@ -42,15 +44,8 @@ struct TutorialPage: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
 
-            TabView(selection: $page) {
-                ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
-                    TutorialSlide(page: item, isLast: index == pages.count - 1)
-                        .tag(index)
-                        .padding(.horizontal, 20)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.22), value: page)
+            TutorialSoftPager(page: $page, pass: $pass, pages: pages)
+                .padding(.horizontal, 20)
 
             pageDots
                 .padding(.top, 10)
@@ -93,7 +88,7 @@ struct TutorialPage: View {
         HStack(spacing: 12) {
             if page > 0 {
                 Button {
-                    withAnimation { page -= 1 }
+                    TutorialSoftPager.go(to: page - 1, page: $page, pass: $pass, count: pages.count)
                 } label: {
                     Text("戻る")
                         .font(.readable(.callout, weight: .semibold))
@@ -107,6 +102,7 @@ struct TutorialPage: View {
                 }
                 .buttonStyle(PlainHapticButtonStyle())
                 .fixedSize(horizontal: true, vertical: false)
+                .disabled(pass.busy)
                 .accessibilityLabel("戻る")
             }
 
@@ -114,20 +110,142 @@ struct TutorialPage: View {
                 if page >= pages.count - 1 {
                     finish()
                 } else {
-                    withAnimation { page += 1 }
+                    TutorialSoftPager.go(to: page + 1, page: $page, pass: $pass, count: pages.count)
                 }
             } label: {
                 Text(page >= pages.count - 1 ? finishLabel : "つぎへ")
                     .font(.readable(.body, weight: .semibold))
-                    .foregroundStyle(Palette.paper)
+                    .foregroundStyle(Palette.ink)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Palette.warm)
+                            .fill(Palette.paper)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Palette.ink.opacity(0.45), lineWidth: 1)
                     )
             }
             .buttonStyle(PlainHapticButtonStyle())
+            .disabled(pass.busy && page < pages.count - 1)
+        }
+    }
+}
+
+// MARK: - ゆるくフェード（消えて → 紙色 → 次）
+
+private enum TutorialSoftTiming {
+    /// ラボ「ゆるく」と同一
+    static let total: TimeInterval = 0.56
+    static let blankHold: TimeInterval = 0.14
+    static var out: TimeInterval { total * ((1 - blankHold) / 2) }
+    static var hold: TimeInterval { total * blankHold }
+    static var fadeIn: TimeInterval { total - out - hold }
+}
+
+private struct TutorialSoftPassState {
+    var shown = 0
+    var opacity: Double = 1
+    var busy = false
+    var axis: Axis? = nil
+
+    enum Axis {
+        case horizontal
+        case vertical
+    }
+}
+
+private struct TutorialSoftPager: View {
+    @Binding var page: Int
+    @Binding var pass: TutorialSoftPassState
+    let pages: [TutorialCopy.Page]
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = max(geo.size.width, 1)
+            TutorialSlide(
+                page: pages[pass.shown],
+                isLast: pass.shown == pages.count - 1
+            )
+            .opacity(pass.opacity)
+            .animation(.easeInOut(duration: TutorialSoftTiming.out), value: pass.opacity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .allowsHitTesting(!pass.busy)
+            .simultaneousGesture(dragGesture(width: width))
+        }
+        .onAppear {
+            if pass.shown != page {
+                pass.shown = page
+            }
+        }
+    }
+
+    private func dragGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 12, coordinateSpace: .local)
+            .onChanged { value in
+                guard !pass.busy else { return }
+                let dx = value.translation.width
+                let dy = value.translation.height
+                if pass.axis == nil {
+                    if abs(dx) > abs(dy) + 6 {
+                        pass.axis = .horizontal
+                    } else if abs(dy) > abs(dx) + 6 {
+                        pass.axis = .vertical
+                    }
+                }
+            }
+            .onEnded { value in
+                defer { pass.axis = nil }
+                guard !pass.busy else { return }
+                guard pass.axis == .horizontal else { return }
+                let predicted = value.predictedEndTranslation.width
+                let threshold = width * 0.2
+                if (-predicted > threshold || -value.translation.width > threshold),
+                   page + 1 < pages.count
+                {
+                    Self.go(to: page + 1, page: $page, pass: $pass, count: pages.count)
+                } else if (predicted > threshold || value.translation.width > threshold),
+                          page > 0
+                {
+                    Self.go(to: page - 1, page: $page, pass: $pass, count: pages.count)
+                }
+            }
+    }
+
+    static func go(
+        to newPage: Int,
+        page: Binding<Int>,
+        pass: Binding<TutorialSoftPassState>,
+        count: Int
+    ) {
+        guard !pass.wrappedValue.busy else { return }
+        guard newPage >= 0, newPage < count, newPage != page.wrappedValue else { return }
+
+        var start = pass.wrappedValue
+        start.busy = true
+        start.axis = nil
+        start.opacity = 0
+        pass.wrappedValue = start
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + TutorialSoftTiming.out) {
+            var mid = pass.wrappedValue
+            mid.shown = newPage
+            pass.wrappedValue = mid
+            page.wrappedValue = newPage
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + TutorialSoftTiming.hold) {
+                var fade = pass.wrappedValue
+                fade.opacity = 1
+                pass.wrappedValue = fade
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + TutorialSoftTiming.fadeIn) {
+                    var done = pass.wrappedValue
+                    done.busy = false
+                    pass.wrappedValue = done
+                }
+            }
         }
     }
 }
@@ -286,13 +404,14 @@ private struct CommuteVerseView: View {
 
     var body: some View {
         // 縦書き：列は右→左、字は上→下
-        HStack(alignment: .top, spacing: 22) {
+        HStack(alignment: .top, spacing: 24) {
             ForEach(Array(lines.enumerated().reversed()), id: \.offset) { index, line in
-                VStack(spacing: 3) {
+                VStack(spacing: 4) {
                     ForEach(Array(line.enumerated()), id: \.offset) { _, ch in
                         Text(String(ch))
-                            .font(.system(size: 17, weight: .medium, design: .serif))
-                            .foregroundStyle(Palette.ink)
+                            // 参考稿と同じくヒラギノ明朝 W3・真っ黒（UIの茶系 ink / New York は使わない）
+                            .font(.custom("HiraMinProN-W3", size: 19))
+                            .foregroundStyle(Color.black)
                     }
                 }
                 .opacity(isOn(index) ? 1 : 0)
@@ -408,11 +527,11 @@ enum TutorialCopy {
             kicker: "なにができるか · 03",
             title: "歩いたところが、道になる",
             bodies: [
-                "地図をひとつ確かめて、少し回り道をする。最短で急がなくてよい。橋や田畑の道、境内や川辺など、無駄に見える寄り道こそが、このアプリの魅力です。",
+                "地図には、寄るところの点と入り口の手がかりを置く。ナビの線は引かない。歩き方は土地の案内を聴きながら、足のほうを信じる。橋や田畑の道、境内や川辺など、無駄に見える寄り道こそが、このアプリの魅力です。",
                 "見たことがあるようで、見たことのない角を曲がり、駅へ戻る。歩いたぶんだけ、名前は散歩道になっていく。",
             ],
             imageName: "tutorial-map",
-            imageAlt: "徒歩圏の地図と動線",
+            imageAlt: "徒歩圏の地図とおすすめの点",
             showBrand: true
         ),
         Page(
@@ -422,7 +541,7 @@ enum TutorialCopy {
                 "帰りの電車で、私はその駅名をもう一度読む。同じ名前なのに、もう空っぽではない。そこには、私の歩いた散歩道がある。",
             ],
             steps: [
-                Step(title: "知らない駅に降りてみる", body: "現在地から探すか、気になっていた駅名を入れる。"),
+                Step(title: "知らない駅に降りてみる", body: "現在地の近くの駅を選ぶか、気になっていた駅名を入れる。"),
                 Step(title: "物語のゆかりを読む", body: "土地にまつわるひとかけらを読む。ここまでは無料。"),
                 Step(title: "散歩道を開く", body: "コインを1枚使って、徒歩圏の散歩道の案内をつくる。一度つくった駅は端末に残り、開き直しにコインはいらない。"),
                 Step(title: "聴きながら歩き、駅へ帰る", body: "土地の歴史と今を耳でたどり、無駄な寄り道をして同じ駅へ戻る。"),

@@ -87,7 +87,9 @@
   column-gap: clamp(1.2rem, 4vw, 1.85rem);
   margin: 0.6rem auto 1.6rem;
   width: 100%;
-  color: var(--text-main);
+  font-family: "Hiragino Mincho ProN", "Hiragino Mincho ProN W3", "Yu Mincho",
+    "游明朝", "Shippori Mincho", "Noto Serif JP", serif;
+  color: #000;
 }
 
 .orikata-verse-line {
@@ -96,10 +98,10 @@
   text-orientation: mixed;
   white-space: nowrap;
   direction: ltr;
-  font-size: clamp(0.88rem, 2.5vw, 1.06rem);
-  font-weight: 500;
-  line-height: 1.85;
-  letter-spacing: 0.1em;
+  font-size: clamp(1.05rem, 3.2vw, 1.28rem);
+  font-weight: 400;
+  line-height: 1.95;
+  letter-spacing: 0.14em;
 }
 
 .orikata-verse--lines .orikata-verse-line {

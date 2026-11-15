@@ -649,7 +649,7 @@ final class AppModel {
                     return
                 }
                 self.contourLoading = false
-                // 調べ失敗でもコイン判断の窓は開く（空の物語＋本案内CTA）。
+                // 調べ失敗でもコイン判断の窓は開く。空文は「無い」ではなく通信失敗として区別する。
                 self.pendingStoryNotes = []
                 self.contourIsDecisionUseful = false
                 self.previewHints = []
@@ -657,9 +657,9 @@ final class AppModel {
                 self.pendingDetailBare = bare
                 let message = (error as? LocalizedError)?.errorDescription?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                if let message, !message.isEmpty {
-                    self.heroNote = message
-                }
+                self.heroNote = (message?.isEmpty == false)
+                    ? message
+                    : "物語のゆかりをいま調べられませんでした。同じWi‑Fiで Mac の案内サーバー（3010）が動いているか確認するか、もう一度開いてください。"
             }
         }
     }

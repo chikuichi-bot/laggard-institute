@@ -615,14 +615,14 @@ private struct WalkGuideListenBar: View {
                             ? "ガイダンスを止める"
                             : (canResume ? "ガイダンスを続きから" : "ガイダンスを聴きながら歩く")
                     )
-                    .font(.readable(.subheadline, weight: .semibold))
+                    .font(.readable(.body, weight: .semibold))
                     Text(
                         speaking
                             ? "画面を消しても続きます · ロック画面で止められます"
                             : "土地の歴史と今を耳でたどります"
                     )
-                    .font(.caption2)
-                    .foregroundStyle(Palette.mist)
+                    .font(.readable(.footnote))
+                    .foregroundStyle(Palette.body)
                 }
                 Spacer(minLength: 0)
             }
@@ -699,8 +699,8 @@ struct WalkPage: View {
                     .foregroundStyle(Palette.ink)
                 if !course.subtitle.isEmpty {
                     Text(course.subtitle)
-                        .font(.readable(.caption))
-                        .foregroundStyle(Palette.fog)
+                        .font(.readable(.subheadline))
+                        .foregroundStyle(Palette.body)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 2)
                 }
@@ -710,10 +710,11 @@ struct WalkPage: View {
                    course.id.contains("ordinary-")
                 {
                     Text(guide)
-                        .font(.readable(.caption2))
-                        .foregroundStyle(Palette.mist)
+                        .font(.readable(.body))
+                        .lineSpacing(6)
+                        .foregroundStyle(Palette.body)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 4)
+                        .padding(.top, 6)
                 }
 
                 if let station = model.station {
@@ -755,21 +756,21 @@ struct WalkPage: View {
                 if !course.corridors.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("空気の道")
-                            .font(.readable(.caption, weight: .semibold))
+                            .font(.readable(.subheadline, weight: .semibold))
                             .foregroundStyle(Palette.warm)
                             .tracking(1)
-                        Text("正確な道順やナビではありません。通って感じる気配の区間です。地図の破線は歩き方の輪郭で、名もなき道ほど実地と少しずれても、足のほうを信じてください。")
-                            .font(.readable(.caption2))
-                            .foregroundStyle(Palette.mist)
+                        Text("正確な道順やナビではありません。通って感じる気配の区間です。地図には点だけを置き、線は引きません。名もなき道ほど実地と少しずれても、足のほうを信じてください。")
+                            .font(.readable(.footnote))
+                            .foregroundStyle(Palette.body)
                             .fixedSize(horizontal: false, vertical: true)
                         ForEach(course.corridors) { corridor in
-                            VStack(alignment: .leading, spacing: 3) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(corridor.name)
                                     .font(.mincho(.body, weight: .semibold))
                                     .foregroundStyle(Palette.ink)
                                 Text(corridor.blurb)
-                                    .font(.readable(.caption))
-                                    .foregroundStyle(Palette.fog)
+                                    .font(.readable(.subheadline))
+                                    .foregroundStyle(Palette.body)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             .padding(.vertical, 4)
@@ -861,8 +862,8 @@ private struct WalkRouteSummary: View {
                 .padding(.vertical, 2)
             }
             Text("同じ道はなるべく通らず、駅へ帰ります。どこからでも駅まで歩いて戻れます。")
-                .font(.caption)
-                .foregroundStyle(Palette.mist)
+                .font(.readable(.footnote))
+                .foregroundStyle(Palette.body)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
@@ -880,10 +881,10 @@ private struct WalkRouteSummary: View {
     private func summaryChip(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.caption2)
-                .foregroundStyle(Palette.mist)
+                .font(.readable(.caption))
+                .foregroundStyle(Palette.body)
             Text(value)
-                .font(.readable(.subheadline, weight: .semibold))
+                .font(.readable(.body, weight: .semibold))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -1555,9 +1556,9 @@ struct SettingsPage: View {
                     )
                 }
                 .buttonStyle(PlainHapticButtonStyle())
-                Text("地図は Apple マップ。出町柳ピンは実座標寄り、ほかの駅は目安の位置です。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.mist)
+                Text("地図は Apple マップ。駅と寄るところは、地図データで確かめた位置だけを出します。")
+                    .font(.readable(.footnote))
+                    .foregroundStyle(Palette.body)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("ピクトグラム素材提供：日本デザインセンター／EXPERIENCE JAPAN PICTOGRAMS")
                     .font(.caption)

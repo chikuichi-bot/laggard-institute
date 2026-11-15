@@ -9,17 +9,61 @@
  */
 import {
   isRichLandDepth,
+  LAND_STOCK_QUERY_ALIASES,
   listLandStockSpotBatchTargets,
   lookupAreaDepthByName,
 } from "../lib/mishiranu-area-depth";
 import { generateStationGuideWithGemini } from "../lib/mishiranu-station-ai";
+import type { StationSeed } from "../data/mishiranu-stations";
 import {
   cacheConfigured,
   readCachedStation,
   writeCachedStation,
 } from "../lib/mishiranu-station-cache";
 
-type Line = "eizan" | "keihan" | "randen" | "hankyu" | "sagano" | "karasuma";
+type Line =
+  | "eizan"
+  | "keihan"
+  | "randen"
+  | "hankyu"
+  | "sagano"
+  | "karasuma"
+  | "tozai"
+  | "kintetsu"
+  | "jr-nara"
+  | "jr-kyoto"
+  | "kashihara"
+  | "keihanna"
+  | "keihan-osaka"
+  | "keihan-nakanoshima"
+  | "kintetsu-nara"
+  | "kintetsu-nara-osaka"
+  | "jr-gakken"
+  | "kintetsu-osaka"
+  | "hanshin"
+  | "hanshin-namba"
+  | "hankyu-kobe"
+  | "hankyu-takarazuka"
+  | "hankyu-kyoto-osaka"
+  | "hankyu-imazu"
+  | "hankyu-senri"
+  | "jr-tozai"
+  | "jr-loop"
+  | "jr-kobe"
+  | "jr-takarazuka"
+  | "jr-hanwa"
+  | "jr-yamato"
+  | "midosuji"
+  | "tanimachi"
+  | "yotsubashi"
+  | "chuo"
+  | "sakaisuji"
+  | "sennichimae"
+  | "nagahori"
+  | "nankai-koya"
+  | "nankai-main"
+  | "kintetsu-osaka-east"
+  | "kintetsu-minami-osaka";
 
 function parseArgs(argv: string[]) {
   let dryRun = false;
@@ -47,16 +91,50 @@ function sleep(ms: number) {
 const MIN_SPOTS = 3;
 const MAX_ATTEMPTS = 3;
 
-async function generateOnce(name: string, apiKey: string, viewerSub: string) {
-  const result = await generateStationGuideWithGemini(name, apiKey, viewerSub);
-  if ("error" in result) return result;
-  if ((result.station.spots?.length ?? 0) < MIN_SPOTS) {
-    return {
-      error: "empty_spots",
-      message: `spots ${result.station.spots.length} < ${MIN_SPOTS}`,
-    } as const;
+function withCanonicalName(station: StationSeed, canonical: string): StationSeed {
+  const name = canonical.replace(/駅$/u, "").trim() || canonical;
+  return { ...station, name };
+}
+
+type BatchGenOk = { station: StationSeed; source: string };
+type BatchGenErr = { error: string; message: string };
+
+/** 正本名 → 必要なら別名クエリ。成功したら正本名で返す。 */
+async function generateOnce(
+  name: string,
+  apiKey: string,
+  viewerSub: string,
+): Promise<BatchGenOk | BatchGenErr> {
+  const queries = [name, ...(LAND_STOCK_QUERY_ALIASES[name] ?? [])];
+  let last: BatchGenErr | undefined;
+  for (let q = 0; q < queries.length; q++) {
+    const query = queries[q]!;
+    if (q > 0) process.stdout.write(`alias:${query}… `);
+    const result = await generateStationGuideWithGemini(
+      query,
+      apiKey,
+      `${viewerSub}:q${q}`,
+    );
+    if ("error" in result) {
+      last = { error: result.error, message: result.message };
+      continue;
+    }
+    const station = withCanonicalName(result.station, name);
+    if ((station.spots?.length ?? 0) < MIN_SPOTS) {
+      last = {
+        error: "empty_spots",
+        message: `spots ${station.spots.length} < ${MIN_SPOTS}`,
+      };
+      continue;
+    }
+    return { station, source: result.source };
   }
-  return result;
+  return (
+    last ?? {
+      error: "empty_spots",
+      message: "案内スポットを作れませんでした。別の駅名で試してください。",
+    }
+  );
 }
 
 function isTransientError(error: string): boolean {

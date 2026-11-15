@@ -17,6 +17,7 @@ import landmarkLocks from "@/data/landmark-locks.json";
 import { applyBikeRentalLocks } from "@/lib/mishiranu-bike-locks";
 import {
   isRichLandDepth,
+  LAND_STOCK_QUERY_ALIASES,
   lookupAreaDepthByName,
   stationShellFromLandDepth,
   withAreaDepth,
@@ -2149,10 +2150,13 @@ function mergePlacesFromLandText(
   }
   const nameReading = asString(parsed.nameReading);
   if (nameReading) next = { ...next, nameReading };
-  const lat = asNumber(parsed.lat, next.lat ?? 35.0);
-  const lng = asNumber(parsed.lng, next.lng ?? 135.0);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    next = { ...next, lat, lng };
+  // 仮の日本中心に落とさない（未取得のままなら filterFarSpots をスキップ）
+  if (parsed.lat != null && parsed.lng != null) {
+    const lat = asNumber(parsed.lat, Number.NaN);
+    const lng = asNumber(parsed.lng, Number.NaN);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      next = { ...next, lat, lng };
+    }
   }
   const mood: StationMood = parsed.mood === "empty" ? "empty" : next.mood;
   next = { ...next, mood };
@@ -2930,8 +2934,22 @@ async function generateGuideFromLandStock(
     apiKey,
     viewerSub,
   );
-  // spots 寄りだけだと 1〜2 件で関所落ちすることがある → 通常生成へ（土地は finalize 内 withAreaDepth で戻る）
+  // spots 寄りだけだと 1〜2 件で関所落ちすることがある → 別名／通常生成へ
   if ("error" in finalized && finalized.error === "empty_spots") {
+    const aliases = LAND_STOCK_QUERY_ALIASES[rawName] ?? [];
+    for (const alias of aliases) {
+      const alt = await generateFromPrompt(
+        buildStationPrompt(alias),
+        alias,
+        apiKey,
+        viewerSub,
+      );
+      if ("error" in alt) continue;
+      return {
+        station: { ...alt.station, name: rawName.replace(/駅$/u, "").trim() },
+        source: alt.source,
+      };
+    }
     return generateFromPrompt(
       buildStationPrompt(rawName),
       rawName,

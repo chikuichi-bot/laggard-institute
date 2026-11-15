@@ -20,7 +20,10 @@
     "test:map-trust": "node scripts/test-map-trust.mjs",
     "audit:locks": "node scripts/audit-landmark-locks.mjs",
     "batch:land-spots": "tsx --env-file=.env.local scripts/batch-land-spots.ts",
-    "batch:land-spots:dry": "tsx --env-file=.env.local scripts/batch-land-spots.ts --dry-run"
+    "batch:land-spots:dry": "tsx --env-file=.env.local scripts/batch-land-spots.ts --dry-run",
+    "land:gemini": "node scripts/land-prose-gemini-web.mjs",
+    "land:gemini:list": "node scripts/land-prose-gemini-web.mjs --list",
+    "land:gemini:next": "node scripts/land-prose-gemini-web.mjs --next"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",
