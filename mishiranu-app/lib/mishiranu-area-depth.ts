@@ -83,6 +83,14 @@ import {
   SENBOKU_LAND_DEPTH_BY_NAME,
 } from "@/lib/mishiranu-senboku-land-depth";
 import {
+  KITAKYU_LAND_DEPTH,
+  KITAKYU_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-kitakyu-land-depth";
+import {
+  OSAKA_MONORAIL_LAND_DEPTH,
+  OSAKA_MONORAIL_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-osaka-monorail-land-depth";
+import {
   KINTETSU_NARA_LAND_DEPTH,
   KINTETSU_NARA_LAND_DEPTH_BY_NAME,
 } from "@/lib/mishiranu-kintetsu-nara-land-depth";
@@ -752,6 +760,8 @@ export const AREA_DEPTH: Record<string, AreaDepth> = {
   ...KOBE_SUBWAY_LAND_DEPTH,
   ...JR_FUKUCHIYAMA_LAND_DEPTH,
   ...SENBOKU_LAND_DEPTH,
+  ...KITAKYU_LAND_DEPTH,
+  ...OSAKA_MONORAIL_LAND_DEPTH,
   ...KINTETSU_NARA_LAND_DEPTH,
   ...KINTETSU_NARA_OSAKA_LAND_DEPTH,
   ...JR_GAKKEN_LAND_DEPTH,
@@ -807,6 +817,8 @@ const AREA_DEPTH_BY_NAME: Record<string, string> = {
   ...KOBE_SUBWAY_LAND_DEPTH_BY_NAME,
   ...JR_FUKUCHIYAMA_LAND_DEPTH_BY_NAME,
   ...SENBOKU_LAND_DEPTH_BY_NAME,
+  ...KITAKYU_LAND_DEPTH_BY_NAME,
+  ...OSAKA_MONORAIL_LAND_DEPTH_BY_NAME,
   ...KINTETSU_NARA_LAND_DEPTH_BY_NAME,
   ...KINTETSU_NARA_OSAKA_LAND_DEPTH_BY_NAME,
   ...JR_GAKKEN_LAND_DEPTH_BY_NAME,
@@ -1416,6 +1428,8 @@ export const LAND_STOCK_SPOT_BATCH: ReadonlyArray<{
     | "kobe-subway"
     | "jr-fukuchiyama"
     | "senboku"
+    | "kitakyu"
+    | "osaka-monorail"
     | "kintetsu-nara"
     | "kintetsu-nara-osaka"
     | "jr-gakken"
@@ -2230,6 +2244,27 @@ export const LAND_STOCK_SPOT_BATCH: ReadonlyArray<{
   { line: "senboku", name: "栂・美木多" },
   { line: "senboku", name: "光明池" },
   { line: "senboku", name: "和泉中央" },
+  // 北大阪急行 · S2 緑地公園〜箕面萱野（江坂除外 · 千里中央は北急キー）
+  { line: "kitakyu", name: "緑地公園" },
+  { line: "kitakyu", name: "千里中央" },
+  { line: "kitakyu", name: "桃山台" },
+  { line: "kitakyu", name: "箕面船場阪大前" },
+  { line: "kitakyu", name: "箕面萱野" },
+  // 大阪モノレール本線 · S3 大阪空港〜門真市（乗換はモノレール専用名）
+  { line: "osaka-monorail", name: "大阪空港" },
+  { line: "osaka-monorail", name: "蛍池（モノレール）" },
+  { line: "osaka-monorail", name: "柴原阪大前" },
+  { line: "osaka-monorail", name: "少路" },
+  { line: "osaka-monorail", name: "千里中央（モノレール）" },
+  { line: "osaka-monorail", name: "山田（モノレール）" },
+  { line: "osaka-monorail", name: "万博記念公園" },
+  { line: "osaka-monorail", name: "宇野辺" },
+  { line: "osaka-monorail", name: "南茨木（モノレール）" },
+  { line: "osaka-monorail", name: "沢良宜" },
+  { line: "osaka-monorail", name: "摂津" },
+  { line: "osaka-monorail", name: "南摂津" },
+  { line: "osaka-monorail", name: "大日（モノレール）" },
+  { line: "osaka-monorail", name: "門真市（モノレール）" },
 ];
 
 export function listLandStockSpotBatchTargets(opts?: {

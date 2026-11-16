@@ -79,8 +79,8 @@ npm run land:gemini -- --pack L   # 指定パック
 | KY3 | 京阪 · 石清水〜宇治 Argon再生成 | **取込済8** | `prompts/PROMPT-KY3.md` | `keihan.md` |
 | KR1 | 烏丸洛内 · 鞍馬口〜京都 Argon再生成 | **取込済7** | `prompts/PROMPT-KR1.md` | `karasuma.md` |
 | SG1 | JR嵯峨野 · 二条〜嵯峨嵐山 Argon再生成 | **取込済5** | `prompts/PROMPT-SG1.md` | `sagano.md` |
-| S2 | 北大阪急行 · 江坂以北〜箕面萱野 | 5 | `prompts/PROMPT-S2.md` | `kitakyu.md` |
-| S3 | 大阪モノレール · 大阪空港〜門真市 | 14 | `prompts/PROMPT-S3.md` | `osaka-monorail.md` |
+| S2 | 北大阪急行 · 江坂以北〜箕面萱野 | **取込済5** | `prompts/PROMPT-S2.md` | `kitakyu.md` |
+| S3 | 大阪モノレール · 大阪空港〜門真市 | **取込済14** | `prompts/PROMPT-S3.md` | `osaka-monorail.md` |
 
 **第一稿50駅 Argon再生成（手動 · 出町柳含む）:** D0+EY+KY+KR1+SG1 = **50駅**。索引 `PROMPT-first50-argon.md`。取込時は既存 md / 正本を上書きしてよい。**until-limit は使わない。**
 

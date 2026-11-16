@@ -77,6 +77,8 @@ npm run land:gemini -- --pack L   # 指定
 | `kobe-subway.md` | 神戸市営地下鉄西神・山手線 · **R2取込済15駅**（新神戸〜西神中央 · 運用B · 三宮除外 · 長田≠大阪メトロ · 板宿は山陽と共有id） |
 | `jr-fukuchiyama.md` | JR福知山線 · **N9取込済9駅**（篠山口〜福知山 · 運用B · 新三田以南除外 · 柏原≠大和路線 · id: kaibara） |
 | `senboku.md` | 泉北高速鉄道 · **S1取込済5駅**（深井〜和泉中央 · 運用B · 中百舌鳥除外 · 泉ケ丘は泉北キー izumigaoka） |
+| `kitakyu.md` | 北大阪急行 · **S2取込済5駅**（緑地公園〜箕面萱野 · 運用B · 江坂除外 · 千里中央は北急キー） |
+| `osaka-monorail.md` | 大阪モノレール本線 · **S3取込済14駅**（大阪空港〜門真市 · 運用B · 乗換はモノレール専用キー） |
 | `hanshin.md` | 阪神本線 · **L0+L+L2取込済30駅**（福島〜春日野道 · 運用B） |
 | `hanshin-namba.md` | 阪神なんば線 · **L3取込済8駅**（桜川〜伝法 · 運用B） |
 | `hankyu-kobe.md` | 阪急神戸本線 · **M1取込済14駅**（中津〜春日野道 · 運用B） |
@@ -200,6 +202,8 @@ npm run batch:land-spots -- --force   # 既存キャッシュも作り直し
 - **2026-11-16 泉北 S1:** Gemini 土地文取込（深井〜和泉中央 · 5駅）→ **配線のみ・spots 未実行**。新規 id **+5**（泉ケ丘は `izumigaoka` · JR東佐野旧称と分離）。土地ストック合計 **AREA_DEPTH に +5**
 - **2026-11-16 first50 SG1:** Argon 再生成取込（二条〜嵯峨嵐山 · 5駅）→ `sagano.md` / `mishiranu-sagano-land-depth.ts` 上書き。**配線のみ・spots 未実行**。**first50 全8パック完了**
 - **2026-11-16 spots 一括:** 未キャッシュ **118** → 生成 **111**＋別名救済 **7**（鶴原・みさき公園・室生口大野・近鉄三本松・赤目口・上ノ太子・人丸前）。鶴原は初回JR誤同定→南海キーで上書き。aliases を `LAND_STOCK_QUERY_ALIASES` に追加
+- **2026-11-16 北急 S2:** Argon 取込（緑地公園〜箕面萱野 · 5駅）→ `kitakyu.md` / `mishiranu-kitakyu-land-depth.ts` 新設。**配線のみ・spots 未実行**（Search課金抑制）
+- **2026-11-16 モノレール S3:** Argon 取込（大阪空港〜門真市 · 14駅）→ `osaka-monorail.md` / `mishiranu-osaka-monorail-land-depth.ts` 新設。**配線のみ・spots 未実行**。乗換は専用 id（蛍池・千里中央・山田・南茨木・大日・門真市）
 - **2026-11-16 first50 KR1:** Argon 再生成取込（鞍馬口〜京都 · 7駅）→ `karasuma.md` / `mishiranu-karasuma-land-depth.ts` 上書き。**配線のみ・spots 未実行**
 - **2026-11-16 first50 KY3:** Argon 再生成取込（石清水八幡宮〜宇治 · 8駅）→ `keihan.md` / `mishiranu-keihan-land-depth.ts` 上書き。**配線のみ・spots 未実行**
 - **2026-11-16 first50 KY2:** Argon 再生成取込（深草〜淀 · 6駅）→ `keihan.md` / `mishiranu-keihan-land-depth.ts` 上書き。**配線のみ・spots 未実行**。`龍谷大前深草` 別名を BY_NAME に追加

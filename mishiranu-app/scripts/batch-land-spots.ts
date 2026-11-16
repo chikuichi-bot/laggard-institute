@@ -68,7 +68,9 @@ type Line =
   | "sanyo"
   | "kobe-subway"
   | "jr-fukuchiyama"
-  | "senboku";
+  | "senboku"
+  | "kitakyu"
+  | "osaka-monorail";
 
 function parseArgs(argv: string[]) {
   let dryRun = false;
