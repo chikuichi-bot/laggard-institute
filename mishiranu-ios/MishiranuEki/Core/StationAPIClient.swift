@@ -28,7 +28,7 @@ enum StationAPIError: Error, LocalizedError {
 enum StationAPIClient {
     private static let deviceToken = "mishiranu-ios-lagado-2026"
 
-    /// 公開本番（plist 未設定時の最終先）。
+    /// Cursor Apps ホスト（ログイン壁あり）。生成用の将来ホスト／plist 参照用に残す。
     private static let publicProductionURL = URL(string: "https://mishiranu-eki.apps.grok.bot")!
 
     /// Release / 設定上の本番 URL（Info.plist `MishiranuAPIBaseURL` があればそれ）。
@@ -40,12 +40,12 @@ enum StationAPIClient {
         return publicProductionURL
     }
 
-    /// DEBUG: Mac の `npm run dev`（3010）。IP は DHCP で変わるので複数試し、ダメなら本番へ。
+    /// 屋外の正本はさくら。DEBUG の生成先は Mac LAN。
     static var baseURL: URL {
         #if DEBUG
-        return debugBaseCandidates().first ?? productionURL
+        return debugLanCandidates().first ?? SakuraStationCache.baseURL
         #else
-        return productionURL
+        return SakuraStationCache.baseURL
         #endif
     }
 
@@ -59,26 +59,16 @@ enum StationAPIClient {
     }
 
     #if DEBUG
-    private static func debugBaseCandidates() -> [URL] {
-        // 外出先優先: 公開本番 →（開発時のみ）LAN。
-        // plist が LAN なら先頭に置き、同じ Wi‑Fi の Mac 開発を優先する。
-        // 届かない LAN は短時間で捨てて本番へ。
+    private static func debugLanCandidates() -> [URL] {
+        // plist が LAN なら先頭。届かない先は短時間で諦める。
+        // ※ grok.bot は sign_in_required で外から不通なので候補に入れない。
         var urls: [URL] = []
         func appendUnique(_ url: URL) {
             guard !urls.contains(where: { $0.absoluteString == url.absoluteString }) else { return }
             urls.append(url)
         }
-
-        var plistOverride: URL?
         if let raw = Bundle.main.object(forInfoDictionaryKey: "MishiranuAPIBaseURL") as? String,
-           let override = URL(string: raw), !raw.isEmpty {
-            plistOverride = override
-        }
-        if let override = plistOverride, isLanURL(override) {
-            appendUnique(override)
-        }
-        appendUnique(publicProductionURL)
-        if let override = plistOverride, !isLanURL(override) {
+           let override = URL(string: raw), !raw.isEmpty, isLanURL(override) {
             appendUnique(override)
         }
         for raw in [
@@ -92,8 +82,7 @@ enum StationAPIClient {
     }
     #endif
 
-    /// 端末トークン。本番ゲートを避けたいのでカスタムヘッダを必ず付ける。
-    /// LAN の Next だけは Bearer も併用（ローカル開発用）。
+    /// 端末トークン。LAN の Next は Bearer も併用。
     private static func applyDeviceAuth(to request: inout URLRequest, base: URL) {
         request.setValue(deviceToken, forHTTPHeaderField: "x-mishiranu-device-token")
         if isLanURL(base) {
@@ -102,7 +91,7 @@ enum StationAPIClient {
     }
 
     /// - Parameter userAi: 買い切り BYOK のときだけ渡す。ホストの Gemini は使わない。
-    /// - Parameter forceRefresh: true なら共有キャッシュを無視して作り直す。
+    /// - Parameter forceRefresh: true なら共有キャッシュを無視して作り直す（要 Mac 3010）。
     static func lookupStation(
         name: String,
         userAi: BillingStore.UserAiPayload? = nil,
@@ -111,17 +100,44 @@ enum StationAPIClient {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw StationAPIError.emptyName }
 
-        let base = await resolveBaseURL()
-        return try await lookupStationOnce(
-            name: trimmed,
-            base: base,
-            userAi: userAi,
-            forceRefresh: forceRefresh,
-            timeout: 120
+        // 外（5G）の本線: さくらの静的 JSON。Mac なしでも既キャッシュ駅は開く。
+        if !forceRefresh, let cached = await SakuraStationCache.readStation(name: trimmed) {
+            #if DEBUG
+            print("[MishiranuAPI] sakura hit \(trimmed)")
+            #endif
+            return cached
+        }
+
+        #if DEBUG
+        if let lan = await resolveLanBaseURL() {
+            do {
+                return try await lookupStationOnce(
+                    name: trimmed,
+                    base: lan,
+                    userAi: userAi,
+                    forceRefresh: forceRefresh,
+                    timeout: 120
+                )
+            } catch {
+                if let cached = await SakuraStationCache.readStation(name: trimmed) {
+                    return cached
+                }
+                throw error
+            }
+        }
+        #endif
+
+        if let cached = await SakuraStationCache.readStation(name: trimmed) {
+            return cached
+        }
+
+        throw StationAPIError.badStatus(
+            503,
+            "この駅の案内はまだ共有サーバーにありません。一度同じ Wi‑Fi で Mac の案内サーバーから開くと、外でも使えます。"
         )
     }
 
-    /// コイン不要。物語のゆかりだけ（正本／キャッシュ／grounded）。
+    /// コイン不要。物語のゆかりだけ（さくら → 正本／grounded は Mac 3010）。
     static func lookupStoryNotes(
         name: String,
         userAi: BillingStore.UserAiPayload? = nil
@@ -129,7 +145,17 @@ enum StationAPIClient {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw StationAPIError.emptyName }
 
-        let base = await resolveBaseURL()
+        if let cached = await SakuraStationCache.readStoryNotes(name: trimmed) {
+            return cached
+        }
+
+        #if DEBUG
+        guard let base = await resolveLanBaseURL() else {
+            throw StationAPIError.badStatus(
+                503,
+                "物語のゆかりはまだ共有サーバーにありません。Wi‑Fi で Mac の案内サーバーから一度開いてください。"
+            )
+        }
         var request = URLRequest(url: base.appendingPathComponent("api/mishiranu/story"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -165,6 +191,12 @@ enum StationAPIClient {
                 Self.networkFailureMessage(urlError, base: base)
             )
         }
+        #else
+        throw StationAPIError.badStatus(
+            503,
+            "物語のゆかりはまだ共有サーバーにありません。別の駅で試すか、しばらくしてからどうぞ。"
+        )
+        #endif
     }
 
     private static func parseStoryNotes(_ raw: Any?) -> [HistoryNote] {
@@ -179,15 +211,10 @@ enum StationAPIClient {
         }
     }
 
-    /// 死んだ LAN は 2 秒で捨て、生きている先だけ本生成（最大120秒）に使う。
-    /// 外出先では公開本番を先に採用し、LAN は届くときだけ使う。
-    private static func resolveBaseURL() async -> URL {
+    /// 死んだ LAN は 2 秒で捨て、生きている Mac だけ本生成に使う。
+    private static func resolveLanBaseURL() async -> URL? {
         #if DEBUG
-        for candidate in debugBaseCandidates() {
-            if !isLanURL(candidate) {
-                print("[MishiranuAPI] use \(candidate.absoluteString)")
-                return candidate
-            }
+        for candidate in debugLanCandidates() {
             let ok = await isReachable(candidate, timeout: 2)
             print("[MishiranuAPI] probe \(candidate.absoluteString) -> \(ok)")
             if ok {
@@ -195,11 +222,7 @@ enum StationAPIClient {
             }
         }
         #endif
-        // plist が LAN のままだと届かない先へ戻ってしまうので、非 LAN だけ採用。
-        if !isLanURL(productionURL) {
-            return productionURL
-        }
-        return publicProductionURL
+        return nil
     }
 
     private static func isReachable(_ base: URL, timeout: TimeInterval) async -> Bool {
@@ -209,7 +232,7 @@ enum StationAPIClient {
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-            // 401/403/404 を「届いた」と誤判定しない（本番へフォールバックする）。
+            // 401/403/404 を「届いた」と誤判定しない。
             return (200 ... 299).contains(status)
         } catch {
             #if DEBUG
@@ -274,25 +297,20 @@ enum StationAPIClient {
         case .timedOut:
             return "案内サーバーの応答が遅れています。もう一度どうぞ。"
         case .notConnectedToInternet:
-            return "インターネットに接続されていません。Wi‑Fiを確認してください。"
+            return "インターネットに接続されていません。通信状況を確認してください。"
         case .cannotConnectToHost, .cannotFindHost, .networkConnectionLost, .dnsLookupFailed:
             if isLanURL(base) {
                 return "Macの案内サーバー（3010）に届きません。同じWi‑Fiか、サーバー起動を確認してください。"
             }
-            return "案内サーバーに入れませんでした。通信状況をもう一度確認してください。"
+            return "案内サーバーに届きません。共有サーバー（さくら）か通信状況を確認してください。"
         default:
             return "案内の通信に失敗しました。通信状況をみて、もう一度どうぞ。"
         }
     }
 
     private static func fallbackMessage(status: Int, error: String?, base: URL) -> String {
-        let authDenied: String = {
-            if isLanURL(base) {
-                return "案内サーバーへの接続が拒否されました。Macの開発サーバー（3010）が同じWi‑Fiで起動しているか確認してください。"
-            }
-            return "案内サーバーに入れませんでした。通信状況をもう一度確認してください。"
-        }()
-
+        let sakuraHint =
+            "案内の生成サーバーにはいま届きません。共有キャッシュにある駅なら外でも開けます。未登録の駅は Wi‑Fi で Mac から一度開いてください。"
         switch error {
         case "rate_limited":
             return "いま混み合っています。少し待ってから、もう一度どうぞ。"
@@ -302,15 +320,15 @@ enum StationAPIClient {
             return "鉄道の駅として確認できませんでした。別の駅名で試してください。"
         case "unauthorized", "sign_in_required":
             if isLanURL(base) {
-                return authDenied
+                return "案内サーバーへの接続が拒否されました。Macの開発サーバー（3010）が同じWi‑Fiで起動しているか確認してください。"
             }
-            return "外出先の案内サーバーがまだ非公開です。公開設定が反映されるまで、端末に残した駅か、Safari でサインインした案内をご利用ください。"
+            return sakuraHint
         default:
             if status == 401 || status == 403 {
                 if isLanURL(base) {
-                    return authDenied
+                    return "案内サーバーへの接続が拒否されました。Macの開発サーバー（3010）が同じWi‑Fiで起動しているか確認してください。"
                 }
-                return "外出先の案内サーバーがまだ非公開です。公開設定が反映されるまで、端末に残した駅か、Safari でサインインした案内をご利用ください。"
+                return sakuraHint
             }
             if status >= 500 {
                 return "案内の応答が途切れました。もう一度どうぞ。"
@@ -319,6 +337,7 @@ enum StationAPIClient {
         }
     }
 }
+
 
 /// Web / Gemini JSON をネイティブ Station 形へ寄せる。
 enum StationNormalizer {

@@ -63,7 +63,12 @@ type Line =
   | "nankai-koya"
   | "nankai-main"
   | "kintetsu-osaka-east"
-  | "kintetsu-minami-osaka";
+  | "kintetsu-minami-osaka"
+  | "keihan-katano"
+  | "sanyo"
+  | "kobe-subway"
+  | "jr-fukuchiyama"
+  | "senboku";
 
 function parseArgs(argv: string[]) {
   let dryRun = false;

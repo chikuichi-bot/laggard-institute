@@ -1,5 +1,12 @@
 # mishiranu / Lagado knowledge log
 
+## 2026-11-16 · 屋外5Gで「3010拒否」→ 実際は grok.bot 壁。さくら直読みで外利用
+- **症状:** 外（5G）で「案内サーバーへの接続が拒否…Mac の開発サーバー（3010）」と出て駅が開けない
+- **原因:** DEBUG は LAN 不通後に `mishiranu-eki.apps.grok.bot` へ落ちるが、Cursor Apps が `sign_in_required`（401）を返す。端末トークンは届かない。拒否文が 3010 と誤表示されていた
+- **対処:** iOS が `https://lagado.jp/mishiranu-cache/v1/<sha256>.json` を直接 GET（`SakuraStationCache` · Node と同鍵）。ヒットすれば外でも開く。未キャッシュ駅だけ Wi‑Fi+Mac 3010 で生成→さくら書き込み。grok.bot は候補から外す
+- **再利用:** 屋外不通 → まずさくら JSON の有無。本番 Cursor Apps は iPhone から通らない前提。エラー文に 3010 だけを書かない
+- **やってはいけない:** grok.bot を屋外の正本にする／拒否をすべて「Mac 未起動」と読む
+
 ## 2026-11-15 · チュートリアルは横スライド禁止・電車の窓ぼかし
 - **症状:** TabView `.page` だと隣ページが端に見え、説明がスライド式になる
 - **原因:** ページ送りを UIKit/SwiftUI のページコントローラに任せた

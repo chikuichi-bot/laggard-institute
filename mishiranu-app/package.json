@@ -23,7 +23,8 @@
     "batch:land-spots:dry": "tsx --env-file=.env.local scripts/batch-land-spots.ts --dry-run",
     "land:gemini": "node scripts/land-prose-gemini-web.mjs",
     "land:gemini:list": "node scripts/land-prose-gemini-web.mjs --list",
-    "land:gemini:next": "node scripts/land-prose-gemini-web.mjs --next"
+    "land:gemini:next": "node scripts/land-prose-gemini-web.mjs --next",
+    "land:gemini:until-limit": "node scripts/land-prose-gemini-web.mjs --until-limit"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

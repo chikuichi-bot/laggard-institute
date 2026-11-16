@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>トップ地図の位置・大きさ</title>
+  <style>
+    :root { --ink: #2a241c; --paper: #f8f5ee; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #12100e;
+      color: #f3efe6;
+      font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+      padding: 16px 16px 40px;
+    }
+    h1 { font-size: 1.15rem; font-weight: 500; text-align: center; margin: 0; }
+    .lead { text-align: center; color: #b7ad9e; font-size: 0.85rem; margin: 6px 0 14px; }
+    .phone {
+      width: min(100%, 320px);
+      height: 620px;
+      margin: 0 auto;
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 28px;
+      padding: 28px 16px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    /* タイトルと地図は独立。地図はボタン上まで全域 */
+    .stage {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      margin-bottom: 12px;
+    }
+    .title {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 2;
+      writing-mode: vertical-rl;
+      letter-spacing: 0.28em;
+      font-size: 1.2rem;
+      pointer-events: none;
+    }
+    .slot {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: rgba(42, 36, 28, 0.04);
+      border: 1px dashed rgba(42, 36, 28, 0.25);
+    }
+    .map {
+      position: absolute;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      z-index: 1;
+    }
+    .map:active { cursor: grabbing; }
+    .map svg { display: block; width: 100%; height: auto; pointer-events: none; }
+    .bank { fill: none; stroke: rgba(42,36,28,.5); stroke-width: 1.2; stroke-linecap: round; }
+    .road { fill: none; stroke: rgba(42,36,28,.28); stroke-width: 1.4; }
+    .station { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
+    .cta {
+      flex: 0 0 auto;
+      width: 100%;
+      min-height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(42,36,28,.55);
+      background: rgba(42,36,28,.04);
+      font: inherit;
+      letter-spacing: 0.16em;
+    }
+    .panel { max-width: 320px; margin: 16px auto 0; display: grid; gap: 10px; }
+    label { display: grid; gap: 4px; font-size: 0.9rem; color: #d2c8b8; }
+    input[type="range"] { width: 100%; }
+    .row { display: flex; gap: 8px; }
+    button.act {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid #3a342c;
+      background: #1c1914;
+      color: inherit;
+      font: inherit;
+      padding: 10px;
+      cursor: pointer;
+    }
+    .now { text-align: center; margin: 0; font-size: 0.85rem; color: #e8dfd0; }
+  </style>
+</head>
+<body>
+  <h1>地図を動かしてください</h1>
+  <p class="lead">右の題字と地図は別レイヤーです。地図は上端まで動かせます。</p>
+
+  <div class="phone">
+    <div class="stage">
+      <div class="slot" id="slot">
+        <div class="map" id="map">
+          <svg viewBox="0 0 160 168" aria-hidden="true">
+            <path class="bank" d="M52 4 C50 28, 52 48, 56 64 C60 76, 64 84, 70 90 M148 20 C128 34, 108 50, 90 68 C82 76, 76 84, 70 90 M70 90 C72 108, 74 126, 76 144 C77 154, 78 160, 80 168" />
+            <path class="road" d="M2 132 H158" />
+            <path class="road" d="M34 4 V164" />
+            <path class="road" d="M142 4 V164" />
+            <path class="road" d="M88 98 V164" />
+            <path class="road" d="M6 36 H48" />
+            <path class="road" d="M6 58 H50" />
+            <path class="road" d="M6 82 H52" />
+            <path class="road" d="M6 108 H54" />
+            <path class="road" d="M100 40 H140" />
+            <path class="road" d="M98 62 H144" />
+            <path class="road" d="M96 88 H146" />
+            <path class="road" d="M100 112 H148" />
+            <path class="road" d="M18 8 V128" />
+            <path class="road" d="M46 8 V128" />
+            <path class="road" d="M108 8 V128" />
+            <path class="road" d="M128 8 V160" />
+            <rect class="station" x="88.5" y="78.5" width="7" height="7" rx="1" />
+          </svg>
+        </div>
+      </div>
+      <div class="title">見知らぬ駅</div>
+    </div>
+    <button class="cta" type="button">この場所</button>
+  </div>
+
+  <div class="panel">
+    <p class="now" id="now">左 9 · 上 33 · 幅 73%</p>
+    <label>大きさ
+      <input id="w" type="range" min="30" max="120" value="73" />
+    </label>
+    <label>左右
+      <input id="x" type="range" min="-20" max="80" value="9" />
+    </label>
+    <label>上下
+      <input id="y" type="range" min="-20" max="80" value="33" />
+    </label>
+    <div class="row">
+      <button class="act" id="reset" type="button">リセット</button>
+      <button class="act" id="copy" type="button">数値をコピー</button>
+    </div>
+  </div>
+
+  <script>
+    var map = document.getElementById("map");
+    var slot = document.getElementById("slot");
+    var x = document.getElementById("x");
+    var y = document.getElementById("y");
+    var w = document.getElementById("w");
+    var now = document.getElementById("now");
+    var drag = null;
+
+    function apply() {
+      map.style.left = x.value + "%";
+      map.style.top = y.value + "%";
+      map.style.width = w.value + "%";
+      now.textContent = "左 " + x.value + " · 上 " + y.value + " · 幅 " + w.value + "%";
+    }
+
+    x.oninput = apply;
+    y.oninput = apply;
+    w.oninput = apply;
+    apply();
+
+    map.onpointerdown = function (e) {
+      drag = { px: e.clientX, py: e.clientY, x: Number(x.value), y: Number(y.value) };
+      map.setPointerCapture(e.pointerId);
+    };
+    map.onpointermove = function (e) {
+      if (!drag) return;
+      var rect = slot.getBoundingClientRect();
+      x.value = String(Math.round(drag.x + ((e.clientX - drag.px) / rect.width) * 100));
+      y.value = String(Math.round(drag.y + ((e.clientY - drag.py) / rect.height) * 100));
+      apply();
+    };
+    map.onpointerup = function () { drag = null; };
+    map.onpointercancel = function () { drag = null; };
+
+    document.getElementById("reset").onclick = function () {
+      x.value = "9";
+      y.value = "33";
+      w.value = "73";
+      apply();
+    };
+    document.getElementById("copy").onclick = function () {
+      var text = "左 " + x.value + " / 上 " + y.value + " / 幅 " + w.value + "%";
+      navigator.clipboard.writeText(text);
+      now.textContent = "コピーしました · " + text;
+    };
+  </script>
+</body>
+</html>

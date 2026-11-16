@@ -662,7 +662,7 @@ final class AppModel {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 self.heroNote = (message?.isEmpty == false)
                     ? message
-                    : "物語のゆかりをいま調べられませんでした。通信状況をみて、もう一度開いてください。"
+                    : "物語のゆかりをいま調べられませんでした。共有サーバーか通信状況を確認するか、もう一度開いてください。"
             }
         }
     }

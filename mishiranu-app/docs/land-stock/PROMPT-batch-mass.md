@@ -4,7 +4,7 @@
 
 1000駅を1チャットには載せない。**この索引の各ファイルを別 Gemini チャットに並列貼付**する。
 
-## 貼り方（半自動 · API課金なし · Gemini Web Hydrogen）
+## 貼り方（半自動 · API課金なし · Gemini Web Argon 高）
 
 ```bash
 cd mishiranu-app
@@ -14,7 +14,10 @@ npm run land:gemini -- --pack L   # 指定パック
 ```
 
 1. 上のコマンドで **クリップボードにプロンプトが入る**＋Gemini Web が開く
-2. **新規チャット** · モデルは **Hydrogen 高**のまま · Cmd+V → 送信
+2. **新規チャット** · スクリプトが **Argon 高**を自動選択（失敗時は手動）· Cmd+V → 送信  
+   - **初回だけ** Chrome: 表示 → 開発 / 管理 → 「Apple Events からの JavaScript を許可」  
+   - Gemini設定の「自動モデル選択」は OFF 推奨（新規チャットでリセットされにくい）  
+   - **連続（制限まで）:** `npm run land:gemini:until-limit` → 未取込を新規チャット→Argon高→貼付→送信→`docs/land-stock/.gemini-web/raw/` に保存。上限・モデル落ちで停止
 3. 返ってきたら Cursor に `{id}です` と貼る → 配線のみ（spots しない）
 
 手動のままやる場合: 下表のファイルを開き、コードブロックをコピーして同じ手順。
@@ -63,15 +66,25 @@ npm run land:gemini -- --pack L   # 指定パック
 | K4 | 近鉄南大阪線 · 駒ヶ谷〜橿原神宮前 | **取込済12** | `prompts/PROMPT-K4.md` | `kintetsu-minami-osaka.md` |
 | J3 | 京阪本線 · 京橋〜淀屋橋 | **取込済4** | `prompts/PROMPT-J3.md` | `keihan-osaka.md` |
 | J4 | 京阪中之島線 · 中之島〜なにわ橋 | **取込済4** | `prompts/PROMPT-J4.md` | `keihan-nakanoshima.md` |
-| J5 | 京阪交野線 · 枚方市〜私市 | 7 | `prompts/PROMPT-J5.md` | `keihan-katano.md` |
-| R1 | 山陽電鉄本線 · 西代〜明石 | 16 | `prompts/PROMPT-R1.md` | `sanyo.md` |
-| R2 | 神戸市営地下鉄西神・山手線 · 新神戸〜西神中央 | 15 | `prompts/PROMPT-R2.md` | `kobe-subway.md` |
-| N9 | JR福知山線 · 篠山口〜福知山 | 9 | `prompts/PROMPT-N9.md` | `jr-fukuchiyama.md` |
-| S1 | 泉北高速鉄道 · 深井〜和泉中央 | 5 | `prompts/PROMPT-S1.md` | `senboku.md` |
+| J5 | 京阪交野線 · 枚方市〜私市 | **取込済7** | `prompts/PROMPT-J5.md` | `keihan-katano.md` |
+| R1 | 山陽電鉄本線 · 西代〜明石 | **取込済16** | `prompts/PROMPT-R1.md` | `sanyo.md` |
+| R2 | 神戸市営地下鉄西神・山手線 · 新神戸〜西神中央 | **取込済15** | `prompts/PROMPT-R2.md` | `kobe-subway.md` |
+| N9 | JR福知山線 · 篠山口〜福知山 | **取込済9** | `prompts/PROMPT-N9.md` | `jr-fukuchiyama.md` |
+| S1 | 泉北高速鉄道 · 深井〜和泉中央 | **取込済5** | `prompts/PROMPT-S1.md` | `senboku.md` |
+| D0 | 出町柳周辺 · 正本3駅 Argon再生成（第一稿50の1） | **取込済3** | `prompts/PROMPT-D0.md` | `area-depth-core.md` |
+| EY1 | 叡電本線 · 元田中〜八瀬 Argon再生成 | **取込済7** | `prompts/PROMPT-EY1.md` | `eizan.md` |
+| EY2 | 叡電鞍馬線 · 八幡前〜鞍馬 Argon再生成 | **取込済7** | `prompts/PROMPT-EY2.md` | `eizan.md` |
+| KY1 | 京阪 · 神宮丸太町〜伏見稲荷 Argon再生成 | **取込済7** | `prompts/PROMPT-KY1.md` | `keihan.md` |
+| KY2 | 京阪本線 · 深草〜淀 Argon再生成 | 6 | `prompts/PROMPT-KY2.md` | `keihan.md` |
+| KY3 | 京阪 · 石清水〜宇治 Argon再生成 | 8 | `prompts/PROMPT-KY3.md` | `keihan.md` |
+| KR1 | 烏丸洛内 · 鞍馬口〜京都 Argon再生成 | 7 | `prompts/PROMPT-KR1.md` | `karasuma.md` |
+| SG1 | JR嵯峨野 · 二条〜嵯峨嵐山 Argon再生成 | 5 | `prompts/PROMPT-SG1.md` | `sagano.md` |
 | S2 | 北大阪急行 · 江坂以北〜箕面萱野 | 5 | `prompts/PROMPT-S2.md` | `kitakyu.md` |
 | S3 | 大阪モノレール · 大阪空港〜門真市 | 14 | `prompts/PROMPT-S3.md` | `osaka-monorail.md` |
 
-**このバッチ合計:** 480駅
+**第一稿50駅 Argon再生成（手動 · 出町柳含む）:** D0+EY+KY+KR1+SG1 = **50駅**。索引 `PROMPT-first50-argon.md`。取込時は既存 md / 正本を上書きしてよい。**until-limit は使わない。**
+
+**このバッチ合計:** 480駅 + 再生成38
 
 **見込みストック:** 261 + 480 ≒ **741駅**（重複名・巨大除外の関係で実取込は前後する）
 

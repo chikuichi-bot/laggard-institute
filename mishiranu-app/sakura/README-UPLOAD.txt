@@ -50,10 +50,13 @@ PHP が v1/ を作って JSON を書けるようにするためです。
 
 - ローカル開発: `mishiranu-app/.env.local`（upload スクリプト後に URL/TOKEN を入れる）
 - 本番（Cursor Apps `mishiranu-eki.apps.grok.bot`）: Publish Settings の Environment に同じ2つ
-- iPhone DEBUG は Mac の `npm run dev`（3010）の `.env.local` を読む
+- iPhone DEBUG の **生成** は Mac の `npm run dev`（3010）の `.env.local` を読む
+- iPhone の **屋外読み** は API を経由せず、上記 URL の `v1/<鍵>.json` を直接 GET する
+  （`mishiranu-ios` の `SakuraStationCache`）。合言葉は読みに不要
 
-どちらも未設定なら、キャッシュを使わず今までどおり毎回生成します。
-さくらが落ちても案内は止まりません（読みも書きも失敗は黙って無視します）。
+どちらも未設定なら、サーバー側はキャッシュを使わず今までどおり毎回生成します。
+さくらが落ちても、Mac 3010 が生きていれば生成はできます。
+屋外で開けるのは、すでにさくらへ載った駅だけです。
 
 
 5. 動いているか見る
