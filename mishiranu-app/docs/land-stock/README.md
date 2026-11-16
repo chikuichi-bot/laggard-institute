@@ -54,7 +54,7 @@ npm run land:gemini -- --pack L   # 指定
 | `keihan.md` | 京阪（鴨東〜洛南＋宇治線。出町・中書島除く）21駅 |
 | `randen.md` | 嵐電（嵐山本線＋北野線）15駅 |
 | `hankyu.md` | 阪急京都本線9駅＋嵐山線3駅（上桂〜嵐山） |
-| `sagano.md` | JR嵯峨野線（二条〜嵯峨嵐山）5駅 |
+| `sagano.md` | JR嵯峨野線 · **SG1取込済5駅**（二条〜嵯峨嵐山 · Argon再生成 · 運用B） |
 | `karasuma.md` | 地下鉄烏丸線・洛内寄り7駅（鞍馬口〜京都）· 最良AI稿直取込済 |
 | `tozai.md` | 地下鉄東西線・未収録13駅（下記）· **Gemini 起稿取込済 2026-11-15** · 依頼文は `PROMPT-tozai.md` |
 | `kintetsu-kyoto.md` | 近鉄京都線・未収録25駅 · **Gemini 起稿取込済 2026-11-15** · 依頼文は `PROMPT-kintetsu-kyoto.md`（A/B分割） |
@@ -198,3 +198,8 @@ npm run batch:land-spots -- --force   # 既存キャッシュも作り直し
 - **2026-11-15 JR N5:** Gemini 土地文取込（美章園〜鳳 · 13駅）→ **配線のみ・spots 未実行**。新規 id **+13**。土地ストック合計 **434駅**（421＋13）
 - **2026-11-15 JR N6:** Gemini 土地文取込（富木〜紀伊 · 16駅）→ **配線のみ・spots 未実行**。新規 id **+16**。土地ストック合計 **450駅**（434＋16）
 - **2026-11-16 泉北 S1:** Gemini 土地文取込（深井〜和泉中央 · 5駅）→ **配線のみ・spots 未実行**。新規 id **+5**（泉ケ丘は `izumigaoka` · JR東佐野旧称と分離）。土地ストック合計 **AREA_DEPTH に +5**
+- **2026-11-16 first50 SG1:** Argon 再生成取込（二条〜嵯峨嵐山 · 5駅）→ `sagano.md` / `mishiranu-sagano-land-depth.ts` 上書き。**配線のみ・spots 未実行**。**first50 全8パック完了**
+- **2026-11-16 spots 一括:** 未キャッシュ **118** → 生成 **111**＋別名救済 **7**（鶴原・みさき公園・室生口大野・近鉄三本松・赤目口・上ノ太子・人丸前）。鶴原は初回JR誤同定→南海キーで上書き。aliases を `LAND_STOCK_QUERY_ALIASES` に追加
+- **2026-11-16 first50 KR1:** Argon 再生成取込（鞍馬口〜京都 · 7駅）→ `karasuma.md` / `mishiranu-karasuma-land-depth.ts` 上書き。**配線のみ・spots 未実行**
+- **2026-11-16 first50 KY3:** Argon 再生成取込（石清水八幡宮〜宇治 · 8駅）→ `keihan.md` / `mishiranu-keihan-land-depth.ts` 上書き。**配線のみ・spots 未実行**
+- **2026-11-16 first50 KY2:** Argon 再生成取込（深草〜淀 · 6駅）→ `keihan.md` / `mishiranu-keihan-land-depth.ts` 上書き。**配線のみ・spots 未実行**。`龍谷大前深草` 別名を BY_NAME に追加

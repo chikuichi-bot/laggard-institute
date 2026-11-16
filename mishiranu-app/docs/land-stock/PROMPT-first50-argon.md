@@ -13,10 +13,10 @@
 | 2 | EY1 | 叡電本線 · 元田中〜八瀬比叡山口 | **取込済7** | `prompts/PROMPT-EY1.md` | `eizan.md` |
 | 3 | EY2 | 叡電鞍馬線 · 八幡前〜鞍馬 | **取込済7** | `prompts/PROMPT-EY2.md` | `eizan.md` |
 | 4 | KY1 | 京阪 · 神宮丸太町〜伏見稲荷 | **取込済7** | `prompts/PROMPT-KY1.md` | `keihan.md` |
-| 5 | KY2 | 京阪本線 · 深草〜淀 | 6 | `prompts/PROMPT-KY2.md` | `keihan.md` |
-| 6 | KY3 | 京阪 · 石清水〜宇治 | 8 | `prompts/PROMPT-KY3.md` | `keihan.md` |
-| 7 | KR1 | 烏丸洛内 · 鞍馬口〜京都 | 7 | `prompts/PROMPT-KR1.md` | `karasuma.md` |
-| 8 | SG1 | JR嵯峨野 · 二条〜嵯峨嵐山 | 5 | `prompts/PROMPT-SG1.md` | `sagano.md` |
+| 5 | KY2 | 京阪本線 · 深草〜淀 | **取込済6** | `prompts/PROMPT-KY2.md` | `keihan.md` |
+| 6 | KY3 | 京阪 · 石清水〜宇治 | **取込済8** | `prompts/PROMPT-KY3.md` | `keihan.md` |
+| 7 | KR1 | 烏丸洛内 · 鞍馬口〜京都 | **取込済7** | `prompts/PROMPT-KR1.md` | `karasuma.md` |
+| 8 | SG1 | JR嵯峨野 · 二条〜嵯峨嵐山 | **取込済5** | `prompts/PROMPT-SG1.md` | `sagano.md` |
 
 **内訳:** 正本3 + 叡電14 + 京阪21 + 烏丸7 + 嵯峨野5 = **50**
 

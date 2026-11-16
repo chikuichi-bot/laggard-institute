@@ -75,10 +75,10 @@ npm run land:gemini -- --pack L   # 指定パック
 | EY1 | 叡電本線 · 元田中〜八瀬 Argon再生成 | **取込済7** | `prompts/PROMPT-EY1.md` | `eizan.md` |
 | EY2 | 叡電鞍馬線 · 八幡前〜鞍馬 Argon再生成 | **取込済7** | `prompts/PROMPT-EY2.md` | `eizan.md` |
 | KY1 | 京阪 · 神宮丸太町〜伏見稲荷 Argon再生成 | **取込済7** | `prompts/PROMPT-KY1.md` | `keihan.md` |
-| KY2 | 京阪本線 · 深草〜淀 Argon再生成 | 6 | `prompts/PROMPT-KY2.md` | `keihan.md` |
-| KY3 | 京阪 · 石清水〜宇治 Argon再生成 | 8 | `prompts/PROMPT-KY3.md` | `keihan.md` |
-| KR1 | 烏丸洛内 · 鞍馬口〜京都 Argon再生成 | 7 | `prompts/PROMPT-KR1.md` | `karasuma.md` |
-| SG1 | JR嵯峨野 · 二条〜嵯峨嵐山 Argon再生成 | 5 | `prompts/PROMPT-SG1.md` | `sagano.md` |
+| KY2 | 京阪本線 · 深草〜淀 Argon再生成 | **取込済6** | `prompts/PROMPT-KY2.md` | `keihan.md` |
+| KY3 | 京阪 · 石清水〜宇治 Argon再生成 | **取込済8** | `prompts/PROMPT-KY3.md` | `keihan.md` |
+| KR1 | 烏丸洛内 · 鞍馬口〜京都 Argon再生成 | **取込済7** | `prompts/PROMPT-KR1.md` | `karasuma.md` |
+| SG1 | JR嵯峨野 · 二条〜嵯峨嵐山 Argon再生成 | **取込済5** | `prompts/PROMPT-SG1.md` | `sagano.md` |
 | S2 | 北大阪急行 · 江坂以北〜箕面萱野 | 5 | `prompts/PROMPT-S2.md` | `kitakyu.md` |
 | S3 | 大阪モノレール · 大阪空港〜門真市 | 14 | `prompts/PROMPT-S3.md` | `osaka-monorail.md` |
 
