@@ -50,7 +50,10 @@ import {
   refineLandProse,
 } from "@/lib/mishiranu-land-prose";
 import { ensureLandMentions } from "@/lib/mishiranu-lore";
-import type { UserAiConfig } from "@/lib/mishiranu-billing";
+import {
+  sanitizeOpenAiCompatibleBaseUrl,
+  type UserAiConfig,
+} from "@/lib/mishiranu-billing";
 import {
   clarifyLandscapeName,
   landscapeWalkBlurb,
@@ -1215,10 +1218,15 @@ async function callOpenAiCompatibleGenerate(
     };
   }
 
-  const base = (config.baseUrl || "https://api.openai.com/v1").replace(
-    /\/$/,
-    "",
-  );
+  const base = sanitizeOpenAiCompatibleBaseUrl(config.baseUrl);
+  if (!base) {
+    paid.release();
+    return {
+      ok: false,
+      error: "gemini_http",
+      message: "この API の接続先は使えません。許可された先を選んでください。",
+    };
+  }
   const model = config.model || "gpt-4o-mini";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

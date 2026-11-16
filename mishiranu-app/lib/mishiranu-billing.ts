@@ -74,6 +74,36 @@ export const BYOK_PROVIDERS: Array<{
 export const DEFAULT_OPENAI_BASE = "https://api.openai.com/v1";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 
+/** BYOK の OpenAI 互換先。SSRF 防止のため許可ホストのみ。 */
+const OPENAI_COMPAT_HOSTS = new Set([
+  "api.openai.com",
+  "openrouter.ai",
+  "api.groq.com",
+]);
+
+/**
+ * サーバーが fetch してよい OpenAI 互換 baseUrl。
+ * https・許可ホスト・認証情報なしのみ。不正なら null。
+ */
+export function sanitizeOpenAiCompatibleBaseUrl(
+  raw: string | undefined | null,
+): string | null {
+  const trimmed = (raw ?? "").trim().replace(/\/$/, "");
+  const candidate = trimmed || DEFAULT_OPENAI_BASE;
+  let url: URL;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  if (url.username || url.password) return null;
+  if (url.port && url.port !== "443") return null;
+  const host = url.hostname.toLowerCase();
+  if (!OPENAI_COMPAT_HOSTS.has(host)) return null;
+  return candidate;
+}
+
 const STORAGE_KEY = "mishiranu.billing.v1";
 /** 試作中はコイン経路で見る。買い切りフラグを一度だけ落とす。 */
 const FORCE_COIN_MODE_KEY = "mishiranu.billing.forceCoinMode.20261111";
@@ -171,7 +201,7 @@ export function isByokConfigured(state: BillingState): boolean {
   if (!state.byokUnlocked) return false;
   if (state.apiKey.trim().length < 8) return false;
   if (state.byokProvider === "openai") {
-    return state.apiBaseUrl.trim().startsWith("http");
+    return sanitizeOpenAiCompatibleBaseUrl(state.apiBaseUrl) != null;
   }
   return true;
 }
@@ -203,10 +233,12 @@ export function userAiConfigFromBilling(
 ): UserAiConfig | null {
   if (!usesByokForGeneration(state)) return null;
   if (state.byokProvider === "openai") {
+    const baseUrl = sanitizeOpenAiCompatibleBaseUrl(state.apiBaseUrl);
+    if (!baseUrl) return null;
     return {
       provider: "openai",
       apiKey: state.apiKey.trim(),
-      baseUrl: state.apiBaseUrl.trim().replace(/\/$/, "") || DEFAULT_OPENAI_BASE,
+      baseUrl,
       model: state.apiModel.trim() || DEFAULT_OPENAI_MODEL,
     };
   }

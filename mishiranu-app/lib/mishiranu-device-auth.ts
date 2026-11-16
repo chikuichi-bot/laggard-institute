@@ -1,12 +1,11 @@
 /**
  * Native iOS が見知らぬ駅 API を叩くときの端末トークン。
  * Cursor Apps の identity ヘッダが無い代わりに使う。
- * 本番では MISHIRANU_DEVICE_TOKEN を優先。未設定時は内蔵トークン（Lagado 私用）。
+ * トークン文字列はソースに置かず、MISHIRANU_DEVICE_TOKEN のみ。
  */
 import type { VerifiedIdentity } from "../cursor/identity";
 import { getIdentity } from "../cursor/identity";
 
-const BUILTIN_IOS_DEVICE_TOKEN = "mishiranu-ios-lagado-2026";
 const DEVICE_SUB = "device:ios";
 
 export type StationViewer = {
@@ -14,12 +13,12 @@ export type StationViewer = {
   via: "identity" | "device";
 };
 
-function expectedDeviceToken(): string {
+function expectedDeviceToken(): string | null {
   const fromEnv =
     typeof process !== "undefined"
       ? process.env.MISHIRANU_DEVICE_TOKEN?.trim()
       : "";
-  return fromEnv || BUILTIN_IOS_DEVICE_TOKEN;
+  return fromEnv || null;
 }
 
 function headerToken(request: Request): string | null {
@@ -33,9 +32,11 @@ function headerToken(request: Request): string | null {
 }
 
 export function acceptDeviceToken(request: Request): StationViewer | null {
+  const expected = expectedDeviceToken();
+  if (!expected) return null;
   const token = headerToken(request);
   if (!token) return null;
-  if (token !== expectedDeviceToken()) return null;
+  if (token !== expected) return null;
   return { sub: DEVICE_SUB, via: "device" };
 }
 

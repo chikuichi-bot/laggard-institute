@@ -1,5 +1,6 @@
 import { requireStationViewer } from "@/lib/mishiranu-device-auth";
 import type { UserAiConfig } from "@/lib/mishiranu-billing";
+import { sanitizeOpenAiCompatibleBaseUrl } from "@/lib/mishiranu-billing";
 import {
   allowViewerRequest,
   hasViewerHourlyBudget,
@@ -46,11 +47,10 @@ function parseUserAi(body: Body): UserAiConfig | null {
     if (apiKey.length < 8) return null;
     const provider = raw.provider === "openai" ? "openai" : "gemini";
     if (provider === "openai") {
-      const baseUrl =
-        typeof raw.baseUrl === "string" && raw.baseUrl.trim()
-          ? raw.baseUrl.trim().replace(/\/$/, "")
-          : "https://api.openai.com/v1";
-      if (!/^https?:\/\//i.test(baseUrl)) return null;
+      const baseUrl = sanitizeOpenAiCompatibleBaseUrl(
+        typeof raw.baseUrl === "string" ? raw.baseUrl : undefined,
+      );
+      if (!baseUrl) return null;
       const model =
         typeof raw.model === "string" && raw.model.trim()
           ? raw.model.trim()
