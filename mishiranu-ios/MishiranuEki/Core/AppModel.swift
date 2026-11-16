@@ -550,11 +550,14 @@ final class AppModel {
 
     /// 保存がほぼ空か（スポットも土地文も無いときだけ自動で作り直す）。
     private static func isUnusableSaved(_ station: Station) -> Bool {
-        let prose =
-            (station.stationIntro?.count ?? 0)
-            + (station.areaAbout?.count ?? 0)
-            + (station.walkGuide?.count ?? 0)
-            + station.historyNotes.reduce(0) { $0 + $1.body.count }
+        let intro = station.stationIntro?.count ?? 0
+        let about = station.areaAbout?.count ?? 0
+        let walk = station.walkGuide?.count ?? 0
+        var historyChars = 0
+        for note in station.historyNotes {
+            historyChars += note.body.count
+        }
+        let prose = intro + about + walk + historyChars
         return station.spots.isEmpty && prose < 80
     }
 

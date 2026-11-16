@@ -906,8 +906,8 @@ enum SpotLocator {
     }
 
     private static func coordinateOf(_ item: MKMapItem) -> CLLocationCoordinate2D {
-        if #available(iOS 26.0, *) { return item.location.coordinate }
-        return item.placemark.coordinate
+        // CI は Xcode 16 / iOS 18 SDK。MKMapItem.location は未導入のため placemark を使う。
+        item.placemark.coordinate
     }
 
     private static func addressLine(_ item: MKMapItem) -> String? {
