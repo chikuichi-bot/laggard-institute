@@ -659,7 +659,7 @@ final class AppModel {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 self.heroNote = (message?.isEmpty == false)
                     ? message
-                    : "物語のゆかりをいま調べられませんでした。同じWi‑Fiで Mac の案内サーバー（3010）が動いているか確認するか、もう一度開いてください。"
+                    : "物語のゆかりをいま調べられませんでした。通信状況をみて、もう一度開いてください。"
             }
         }
     }

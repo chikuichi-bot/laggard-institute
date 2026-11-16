@@ -60,16 +60,25 @@ enum StationAPIClient {
 
     #if DEBUG
     private static func debugBaseCandidates() -> [URL] {
-        // plist 上書き → LAN 候補 → 公開本番。届かない LAN は短時間で捨てる。
-        // IP は DHCP / テザリングで変わる。届かないときは `node scripts/cap-local-url.mjs` で確認して先頭へ。
+        // 外出先優先: 公開本番 →（開発時のみ）LAN。
+        // plist が LAN なら先頭に置き、同じ Wi‑Fi の Mac 開発を優先する。
+        // 届かない LAN は短時間で捨てて本番へ。
         var urls: [URL] = []
         func appendUnique(_ url: URL) {
             guard !urls.contains(where: { $0.absoluteString == url.absoluteString }) else { return }
             urls.append(url)
         }
 
+        var plistOverride: URL?
         if let raw = Bundle.main.object(forInfoDictionaryKey: "MishiranuAPIBaseURL") as? String,
            let override = URL(string: raw), !raw.isEmpty {
+            plistOverride = override
+        }
+        if let override = plistOverride, isLanURL(override) {
+            appendUnique(override)
+        }
+        appendUnique(publicProductionURL)
+        if let override = plistOverride, !isLanURL(override) {
             appendUnique(override)
         }
         for raw in [
@@ -79,10 +88,18 @@ enum StationAPIClient {
         ] {
             if let url = URL(string: raw) { appendUnique(url) }
         }
-        appendUnique(publicProductionURL)
         return urls
     }
     #endif
+
+    /// 端末トークン。本番ゲートを避けたいのでカスタムヘッダを必ず付ける。
+    /// LAN の Next だけは Bearer も併用（ローカル開発用）。
+    private static func applyDeviceAuth(to request: inout URLRequest, base: URL) {
+        request.setValue(deviceToken, forHTTPHeaderField: "x-mishiranu-device-token")
+        if isLanURL(base) {
+            request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
+        }
+    }
 
     /// - Parameter userAi: 買い切り BYOK のときだけ渡す。ホストの Gemini は使わない。
     /// - Parameter forceRefresh: true なら共有キャッシュを無視して作り直す。
@@ -116,7 +133,7 @@ enum StationAPIClient {
         var request = URLRequest(url: base.appendingPathComponent("api/mishiranu/story"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
+        applyDeviceAuth(to: &request, base: base)
         request.timeoutInterval = 60
         var payload: [String: Any] = ["name": trimmed]
         if let userAi {
@@ -163,10 +180,12 @@ enum StationAPIClient {
     }
 
     /// 死んだ LAN は 2 秒で捨て、生きている先だけ本生成（最大120秒）に使う。
+    /// 外出先では公開本番を先に採用し、LAN は届くときだけ使う。
     private static func resolveBaseURL() async -> URL {
         #if DEBUG
         for candidate in debugBaseCandidates() {
             if !isLanURL(candidate) {
+                print("[MishiranuAPI] use \(candidate.absoluteString)")
                 return candidate
             }
             let ok = await isReachable(candidate, timeout: 2)
@@ -210,7 +229,7 @@ enum StationAPIClient {
         var request = URLRequest(url: base.appendingPathComponent("api/mishiranu/station"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
+        applyDeviceAuth(to: &request, base: base)
         request.timeoutInterval = timeout
         var payload: [String: Any] = ["name": name]
         if forceRefresh {
@@ -282,10 +301,16 @@ enum StationAPIClient {
         case "not_a_station":
             return "鉄道の駅として確認できませんでした。別の駅名で試してください。"
         case "unauthorized", "sign_in_required":
-            return authDenied
+            if isLanURL(base) {
+                return authDenied
+            }
+            return "外出先の案内サーバーがまだ非公開です。公開設定が反映されるまで、端末に残した駅か、Safari でサインインした案内をご利用ください。"
         default:
             if status == 401 || status == 403 {
-                return authDenied
+                if isLanURL(base) {
+                    return authDenied
+                }
+                return "外出先の案内サーバーがまだ非公開です。公開設定が反映されるまで、端末に残した駅か、Safari でサインインした案内をご利用ください。"
             }
             if status >= 500 {
                 return "案内の応答が途切れました。もう一度どうぞ。"
