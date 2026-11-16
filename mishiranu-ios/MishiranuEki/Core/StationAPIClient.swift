@@ -28,13 +28,16 @@ enum StationAPIError: Error, LocalizedError {
 enum StationAPIClient {
     private static let deviceToken = "mishiranu-ios-lagado-2026"
 
-    /// Release / 最終フォールバックの公開 URL。
+    /// 公開本番（plist 未設定時の最終先）。
+    private static let publicProductionURL = URL(string: "https://mishiranu-eki.apps.grok.bot")!
+
+    /// Release / 設定上の本番 URL（Info.plist `MishiranuAPIBaseURL` があればそれ）。
     static var productionURL: URL {
         if let raw = Bundle.main.object(forInfoDictionaryKey: "MishiranuAPIBaseURL") as? String,
            let url = URL(string: raw), !raw.isEmpty {
             return url
         }
-        return URL(string: "https://mishiranu-eki.apps.grok.bot")!
+        return publicProductionURL
     }
 
     /// DEBUG: Mac の `npm run dev`（3010）。IP は DHCP で変わるので複数試し、ダメなら本番へ。
@@ -46,17 +49,38 @@ enum StationAPIClient {
         #endif
     }
 
+    private static func isLanURL(_ url: URL) -> Bool {
+        let host = url.host ?? ""
+        return host.hasPrefix("192.168.")
+            || host.hasPrefix("172.")
+            || host.hasPrefix("10.")
+            || host == "localhost"
+            || host == "127.0.0.1"
+    }
+
     #if DEBUG
     private static func debugBaseCandidates() -> [URL] {
-        // いまの Mac LAN → ホットスポット帯 → 以前の固定 → 本番。届かない先は短時間で諦める。
+        // plist 上書き → LAN 候補 → 公開本番。届かない LAN は短時間で捨てる。
         // IP は DHCP / テザリングで変わる。届かないときは `node scripts/cap-local-url.mjs` で確認して先頭へ。
-        [
+        var urls: [URL] = []
+        func appendUnique(_ url: URL) {
+            guard !urls.contains(where: { $0.absoluteString == url.absoluteString }) else { return }
+            urls.append(url)
+        }
+
+        if let raw = Bundle.main.object(forInfoDictionaryKey: "MishiranuAPIBaseURL") as? String,
+           let override = URL(string: raw), !raw.isEmpty {
+            appendUnique(override)
+        }
+        for raw in [
             "http://192.168.0.5:3010",
             "http://192.168.0.8:3010",
             "http://172.20.10.7:3010",
-            productionURL.absoluteString,
-        ]
-        .compactMap(URL.init(string:))
+        ] {
+            if let url = URL(string: raw) { appendUnique(url) }
+        }
+        appendUnique(publicProductionURL)
+        return urls
     }
     #endif
 
@@ -112,7 +136,7 @@ enum StationAPIClient {
             let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             if !(200 ... 299).contains(status) {
                 let message = (body["message"] as? String)
-                    ?? Self.fallbackMessage(status: status, error: body["error"] as? String)
+                    ?? Self.fallbackMessage(status: status, error: body["error"] as? String, base: base)
                 throw StationAPIError.badStatus(status, message)
             }
             return parseStoryNotes(body["storyNotes"])
@@ -121,7 +145,7 @@ enum StationAPIClient {
         } catch let urlError as URLError {
             throw StationAPIError.badStatus(
                 urlError.errorCode,
-                Self.networkFailureMessage(urlError)
+                Self.networkFailureMessage(urlError, base: base)
             )
         }
     }
@@ -142,13 +166,7 @@ enum StationAPIClient {
     private static func resolveBaseURL() async -> URL {
         #if DEBUG
         for candidate in debugBaseCandidates() {
-            let host = candidate.host ?? ""
-            let isLan = host.hasPrefix("192.168.")
-                || host.hasPrefix("172.")
-                || host.hasPrefix("10.")
-                || host == "localhost"
-                || host == "127.0.0.1"
-            if !isLan {
+            if !isLanURL(candidate) {
                 return candidate
             }
             let ok = await isReachable(candidate, timeout: 2)
@@ -158,7 +176,11 @@ enum StationAPIClient {
             }
         }
         #endif
-        return productionURL
+        // plist が LAN のままだと届かない先へ戻ってしまうので、非 LAN だけ採用。
+        if !isLanURL(productionURL) {
+            return productionURL
+        }
+        return publicProductionURL
     }
 
     private static func isReachable(_ base: URL, timeout: TimeInterval) async -> Bool {
@@ -168,7 +190,8 @@ enum StationAPIClient {
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-            return (200 ... 499).contains(status)
+            // 401/403/404 を「届いた」と誤判定しない（本番へフォールバックする）。
+            return (200 ... 299).contains(status)
         } catch {
             #if DEBUG
             print("[MishiranuAPI] probe error \(base.absoluteString): \(error)")
@@ -210,7 +233,7 @@ enum StationAPIClient {
             let payload = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             if !(200 ... 299).contains(status) {
                 let message = (payload["message"] as? String)
-                    ?? Self.fallbackMessage(status: status, error: payload["error"] as? String)
+                    ?? Self.fallbackMessage(status: status, error: payload["error"] as? String, base: base)
                 throw StationAPIError.badStatus(status, message)
             }
             guard let stationObj = payload["station"] as? [String: Any] else {
@@ -222,25 +245,35 @@ enum StationAPIClient {
         } catch let urlError as URLError {
             throw StationAPIError.badStatus(
                 urlError.errorCode,
-                Self.networkFailureMessage(urlError)
+                Self.networkFailureMessage(urlError, base: base)
             )
         }
     }
 
-    private static func networkFailureMessage(_ error: URLError) -> String {
+    private static func networkFailureMessage(_ error: URLError, base: URL) -> String {
         switch error.code {
         case .timedOut:
             return "案内サーバーの応答が遅れています。もう一度どうぞ。"
         case .notConnectedToInternet:
             return "インターネットに接続されていません。Wi‑Fiを確認してください。"
         case .cannotConnectToHost, .cannotFindHost, .networkConnectionLost, .dnsLookupFailed:
-            return "Macの案内サーバー（3010）に届きません。同じWi‑Fiか、サーバー起動を確認してください。"
+            if isLanURL(base) {
+                return "Macの案内サーバー（3010）に届きません。同じWi‑Fiか、サーバー起動を確認してください。"
+            }
+            return "案内サーバーに入れませんでした。通信状況をもう一度確認してください。"
         default:
             return "案内の通信に失敗しました。通信状況をみて、もう一度どうぞ。"
         }
     }
 
-    private static func fallbackMessage(status: Int, error: String?) -> String {
+    private static func fallbackMessage(status: Int, error: String?, base: URL) -> String {
+        let authDenied: String = {
+            if isLanURL(base) {
+                return "案内サーバーへの接続が拒否されました。Macの開発サーバー（3010）が同じWi‑Fiで起動しているか確認してください。"
+            }
+            return "案内サーバーに入れませんでした。通信状況をもう一度確認してください。"
+        }()
+
         switch error {
         case "rate_limited":
             return "いま混み合っています。少し待ってから、もう一度どうぞ。"
@@ -249,10 +282,10 @@ enum StationAPIClient {
         case "not_a_station":
             return "鉄道の駅として確認できませんでした。別の駅名で試してください。"
         case "unauthorized", "sign_in_required":
-            return "案内サーバーへの接続が拒否されました。Macの開発サーバー（3010）が同じWi‑Fiで起動しているか確認してください。"
+            return authDenied
         default:
             if status == 401 || status == 403 {
-                return "案内サーバーへの接続が拒否されました。Macの開発サーバー（3010）が同じWi‑Fiで起動しているか確認してください。"
+                return authDenied
             }
             if status >= 500 {
                 return "案内の応答が途切れました。もう一度どうぞ。"
