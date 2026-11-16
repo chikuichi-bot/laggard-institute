@@ -1,0 +1,387 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&display=swap");
+
+.bc-page {
+  min-height: 100vh;
+  background: #1a1714;
+  color: #f2ebe0;
+  font-family: "Shippori Mincho", serif;
+  padding: 1.5rem 1.25rem 4rem;
+}
+
+.bc-head {
+  max-width: 72rem;
+  margin: 0 auto 1.5rem;
+}
+
+.bc-head-kicker {
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: #b7ad9e;
+}
+
+.bc-head-title {
+  margin: 0 0 0.5rem;
+  font-weight: 500;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+.bc-head-lead {
+  margin: 0 0 1rem;
+  max-width: 38em;
+  line-height: 1.75;
+  color: #d2c8b8;
+}
+
+.bc-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.bc-tabs button {
+  border: 1px solid #3a342c;
+  background: transparent;
+  color: #e8e0d4;
+  border-radius: 999px;
+  padding: 0.32rem 0.7rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.bc-tabs button.is-on {
+  background: #f3efe6;
+  color: #171512;
+  border-color: #f3efe6;
+}
+
+.bc-grid {
+  max-width: 78rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.6rem 1rem;
+}
+
+.bc-grid--one {
+  max-width: 28rem;
+}
+
+.bc-card h2 {
+  margin: 0.75rem 0 0.2rem;
+  font-size: 1rem;
+}
+
+.bc-card-copy p {
+  margin: 0;
+  color: #d8d0c4;
+  line-height: 1.55;
+  font-size: 0.88rem;
+}
+
+.bc-phone {
+  width: min(100%, 280px);
+  height: 560px;
+  border-radius: 32px;
+  padding: 10px;
+  background: #0c0b09;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.bc-notch {
+  width: 84px;
+  height: 16px;
+  margin: 0 auto 6px;
+  border-radius: 0 0 12px 12px;
+  background: #0c0b09;
+  position: relative;
+  z-index: 2;
+}
+
+.bc-screen {
+  height: calc(100% - 6px);
+  margin-top: -16px;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.bc-cover {
+  --ink: #2a241c;
+  --paper: #f4efe4;
+  --mist: #8a7d6b;
+  --line: #2a241c;
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 2.1rem 1.2rem 1.15rem;
+  background:
+    radial-gradient(120% 80% at 20% 0%, rgba(255, 255, 255, 0.35), transparent 55%),
+    linear-gradient(180deg, #f7f2e8 0%, var(--paper) 48%, #efe8da 100%);
+  color: var(--ink);
+  font-family: "Shippori Mincho", serif;
+}
+
+.bc-frame {
+  position: absolute;
+  inset: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--line) 28%, transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bc-spine {
+  position: absolute;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  right: 0.55rem;
+  width: 0.62rem;
+  background: linear-gradient(180deg, #5c4030, #3d2a20 55%, #5c4030);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bc-series {
+  position: relative;
+  z-index: 2;
+  margin: 0.15rem 0 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.28em;
+  color: var(--mist);
+  writing-mode: vertical-rl;
+  margin-left: auto;
+  margin-right: 1.15rem;
+}
+
+.bc-title {
+  position: relative;
+  z-index: 2;
+  margin: 0.55rem 0 0 auto;
+  margin-right: 1.15rem;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  text-orientation: mixed;
+  width: max-content;
+  height: auto;
+  font-size: 1.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1;
+}
+
+.bc-obi {
+  position: relative;
+  z-index: 2;
+  margin: auto 0 0;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, var(--ink) 88%, #7a3b2e);
+  color: #f6efe3;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.bc-gap {
+  flex: 1 1 auto;
+  min-height: 1.5rem;
+}
+
+.bc-colophon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.bc-cta {
+  width: 100%;
+  min-height: 2.65rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+}
+
+.bc-search label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.bc-search span {
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  color: var(--mist);
+}
+
+.bc-search input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--ink);
+  background: transparent;
+  padding: 0.28rem 0;
+  border-radius: 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.bc-search input::placeholder {
+  color: color-mix(in srgb, var(--mist) 75%, transparent);
+}
+
+.bc-imprint {
+  margin: 0.1rem 0 0;
+  text-align: center;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  color: var(--mist);
+}
+
+/* 1 · 背表紙 */
+.bc-cover--spine {
+  padding-right: 1.95rem;
+}
+
+.bc-cover--spine .bc-frame {
+  right: 1.35rem;
+}
+
+.bc-cover--spine .bc-title,
+.bc-cover--spine .bc-series {
+  margin-right: 0.2rem;
+}
+
+.bc-cover--spine .bc-cta {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-width: 1.5px;
+  font-weight: 600;
+}
+
+/* 2 · 帯 */
+.bc-cover--band {
+  --paper: #f6f1e7;
+}
+
+.bc-cover--band .bc-title {
+  margin-inline: auto;
+  margin-right: auto;
+  font-size: 1.85rem;
+  letter-spacing: 0.26em;
+}
+
+.bc-cover--band .bc-series {
+  margin-inline: auto;
+  writing-mode: horizontal-tb;
+  letter-spacing: 0.34em;
+  text-align: center;
+}
+
+.bc-cover--band .bc-gap {
+  min-height: 0.5rem;
+}
+
+.bc-cover--band .bc-obi {
+  margin-bottom: 0.75rem;
+}
+
+.bc-cover--band .bc-cta {
+  border-radius: 2px;
+  background: var(--ink);
+  color: var(--paper);
+  letter-spacing: 0.18em;
+}
+
+/* 3 · 余白 */
+.bc-cover--ma {
+  --paper: #f8f5ee;
+  background: #f8f5ee;
+  padding-top: 2.6rem;
+}
+
+.bc-cover--ma .bc-frame {
+  display: none;
+}
+
+.bc-cover--ma .bc-series {
+  opacity: 0.7;
+  margin-right: 0.15rem;
+}
+
+.bc-cover--ma .bc-title {
+  margin-right: 0.15rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  font-size: 1.55rem;
+}
+
+.bc-cover--ma .bc-cta {
+  border: none;
+  border-bottom: 1px solid var(--ink);
+  border-radius: 0;
+  min-height: 0;
+  padding: 0.2rem 0 0.35rem;
+  width: auto;
+  align-self: flex-start;
+  letter-spacing: 0.2em;
+}
+
+.bc-cover--ma .bc-imprint {
+  text-align: left;
+}
+
+/* 4 · 布表紙 */
+.bc-cover--cloth {
+  --ink: #e6d3a1;
+  --paper: #17140f;
+  --mist: #a8946a;
+  --line: #e6d3a1;
+  background:
+    radial-gradient(90% 70% at 70% 15%, rgba(230, 211, 161, 0.08), transparent 50%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.015) 0 1px,
+      transparent 1px 3px
+    ),
+    #17140f;
+  color: var(--ink);
+}
+
+.bc-cover--cloth .bc-frame {
+  inset: 0.85rem;
+  border-color: color-mix(in srgb, var(--ink) 42%, transparent);
+}
+
+.bc-cover--cloth .bc-title {
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  margin-right: 0.35rem;
+}
+
+.bc-cover--cloth .bc-series {
+  margin-right: 0.35rem;
+}
+
+.bc-cover--cloth .bc-cta {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+.bc-cover--cloth .bc-search input {
+  border-bottom-color: var(--ink);
+  color: var(--ink);
+}
+
+.bc-cover--cloth .bc-search input::placeholder {
+  color: color-mix(in srgb, var(--mist) 80%, transparent);
+}

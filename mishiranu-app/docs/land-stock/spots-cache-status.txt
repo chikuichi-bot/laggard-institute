@@ -1,0 +1,71 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm.
+configured true
+HIT eizan 元田中 spots=3
+HIT eizan 茶山・京都芸術大学 spots=5
+HIT eizan 一乗寺 spots=4
+HIT eizan 修学院 spots=6
+HIT eizan 宝ヶ池 spots=4
+HIT eizan 三宅八幡 spots=3
+HIT eizan 八瀬比叡山口 spots=6
+HIT eizan 八幡前 spots=5
+HIT eizan 岩倉 spots=5
+HIT eizan 木野 spots=3
+HIT eizan 京都精華大前 spots=3
+HIT eizan 市原 spots=4
+HIT eizan 貴船口 spots=3
+HIT eizan 鞍馬 spots=5
+HIT keihan 神宮丸太町 spots=6
+HIT keihan 三条 spots=3
+HIT keihan 祇園四条 spots=5
+HIT keihan 清水五条 spots=5
+HIT keihan 七条 spots=6
+HIT keihan 鳥羽街道 spots=3
+HIT keihan 伏見稲荷 spots=7
+HIT keihan 深草 spots=6
+HIT keihan 藤森 spots=14
+HIT keihan 墨染 spots=5
+HIT keihan 丹波橋 spots=8
+HIT keihan 伏見桃山 spots=9
+HIT keihan 淀 spots=3
+HIT keihan 石清水八幡宮 spots=10
+HIT keihan 観月橋 spots=7
+HIT keihan 桃山南口 spots=6
+HIT keihan 六地蔵 spots=4
+HIT keihan 木幡 spots=4
+HIT keihan 黄檗 spots=4
+HIT keihan 三室戸 spots=3
+HIT keihan 宇治 spots=8
+HIT randen 四条大宮 spots=3
+HIT randen 西大路三条 spots=3
+HIT randen 山ノ内 spots=3
+HIT randen 嵐電天神川 spots=4
+HIT randen 蚕ノ社 spots=3
+MISS randen 帷子ノ辻
+HIT randen 撮影所前 spots=3
+HIT randen 鹿王院 spots=4
+MISS randen 嵐電嵯峨
+HIT randen 嵐山 spots=3
+HIT randen 御室仁和寺 spots=4
+MISS randen 妙心寺
+HIT randen 龍安寺 spots=4
+MISS randen 等持院・立命館大学衣笠キャンパス前
+HIT randen 北野白梅町 spots=4
+HIT hankyu 京都河原町 spots=8
+HIT hankyu 烏丸 spots=4
+HIT hankyu 大宮 spots=4
+HIT hankyu 西院 spots=7
+HIT hankyu 西京極 spots=3
+HIT hankyu 桂 spots=5
+HIT hankyu 東向日 spots=3
+HIT hankyu 洛西口 spots=3
+HIT hankyu 長岡天神 spots=5
+HIT hankyu 上桂 spots=3
+HIT hankyu 松尾大社 spots=3
+HIT hankyu 嵐山（阪急） spots=3
+HIT sagano 二条 spots=6
+HIT sagano 円町 spots=3
+HIT sagano 花園 spots=5
+MISS sagano 太秦
+HIT sagano 嵯峨嵐山 spots=3
+
+HIT 62 / MISS 5 / total 67

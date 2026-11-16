@@ -1,0 +1,624 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&display=swap");
+
+.ts7 {
+  --bg: #f4f1ea;
+  --paper: #faf7f0;
+  --ink: #111;
+  --mute: #6a655c;
+  --line: #d8d2c4;
+  min-height: 100dvh;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+
+.ts7-shell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3.5rem;
+}
+
+.ts7-kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  color: var(--mute);
+}
+
+.ts7-title {
+  margin: 0.45rem 0 0.6rem;
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.ts7-lede {
+  margin: 0;
+  max-width: 36em;
+  color: var(--mute);
+  line-height: 1.75;
+  font-size: 0.95rem;
+}
+
+.ts7-switch {
+  position: relative;
+}
+
+.ts7-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ts7-tabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 1.75rem 0 1.5rem;
+}
+
+@media (max-width: 720px) {
+  .ts7-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.ts7-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  cursor: pointer;
+  text-align: center;
+}
+
+.ts7-tab:hover {
+  border-color: rgba(17, 17, 17, 0.55);
+}
+
+.ts7-tab-num {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--mute);
+}
+
+.ts7-tab-name {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+}
+
+.ts7-radio--0:checked ~ .ts7-tabs .ts7-tab--0,
+.ts7-radio--1:checked ~ .ts7-tabs .ts7-tab--1,
+.ts7-radio--2:checked ~ .ts7-tabs .ts7-tab--2,
+.ts7-radio--3:checked ~ .ts7-tabs .ts7-tab--3,
+.ts7-radio--4:checked ~ .ts7-tabs .ts7-tab--4,
+.ts7-radio--5:checked ~ .ts7-tabs .ts7-tab--5,
+.ts7-radio--6:checked ~ .ts7-tabs .ts7-tab--6 {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.ts7-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 280px) 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .ts7-stage {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ts7-phone {
+  border: 1px solid var(--ink);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--paper);
+  aspect-ratio: 240 / 420;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+}
+
+.ts7-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ts7-aside {
+  position: relative;
+  min-height: 10rem;
+}
+
+.ts7-aside-panel,
+.ts7-panel {
+  visibility: hidden;
+}
+
+.ts7-aside-panel {
+  position: absolute;
+  inset: 0;
+}
+
+.ts7-radio--0:checked ~ .ts7-stage .ts7-panel--0,
+.ts7-radio--1:checked ~ .ts7-stage .ts7-panel--1,
+.ts7-radio--2:checked ~ .ts7-stage .ts7-panel--2,
+.ts7-radio--3:checked ~ .ts7-stage .ts7-panel--3,
+.ts7-radio--4:checked ~ .ts7-stage .ts7-panel--4,
+.ts7-radio--5:checked ~ .ts7-stage .ts7-panel--5,
+.ts7-radio--6:checked ~ .ts7-stage .ts7-panel--6,
+.ts7-radio--0:checked ~ .ts7-stage .ts7-aside-panel--0,
+.ts7-radio--1:checked ~ .ts7-stage .ts7-aside-panel--1,
+.ts7-radio--2:checked ~ .ts7-stage .ts7-aside-panel--2,
+.ts7-radio--3:checked ~ .ts7-stage .ts7-aside-panel--3,
+.ts7-radio--4:checked ~ .ts7-stage .ts7-aside-panel--4,
+.ts7-radio--5:checked ~ .ts7-stage .ts7-aside-panel--5,
+.ts7-radio--6:checked ~ .ts7-stage .ts7-aside-panel--6 {
+  visibility: visible;
+}
+
+/* 非表示パネルはアニメ停止 */
+.ts7-panel * {
+  animation-play-state: paused !important;
+}
+
+.ts7-radio--0:checked ~ .ts7-stage .ts7-panel--0 *,
+.ts7-radio--1:checked ~ .ts7-stage .ts7-panel--1 *,
+.ts7-radio--2:checked ~ .ts7-stage .ts7-panel--2 *,
+.ts7-radio--3:checked ~ .ts7-stage .ts7-panel--3 *,
+.ts7-radio--4:checked ~ .ts7-stage .ts7-panel--4 *,
+.ts7-radio--5:checked ~ .ts7-stage .ts7-panel--5 *,
+.ts7-radio--6:checked ~ .ts7-stage .ts7-panel--6 * {
+  animation-play-state: running !important;
+}
+
+.ts7-now {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--mute);
+}
+
+.ts7-now strong {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.ts7-hint {
+  margin: 0 0 0.85rem;
+  line-height: 1.75;
+  font-size: 0.95rem;
+}
+
+.ts7-motif {
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  color: var(--mute);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+}
+
+/* ========== 0 詩 ========== */
+.ts7-s0-light {
+  animation: ts7-light 3.2s linear infinite;
+}
+
+@keyframes ts7-light {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(210px);
+  }
+}
+
+.ts7-s0-station {
+  animation: ts7-pass 4.5s linear infinite;
+}
+
+@keyframes ts7-pass {
+  0% {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.55;
+  }
+  80% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateX(-120px);
+    opacity: 0;
+  }
+}
+
+.ts7-s0-body {
+  transform-origin: 190px 280px;
+  animation: ts7-sway 2.6s ease-in-out infinite;
+}
+
+@keyframes ts7-sway {
+  0%,
+  100% {
+    transform: rotate(-1.6deg);
+  }
+  50% {
+    transform: rotate(1.6deg);
+  }
+}
+
+/* ========== 1 降りる ========== */
+.ts7-s1-name {
+  animation: ts7-hollow 5s ease-in-out infinite;
+}
+
+@keyframes ts7-hollow {
+  0%,
+  25% {
+    opacity: 0.25;
+  }
+  45%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.ts7-s1-figure {
+  animation: ts7-descend 5s ease-in-out infinite;
+}
+
+@keyframes ts7-descend {
+  0%,
+  15% {
+    transform: translateY(-36px);
+    opacity: 0;
+  }
+  35% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.ts7-s1-legs {
+  transform-origin: 120px 292px;
+  animation: ts7-step 5s ease-in-out infinite;
+}
+
+@keyframes ts7-step {
+  0%,
+  35% {
+    transform: scaleY(0.92);
+  }
+  45%,
+  55% {
+    transform: scaleY(1.04);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+.ts7-s1-dot {
+  opacity: 0;
+  animation: ts7-dot-on 5s ease-in-out infinite;
+}
+
+@keyframes ts7-dot-on {
+  0%,
+  55% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  65%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ========== 2 名前 ========== */
+.ts7-s2-bird {
+  animation: ts7-bird-fade 6s ease-in-out infinite;
+}
+
+@keyframes ts7-bird-fade {
+  0%,
+  20% {
+    opacity: 1;
+  }
+  45%,
+  100% {
+    opacity: 0.08;
+  }
+}
+
+.ts7-s2-label {
+  transform-origin: 120px 182px;
+  animation: ts7-label-on 6s ease-in-out infinite;
+}
+
+@keyframes ts7-label-on {
+  0%,
+  12% {
+    opacity: 0;
+    transform: scale(0.7) translateY(-8px);
+  }
+  28%,
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ts7-s2-strike {
+  stroke-dasharray: 140;
+  stroke-dashoffset: 140;
+  animation: ts7-strike 6s ease-in-out infinite;
+}
+
+@keyframes ts7-strike {
+  0%,
+  50% {
+    stroke-dashoffset: 140;
+    opacity: 0;
+  }
+  65%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.7;
+  }
+}
+
+.ts7-s2-fade {
+  animation: ts7-caption 6s ease-in-out infinite;
+}
+
+@keyframes ts7-caption {
+  0%,
+  40% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 0.75;
+  }
+}
+
+/* ========== 3 ホーム ========== */
+.ts7-s3-door-l {
+  transform-origin: 40px 180px;
+  animation: ts7-door-l 5.5s ease-in-out infinite;
+}
+
+.ts7-s3-door-r {
+  transform-origin: 200px 180px;
+  animation: ts7-door-r 5.5s ease-in-out infinite;
+}
+
+@keyframes ts7-door-l {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  40%,
+  100% {
+    transform: translateX(-48px);
+  }
+}
+
+@keyframes ts7-door-r {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  40%,
+  100% {
+    transform: translateX(48px);
+  }
+}
+
+.ts7-s3-figure {
+  animation: ts7-step-out 5.5s ease-in-out infinite;
+}
+
+@keyframes ts7-step-out {
+  0%,
+  30% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  50%,
+  100% {
+    opacity: 1;
+    transform: translateY(20px);
+  }
+}
+
+.ts7-s3-scrap {
+  animation: ts7-scrap 5.5s ease-in-out infinite;
+}
+
+@keyframes ts7-scrap {
+  0%,
+  55% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  70%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========== 4 聴く ========== */
+.ts7-s4-ring {
+  opacity: 0;
+  animation: ts7-ring 3.2s ease-out infinite;
+}
+
+@keyframes ts7-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.55);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+.ts7-s4-river,
+.ts7-s4-slope {
+  stroke-dasharray: 280;
+  stroke-dashoffset: 280;
+  animation: ts7-draw 6s ease-in-out infinite;
+}
+
+.ts7-s4-slope {
+  animation-delay: 0.4s;
+}
+
+@keyframes ts7-draw {
+  0%,
+  15% {
+    stroke-dashoffset: 280;
+    opacity: 0.2;
+  }
+  45%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.ts7-s4-phone {
+  animation: ts7-pocket 6s ease-in-out infinite;
+}
+
+@keyframes ts7-pocket {
+  0%,
+  30% {
+    transform: translate(0, -40px);
+    opacity: 0.85;
+  }
+  60%,
+  100% {
+    transform: translate(8px, 28px);
+    opacity: 0.35;
+  }
+}
+
+/* ========== 5 歩く ========== */
+.ts7-s5-spot,
+.ts7-s5-spot-core {
+  opacity: 0;
+  animation: ts7-spot 6s ease-in-out infinite;
+}
+
+@keyframes ts7-spot {
+  0%,
+  5% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  15%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 点の座標: 70,120 → 150,150 → 90,210 → 160,250 → 100,300 */
+.ts7-s5-walker {
+  animation: ts7-walk 6s ease-in-out infinite;
+}
+
+@keyframes ts7-walk {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  25% {
+    transform: translate(80px, 30px);
+  }
+  50% {
+    transform: translate(20px, 90px);
+  }
+  75% {
+    transform: translate(90px, 130px);
+  }
+  100% {
+    transform: translate(30px, 180px);
+    opacity: 1;
+  }
+}
+
+/* ========== 6 帰る ========== */
+.ts7-s6-empty {
+  animation: ts7-empty-dim 5.5s ease-in-out infinite;
+}
+
+@keyframes ts7-empty-dim {
+  0%,
+  30% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+.ts7-s6-full {
+  animation: ts7-full-rise 5.5s ease-in-out infinite;
+}
+
+@keyframes ts7-full-rise {
+  0%,
+  35% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  55%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ts7-s6-dot {
+  opacity: 0;
+  animation: ts7-dot-on 5.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts7-panel * {
+    animation: none !important;
+  }
+}

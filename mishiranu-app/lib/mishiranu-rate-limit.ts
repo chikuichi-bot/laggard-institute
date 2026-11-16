@@ -193,16 +193,27 @@ export function allowViewerHourlyBudget(
   return hasViewerHourlyBudget(viewerSub, maxHits, windowMs);
 }
 
+/** 買い切り BYOK（viewerSub が byok: で始まる）はホスト側の Gemini 予算を使わない。 */
+export function isByokViewer(viewerSub: string): boolean {
+  return viewerSub.startsWith("byok:");
+}
+
 /**
  * Gate before any paid Gemini HTTP call.
  * Charges both the process-wide budget and one unit of the viewer's hourly
  * paid-call budget (so a route that makes 3 Gemini calls costs 3, not 1).
  * Returns a release() that must be called in finally.
+ * BYOK（ユーザー自身の API キー）はホスト予算を消費しない。
  */
 export function beginPaidAiCall(
   viewerSub: string,
 ): { ok: true; release: () => void } | { ok: false } {
   ensureLoaded();
+
+  if (isByokViewer(viewerSub)) {
+    return { ok: true, release: () => {} };
+  }
+
   const now = Date.now();
   const recent = pruneHits(globalPaidHits, now, GLOBAL_PAID_WINDOW_MS);
   globalPaidHits.length = 0;

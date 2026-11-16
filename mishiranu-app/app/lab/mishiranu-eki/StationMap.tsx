@@ -9,7 +9,11 @@ import {
   type Spot,
   type StationSeed,
 } from "@/data/mishiranu-stations";
-import { spotLatLng, stationLatLng } from "@/lib/mishiranu-geo";
+import { haversineKm, spotLatLng, stationLatLng } from "@/lib/mishiranu-geo";
+import type { AtmosphereCorridor } from "@/lib/mishiranu-atmosphere";
+import { entranceHint } from "@/lib/mishiranu-walk-guide-map";
+
+type MapDetailPref = "clean" | "rich";
 
 type Props = {
   station: StationSeed;
@@ -18,32 +22,129 @@ type Props = {
   activeSpotId: string | null;
   /** Ordered spot ids for the chosen walking course */
   courseStopIds?: string[] | null;
+  /** 空気の区間（商店街・街並み・川辺） */
+  corridors?: AtmosphereCorridor[] | null;
+  /** すっきり＝標準OSM / くわしく＝地名の多い図＋ピン名 */
+  mapDetail?: MapDetailPref;
   onSelect: (spotId: string) => void;
 };
 
-function pinIcon(color: string, active: boolean) {
+const TILE_CLEAN =
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const TILE_RICH =
+  "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const ATTR_CLEAN =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const ATTR_RICH =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+function isFixedLandmarkName(name: string): boolean {
+  if (/デルタ|三角州|下鴨神社|賀茂御祖/.test(name)) return true;
+  // 枡形商店街は通りの正本。満寿形屋と重ねても商店街側は動かさない。
+  if (/満寿/.test(name)) return false;
+  return /枡形商店街|桝形商店街|出町枡形|出町桝形/.test(name);
+}
+
+function isMovableShopPin(
+  point: { id: string; name?: string },
+  guideById: Map<string, string>,
+): boolean {
+  const guide = guideById.get(point.id);
+  return guide === "meal" || guide === "souvenir";
+}
+
+/** 正本（デルタ・商店街）は動かさず、ご飯／土産だけずらして両方見せる。 */
+function spreadNearbyCoursePins(
+  points: Array<{ id: string; lat: number; lng: number; name?: string }>,
+  guideById: Map<string, string> = new Map(),
+): Map<string, { lat: number; lng: number }> {
+  const result = new Map<string, { lat: number; lng: number }>();
+  const thresholdKm = 0.04;
+  const anchored = new Set(
+    points
+      .filter((p) => p.name && isFixedLandmarkName(p.name))
+      .map((p) => p.id),
+  );
+  for (const p of points) {
+    if (anchored.has(p.id)) result.set(p.id, { lat: p.lat, lng: p.lng });
+  }
+  const clashes = (id: string, lat: number, lng: number) =>
+    points.some((other) => {
+      if (other.id === id) return false;
+      const shown = result.get(other.id) ?? other;
+      return haversineKm({ lat, lng }, shown) < thresholdKm;
+    });
+
+  points.forEach((point, index) => {
+    if (anchored.has(point.id)) return;
+    if (!isMovableShopPin(point, guideById)) {
+      result.set(point.id, { lat: point.lat, lng: point.lng });
+      return;
+    }
+    let { lat, lng } = point;
+    // 満寿形屋は南南西へ（川・駅側へ飛ばさない）
+    const baseAngleDeg = /満寿/.test(point.name ?? "") ? 200 : index * 55;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      if (!clashes(point.id, lat, lng)) break;
+      const angle = ((baseAngleDeg + attempt * 28) * Math.PI) / 180;
+      const dist = 22 + attempt * 5;
+      const north = dist * Math.cos(angle);
+      const east = dist * Math.sin(angle);
+      lat = point.lat + north / 111_320;
+      lng =
+        point.lng +
+        east / (111_320 * Math.max(Math.cos((point.lat * Math.PI) / 180), 0.2));
+    }
+    result.set(point.id, { lat, lng });
+  });
+  for (const p of points) {
+    if (!result.has(p.id)) result.set(p.id, { lat: p.lat, lng: p.lng });
+  }
+  return result;
+}
+
+function pinIcon(color: string, active: boolean, nudge = false) {
   const size = active ? 16 : 12;
+  const shift = nudge ? 16 : 0;
+  // iconSize / iconAnchor を点の中心に一致させる（余白なし）
+  // nudge は座標を動かさず、重なった店アイコンだけ画面上でずらす
   return L.divIcon({
     className: "mishiranu-leaflet-pin",
     html: `<span style="
       display:block;width:${size}px;height:${size}px;border-radius:50%;
-      background:${color};border:2px solid #ffffff;
+      background:${color};border:2px solid #ffffff;box-sizing:border-box;
       box-shadow:0 0 0 ${active ? 3 : 1}px ${active ? "rgba(255,106,61,0.55)" : "rgba(36,48,56,0.18)"};
     "></span>`,
     iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    iconAnchor: [size / 2 + shift, size / 2 + shift],
+    popupAnchor: [0, -size / 2],
   });
 }
 
-function stepIcon(step: number, color: string, active: boolean) {
+function stepIcon(step: number, color: string, active: boolean, nudge = false) {
   const size = active ? 26 : 22;
+  const shift = nudge ? 18 : 0;
   return L.divIcon({
     className: "mishiranu-leaflet-pin",
     html: `<span class="mishiranu-leaflet-step${active ? " mishiranu-leaflet-step--active" : ""}" style="
       --step-color:${color};width:${size}px;height:${size}px;font-size:${active ? 12 : 11}px;
+      box-sizing:border-box;
     ">${step}</span>`,
     iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    iconAnchor: [size / 2 + shift, size / 2 + shift],
+    popupAnchor: [0, -size / 2],
+  });
+}
+
+function entranceIcon(label: string) {
+  return L.divIcon({
+    className: "mishiranu-leaflet-pin",
+    html: `<span style="display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none">
+      <span style="width:26px;height:26px;border-radius:50%;background:#9a3d31;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font:700 11px/1 system-ui,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.25)">入</span>
+      <span style="max-width:7.5em;padding:1px 5px;border-radius:999px;background:rgba(249,244,230,.94);border:1px solid rgba(154,61,49,.45);color:#2a2420;font:600 9px/1.2 system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</span>
+    </span>`,
+    iconSize: [28, 44],
+    iconAnchor: [14, 14],
   });
 }
 
@@ -53,11 +154,14 @@ export default function StationMap({
   radiusKm,
   activeSpotId,
   courseStopIds = null,
+  corridors = null,
+  mapDetail = "clean",
   onSelect,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const tileRef = useRef<L.TileLayer | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
 
@@ -79,12 +183,11 @@ export default function StationMap({
 
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    // OSM is key-free; dusk look comes from CSS filter on .leaflet-tile-pane
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    const tile = L.tileLayer(TILE_CLEAN, {
+      attribution: ATTR_CLEAN,
       maxZoom: 19,
     }).addTo(map);
+    tileRef.current = tile;
 
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -102,10 +205,23 @@ export default function StationMap({
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      tileRef.current = null;
     };
     // station identity only for initial mount; updates handled below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const url = mapDetail === "rich" ? TILE_RICH : TILE_CLEAN;
+    const attr = mapDetail === "rich" ? ATTR_RICH : ATTR_CLEAN;
+    if (tileRef.current) {
+      map.removeLayer(tileRef.current);
+    }
+    const tile = L.tileLayer(url, { attribution: attr, maxZoom: 19 }).addTo(map);
+    tileRef.current = tile;
+  }, [mapDetail]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -120,43 +236,130 @@ export default function StationMap({
 
     const courseIds = (courseStopIds ?? []).filter((id) => spotById.has(id));
     const courseSet = new Set(courseIds);
-    const path: L.LatLngExpression[] = [[center.lat, center.lng]];
+
+    let cancelled = false;
+    const focusActive = (): boolean => {
+      if (!activeSpotId) return false;
+      const spot = spotById.get(activeSpotId);
+      if (!spot) return false;
+      const ll = spotLatLng(station, spot);
+      map.setView([ll.lat, ll.lng], 16, { animate: true });
+      return true;
+    };
+
+    // 動線の線は引かない。歩き方は自由。おすすめの通り・境内は点だけ。
+    const hintBounds: L.LatLngExpression[] = [[center.lat, center.lng]];
     for (const id of courseIds) {
       const spot = spotById.get(id);
       if (!spot) continue;
       const ll = spotLatLng(station, spot);
-      path.push([ll.lat, ll.lng]);
+      hintBounds.push([ll.lat, ll.lng]);
     }
 
-    if (path.length >= 2) {
-      L.polyline(path, {
-        color: "#9a3d31",
-        weight: 4,
-        opacity: 0.88,
-        lineJoin: "round",
-        lineCap: "round",
-        className: "mishiranu-leaflet-course",
+    const firstCourse = courseIds[0] ? spotById.get(courseIds[0]) : null;
+    const firstLl = firstCourse ? spotLatLng(station, firstCourse) : null;
+    const entrance =
+      courseIds.length > 0
+        ? entranceHint({
+            stationLat: center.lat,
+            stationLng: center.lng,
+            walkGuide: station.walkGuide,
+            firstStop: firstLl,
+            spots: [...spotById.values()],
+          })
+        : null;
+    if (entrance) {
+      hintBounds.push([entrance.lat, entrance.lng]);
+      L.marker([entrance.lat, entrance.lng], {
+        icon: entranceIcon(entrance.label),
+        title: `入 · ${entrance.label}`,
+        zIndexOffset: 250,
+        interactive: false,
       }).addTo(layer);
-      L.polyline(path, {
-        color: "#f9f4e6",
-        weight: 1.5,
-        opacity: 0.95,
-        lineJoin: "round",
-        lineCap: "round",
-        dashArray: "1 10",
-      }).addTo(layer);
-    } else {
-      L.circle([center.lat, center.lng], {
-        radius: radiusKm * 1000,
-        color: "#b5493a",
-        weight: 1.5,
-        dashArray: "4 6",
-        fillColor: "#b5493a",
-        fillOpacity: 0.06,
-      }).addTo(layer);
-      map.setView([center.lat, center.lng], radiusKm >= 2.5 ? 14 : 15, {
-        animate: false,
+    }
+
+    const courseSpotNames = new Set(
+      courseIds.map((id) => spotById.get(id)?.name).filter(Boolean) as string[],
+    );
+    const relatedCorridor = (c: AtmosphereCorridor) => {
+      if (!courseSpotNames.size) return false;
+      return c.relatedSpotNames.some((key) =>
+        [...courseSpotNames].some(
+          (n) => key.length >= 2 && (n.includes(key) || key.includes(n)),
+        ),
+      );
+    };
+    let hintCount = 0;
+    for (const corridor of corridors ?? []) {
+      if (courseIds.length > 0 && !relatedCorridor(corridor)) continue;
+      const path = corridor.path ?? [];
+      if (path.length < 2) continue;
+      // コースに同名立ち寄りがある通りはピンが正本。端ヒントは「ずれ」に見えるので出さない。
+      const hasNamedStop = [...courseSpotNames].some(
+        (n) =>
+          n.includes(corridor.name) ||
+          corridor.name.includes(n) ||
+          corridor.relatedSpotNames.some(
+            (k) => k.length >= 2 && (n.includes(k) || k.includes(n)),
+          ),
+      );
+      if (hasNamedStop) continue;
+      const mid = path[Math.floor(path.length / 2)];
+      const onStop = [...courseSpotNames].some((n) => {
+        const spot = [...spotById.values()].find((s) => s.name === n);
+        if (!spot || spot.lat == null || spot.lng == null) return false;
+        return (
+          Math.abs(spot.lat - mid.lat) < 0.00022 &&
+          Math.abs(spot.lng - mid.lng) < 0.00022
+        );
       });
+      if (onStop) continue;
+      const shortName =
+        corridor.name.length <= 10
+          ? corridor.name
+          : (corridor.relatedSpotNames[0]?.slice(0, 10) ??
+            corridor.name.slice(0, 8));
+      hintBounds.push([mid.lat, mid.lng]);
+      L.circleMarker([mid.lat, mid.lng], {
+        radius: 5,
+        color: "#9a3d31",
+        weight: 1.5,
+        dashArray: "2 2",
+        fillColor: "#f9f4e6",
+        fillOpacity: 0.95,
+      })
+        .bindTooltip(shortName, {
+          permanent: mapDetail === "rich",
+          direction: "top",
+          offset: [0, -6],
+          className: "mishiranu-leaflet-tooltip",
+        })
+        .addTo(layer);
+      hintCount += 1;
+      if (hintCount >= 6) break;
+    }
+
+    L.circle([center.lat, center.lng], {
+      radius: radiusKm * 1000,
+      color: "#b5493a",
+      weight: 1.5,
+      dashArray: "4 6",
+      fillColor: "#b5493a",
+      fillOpacity: 0.06,
+    }).addTo(layer);
+
+    if (!focusActive()) {
+      if (hintBounds.length >= 2) {
+        map.fitBounds(L.latLngBounds(hintBounds), {
+          padding: [36, 36],
+          maxZoom: 16,
+          animate: false,
+        });
+      } else {
+        map.setView([center.lat, center.lng], radiusKm >= 2.5 ? 14 : 15, {
+          animate: false,
+        });
+      }
     }
 
     const stationLabel = document.createElement("span");
@@ -176,45 +379,111 @@ export default function StationMap({
       })
       .addTo(layer);
 
+    // コース＋ご飯屋など、近いピンをまとめて広げて両方見せる（満寿形屋×枡形商店街など）
+    const orderedForSpread: Array<{
+      id: string;
+      lat: number;
+      lng: number;
+      name: string;
+    }> = [];
+    for (const id of courseIds) {
+      const spot = spotById.get(id);
+      if (!spot) continue;
+      const ll = spotLatLng(station, spot);
+      orderedForSpread.push({
+        id,
+        lat: ll.lat,
+        lng: ll.lng,
+        name: spot.name,
+      });
+    }
     for (const spot of spots) {
       if (courseSet.has(spot.id)) continue;
-      const { lat, lng } = spotLatLng(station, spot);
-      const marker = L.marker([lat, lng], {
-        icon: pinIcon(GUIDE_COLOR[spotGuide(spot)], spot.id === activeSpotId),
+      const ll = spotLatLng(station, spot);
+      orderedForSpread.push({
+        id: spot.id,
+        lat: ll.lat,
+        lng: ll.lng,
+        name: spot.name,
+      });
+    }
+    const guideById = new Map(
+      orderedForSpread.map((p) => {
+        const spot = spotById.get(p.id);
+        return [p.id, spot ? spotGuide(spot) : "tip"] as const;
+      }),
+    );
+    // 座標は正本のまま。近いご飯ピンだけアイコンを画面上でずらす。
+    const displayCoords = new Map(
+      orderedForSpread.map((p) => [p.id, { lat: p.lat, lng: p.lng }]),
+    );
+    const nudged = new Set(
+      orderedForSpread
+        .filter((p) => {
+          const guide = guideById.get(p.id);
+          if (guide !== "meal" && guide !== "souvenir") return false;
+          return orderedForSpread.some((other) => {
+            if (other.id === p.id) return false;
+            return haversineKm(p, other) < 0.028;
+          });
+        })
+        .map((p) => p.id),
+    );
+
+    const bindName = (marker: L.Marker, name: string) => {
+      if (mapDetail !== "rich") return;
+      const label = document.createElement("span");
+      label.textContent = name;
+      marker.bindTooltip(label, {
+        permanent: true,
+        direction: "top",
+        offset: [0, -10],
+        className: "mishiranu-leaflet-tooltip",
+      });
+    };
+
+    for (const spot of spots) {
+      if (courseSet.has(spot.id)) continue;
+      const shown = displayCoords.get(spot.id) ?? spotLatLng(station, spot);
+      const marker = L.marker([shown.lat, shown.lng], {
+        icon: pinIcon(
+          GUIDE_COLOR[spotGuide(spot)],
+          spot.id === activeSpotId,
+          nudged.has(spot.id),
+        ),
         title: spot.name,
         opacity: courseIds.length > 0 ? 0.45 : 1,
+        zIndexOffset: spotGuide(spot) === "meal" ? 160 : 100,
       });
       marker.on("click", () => onSelectRef.current(spot.id));
+      bindName(marker, spot.name);
       marker.addTo(layer);
     }
 
     courseIds.forEach((id, index) => {
       const spot = spotById.get(id);
       if (!spot) return;
-      const { lat, lng } = spotLatLng(station, spot);
-      const marker = L.marker([lat, lng], {
+      const shown = displayCoords.get(id) ?? spotLatLng(station, spot);
+      const marker = L.marker([shown.lat, shown.lng], {
         icon: stepIcon(
           index + 1,
           GUIDE_COLOR[spotGuide(spot)],
           spot.id === activeSpotId,
+          nudged.has(id),
         ),
         title: `${index + 1}. ${spot.name}`,
         zIndexOffset: 200 + index,
       });
       marker.on("click", () => onSelectRef.current(spot.id));
+      bindName(marker, `${index + 1}. ${spot.name}`);
       marker.addTo(layer);
     });
 
-    if (path.length >= 2) {
-      map.fitBounds(L.latLngBounds(path), {
-        padding: [36, 36],
-        maxZoom: 16,
-        animate: false,
-      });
-    }
-
     requestAnimationFrame(() => map.invalidateSize());
-  }, [station, spots, radiusKm, activeSpotId, courseStopIds]);
+    return () => {
+      cancelled = true;
+    };
+  }, [station, spots, radiusKm, activeSpotId, courseStopIds, corridors, mapDetail]);
 
   return (
     <div className="mishiranu-map mishiranu-map--live" aria-label={`${station.name}駅周辺の地図`}>

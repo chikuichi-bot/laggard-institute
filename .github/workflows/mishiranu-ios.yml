@@ -1,0 +1,62 @@
+name: mishiranu-ios
+
+on:
+  push:
+    paths:
+      - "mishiranu-ios/**"
+      - ".github/workflows/mishiranu-ios.yml"
+  pull_request:
+    paths:
+      - "mishiranu-ios/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          xcodebuild -version
+      - name: Build for iOS Simulator
+        working-directory: mishiranu-ios
+        run: |
+          xcodebuild build \
+            -project MishiranuEki.xcodeproj \
+            -scheme MishiranuEki \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Screenshots
+        working-directory: mishiranu-ios
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)["devices"]
+          phones = [d for rt, ds in data.items() if "iOS" in rt for d in ds if d["name"].startswith("iPhone")]
+          pick = next((d for d in phones if d["name"] == "iPhone 16"), phones[0])
+          print(pick["udid"])')
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "14:20" --batteryLevel 100 --cellularBars 4 || true
+          xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/MishiranuEki.app
+          mkdir -p shots
+          for screen in hero chat course map place walk guide more; do
+            xcrun simctl terminate "$UDID" jp.lagado.mishiranueki || true
+            if [ "$screen" = hero ]; then
+              xcrun simctl launch "$UDID" jp.lagado.mishiranueki
+            else
+              xcrun simctl launch "$UDID" jp.lagado.mishiranueki -mishiranuDemo "$screen"
+            fi
+            sleep 6
+            xcrun simctl io "$UDID" screenshot "shots/$screen.png"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mishiranu-ios-screenshots
+          path: mishiranu-ios/shots/*.png

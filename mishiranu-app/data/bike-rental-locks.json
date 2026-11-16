@@ -1,0 +1,240 @@
+{
+  "_note": "レンタは確認できたものだけ。CLEW（clew.jp/clewport）と HELLO CYCLING（hellocycling.jp 京都市一覧）で、ポート名に駅名＋駅が付くもののみ。推測・近所の店・別駅・支店名・バス停は載せない。えむじかは閉業。iOS Resources/bike-rental-locks.json と中身を同じにする。確認日 2026-11-14。",
+  "source": "https://www.clew.jp/clewport/ + https://www.hellocycling.jp/station/kyoto/",
+  "checkedAt": "2026-11-14",
+  "locks": [
+    {
+      "station": "出町柳",
+      "kind": "app",
+      "name": "CLEW（クルー）京阪出町柳駅前",
+      "code": "KT032",
+      "address": "京都市左京区田中上柳町25-3",
+      "walkMinutes": 1,
+      "note": "京阪7番出口付近のポート。アプリ登録のあとQRで解錠。ポート間の乗り捨て向き。",
+      "summary": "駅すぐには CLEW（クルー）など、アプリで借りるポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "元田中",
+      "kind": "app",
+      "name": "CLEW（クルー）元田中駅前 南東側",
+      "code": "KT153",
+      "address": "京都市左京区田中里ノ内町69-3",
+      "walkMinutes": 1,
+      "note": "駅前南東側のポート（KT153）。アプリ登録のあとQRで解錠。",
+      "summary": "駅前南東側に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "神宮丸太町",
+      "kind": "app",
+      "name": "CLEW（クルー）京阪神宮丸太町駅前",
+      "code": "KT033",
+      "address": "京都市左京区下堤町91-1",
+      "walkMinutes": 1,
+      "note": "京阪川端駐輪センター側のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅前に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "三条",
+      "kind": "app",
+      "name": "CLEW（クルー）京阪三条駅前",
+      "code": "KT030",
+      "address": "京都市東山区五軒町130-1",
+      "walkMinutes": 1,
+      "note": "4・5番出口付近のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅前に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "七条",
+      "kind": "app",
+      "name": "CLEW（クルー）京阪七条駅前",
+      "code": "KT029",
+      "address": "京都市東山区一橋宮ノ内町",
+      "walkMinutes": 1,
+      "note": "1番出口付近のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅前に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "伏見稲荷",
+      "kind": "app",
+      "name": "CLEW（クルー）京阪伏見稲荷駅西",
+      "code": "KT028",
+      "address": "京都市伏見区深草下横縄町24-16",
+      "walkMinutes": 2,
+      "note": "駅西側のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅西に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "深草",
+      "kind": "app",
+      "name": "CLEW（クルー）京阪龍谷大前深草駅",
+      "code": "KT193",
+      "address": "京都市伏見区深草ススハキ町38番地",
+      "walkMinutes": 1,
+      "note": "京阪龍谷大前深草駅のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "藤森",
+      "kind": "app",
+      "name": "CLEW（クルー）京阪藤森駅前",
+      "code": "KT206",
+      "address": "京都市伏見区深草極楽町746-1",
+      "walkMinutes": 1,
+      "note": "東口／南改札付近のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅前に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "丹波橋",
+      "kind": "app",
+      "name": "CLEW（クルー）京阪丹波橋駅前",
+      "code": "KT201",
+      "address": "京都市伏見区桃山井伊掃部西町5-93",
+      "walkMinutes": 1,
+      "note": "北改札口付近のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅前に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "桃山南口",
+      "kind": "app",
+      "name": "HELLO CYCLING 京阪桃山南口駅",
+      "address": "京都市伏見区桃山町丹後",
+      "walkMinutes": 1,
+      "note": "HELLO 公式の京阪桃山南口駅ポート。アプリで解錠。",
+      "summary": "駅に HELLO CYCLING のポートがあります。会員登録のあとアプリで借ります。"
+    },
+    {
+      "station": "観月橋",
+      "kind": "app",
+      "name": "HELLO CYCLING 京阪観月橋駅",
+      "address": "京都市伏見区豊後橋町761番地",
+      "walkMinutes": 1,
+      "note": "HELLO 公式の京阪観月橋駅ポート。アプリで解錠。",
+      "summary": "駅に HELLO CYCLING のポートがあります。会員登録のあとアプリで借ります。"
+    },
+    {
+      "station": "六地蔵",
+      "kind": "app",
+      "name": "HELLO CYCLING 京阪六地蔵駅",
+      "address": "京都市伏見区桃山町中島2番地",
+      "walkMinutes": 1,
+      "note": "HELLO 公式の京阪六地蔵駅ポート。アプリで解錠。",
+      "summary": "駅に HELLO CYCLING のポートがあります。会員登録のあとアプリで借ります。"
+    },
+    {
+      "station": "淀",
+      "kind": "app",
+      "name": "HELLO CYCLING 京阪淀駅 北改札口",
+      "address": "京都市伏見区淀池上町17-2",
+      "walkMinutes": 1,
+      "note": "HELLO 公式の京阪淀駅ポート。アプリで解錠。",
+      "summary": "駅に HELLO CYCLING のポートがあります。会員登録のあとアプリで借ります。"
+    },
+    {
+      "station": "等持院・立命館大学衣笠キャンパス前",
+      "kind": "app",
+      "name": "CLEW（クルー）等持院駅 北側",
+      "code": "KT096",
+      "address": "京都市北区等持院西町50",
+      "walkMinutes": 2,
+      "note": "駅北側のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅北側に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "西院",
+      "kind": "app",
+      "name": "CLEW（クルー）西院駅西",
+      "code": "KT252",
+      "address": "京都市右京区西院北矢掛町17",
+      "walkMinutes": 2,
+      "note": "駅西側（北矢掛町）のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅西に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "西京極",
+      "kind": "app",
+      "name": "HELLO CYCLING 西京極駅南口第２駐輪場",
+      "address": "京都市右京区西京極北裏町4-18",
+      "walkMinutes": 2,
+      "note": "HELLO 公式の西京極駅南口ポート。アプリで解錠。",
+      "summary": "駅南口に HELLO CYCLING のポートがあります。会員登録のあとアプリで借ります。"
+    },
+    {
+      "station": "嵐山（阪急）",
+      "kind": "app",
+      "name": "CLEW（クルー）阪急嵐山駅前",
+      "code": "KT207",
+      "address": "京都市西京区嵐山西一川町8-3",
+      "walkMinutes": 1,
+      "note": "阪急嵐山駅前のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅前に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "嵯峨嵐山",
+      "kind": "app",
+      "name": "CLEW（クルー）JR嵯峨嵐山駅前",
+      "code": "KT266",
+      "address": "京都市右京区嵯峨天龍寺広道町3番",
+      "walkMinutes": 1,
+      "note": "JR嵯峨嵐山駅前のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅前に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "二条",
+      "kind": "app",
+      "name": "CLEW（クルー）JR二条駅 西口",
+      "code": "KT381",
+      "address": "京都市中京区西ノ京東栂尾町3",
+      "walkMinutes": 1,
+      "note": "西口付近のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅西口に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "桂",
+      "kind": "app",
+      "name": "CLEW（クルー）阪急桂駅前",
+      "code": "KT263",
+      "address": "京都市西京区川島有栖川町52",
+      "walkMinutes": 1,
+      "note": "西口／南西側のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅前に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "洛西口",
+      "kind": "app",
+      "name": "HELLO CYCLING 洛西口駅下",
+      "address": "京都市西京区川島六ノ坪町29-2",
+      "walkMinutes": 1,
+      "note": "HELLO 公式の洛西口駅下ポート。アプリで解錠。",
+      "summary": "駅下に HELLO CYCLING のポートがあります。会員登録のあとアプリで借ります。"
+    },
+    {
+      "station": "岩倉",
+      "kind": "app",
+      "name": "HELLO CYCLING 岩倉駅駐輪場",
+      "address": "京都市左京区岩倉忠在地町1000-9",
+      "walkMinutes": 1,
+      "note": "HELLO 公式の岩倉駅駐輪場ポート。アプリで解錠。",
+      "summary": "駅駐輪場に HELLO CYCLING のポートがあります。会員登録のあとアプリで借ります。"
+    },
+    {
+      "station": "五条",
+      "kind": "app",
+      "name": "CLEW（クルー）五条駅4番出口",
+      "code": "KT012",
+      "address": "京都市下京区大坂町369",
+      "walkMinutes": 2,
+      "note": "地下鉄五条駅4番出口付近のポート。アプリ登録のあとQRで解錠。",
+      "summary": "駅出口付近に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    },
+    {
+      "station": "京都",
+      "kind": "app",
+      "name": "CLEW（クルー）京都駅八条口",
+      "code": "KT039",
+      "address": "京都市南区東九条西山王町11",
+      "walkMinutes": 5,
+      "note": "八条口側のポート。アプリ登録のあとQRで解錠。",
+      "summary": "八条口側に CLEW（クルー）のポートがあります。会員登録のあとQRで解錠します。"
+    }
+  ]
+}

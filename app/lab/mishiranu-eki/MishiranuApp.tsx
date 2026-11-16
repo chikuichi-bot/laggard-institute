@@ -879,7 +879,7 @@ export default function MishiranuApp({
               <div className="mishiranu-chat-replies" aria-label="いまの時間帯">
                 <button
                   type="button"
-                  className="mishiranu-chat-chip mishiranu-chat-chip--primary"
+                  className="mishiranu-chat-chip"
                   onClick={() =>
                     chooseClock(
                       dayPartFromHour(new Date().getHours()),
