@@ -399,23 +399,54 @@ struct HeroView: View {
                 let location = try await locator.requestOnce()
                 let lat = location.coordinate.latitude
                 let lng = location.coordinate.longitude
-                if let station = model.finishLocate(lat: lat, lng: lng) {
-                    pendingConfirm = .locate(station)
-                    return
-                }
+                let saved = model.nearestSavedStation(lat: lat, lng: lng)
+                // 地図の実駅を先に見る。保存の出町柳が1km圏でも、足元の元田中を優先する。
                 let label = "現在地の近く"
                 candidateSheet = CandidateSheet(query: label, items: [], loading: true)
-                let items = await StationCandidateSearch.nearby(lat: lat, lng: lng)
+                let items = await StationCandidateSearch.nearby(
+                    lat: lat,
+                    lng: lng,
+                    knownStations: model.stations
+                )
                 guard candidateSheet?.query == label else { return }
+
+                if let best = items.first,
+                   let bestKm = best.distanceKm,
+                   bestKm <= nearbyStationKm {
+                    model.endLocateLoading()
+                    model.heroNote = nil
+                    // 地図上の最寄りが保存済みなら確認ダイアログ。未保存なら候補一覧（先頭が足元の駅）。
+                    if let known = best.knownStation, !Self.isThin(known) {
+                        candidateSheet = nil
+                        pendingConfirm = .locate(known)
+                    } else {
+                        candidateSheet = CandidateSheet(query: label, items: items, loading: false)
+                    }
+                    return
+                }
+
+                if let saved, saved.km <= nearbyStationKm {
+                    // 地図が空でも、保存駅がホーム圏ならそれを確認。
+                    model.endLocateLoading()
+                    model.heroNote = nil
+                    candidateSheet = nil
+                    pendingConfirm = .locate(saved.station)
+                    return
+                }
+
+                model.endLocateLoading()
                 if items.isEmpty {
                     candidateSheet = nil
+                    model.applyLocateMissHint(hit: saved)
                 } else {
                     model.heroNote = nil
                     candidateSheet = CandidateSheet(query: label, items: items, loading: false)
                 }
             } catch let failure as LocateFailure {
+                candidateSheet = nil
                 model.failLocate(failure)
             } catch {
+                candidateSheet = nil
                 model.failLocate(.unknown)
             }
         }

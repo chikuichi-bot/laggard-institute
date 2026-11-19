@@ -8,9 +8,25 @@ struct StationNameCandidate: Identifiable, Equatable {
     let detail: String
     /// 端末に案内があるときだけ。無ければ AI で調べる。
     let knownStation: Station?
+    /// 現在地からの距離（km）。nearby のときだけ入る。
+    let distanceKm: Double?
 
     var bareName: String {
         name.hasSuffix("駅") ? String(name.dropLast()) : name
+    }
+
+    init(
+        id: String,
+        name: String,
+        detail: String,
+        knownStation: Station?,
+        distanceKm: Double? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.detail = detail
+        self.knownStation = knownStation
+        self.distanceKm = distanceKm
     }
 }
 
@@ -88,8 +104,14 @@ enum StationCandidateSearch {
         return Array(out.prefix(limit))
     }
 
-    /// 現在地のまわりの駅を Apple 地図から近い順に。保存駅が近くに無いとき用。
-    static func nearby(lat: Double, lng: Double, limit: Int = 5) async -> [StationNameCandidate] {
+    /// 現在地のまわりの駅を Apple 地図から近い順に。
+    /// - Parameter knownStations: あれば同名の保存駅を knownStation に載せる。
+    static func nearby(
+        lat: Double,
+        lng: Double,
+        knownStations: [Station] = [],
+        limit: Int = 5
+    ) async -> [StationNameCandidate] {
         let here = CLLocation(latitude: lat, longitude: lng)
         let request = MKLocalPointsOfInterestRequest(center: here.coordinate, radius: 3000)
         request.pointOfInterestFilter = MKPointOfInterestFilter(including: [.publicTransport])
@@ -120,12 +142,17 @@ enum StationCandidateSearch {
         return rows
             .sorted { $0.km < $1.km }
             .prefix(limit)
-            .map {
-                StationNameCandidate(
-                    id: "near-\(key($0.name))",
-                    name: $0.name,
-                    detail: "現在地から\(Geo.distanceLabel(km: $0.km))",
-                    knownStation: nil
+            .map { row in
+                let bare = key(row.name)
+                let known = knownStations.first {
+                    SavedStationStore.bareName($0.name).lowercased() == bare
+                }
+                return StationNameCandidate(
+                    id: known?.id ?? "near-\(bare)",
+                    name: row.name,
+                    detail: "現在地から\(Geo.distanceLabel(km: row.km))",
+                    knownStation: known,
+                    distanceKm: row.km
                 )
             }
     }

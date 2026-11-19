@@ -388,7 +388,8 @@ export default function MishiranuApp({
       });
       const { latitude: lat, longitude: lng } = position.coords;
       const local = findNearestStation(lat, lng, STATIONS);
-      if (local && local.km <= 3.5) {
+      // 隣駅へ吸い込まれないよう、ホーム周辺だけスナップ。
+      if (local && local.km <= 0.55) {
         chooseStation(
           local.station,
           `現在地（${local.station.name}・約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）`,

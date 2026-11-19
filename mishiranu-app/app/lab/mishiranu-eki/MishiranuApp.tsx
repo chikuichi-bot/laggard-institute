@@ -957,7 +957,8 @@ export default function MishiranuApp({
         const { lat, lng } = await pending;
         // Precise GPS never leaves the browser. Match against seed + saved library only.
         const local = findNearestStation(lat, lng, catalog);
-        if (local && local.km <= 3.5) {
+        // 隣駅（元田中↔出町柳 約1km）へ吸い込まれないよう、ホーム周辺だけスナップ。
+        if (local && local.km <= 0.55) {
           setHeroNote(null);
           // いきなり開かず、確認してから案内へ。
           setPendingConfirm({ kind: "locate", station: local.station });

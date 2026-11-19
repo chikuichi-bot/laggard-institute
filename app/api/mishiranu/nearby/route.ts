@@ -12,7 +12,8 @@ type Body = {
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 6;
-const CURATED_RADIUS_KM = 3.5;
+/** 隣駅への誤スナップ防止。ホーム周辺のみシード駅を返す。 */
+const CURATED_RADIUS_KM = 0.55;
 const hits = new Map<string, number[]>();
 
 function clientKey(request: Request): string {
