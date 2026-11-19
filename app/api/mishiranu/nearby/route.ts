@@ -12,7 +12,8 @@ type Body = {
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 6;
-const CURATED_RADIUS_KM = 3.5;
+/** API キーが無いときだけ、シード最寄りを返す控え距離。 */
+const CURATED_FALLBACK_KM = 0.55;
 const hits = new Map<string, number[]>();
 
 function clientKey(request: Request): string {
@@ -69,17 +70,10 @@ export async function POST(request: Request) {
   }
 
   const nearest = findNearestStation(lat, lng, STATIONS);
-  if (nearest && nearest.km <= CURATED_RADIUS_KM) {
-    return Response.json({
-      station: nearest.station,
-      source: "seed" as const,
-      km: Math.round(nearest.km * 10) / 10,
-    });
-  }
-
   const apiKey = process.env.GEMINI_API_KEY?.trim();
+  // 常に実在の最寄りを AI で特定。シードへの距離スナップはしない。
   if (!apiKey) {
-    if (nearest) {
+    if (nearest && nearest.km <= CURATED_FALLBACK_KM) {
       return Response.json({
         station: nearest.station,
         source: "seed" as const,

@@ -64,8 +64,16 @@ enum LocateFailure: Error, Hashable {
 let openingGuide =
     "知らない駅に到着しましたね。現在地から探すか、駅名を入力してください。決まると、その土地の案内を開きます。一度見た駅は、この端末に残ります。"
 
-/// 現在地から自動で選ぶ駅の上限距離。
-let nearbyStationKm = 3.5
+/// 保存カタログだけで「近い」とみなす上限（地図が使えないときの控え）。
+/// 通常の「この駅について」は Apple 地図の最寄りを距離無制限で採る。
+let nearbyStationKm = 0.55
+
+/// 現在地から選んだ最寄り駅。
+enum NearestStationPick: Equatable {
+    case known(Station)
+    case name(String)
+    case none
+}
 
 @MainActor
 @Observable
@@ -841,22 +849,61 @@ final class AppModel {
         return true
     }
 
-    /// 現在地から最寄りを返す。近いときは呼び出し側で確認してから `chooseStation` する。
+    /// 保存・同梱カタログ上の最寄り（距離つき）。
+    func nearestSavedStation(lat: Double, lng: Double) -> (station: Station, km: Double)? {
+        Geo.nearestStation(lat: lat, lng: lng, in: stations).map { ($0.station, $0.km) }
+    }
+
+    /// Apple 地図のいちばん近い駅を返す。保存駅への距離スナップはしない。
+    func pickNearestStation(lat: Double, lng: Double) async -> NearestStationPick {
+        let items = await StationCandidateSearch.nearby(
+            lat: lat,
+            lng: lng,
+            knownStations: stations
+        )
+        guard let best = items.first else { return .none }
+        if let known = best.knownStation, !Self.isThinStation(known) {
+            return .known(known)
+        }
+        return .name(best.bareName)
+    }
+
+    private static func isThinStation(_ station: Station) -> Bool {
+        let prose =
+            (station.stationIntro?.count ?? 0)
+            + (station.areaAbout?.count ?? 0)
+            + (station.walkGuide?.count ?? 0)
+        return station.spots.count < 3 || prose < 80
+    }
+
+    /// 現在地から最寄りを返す（地図が空のときの保存カタログ控え）。
     @discardableResult
     func finishLocate(lat: Double, lng: Double) -> Station? {
         geoLoading = false
-        let hit = Geo.nearestStation(lat: lat, lng: lng, in: stations)
+        let hit = nearestSavedStation(lat: lat, lng: lng)
         if let hit, hit.km <= nearbyStationKm {
             heroNote = nil
             screen = .hero
             return hit.station
         }
-        let nearestHint = hit.map {
-            "いちばん近い保存済みの駅は\($0.station.name)（\(Geo.distanceLabel(km: $0.km))）ですが、徒歩圏外です。"
-        } ?? ""
-        heroNote = "\(nearestHint)駅名を入力すれば、全国どこでも徒歩圏の案内をつくれます。"
-        screen = .hero
+        applyLocateMissHint(hit: hit)
         return nil
+    }
+
+    /// GPS 取得は終わったが、地図候補を見てから決めるとき。
+    func endLocateLoading() {
+        geoLoading = false
+        screen = .hero
+    }
+
+    func applyLocateMissHint(hit: (station: Station, km: Double)?) {
+        let nearestHint = hit.map {
+            "いちばん近い保存済みの駅は\($0.station.name)（\(Geo.distanceLabel(km: $0.km))）です。地図の最寄りが取れなかったので、駅名でも探せます。"
+        } ?? ""
+        heroNote = nearestHint.isEmpty
+            ? "最寄りの駅名を特定できませんでした。駅名を入力してください。"
+            : "\(nearestHint)"
+        screen = .hero
     }
 
     func failLocate(_ failure: LocateFailure) {

@@ -76,6 +76,7 @@ import {
 } from "@/lib/mishiranu-device-geo";
 import {
   findNearestStation,
+  fuzzLatLngForExternal,
   haversineKm,
   spotLatLng,
   stationLatLng,
@@ -955,20 +956,47 @@ export default function MishiranuApp({
     void (async () => {
       try {
         const { lat, lng } = await pending;
-        // Precise GPS never leaves the browser. Match against seed + saved library only.
-        const local = findNearestStation(lat, lng, catalog);
-        if (local && local.km <= 3.5) {
+        // 精密 GPS はブラウザ内だけ。最寄り特定 API には粗い座標だけ送る。
+        const coarse = fuzzLatLngForExternal(lat, lng);
+        const res = await fetch("/api/mishiranu/nearby", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ lat: coarse.lat, lng: coarse.lng }),
+        });
+        const raw = await res.text();
+        let data: {
+          station?: StationSeed;
+          error?: string;
+          message?: string;
+        } = {};
+        try {
+          data = raw ? (JSON.parse(raw) as typeof data) : {};
+        } catch {
+          /* fall through */
+        }
+        if (res.ok && data.station) {
           setHeroNote(null);
-          // いきなり開かず、確認してから案内へ。
-          setPendingConfirm({ kind: "locate", station: local.station });
+          setPendingConfirm({ kind: "locate", station: data.station });
           return;
         }
 
-        const nearestHint = local
-          ? `いちばん近い保存済みの駅は${local.station.name}（約${local.km < 1 ? `${Math.round(local.km * 1000)}m` : `${local.km.toFixed(1)}km`}）ですが、徒歩圏外です。`
-          : "";
+        // API が使えないときだけ保存・収録の最寄りを提示（スナップ強制はしない）。
+        const local = findNearestStation(lat, lng, catalog);
+        if (local) {
+          setHeroNote(
+            `いちばん近い保存・収録の駅は${local.station.name}（約${
+              local.km < 1
+                ? `${Math.round(local.km * 1000)}m`
+                : `${local.km.toFixed(1)}km`
+            }）です。違えば駅名を入力してください。`,
+          );
+          setPendingConfirm({ kind: "locate", station: local.station });
+          return;
+        }
         setHeroNote(
-          `${nearestHint}駅名を入力すれば、全国どこでも徒歩圏の案内をつくれます。`.trim(),
+          data.message?.trim() ||
+            "最寄りの駅名を特定できませんでした。駅名を入力してください。",
         );
       } catch (err) {
         const failure =
