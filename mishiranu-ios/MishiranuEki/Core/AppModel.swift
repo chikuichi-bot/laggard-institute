@@ -64,9 +64,16 @@ enum LocateFailure: Error, Hashable {
 let openingGuide =
     "知らない駅に到着しましたね。現在地から探すか、駅名を入力してください。決まると、その土地の案内を開きます。一度見た駅は、この端末に残ります。"
 
-/// 「この駅について」で保存駅へ自動スナップする上限。
-/// 隣駅（例: 元田中↔出町柳 約1km）へ吸い込まれないよう、ホーム周辺だけにする。
+/// 保存カタログだけで「近い」とみなす上限（地図が使えないときの控え）。
+/// 通常の「この駅について」は Apple 地図の最寄りを距離無制限で採る。
 let nearbyStationKm = 0.55
+
+/// 現在地から選んだ最寄り駅。
+enum NearestStationPick: Equatable {
+    case known(Station)
+    case name(String)
+    case none
+}
 
 @MainActor
 @Observable
@@ -842,12 +849,34 @@ final class AppModel {
         return true
     }
 
-    /// 保存・同梱カタログ上の最寄り（距離つき）。スナップ判定は呼び出し側。
+    /// 保存・同梱カタログ上の最寄り（距離つき）。
     func nearestSavedStation(lat: Double, lng: Double) -> (station: Station, km: Double)? {
         Geo.nearestStation(lat: lat, lng: lng, in: stations).map { ($0.station, $0.km) }
     }
 
-    /// 現在地から最寄りを返す。近いときは呼び出し側で確認してから `chooseStation` する。
+    /// Apple 地図のいちばん近い駅を返す。保存駅への距離スナップはしない。
+    func pickNearestStation(lat: Double, lng: Double) async -> NearestStationPick {
+        let items = await StationCandidateSearch.nearby(
+            lat: lat,
+            lng: lng,
+            knownStations: stations
+        )
+        guard let best = items.first else { return .none }
+        if let known = best.knownStation, !Self.isThinStation(known) {
+            return .known(known)
+        }
+        return .name(best.bareName)
+    }
+
+    private static func isThinStation(_ station: Station) -> Bool {
+        let prose =
+            (station.stationIntro?.count ?? 0)
+            + (station.areaAbout?.count ?? 0)
+            + (station.walkGuide?.count ?? 0)
+        return station.spots.count < 3 || prose < 80
+    }
+
+    /// 現在地から最寄りを返す（地図が空のときの保存カタログ控え）。
     @discardableResult
     func finishLocate(lat: Double, lng: Double) -> Station? {
         geoLoading = false
@@ -869,9 +898,11 @@ final class AppModel {
 
     func applyLocateMissHint(hit: (station: Station, km: Double)?) {
         let nearestHint = hit.map {
-            "いちばん近い保存済みの駅は\($0.station.name)（\(Geo.distanceLabel(km: $0.km))）ですが、徒歩圏外です。"
+            "いちばん近い保存済みの駅は\($0.station.name)（\(Geo.distanceLabel(km: $0.km))）です。地図の最寄りが取れなかったので、駅名でも探せます。"
         } ?? ""
-        heroNote = "\(nearestHint)駅名を入力すれば、全国どこでも徒歩圏の案内をつくれます。"
+        heroNote = nearestHint.isEmpty
+            ? "最寄りの駅名を特定できませんでした。駅名を入力してください。"
+            : "\(nearestHint)"
         screen = .hero
     }
 

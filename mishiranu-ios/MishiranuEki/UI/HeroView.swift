@@ -26,8 +26,10 @@ struct HeroView: View {
     }
 
     private enum StationConfirm: Equatable {
-        /// GPS で近いときだけ「ここは」と言う。
+        /// GPS でいちばん近い駅（端末に案内あり）。
         case locate(Station)
+        /// GPS でいちばん近い駅名（まだ案内がない）。
+        case locateName(String)
         case open(Station)
         case recall(Station)
 
@@ -35,18 +37,15 @@ struct HeroView: View {
             switch self {
             case .locate(let station):
                 return "ここは\(Self.label(station.name))です"
+            case .locateName(let name):
+                return "ここは\(Self.label(name))です"
             case .open(let station), .recall(let station):
                 return "「\(Self.label(station.name))」ですか？"
             }
         }
 
         var message: String {
-            switch self {
-            case .locate:
-                return "この駅の徒歩圏の案内を開きますか？"
-            case .open, .recall:
-                return "この駅の徒歩圏の案内を開きますか？"
-            }
+            "この駅の徒歩圏の案内を開きますか？"
         }
 
         private static func label(_ raw: String) -> String {
@@ -366,6 +365,8 @@ struct HeroView: View {
         switch pending {
         case .locate(let station), .open(let station):
             model.chooseStation(station, omitYou: true)
+        case .locateName(let name):
+            model.requestAiStation(name)
         case .recall(let station):
             model.recallSavedStation(station)
         }
@@ -399,48 +400,19 @@ struct HeroView: View {
                 let location = try await locator.requestOnce()
                 let lat = location.coordinate.latitude
                 let lng = location.coordinate.longitude
-                let saved = model.nearestSavedStation(lat: lat, lng: lng)
-                // 地図の実駅を先に見る。保存の出町柳が1km圏でも、足元の元田中を優先する。
-                let label = "現在地の近く"
-                candidateSheet = CandidateSheet(query: label, items: [], loading: true)
-                let items = await StationCandidateSearch.nearby(
-                    lat: lat,
-                    lng: lng,
-                    knownStations: model.stations
-                )
-                guard candidateSheet?.query == label else { return }
-
-                if let best = items.first,
-                   let bestKm = best.distanceKm,
-                   bestKm <= nearbyStationKm {
-                    model.endLocateLoading()
-                    model.heroNote = nil
-                    // 地図上の最寄りが保存済みなら確認ダイアログ。未保存なら候補一覧（先頭が足元の駅）。
-                    if let known = best.knownStation, !Self.isThin(known) {
-                        candidateSheet = nil
-                        pendingConfirm = .locate(known)
-                    } else {
-                        candidateSheet = CandidateSheet(query: label, items: items, loading: false)
-                    }
-                    return
-                }
-
-                if let saved, saved.km <= nearbyStationKm {
-                    // 地図が空でも、保存駅がホーム圏ならそれを確認。
-                    model.endLocateLoading()
-                    model.heroNote = nil
-                    candidateSheet = nil
-                    pendingConfirm = .locate(saved.station)
-                    return
-                }
-
+                // 常に地図上でいちばん近い駅を拾う（保存済みの隣駅へスナップしない）。
+                let pick = await model.pickNearestStation(lat: lat, lng: lng)
                 model.endLocateLoading()
-                if items.isEmpty {
-                    candidateSheet = nil
-                    model.applyLocateMissHint(hit: saved)
-                } else {
+                candidateSheet = nil
+                switch pick {
+                case .known(let station):
                     model.heroNote = nil
-                    candidateSheet = CandidateSheet(query: label, items: items, loading: false)
+                    pendingConfirm = .locate(station)
+                case .name(let name):
+                    model.heroNote = nil
+                    pendingConfirm = .locateName(name)
+                case .none:
+                    model.applyLocateMissHint(hit: model.nearestSavedStation(lat: lat, lng: lng))
                 }
             } catch let failure as LocateFailure {
                 candidateSheet = nil
