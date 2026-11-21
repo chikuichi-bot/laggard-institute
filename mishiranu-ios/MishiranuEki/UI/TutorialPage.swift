@@ -472,18 +472,6 @@ enum TutorialCopy {
         Page(
             kicker: nil,
             title: "知らない駅に降りてみる",
-            bodies: [],
-            showBrand: false,
-            verseLines: [
-                "夜の京阪電車",
-                "淀屋橋駅で特急の一番前運転席の反対側に座る",
-                "駅が通過していき街の明かりが流れていく",
-            ],
-            verseMotion: .window
-        ),
-        Page(
-            kicker: nil,
-            title: "知らない駅に降りてみる",
             bodies: [
                 "名前だけ知っている駅に、私は降りる。",
                 "名前だけのからっぽだった駅が、私の散歩道になる。",
