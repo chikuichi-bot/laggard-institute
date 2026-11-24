@@ -46,6 +46,28 @@ npm run land:gemini -- --pack L   # 指定
 
 返ってきた全文を Cursor に貼る → 配線。詳細は `PROMPT-batch-mass.md`。
 
+### Wave2 · 続き（2026-11-22）
+
+mass 480 取込後の未収録線。索引: **`PROMPT-batch-wave2.md`**（T1〜T13 · 約97駅）。
+Wave2 から土地文に **readings（音読み）** を同梱。
+
+```bash
+npm run land:gemini:list          # 未取込 T1〜
+npm run land:gemini:next
+```
+
+### 音読み（完成文 → 発話辞書）
+
+画面の漢字は変えない。xVoice 用に `SpeechSpeakable` 辞書だけ増やす。
+
+```bash
+npm run land:readings:prepare     # 構造化固有名から PROMPT-Y*.md
+# Gemini に貼る → raw/Y1.tsv に保存
+npm run land:readings:merge       # TS / Swift 辞書へ合流
+```
+
+詳細: `readings/README.md`
+
 ## ファイル
 
 | ファイル | 内容 |
@@ -207,3 +229,20 @@ npm run batch:land-spots -- --force   # 既存キャッシュも作り直し
 - **2026-11-16 first50 KR1:** Argon 再生成取込（鞍馬口〜京都 · 7駅）→ `karasuma.md` / `mishiranu-karasuma-land-depth.ts` 上書き。**配線のみ・spots 未実行**
 - **2026-11-16 first50 KY3:** Argon 再生成取込（石清水八幡宮〜宇治 · 8駅）→ `keihan.md` / `mishiranu-keihan-land-depth.ts` 上書き。**配線のみ・spots 未実行**
 - **2026-11-16 first50 KY2:** Argon 再生成取込（深草〜淀 · 6駅）→ `keihan.md` / `mishiranu-keihan-land-depth.ts` 上書き。**配線のみ・spots 未実行**。`龍谷大前深草` 別名を BY_NAME に追加
+- **2026-11-22 Wave2:** 武庫川・能勢・神鉄・草津・湖西・山陽以西・貴志川のプロンプト化（T1〜T13）。音読み prepare/merge スクリプト追加。土地ストック実エントリ約 **741**
+- **2026-11-22 T1 Neon取込:** 阪神武庫川線 武庫川〜武庫川団地前4駅 → `hanshin-mukogawa.md` / land-depth。武庫川は本線 `mukogawa` 上書き。readings 35語合流。**配線のみ・spots 未実行**
+- **2026-11-22 T2 Neon取込:** 9駅。運用B · spots未実行
+- **2026-11-22 T2B Neon取込:** 4駅。運用B · spots未実行
+- **2026-11-22 T2B Neon差替v2:** 鶯の森・鼓滝・多田・平野 4駅を新稿で上書き。運用B · spots未実行
+- **2026-11-22 T3 Neon取込:** 1駅。運用B · spots未実行
+- **2026-11-22 T3 Neon取込:** 日生中央。あわせて妙見線北部7駅（一の鳥居〜妙見口）を同梱新稿で差替。運用B · spots未実行
+- **2026-11-22 T4 Neon取込:** 5駅。運用B · spots未実行
+- **2026-11-22 T5 Neon取込:** 10駅。運用B · spots未実行
+- **2026-11-22 T5B Neon取込:** 9駅。運用B · spots未実行
+- **2026-11-22 T5C Neon取込:** 3駅。運用B · spots未実行
+- **2026-11-22 T7 Neon取込:** 7駅。運用B · spots未実行
+- **2026-11-22 T7B Neon取込:** 3駅。運用B · spots未実行
+- **2026-11-22 T7C Neon取込:** 9駅。運用B · spots未実行
+- **2026-11-22 T7D Neon取込:** 7駅。運用B · spots未実行
+- **2026-11-22 T6A Neon取込:** 13駅。運用B · spots未実行
+- **2026-11-22 T6B Neon取込:** 8駅。運用B · spots未実行

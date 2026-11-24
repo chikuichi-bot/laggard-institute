@@ -24,7 +24,10 @@
     "land:gemini": "node scripts/land-prose-gemini-web.mjs",
     "land:gemini:list": "node scripts/land-prose-gemini-web.mjs --list",
     "land:gemini:next": "node scripts/land-prose-gemini-web.mjs --next",
-    "land:gemini:until-limit": "node scripts/land-prose-gemini-web.mjs --until-limit"
+    "land:gemini:until-limit": "node scripts/land-prose-gemini-web.mjs --until-limit",
+    "land:readings:prepare": "node scripts/land-readings-prepare.mjs",
+    "land:readings:merge": "node scripts/land-readings-merge.mjs",
+    "land:wave2:ingest": "python3 scripts/land-wave2-ingest.py"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

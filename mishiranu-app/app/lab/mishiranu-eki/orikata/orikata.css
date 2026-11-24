@@ -37,11 +37,12 @@
 .orikata-shell {
   width: min(800px, 100%);
   margin: 0 auto;
-  padding: max(1.5rem, env(safe-area-inset-top)) 1.25rem
+  padding: max(1.5rem, env(safe-area-inset-top)) 20px
     calc(3rem + env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
-/* —— ヘッダ：ブランドが第一信号、思想は一行の見出し —— */
+/* —— ブランド〜紹介 —— */
 .orikata-hero {
   text-align: center;
   padding: 2.1rem 0 1.85rem;
@@ -60,7 +61,7 @@
 }
 
 .orikata-brand {
-  margin: 1.35rem 0 1.15rem;
+  margin: 0 0 1.15rem;
   font-size: clamp(2.15rem, 8vw, 2.85rem);
   font-weight: 400;
   letter-spacing: 0.22em;
@@ -74,19 +75,26 @@
   margin: 0 0 1.25rem;
 }
 
-/* トップ縦書き · 3列固定（右→左）· 速度は文字ごと基準 */
+/* トップ縦書き · 3列固定（右→左）· 出現後2秒で同じ手法で消える */
 .orikata-verse {
   --cv-start: 0.28s;
   --cv-col: 1.55s;
   --cv-col-dur: 1.65s;
+  --cv-hold: 2s;
+  --cv-last-i: 2;
+  --cv-out-start: calc(
+    var(--cv-start) + var(--cv-last-i) * var(--cv-col) + var(--cv-col-dur) +
+      var(--cv-hold)
+  );
   display: grid;
   grid-template-columns: repeat(3, max-content);
   direction: rtl;
   justify-content: center;
   align-items: start;
   column-gap: clamp(1.2rem, 4vw, 1.85rem);
-  margin: 0.6rem auto 1.6rem;
-  width: 100%;
+  margin: 0;
+  width: max-content;
+  max-width: 100%;
   color: var(--text-main);
 }
 
@@ -105,43 +113,89 @@
 .orikata-verse--lines .orikata-verse-line {
   opacity: 0;
   transform: translateY(0.55em);
-  animation: orikata-verse-line var(--cv-col-dur) ease forwards;
-  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+  animation:
+    orikata-verse-line-in var(--cv-col-dur) ease forwards,
+    orikata-verse-line-out var(--cv-col-dur) ease forwards;
+  animation-delay:
+    calc(var(--cv-start) + var(--i) * var(--cv-col)),
+    calc(var(--cv-out-start) + var(--i) * var(--cv-col));
 }
 
 .orikata-verse--curtain .orikata-verse-line {
   clip-path: inset(0 0 100% 0);
-  animation: orikata-verse-curtain var(--cv-col-dur)
-    cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+  animation:
+    orikata-verse-curtain-in var(--cv-col-dur)
+      cubic-bezier(0.22, 0.61, 0.36, 1) forwards,
+    orikata-verse-curtain-out var(--cv-col-dur)
+      cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation-delay:
+    calc(var(--cv-start) + var(--i) * var(--cv-col)),
+    calc(var(--cv-out-start) + var(--i) * var(--cv-col));
 }
 
 .orikata-verse--window .orikata-verse-line {
   opacity: 0;
   transform: translateX(0.7em);
   filter: blur(2.5px);
-  animation: orikata-verse-window var(--cv-col-dur) ease forwards;
-  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+  animation:
+    orikata-verse-window-in var(--cv-col-dur) ease forwards,
+    orikata-verse-window-out var(--cv-col-dur) ease forwards;
+  animation-delay:
+    calc(var(--cv-start) + var(--i) * var(--cv-col)),
+    calc(var(--cv-out-start) + var(--i) * var(--cv-col));
 }
 
-@keyframes orikata-verse-line {
+@keyframes orikata-verse-line-in {
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes orikata-verse-curtain {
+@keyframes orikata-verse-line-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.55em);
+  }
+}
+
+@keyframes orikata-verse-curtain-in {
   to {
     clip-path: inset(0 0 0 0);
   }
 }
 
-@keyframes orikata-verse-window {
+@keyframes orikata-verse-curtain-out {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+@keyframes orikata-verse-window-in {
   to {
     opacity: 1;
     transform: translateX(0);
     filter: blur(0);
+  }
+}
+
+@keyframes orikata-verse-window-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(0.7em);
+    filter: blur(2.5px);
   }
 }
 

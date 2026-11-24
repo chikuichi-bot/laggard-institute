@@ -23,24 +23,17 @@ export type TutorialPageCopy = {
   verseMotion?: TutorialVerseMotion;
 };
 
-/** トップの縦書き3列（ユーザー原文のまま · 右→左） */
+/** @deprecated 帰りの詩ページは削除。ラボ比較用に残す。 */
 export const COMMUTE_VERSE_LINES = [
   "夜の京阪電車",
   "淀屋橋駅で特急の一番前運転席の反対側に座る",
   "駅が通過していき街の明かりが流れていく",
 ] as const;
 
-/** トップ縦書きモーション（2026-11-13 淡島様 · 4 · 窓の通過） */
+/** @deprecated 帰りの詩ページは削除。ラボ比較用に残す。 */
 export const COMMUTE_VERSE_MOTION: TutorialVerseMotion = "window";
 
 export const TUTORIAL_PAGES: TutorialPageCopy[] = [
-  {
-    showBrand: false,
-    title: "知らない駅に降りてみる",
-    bodies: [],
-    verseLines: COMMUTE_VERSE_LINES,
-    verseMotion: COMMUTE_VERSE_MOTION,
-  },
   {
     showBrand: true,
     title: "知らない駅に降りてみる",
@@ -53,12 +46,10 @@ export const TUTORIAL_PAGES: TutorialPageCopy[] = [
     showBrand: true,
     kicker: "はじまり",
     title: "名前を知って、見なくなった駅",
-    quote:
-      "子どもに「あれは鳥だよ」と言葉を教えたその日から、子どもはもう、あの鳥を見なくなってしまいます。",
-    quoteBy: "── ジッドゥ・クリシュナムルティ",
     bodies: [
+      "日本には、約九千もの駅がある。",
       "いつもは、その名前を読むだけで通り過ぎる。分かったつもりになって、降りない。",
-      "名前だけが残り、その土地の姿を、私は一度も見ていない。駅は、私にとって存在しないもののようになっていました。",
+      "名前だけが残り、その土地の姿を、私は一度も見ていない。九千のうちのほとんどは、私にとって存在しないもののようになっていました。",
     ],
   },
   {

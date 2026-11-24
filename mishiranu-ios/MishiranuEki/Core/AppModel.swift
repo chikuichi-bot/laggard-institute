@@ -50,13 +50,13 @@ enum LocateFailure: Error, Hashable {
     var message: String {
         switch self {
         case .denied:
-            return "位置情報の許可がオフです。「設定 → プライバシーとセキュリティ → 位置情報サービス」でオンにし、「見知らぬ駅」を「このAppの使用中のみ許可」にしてから、もう一度「現在地で駅を探す」を押してください。駅名でも探せます。"
+            return "位置情報の許可がオフです。iPhoneの「設定 → 見知らぬ駅 → 位置情報」を「このAppの使用中のみ許可」にしてから、もう一度「この駅について」を押してください。駅名でも探せます。"
         case .unavailable:
-            return "いま位置が取れませんでした。屋外でもう一度試すか、駅名で探してください。"
+            return "いま位置が取れませんでした。少し待ってからもう一度、または駅名で探してください。"
         case .timeout:
-            return "現在地の確認がタイムアウトしました。もう一度試すか、駅名で探してください。"
+            return "現在地の確認に時間がかかりすぎました。もう一度押すか、駅名で探してください。"
         case .unknown:
-            return "現在地を取得できませんでした。駅名で探すか、もう一度どうぞ。"
+            return "現在地を取得できませんでした。もう一度押すか、駅名で探してください。"
         }
     }
 }
@@ -64,8 +64,10 @@ enum LocateFailure: Error, Hashable {
 let openingGuide =
     "知らない駅に到着しましたね。現在地から探すか、駅名を入力してください。決まると、その土地の案内を開きます。一度見た駅は、この端末に残ります。"
 
-/// 現在地から自動で選ぶ駅の上限距離。
+/// 現在地まわりの候補を集める半径（保存駅・MapKit）。
 let nearbyStationKm = 3.5
+/// 「ここは○○です」と即確定してよい距離。これより遠い保存駅は隣駅の誤確定になる。
+let atStationConfirmKm = 0.55
 
 @MainActor
 @Observable
@@ -116,6 +118,8 @@ final class AppModel {
     var stationNotice: String?
     /// 土地案内の読み上げ。タブをまたいでも止めない（歩きながら聴く）。
     let placeNarrator = PlaceNarrator()
+    /// G3 · 歩いた軌跡（予定ナビ線ではない。事実の GPS だけ）。
+    let walkTrail = WalkTrailRecorder()
 
     private let now: () -> Date
     @ObservationIgnored private var pendingTour: Task<Void, Never>?
@@ -322,6 +326,7 @@ final class AppModel {
         pendingTour?.cancel()
         pendingStationLookup?.cancel()
         screen = .hero
+        syncWalkTrailRecording()
         resetHome()
     }
 
@@ -464,6 +469,7 @@ final class AppModel {
         }
         courses = ordinary + others
         selectedCourse = ordinary.first ?? others.first
+        syncWalkTrailRecording()
     }
 
     /// 表示中の駅とコースが食い違っていたら組み直す。
@@ -471,10 +477,12 @@ final class AppModel {
         guard let station else {
             selectedCourse = nil
             courses = []
+            syncWalkTrailRecording()
             return
         }
         if let course = selectedCourse, courseFitsStation(course, station: station),
            course.id.contains(SavedStationStore.bareName(station.name)) {
+            syncWalkTrailRecording()
             return
         }
         applyOrdinaryWalk(for: station)
@@ -491,6 +499,31 @@ final class AppModel {
     /// 歩くページからショート／ロングを選ぶ。
     func selectWalkCourse(_ course: WalkCourse) {
         selectedCourse = course
+        syncWalkTrailRecording()
+    }
+
+    /// G3 · 散歩が開いているあいだだけ軌跡を取る。予定線は引かない。
+    func syncWalkTrailRecording() {
+        guard screen == .tour,
+              selectedCourse != nil,
+              !isStationPreview,
+              let station
+        else {
+            walkTrail.stop(save: true)
+            return
+        }
+        walkTrail.start(
+            stationId: station.id,
+            stationName: station.name,
+            lat: station.lat,
+            lng: station.lng,
+            radiusKm: radiusKm
+        )
+    }
+
+    /// 歩いた軌跡をこの駅から消す。
+    func clearWalkTrail() {
+        walkTrail.clearTrail()
     }
 
     /// 空気の道設定を変えたあと、散歩コースを組み直す。
@@ -499,10 +532,12 @@ final class AppModel {
         applyOrdinaryWalk(for: station)
     }
 
-    /// 歩くタブに出すショート／ロング。
+    /// 歩くタブに出すひと寄り／小回り／大回り。
     var ordinaryWalkCourses: [WalkCourse] {
         courses.filter {
-            $0.id.contains("ordinary-short") || $0.id.contains("ordinary-long")
+            $0.id.contains("ordinary-micro")
+                || $0.id.contains("ordinary-short")
+                || $0.id.contains("ordinary-long")
         }
     }
 
@@ -841,28 +876,37 @@ final class AppModel {
         return true
     }
 
-    /// 現在地から最寄りを返す。近いときは呼び出し側で確認してから `chooseStation` する。
+    /// 現在地から最寄り保存駅を返す。駅の直近（`atStationConfirmKm`）のときだけ即確定用。
+    /// 3.5km 圏の保存駅は隣駅誤確定になるので返さない（呼び出し側が MapKit 候補へ）。
     @discardableResult
     func finishLocate(lat: Double, lng: Double) -> Station? {
         geoLoading = false
+        heroNote = nil
+        screen = .hero
         let hit = Geo.nearestStation(lat: lat, lng: lng, in: stations)
-        if let hit, hit.km <= nearbyStationKm {
-            heroNote = nil
-            screen = .hero
+        if let hit, hit.km <= atStationConfirmKm {
             return hit.station
         }
-        let nearestHint = hit.map {
-            "いちばん近い保存済みの駅は\($0.station.name)（\(Geo.distanceLabel(km: $0.km))）ですが、徒歩圏外です。"
-        } ?? ""
-        heroNote = "\(nearestHint)駅名を入力すれば、全国どこでも徒歩圏の案内をつくれます。"
-        screen = .hero
         return nil
+    }
+
+    /// 現在地は取れたが、近くの駅候補が無いとき。
+    func noteLocateWithoutNearbyStation(nearestSavedKmLabel: String? = nil) {
+        if let nearestSavedKmLabel {
+            heroNote =
+                "いまいる場所は分かりました。いちばん近い保存済みの駅は\(nearestSavedKmLabel)で徒歩圏外です。駅名を入力してください。"
+        } else {
+            heroNote =
+                "いまいる場所は分かりました。付近の駅名を地図から拾えませんでした。駅名を入力してください。"
+        }
+        screen = .hero
     }
 
     func failLocate(_ failure: LocateFailure) {
         geoLoading = false
         heroNote = failure.message
         screen = .hero
+        syncWalkTrailRecording()
     }
 
 
@@ -895,6 +939,7 @@ final class AppModel {
             }
             applyOrdinaryWalk(for: fixed)
         }
+        syncWalkTrailRecording()
     }
 
     /// 設定の「調べた駅」から、保存済みの案内を思い出す。

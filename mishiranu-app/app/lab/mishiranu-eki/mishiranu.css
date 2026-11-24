@@ -4279,13 +4279,19 @@ a.mishiranu-btn {
   color: var(--mk-ink, #2b2722);
 }
 
-/* トップ縦書き · 3列固定（右→左）· 速度は文字ごと基準 */
+/* トップ縦書き · 3列固定（右→左）· 出現後2秒で同じ手法で消える */
 .mishiranu-tutorial-verse {
   --cv-start: 0.28s;
   --cv-col: 1.55s;
   --cv-char: 0.055s;
   --cv-fade: 0.42s;
   --cv-col-dur: 1.65s;
+  --cv-hold: 2s;
+  --cv-last-i: 2;
+  --cv-out-start: calc(
+    var(--cv-start) + var(--cv-last-i) * var(--cv-col) + var(--cv-col-dur) +
+      var(--cv-hold)
+  );
   display: grid;
   grid-template-columns: repeat(3, max-content);
   direction: rtl;
@@ -4318,8 +4324,12 @@ a.mishiranu-btn {
 .mishiranu-tutorial-verse--lines .mishiranu-tutorial-verse-line {
   opacity: 0;
   transform: translateY(0.55em);
-  animation: mishiranu-verse-line var(--cv-col-dur) ease forwards;
-  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+  animation:
+    mishiranu-verse-line-in var(--cv-col-dur) ease forwards,
+    mishiranu-verse-line-out var(--cv-col-dur) ease forwards;
+  animation-delay:
+    calc(var(--cv-start) + var(--i) * var(--cv-col)),
+    calc(var(--cv-out-start) + var(--i) * var(--cv-col));
 }
 
 .mishiranu-tutorial-verse--chars .mishiranu-tutorial-verse-ch {
@@ -4332,23 +4342,43 @@ a.mishiranu-btn {
 
 .mishiranu-tutorial-verse--curtain .mishiranu-tutorial-verse-line {
   clip-path: inset(0 0 100% 0);
-  animation: mishiranu-verse-curtain var(--cv-col-dur)
-    cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+  animation:
+    mishiranu-verse-curtain-in var(--cv-col-dur)
+      cubic-bezier(0.22, 0.61, 0.36, 1) forwards,
+    mishiranu-verse-curtain-out var(--cv-col-dur)
+      cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation-delay:
+    calc(var(--cv-start) + var(--i) * var(--cv-col)),
+    calc(var(--cv-out-start) + var(--i) * var(--cv-col));
 }
 
 .mishiranu-tutorial-verse--window .mishiranu-tutorial-verse-line {
   opacity: 0;
   transform: translateX(0.7em);
   filter: blur(2.5px);
-  animation: mishiranu-verse-window var(--cv-col-dur) ease forwards;
-  animation-delay: calc(var(--cv-start) + var(--i) * var(--cv-col));
+  animation:
+    mishiranu-verse-window-in var(--cv-col-dur) ease forwards,
+    mishiranu-verse-window-out var(--cv-col-dur) ease forwards;
+  animation-delay:
+    calc(var(--cv-start) + var(--i) * var(--cv-col)),
+    calc(var(--cv-out-start) + var(--i) * var(--cv-col));
 }
 
-@keyframes mishiranu-verse-line {
+@keyframes mishiranu-verse-line-in {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes mishiranu-verse-line-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.55em);
   }
 }
 
@@ -4363,17 +4393,39 @@ a.mishiranu-btn {
   }
 }
 
-@keyframes mishiranu-verse-curtain {
+@keyframes mishiranu-verse-curtain-in {
   to {
     clip-path: inset(0 0 0 0);
   }
 }
 
-@keyframes mishiranu-verse-window {
+@keyframes mishiranu-verse-curtain-out {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+@keyframes mishiranu-verse-window-in {
   to {
     opacity: 1;
     transform: translateX(0);
     filter: blur(0);
+  }
+}
+
+@keyframes mishiranu-verse-window-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(0.7em);
+    filter: blur(2.5px);
   }
 }
 

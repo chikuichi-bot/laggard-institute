@@ -396,20 +396,33 @@ struct HeroView: View {
         searchFocused = false
         Task {
             do {
-                let location = try await locator.requestOnce()
+                // 隣駅へ移った直後でも、中書島などの古い位置キャッシュで確定しない。
+                let location = try await locator.requestOnce(preferFresh: true)
                 let lat = location.coordinate.latitude
                 let lng = location.coordinate.longitude
+                // 保存駅が 3.5km 以内でも即確定しない（隣の鳥羽伏見などが消える）。
+                // 駅直近だけ finishLocate。それ以外は MapKit 込みの近い順リストへ。
                 if let station = model.finishLocate(lat: lat, lng: lng) {
                     pendingConfirm = .locate(station)
                     return
                 }
                 let label = "現在地の近く"
                 candidateSheet = CandidateSheet(query: label, items: [], loading: true)
-                let items = await StationCandidateSearch.nearby(lat: lat, lng: lng)
+                let items = await StationCandidateSearch.nearby(
+                    lat: lat,
+                    lng: lng,
+                    in: model.stations
+                )
                 guard candidateSheet?.query == label else { return }
                 if items.isEmpty {
                     candidateSheet = nil
+                    let nearest = Geo.nearestStation(lat: lat, lng: lng, in: model.stations)
+                    let hint = nearest.map {
+                        "\($0.station.name)（\(Geo.distanceLabel(km: $0.km))）"
+                    }
+                    model.noteLocateWithoutNearbyStation(nearestSavedKmLabel: hint)
                 } else {
+                    // 近い順に出す（中書島の保存があっても、いま近い鳥羽伏見が先頭になる）。
                     model.heroNote = nil
                     candidateSheet = CandidateSheet(query: label, items: items, loading: false)
                 }

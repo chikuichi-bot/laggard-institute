@@ -10,6 +10,8 @@
 	<key>MishiranuAPIBaseURL</key>
 	<string>https://mishiranu-eki.apps.grok.bot</string>
 	<!-- DEBUG 実機が Mac の http://192.168.x.x:3010 に届くように -->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>しばらくアプリを開いていないときにだけ、短い寄り道の知らせを送ります。移動の追跡には使いません。</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>この端末の近くにある案内サーバー（Mac）へつなぎ、駅のまわり方をつくるために使います。</string>
 	<key>NSBonjourServices</key>

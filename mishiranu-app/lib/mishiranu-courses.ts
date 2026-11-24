@@ -729,6 +729,9 @@ function sortNearStation(spots: Spot[], station: StationSeed): Spot[] {
 }
 
 /** 短い別名の食い付きを避ける（「山崎」が「大山崎山荘」に当たる等）。 */
+/** ひと寄り＝次の電車までの短い寄り道（約15分・確かなピン優先）。 */
+const MICRO_STROLL_BUDGET_MINUTES = 22;
+const MICRO_STROLL_MAX_STOPS = 2;
 /** 小回り＝土地の歩き方を約1時間で辿る（歩き＋軽い滞在＋駅帰還）。 */
 const SHORT_STROLL_BUDGET_MINUTES = 70;
 const SHORT_STROLL_MAX_STOPS = 5;
@@ -1224,12 +1227,56 @@ function preservePoolOrder(pool: Spot[], preferred: Spot[]): Spot[] {
   return out;
 }
 
+function ordinaryVariantCopy(
+  kind: "micro" | "short" | "long",
+  wovenCount: number,
+  preferAtmosphere: boolean,
+  landBasis?: string,
+): { title: string; subtitle: string; vibe: string } {
+  if (kind === "micro") {
+    return {
+      title: "駅から、ひと寄り",
+      subtitle: "次の電車まで · 約15分 · 位置の確かな先だけ",
+      vibe: "改札を出て、ひとつ寄って、同じ駅へ戻る",
+    };
+  }
+  const basis = landBasis?.trim();
+  if (kind === "short") {
+    return {
+      title: "駅から、小回り",
+      subtitle: basis
+        ? `散歩のみ · 約1時間 · ${basis}`
+        : preferAtmosphere
+          ? "散歩のみ · 約1時間 · 土地の空気を通って駅へ帰る"
+          : "散歩のみ · 約1時間 · ぶらりと回って駅へ帰る",
+      vibe: basis
+        ? "ご飯も休憩も挟まず、土地の歩き方を約1時間歩く"
+        : preferAtmosphere
+          ? "最短より、土地らしい無駄な寄り道を歩く"
+          : "駅を出て、少し遠回りをして、駅へ帰る",
+    };
+  }
+  return {
+    title: "駅から、大回り",
+    subtitle: basis
+      ? `土地の歩き方をもう少し · ${basis}`
+      : preferAtmosphere
+        ? `もう少し先の空気まで通って駅へ帰る · ${wovenCount}か所`
+        : `もう少し遠くまで回って駅へ帰る · ${wovenCount}か所`,
+    vibe: basis
+      ? "土地の歩き方文と、文に出た先まで歩く"
+      : preferAtmosphere
+        ? "川辺や境内など、少し遠回りの帯を歩く"
+        : "少し先まで遠回りをして、駅へ帰る",
+  };
+}
+
 function buildOrdinaryVariant(
   prepared: StationSeed,
   dayPart: DayPart,
   timeId: TimeOptionId,
   spots: Spot[],
-  kind: "short" | "long",
+  kind: "micro" | "short" | "long",
   preferAtmosphere: boolean,
   preserveLandOrder = false,
   landBasis?: string,
@@ -1253,7 +1300,12 @@ function buildOrdinaryVariant(
     clockLabel: "",
   }));
   const corridors = corridorsMatching(prepared, woven, preferAtmosphere);
-  const basis = landBasis?.trim();
+  const copy = ordinaryVariantCopy(
+    kind,
+    woven.length,
+    preferAtmosphere,
+    landBasis,
+  );
   // 駅出発→立ち寄り→駅帰還の周回（同じ道の往復を避ける）
   return finishLoopCourse(
     prepared,
@@ -1263,29 +1315,9 @@ function buildOrdinaryVariant(
     woven,
     {
       id: `ordinary-${kind}-${prepared.name.replace(/駅$/u, "")}-${dayPart}`,
-      title: kind === "short" ? "駅から、小回り" : "駅から、大回り",
-      subtitle: basis
-        ? kind === "short"
-          ? `散歩のみ · 約1時間 · ${basis}`
-          : `土地の歩き方をもう少し · ${basis}`
-        : preferAtmosphere
-          ? kind === "short"
-            ? `散歩のみ · 約1時間 · 土地の空気を通って駅へ帰る`
-            : `もう少し先の空気まで通って駅へ帰る · ${woven.length}か所`
-          : kind === "short"
-            ? `散歩のみ · 約1時間 · ぶらりと回って駅へ帰る`
-            : `もう少し遠くまで回って駅へ帰る · ${woven.length}か所`,
-      vibe: basis
-        ? kind === "short"
-          ? "ご飯も休憩も挟まず、土地の歩き方を約1時間歩く"
-          : "土地の歩き方文と、文に出た先まで歩く"
-        : preferAtmosphere
-          ? kind === "short"
-            ? "最短より、土地らしい無駄な寄り道を歩く"
-            : "川辺や境内など、少し遠回りの帯を歩く"
-          : kind === "short"
-            ? "駅を出て、少し遠回りをして、駅へ帰る"
-            : "少し先まで遠回りをして、駅へ帰る",
+      title: copy.title,
+      subtitle: copy.subtitle,
+      vibe: copy.vibe,
     },
     corridors,
     preserveLandOrder,
@@ -1373,6 +1405,47 @@ export function buildFirstVisitOrdinaryCourses(
     ? longSet
     : prioritizeAtmosphereSpots(longSet, allCorridors, preferAtmosphere);
   const out: WalkCourse[] = [];
+  // ひと寄り: 時間がない人向け。地図に出せる確かなピンだけ・1〜2か所。
+  const center =
+    typeof scrubbedPrepared.lat === "number" &&
+    typeof scrubbedPrepared.lng === "number"
+      ? { lat: scrubbedPrepared.lat, lng: scrubbedPrepared.lng }
+      : null;
+  const microTrusted = nearStroll.filter((s) =>
+    allowsOnMap(s, scrubbedPrepared.name, center),
+  );
+  const microPool = microTrusted.length ? microTrusted : nearStroll;
+  const microBone = usingLandOrder
+    ? preservePoolOrder(microPool, narrative).slice(0, MICRO_STROLL_MAX_STOPS)
+    : sortNearStation(microPool, scrubbedPrepared).slice(
+        0,
+        MICRO_STROLL_MAX_STOPS,
+      );
+  const microSet = trimToStrollBudget(
+    microBone.filter(
+      (s) =>
+        spotNearStation(s, scrubbedPrepared) &&
+        hasCourseCoordinate(s) &&
+        isShortStrollSpot(s),
+    ),
+    scrubbedPrepared,
+    MICRO_STROLL_BUDGET_MINUTES,
+    "1h",
+    [],
+  );
+  if (microSet.length) {
+    const micro = buildOrdinaryVariant(
+      scrubbedPrepared,
+      dayPart,
+      "1h",
+      microSet,
+      "micro",
+      preferAtmosphere,
+      usingLandOrder,
+      landBasis,
+    );
+    if (micro) out.push(micro);
+  }
   const short = buildOrdinaryVariant(
     scrubbedPrepared,
     dayPart,

@@ -675,6 +675,12 @@ struct LoreTrace: View {
 struct WalkPage: View {
     @Environment(AppModel.self) private var model
 
+    private static func ordinaryLabel(for courseId: String) -> String {
+        if courseId.contains("micro") { return "ひと寄り" }
+        if courseId.contains("long") { return "大回り" }
+        return "小回り"
+    }
+
     /// 今の駅に属さないコース（出町の顔が墨染に残る等）は出さない。
     private var shownCourse: WalkCourse? {
         guard let station = model.station, let course = model.selectedCourse else { return nil }
@@ -733,7 +739,7 @@ struct WalkPage: View {
                             Button {
                                 model.selectWalkCourse(option)
                             } label: {
-                                Text(option.id.contains("long") ? "大回り" : "小回り")
+                                Text(Self.ordinaryLabel(for: option.id))
                                     .font(.readable(.subheadline, weight: .semibold))
                                     .foregroundStyle(on ? Palette.paper : Palette.ink)
                                     .frame(maxWidth: .infinity)
@@ -748,6 +754,7 @@ struct WalkPage: View {
                                     )
                             }
                             .buttonStyle(PlainHapticButtonStyle())
+                            .accessibilityLabel(Self.ordinaryLabel(for: option.id))
                         }
                     }
                     .padding(.top, 4)

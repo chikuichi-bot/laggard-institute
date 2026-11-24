@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 土地文 · Gemini Web 半自動（API は使わない · Web UI で Argon 高を選ぶ）
+ * 土地文 · Gemini Web 半自動（API は使わない · Web UI で Neon 高を選ぶ）
  *
  * Usage:
  *   npm run land:gemini:list
@@ -23,10 +23,10 @@ const STATE_DIR = join(LAND, ".gemini-web");
 const LAST_PACK = join(STATE_DIR, "last-pack.txt");
 const RAW_DIR = join(STATE_DIR, "raw");
 
-/** 土地文は品質優先 · 4 Argon + 思考レベル高 */
-const TARGET_MODEL = "Argon";
+/** 土地文は品質優先 · Neon + 思考レベル高 */
+const TARGET_MODEL = "Neon";
 const TARGET_THINKING = "高";
-/** Argon 高 · 1パックあたりの待ち上限（秒） */
+/** Neon 高 · 1パックあたりの待ち上限（秒） */
 const RESPONSE_TIMEOUT_SEC = 25 * 60;
 /** いま操作中の Gemini タブ URL（他チャットに JS が刺さらないように固定） */
 let pinnedGeminiTabUrl = "";
@@ -52,8 +52,8 @@ function parseArgs(argv) {
       console.log(`land-prose-gemini-web
 
   --list          未取込パック一覧
-  --next          次の未取込をコピー＋Gemini起動＋Argon高選択＋Cmd+V
-  --until-limit   未取込を連続実行（新規チャット→Argon高→貼付→送信→保存）· 制限で停止
+  --next          次の未取込をコピー＋Gemini起動＋Neon高選択＋Cmd+V
+  --until-limit   未取込を連続実行（新規チャット→Neon高→貼付→送信→保存）· 制限で停止
   --pack <ID>     指定パック（例: L / M1 / J5）
   --no-open       ブラウザは開かない（コピーだけ）
   --no-paste      開くだけ（Cmd+V しない）
@@ -151,10 +151,11 @@ function modelStepJs(step) {
   const visible = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const chip = [...document.querySelectorAll("button")].find((b) => {
     const t = textOf(b);
-    return /(Argon|Hydrogen|Flash|Pro|Carbon)/.test(t) && visible(b) && b.getBoundingClientRect().bottom > innerHeight * 0.35 && t.length < 40;
+    return /(Neon|Argon|Hydrogen|Flash|Pro|Carbon)/.test(t) && visible(b) && b.getBoundingClientRect().bottom > innerHeight * 0.35 && t.length < 40;
   });
   if (!chip) return "no-model-chip";
   const t = textOf(chip);
+  if (/Neon/.test(t) && /高/.test(t)) return "already-neon-high";
   if (/Argon/.test(t) && /高/.test(t)) return "already-argon-high";
   return "need-select:" + t.slice(0, 40);
 })()`,
@@ -165,7 +166,7 @@ function modelStepJs(step) {
   if (byTest && visible(byTest)) { byTest.click(); return "opened-chip"; }
   const chip = [...document.querySelectorAll("button")].find((b) => {
     const t = textOf(b);
-    return /(Argon|Hydrogen|Flash|Pro|Carbon)/.test(t) && visible(b) && b.getBoundingClientRect().bottom > innerHeight * 0.35 && t.length < 40;
+    return /(Neon|Argon|Hydrogen|Flash|Pro|Carbon)/.test(t) && visible(b) && b.getBoundingClientRect().bottom > innerHeight * 0.35 && t.length < 40;
   });
   if (!chip) return "no-model-chip";
   chip.click();
@@ -175,14 +176,23 @@ function modelStepJs(step) {
   const textOf = (el) => (el.innerText || el.textContent || "").replace(/\\s+/g, " ").trim();
   const visible = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const nodes = [...document.querySelectorAll("button,[role=menuitem],[role=option],span,div")];
+  const neon = nodes.find((n) => {
+    const t = textOf(n);
+    return visible(n) && t.length < 60 && (t.includes("Neon") || t.includes("4 Neon"));
+  });
+  if (neon) {
+    const t = neon.closest('[role="menuitem"],[role="option"],button') || neon;
+    t.click();
+    return "picked-neon";
+  }
   const argon = nodes.find((n) => {
     const t = textOf(n);
     return visible(n) && t.length < 60 && (t.includes("4 Argon") || t.includes("コードと分析"));
   });
-  if (!argon) return "no-argon-option";
+  if (!argon) return "no-neon-or-argon-option";
   const t = argon.closest('[role="menuitem"],[role="option"],button') || argon;
   t.click();
-  return "picked-argon";
+  return "picked-argon-fallback";
 })()`,
     openThinking: `(() => {
   const textOf = (el) => (el.innerText || el.textContent || "").replace(/\\s+/g, " ").trim();
@@ -225,7 +235,7 @@ function modelStepJs(step) {
   const visible = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const chip = [...document.querySelectorAll("button")].find((b) => {
     const t = textOf(b);
-    return /(Argon|Hydrogen|Flash|Pro|Carbon)/.test(t) && visible(b) && b.getBoundingClientRect().bottom > innerHeight * 0.35 && t.length < 40;
+    return /(Neon|Argon|Hydrogen|Flash|Pro|Carbon)/.test(t) && visible(b) && b.getBoundingClientRect().bottom > innerHeight * 0.35 && t.length < 40;
   });
   return chip ? textOf(chip) : "";
 })()`,
@@ -429,7 +439,7 @@ function runSelectOnBrowser(browserName) {
   }
 
   // まだ Argon でなければモデルを選ぶ（選ぶとメニューが閉じることがある）
-  const needArgon = !/Argon/.test(chipBefore);
+  const needArgon = !/Neon/.test(chipBefore);
   if (needArgon) {
     sleepSync(700);
     r = runBrowserJs(browserName, modelStepJs("pickArgon"));
@@ -765,9 +775,9 @@ function waitForResponse(timeoutSec = RESPONSE_TIMEOUT_SEC) {
     sleepSync(4000);
     const st = detectRateOrStatus();
     if (st.rate) return { ok: false, reason: "rate-limit", status: st };
-    if (!/Argon/i.test(st.chip || "") && st.chip) {
+    if (!/Neon/i.test(st.chip || "") && st.chip) {
       // モデルが勝手に落ちた場合も制限扱いに近い
-      if (/Flash|Hydrogen|自動/i.test(st.chip)) {
+      if (/Flash|Hydrogen|Argon|自動/i.test(st.chip) && !/Neon/i.test(st.chip)) {
         return { ok: false, reason: "model-fallback:" + st.chip, status: st };
       }
     }
@@ -917,7 +927,7 @@ function runUntilLimit(packs) {
   }
   mkdirSync(RAW_DIR, { recursive: true });
   console.log("");
-  console.log("—— Gemini Web · Argon 制限まで連続 ——");
+  console.log("—— Gemini Web · Neon 制限まで連続 ——");
   console.log(`対象: ${pending.map((p) => p.id).join(", ")}（${pending.length}）`);
   console.log(`保存先: ${RAW_DIR}`);
   console.log("");
@@ -1051,7 +1061,7 @@ function runUntilLimit(packs) {
         console.log(`部分保存: ${path}`);
       }
       console.log("");
-      console.log("◆ Argon 制限（またはモデル落ち）を検出したので停止します。");
+      console.log("◆ Neon/モデル制限（またはモデル落ち）を検出したので停止します。");
       console.log("  制限が開けたら: npm run land:gemini:until-limit");
       return;
     }
@@ -1084,7 +1094,7 @@ function runUntilLimit(packs) {
         const wait2 = waitForResponse(RESPONSE_TIMEOUT_SEC);
         console.log(`結果2: ${wait2.reason} · len=${wait2.status?.respLen ?? "?"}`);
         if (wait2.reason === "rate-limit" || String(wait2.reason).startsWith("model-fallback")) {
-          console.log("◆ Argon 制限を検出したので停止します。");
+          console.log("◆ Neon/モデル制限を検出したので停止します。");
           return;
         }
         text = captureResponseText(hints);
@@ -1148,7 +1158,7 @@ function printHowTo(p) {
   console.log(
     `2. Gemini を開く → ${TARGET_MODEL} ${TARGET_THINKING} を自動選択 → Cmd+V`,
   );
-  console.log("3. 【新規チャット】推奨 · 自動選択が外れていれば手動で Argon 高");
+  console.log("3. 【新規チャット】推奨 · 自動選択が外れていれば手動で Neon 高");
   console.log("4. 入力欄に入っていれば送信（入っていなければ欄をクリックして Cmd+V）");
   console.log(
     `5. 全部返ってきたら Cursor に貼る（先頭に「${p.id}です」と書くと分かりやすい）`,
@@ -1243,7 +1253,7 @@ function main() {
         String(modelResult).includes("js-failed")
       ) {
         console.log(
-          "※ 自動選択に失敗しました。入力欄左のモデルから「4 Argon」→ 思考レベル「高」を手動で選んでください。",
+          "※ 自動選択に失敗しました。入力欄左のモデルから「Neon」→ 思考レベル「高」を手動で選んでください。",
         );
         console.log(
           "※ Gemini設定で「自動モデル選択」がONだと毎回リセットされやすいです。OFF推奨。",

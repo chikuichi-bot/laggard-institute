@@ -280,53 +280,45 @@ private struct TutorialSlide: View {
                             .frame(maxWidth: .infinity)
                     }
 
-                    if !page.verseLines.isEmpty {
-                        CommuteVerseView(
-                            lines: page.verseLines,
-                            motion: page.verseMotion
-                        )
-                        .padding(.top, 4)
-                    } else {
-                        Text(page.title)
-                            .font(.mincho(.title2, weight: .semibold))
-                            .foregroundStyle(Palette.ink)
+                    Text(page.title)
+                        .font(.mincho(.title2, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: contentAlignment)
+                        .multilineTextAlignment(page.showBrand ? .center : .leading)
+
+                    if let quote = page.quote {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(quote)
+                                .font(.mincho(.body))
+                                .foregroundStyle(Palette.ink)
+                                .lineSpacing(6)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if let quoteBy = page.quoteBy {
+                                Text(quoteBy)
+                                    .font(.readable(.caption))
+                                    .foregroundStyle(Palette.mist)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+                        .padding(.leading, 14)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .overlay(alignment: .leading) {
+                            Rectangle()
+                                .fill(Palette.warm.opacity(0.55))
+                                .frame(width: 2)
+                        }
+                    }
+
+                    ForEach(Array(page.bodies.enumerated()), id: \.offset) { _, body in
+                        Text(body)
+                            .font(.readable(.body))
+                            .foregroundStyle(Palette.fog)
+                            .lineSpacing(5)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: contentAlignment)
                             .multilineTextAlignment(page.showBrand ? .center : .leading)
-
-                        if let quote = page.quote {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(quote)
-                                    .font(.mincho(.body))
-                                    .foregroundStyle(Palette.ink)
-                                    .lineSpacing(6)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                if let quoteBy = page.quoteBy {
-                                    Text(quoteBy)
-                                        .font(.readable(.caption))
-                                        .foregroundStyle(Palette.mist)
-                                        .frame(maxWidth: .infinity, alignment: .trailing)
-                                }
-                            }
-                            .padding(.leading, 14)
-                            .padding(.vertical, 10)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .overlay(alignment: .leading) {
-                                Rectangle()
-                                    .fill(Palette.warm.opacity(0.55))
-                                    .frame(width: 2)
-                            }
-                        }
-
-                        ForEach(Array(page.bodies.enumerated()), id: \.offset) { _, body in
-                            Text(body)
-                                .font(.readable(.body))
-                                .foregroundStyle(Palette.fog)
-                                .lineSpacing(5)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: contentAlignment)
-                                .multilineTextAlignment(page.showBrand ? .center : .leading)
-                        }
                     }
 
                     if let imageName = page.imageName {
@@ -390,65 +382,9 @@ private struct TutorialSlide: View {
     }
 }
 
-// MARK: - トップ縦書き（採用: 4 · 窓の通過）
-
-private struct CommuteVerseView: View {
-    let lines: [String]
-    var motion: TutorialCopy.VerseMotion = .window
-
-    @State private var revealed: [Bool] = []
-
-    private func isOn(_ index: Int) -> Bool {
-        revealed.indices.contains(index) && revealed[index]
-    }
-
-    var body: some View {
-        // 縦書き：列は右→左、字は上→下
-        HStack(alignment: .top, spacing: 24) {
-            ForEach(Array(lines.enumerated().reversed()), id: \.offset) { index, line in
-                VStack(spacing: 4) {
-                    ForEach(Array(line.enumerated()), id: \.offset) { _, ch in
-                        Text(String(ch))
-                            // 参考稿と同じくヒラギノ明朝 W3・真っ黒（UIの茶系 ink / New York は使わない）
-                            .font(.custom("HiraMinProN-W3", size: 19))
-                            .foregroundStyle(Color.black)
-                    }
-                }
-                .opacity(isOn(index) ? 1 : 0)
-                .blur(radius: isOn(index) ? 0 : 2.5)
-                .offset(x: isOn(index) ? 0 : 10)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(line)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .onAppear {
-            revealed = Array(repeating: false, count: lines.count)
-            // Web の「2 · 文字ごと」と同じ速度（開始0.28 · 列間隔1.55 · 列の長さ1.65）
-            for i in lines.indices {
-                let delay = 0.28 + Double(i) * 1.55
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    withAnimation(.easeInOut(duration: 1.65)) {
-                        if revealed.indices.contains(i) {
-                            revealed[i] = true
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Copy（ホームページ orikata と同趣旨）
 
 enum TutorialCopy {
-    enum VerseMotion: Equatable {
-        case curtain
-        case window
-        case lines
-        case chars
-    }
-
     struct Step: Equatable {
         var title: String
         var body: String
@@ -464,23 +400,9 @@ enum TutorialCopy {
         var imageAlt: String? = nil
         var steps: [Step] = []
         var showBrand: Bool = false
-        var verseLines: [String] = []
-        var verseMotion: VerseMotion = .curtain
     }
 
     static let pages: [Page] = [
-        Page(
-            kicker: nil,
-            title: "知らない駅に降りてみる",
-            bodies: [],
-            showBrand: false,
-            verseLines: [
-                "夜の京阪電車",
-                "淀屋橋駅で特急の一番前運転席の反対側に座る",
-                "駅が通過していき街の明かりが流れていく",
-            ],
-            verseMotion: .window
-        ),
         Page(
             kicker: nil,
             title: "知らない駅に降りてみる",
@@ -494,11 +416,10 @@ enum TutorialCopy {
             kicker: "はじまり",
             title: "名前を知って、見なくなった駅",
             bodies: [
+                "日本には、約九千もの駅がある。",
                 "いつもは、その名前を読むだけで通り過ぎる。分かったつもりになって、降りない。",
-                "名前だけが残り、その土地の姿を、私は一度も見ていない。駅は、私にとって存在しないもののようになっていました。",
+                "名前だけが残り、その土地の姿を、私は一度も見ていない。九千のうちのほとんどは、私にとって存在しないもののようになっていました。",
             ],
-            quote: "子どもに「あれは鳥だよ」と言葉を教えたその日から、子どもはもう、あの鳥を見なくなってしまいます。",
-            quoteBy: "── ジッドゥ・クリシュナムルティ",
             showBrand: true
         ),
         Page(

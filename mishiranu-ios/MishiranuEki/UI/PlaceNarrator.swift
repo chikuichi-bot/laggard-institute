@@ -34,17 +34,20 @@ enum PlaceScriptSection: String, CaseIterable, Identifiable {
 }
 
 /// 土地の文章を読み上げる（電車の中でも、散策中でも、画面を消しても）。
-/// 「すべて」は文単位で進め、中断しても同じ駅なら続きから再開できる。
+/// 優先: xVoice（xAI TTS · Mac 3010 / さくら tts.php）。不通時は AVSpeech。
+/// 息継ぎ単位（数文まとめ）で進め、次チャンクは再生中に先読みして句点後の間延びを抑える。
 /// タブ切替では止めない（AppModel が保持する）。駅が変わった／トップに戻ったときだけ止める。
 /// バックグラウンド再生には Info.plist の UIBackgroundModes=audio が必要。
 @MainActor
 @Observable
-final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
+final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
     private(set) var isSpeaking = false
     private(set) var isPaused = false
     private(set) var activeSection: PlaceScriptSection?
 
     private let synthesizer = AVSpeechSynthesizer()
+    private var audioPlayer: AVAudioPlayer?
+    private var playbackGeneration = 0
     private var activeStationId: String?
     private var activeStationTitle = "見知らぬ駅"
     /// 発話直前の言い間違い対策用（表示文は変えず、ここだけ使う）。
@@ -53,8 +56,19 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
     private var chunkIndex = 0
     private var scriptDigest = ""
     private var didSetupRemoteCommands = false
+    /// 次チャンクの MP3 先読み（句点ごとの待ちを消す）。
+    private var prefetchedAudio: [Int: Data] = [:]
+    private var prefetchingIndexes: Set<Int> = []
+    /// いまの AVSpeech 発話が属する playbackGeneration（古い didFinish/didCancel を無視）。
+    private var activeSpeechGeneration: Int?
 
-    private static let bookmarkKey = "mishiranu.placeNarrator.bookmark.v1"
+    /// xVoice 1 リクエストに載せる目安。
+    /// `[pause]` 挿入後も API 上限 1200 を超えないよう余白を取る。
+    private static let breathTargetChars = 360
+    private static let breathMaxChars = 720
+    private static let xvoiceSendMaxChars = 1100
+
+    private static let bookmarkKey = "mishiranu.placeNarrator.bookmark.v2"
 
     private struct Bookmark: Codable {
         var stationId: String
@@ -191,17 +205,71 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
             .filter { !$0.isEmpty }
     }
 
-    /// 句点・改行で読み上げ単位に分ける（長すぎる一塊は途中再開しにくい）。
+    /// 息継ぎ単位に分ける。一文ごとだと xVoice 往復の無音が句点ごとに入るので、数文まとめる。
     static func chunks(from text: String) -> [String] {
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+        // 空行＝段落で区切る。段落内の単独改行はつなぐ（句点だけの細切れにしない）。
+        let paragraphs = normalized
+            .components(separatedBy: "\n\n")
+            .map { $0.replacingOccurrences(of: "\n", with: "") }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        var out: [String] = []
+        for paragraph in paragraphs {
+            out.append(contentsOf: packBreathGroups(sentencePieces(from: paragraph)))
+        }
+        return out
+    }
+
+    private static func packBreathGroups(_ sentences: [String]) -> [String] {
+        guard !sentences.isEmpty else { return [] }
+        var out: [String] = []
+        var current = ""
+        for sentence in sentences {
+            // 一文が上限超えでも API に載るよう硬く切る（稀な長文対策）。
+            if sentence.count > breathMaxChars {
+                if !current.isEmpty {
+                    out.append(current)
+                    current = ""
+                }
+                out.append(contentsOf: splitOversizedSentence(sentence))
+                continue
+            }
+            let next = current.isEmpty ? sentence : current + sentence
+            if !current.isEmpty, next.count > breathMaxChars {
+                out.append(current)
+                current = sentence
+                continue
+            }
+            current = next
+            if current.count >= breathTargetChars {
+                out.append(current)
+                current = ""
+            }
+        }
+        if !current.isEmpty { out.append(current) }
+        return out
+    }
+
+    private static func splitOversizedSentence(_ sentence: String) -> [String] {
+        var out: [String] = []
+        var start = sentence.startIndex
+        while start < sentence.endIndex {
+            let end = sentence.index(start, offsetBy: breathMaxChars, limitedBy: sentence.endIndex)
+                ?? sentence.endIndex
+            let piece = String(sentence[start..<end])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !piece.isEmpty { out.append(piece) }
+            start = end
+        }
+        return out
+    }
+
+    private static func sentencePieces(from text: String) -> [String] {
         var out: [String] = []
         var current = ""
         for ch in text {
-            if ch == "\n" {
-                let trimmed = current.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty { out.append(trimmed) }
-                current = ""
-                continue
-            }
             current.append(ch)
             if "。！？".contains(ch) {
                 let trimmed = current.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -211,7 +279,7 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         }
         let rest = current.trimmingCharacters(in: .whitespacesAndNewlines)
         if !rest.isEmpty { out.append(rest) }
-        return out.filter { !$0.isEmpty }
+        return out
     }
 
     private static func digest(_ text: String) -> String {
@@ -288,12 +356,7 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         speakCurrentChunk()
     }
 
-    private func speakCurrentChunk() {
-        guard chunkIndex < chunks.count else {
-            finishPlayback(clearProgress: true)
-            return
-        }
-        let raw = chunks[chunkIndex]
+    private func preparedSpeakText(for raw: String) -> String {
         let spoken: String = {
             if let station = activeSpeakStation {
                 return SpeechSpeakable.prepare(raw, station: station)
@@ -304,22 +367,147 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
                 stationReading: nil
             )
         }()
-        let utterance = AVSpeechUtterance(string: spoken.isEmpty ? raw : spoken)
-        utterance.voice = Self.preferredJapaneseVoice()
-        // 少しゆっくり読むと、固有名の食い違いが減る。
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.84
-        utterance.pitchMultiplier = 1.0
-        utterance.preUtteranceDelay = chunkIndex == 0 ? 0.18 : 0.08
-        utterance.postUtteranceDelay = 0.16
+        return spoken.isEmpty ? raw : spoken
+    }
+
+    /// xVoice 用。句点のあとに短い `[pause]`（xAI タグ）。長すぎる無音にはしない。
+    private static func withShortPausesAfterPunctuation(_ text: String) -> String {
+        var out = ""
+        let chars = Array(text)
+        var i = 0
+        while i < chars.count {
+            let ch = chars[i]
+            out.append(ch)
+            if "。！？".contains(ch) {
+                let after = chars.suffix(from: i + 1)
+                let rest = String(after).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !rest.isEmpty, !rest.hasPrefix("[pause]") {
+                    // 送信上限直前ならタグを足さない（413 回避）。
+                    if out.count + 9 + rest.count <= xvoiceSendMaxChars {
+                        out.append(" [pause] ")
+                    }
+                }
+            }
+            i += 1
+        }
+        let trimmed = out
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count <= xvoiceSendMaxChars { return trimmed }
+        return String(trimmed.prefix(xvoiceSendMaxChars))
+    }
+
+    private func xvoiceSpeakText(for raw: String) -> String {
+        Self.withShortPausesAfterPunctuation(preparedSpeakText(for: raw))
+    }
+
+    private func speakCurrentChunk() {
+        guard chunkIndex < chunks.count else {
+            finishPlayback(clearProgress: true)
+            return
+        }
+        let raw = chunks[chunkIndex]
+        let speakText = preparedSpeakText(for: raw)
+        let xvoiceText = Self.withShortPausesAfterPunctuation(speakText)
+        let generation = playbackGeneration
+        let index = chunkIndex
 
         isSpeaking = true
         isPaused = false
         publishNowPlaying()
+
+        // 再生中に次を先読み（API 往復の長い無音は出さない）
+        prefetchXvoice(index: index + 1, generation: generation)
+
+        Task { @MainActor in
+            do {
+                let mp3: Data
+                if let cached = self.prefetchedAudio.removeValue(forKey: index) {
+                    mp3 = cached
+                } else {
+                    mp3 = try await StationAPIClient.synthesizeXvoice(text: xvoiceText)
+                }
+                guard generation == self.playbackGeneration, self.isSpeaking else { return }
+                try self.playXvoice(mp3, generation: generation)
+                self.prefetchXvoice(index: index + 1, generation: generation)
+            } catch let api as StationAPIError {
+                if case .cancelled = api { return }
+                guard generation == self.playbackGeneration, self.isSpeaking else { return }
+                #if DEBUG
+                print("[PlaceNarrator] xvoice fallback → AVSpeech: \(api)")
+                #endif
+                self.speakWithAVSpeech(speakText, fallbackRaw: raw)
+            } catch {
+                guard generation == self.playbackGeneration, self.isSpeaking else { return }
+                #if DEBUG
+                print("[PlaceNarrator] xvoice fallback → AVSpeech: \(error)")
+                #endif
+                // AVSpeech にはタグを渡さない（読み上げられてしまう）
+                self.speakWithAVSpeech(speakText, fallbackRaw: raw)
+            }
+        }
+    }
+
+    private func prefetchXvoice(index: Int, generation: Int) {
+        guard generation == playbackGeneration, isSpeaking else { return }
+        guard index < chunks.count else { return }
+        guard prefetchedAudio[index] == nil, !prefetchingIndexes.contains(index) else { return }
+        prefetchingIndexes.insert(index)
+        let text = xvoiceSpeakText(for: chunks[index])
+        Task { @MainActor in
+            defer { self.prefetchingIndexes.remove(index) }
+            do {
+                let mp3 = try await StationAPIClient.synthesizeXvoice(text: text)
+                guard generation == self.playbackGeneration else { return }
+                self.prefetchedAudio[index] = mp3
+            } catch {
+                // 先読み失敗は本再生側で再試行／AVSpeech
+            }
+        }
+    }
+
+    private func clearPrefetch() {
+        prefetchedAudio.removeAll(keepingCapacity: false)
+        prefetchingIndexes.removeAll(keepingCapacity: false)
+    }
+
+    private func playXvoice(_ data: Data, generation: Int) throws {
+        guard generation == playbackGeneration, isSpeaking else {
+            throw StationAPIError.cancelled
+        }
+        audioPlayer?.stop()
+        let player = try AVAudioPlayer(data: data)
+        player.delegate = self
+        player.prepareToPlay()
+        guard generation == playbackGeneration, isSpeaking else {
+            throw StationAPIError.cancelled
+        }
+        audioPlayer = player
+        if !player.play() {
+            audioPlayer = nil
+            throw StationAPIError.badStatus(500, "play_failed")
+        }
+    }
+
+    private func speakWithAVSpeech(_ spoken: String, fallbackRaw: String) {
+        let utterance = AVSpeechUtterance(string: spoken.isEmpty ? fallbackRaw : spoken)
+        utterance.voice = Self.preferredJapaneseVoice()
+        // フォールバック時も句点後に少し余韻（xVoice の [pause] に近い短さ）。
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.92
+        utterance.pitchMultiplier = 1.0
+        utterance.preUtteranceDelay = chunkIndex == 0 ? 0.08 : 0.04
+        utterance.postUtteranceDelay = 0.22
+        activeSpeechGeneration = playbackGeneration
         synthesizer.speak(utterance)
     }
 
     func stop(deactivateAudio: Bool = true) {
         persistBookmarkIfNeeded()
+        playbackGeneration += 1
+        activeSpeechGeneration = nil
+        clearPrefetch()
+        audioPlayer?.stop()
+        audioPlayer = nil
         if synthesizer.isSpeaking || synthesizer.isPaused {
             synthesizer.stopSpeaking(at: .immediate)
         }
@@ -337,6 +525,11 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
 
     private func finishPlayback(clearProgress: Bool) {
         if clearProgress { clearBookmark() }
+        playbackGeneration += 1
+        activeSpeechGeneration = nil
+        clearPrefetch()
+        audioPlayer?.stop()
+        audioPlayer = nil
         isSpeaking = false
         isPaused = false
         activeStationId = nil
@@ -347,6 +540,17 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
         scriptDigest = ""
         clearNowPlaying()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func advanceAfterChunk() {
+        guard isSpeaking else { return }
+        chunkIndex += 1
+        if chunkIndex < chunks.count {
+            persistBookmarkIfNeeded()
+            speakCurrentChunk()
+        } else {
+            finishPlayback(clearProgress: true)
+        }
     }
 
     private func setupRemoteCommandsIfNeeded() {
@@ -469,25 +673,25 @@ final class PlaceNarrator: NSObject, AVSpeechSynthesizerDelegate {
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         Task { @MainActor in
-            guard self.isSpeaking else { return }
-            self.chunkIndex += 1
-            if self.chunkIndex < self.chunks.count {
-                self.persistBookmarkIfNeeded()
-                self.speakCurrentChunk()
-            } else {
-                self.finishPlayback(clearProgress: true)
-            }
+            // 古い発話の完了が新セッションを進めないようにする。
+            guard self.activeSpeechGeneration == self.playbackGeneration else { return }
+            guard self.isSpeaking, self.audioPlayer == nil else { return }
+            self.activeSpeechGeneration = nil
+            self.advanceAfterChunk()
         }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        // stop() が playbackGeneration を上げて掃除済み。
+        // ここで状態を触ると「止めてすぐ再生」の新セッションを壊す（以前のバグ）。
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
-            // 止めた位置は persistBookmarkIfNeeded（stop 側）で残す
-            self.isSpeaking = false
-            self.isPaused = false
-            self.activeSection = nil
-            self.activeStationId = nil
-            self.chunks = []
+            guard self.audioPlayer === player else { return }
+            self.audioPlayer = nil
+            guard self.isSpeaking else { return }
+            self.advanceAfterChunk()
         }
     }
 }

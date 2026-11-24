@@ -105,11 +105,14 @@ struct RootView: View {
             Haptics.prepare()
             // 試験中: 起動のたびチュートリアルを出す
             showTutorial = true
+            StrollNudge.askPermissionOnceIfNeeded()
+            StrollNudge.noteAppBecameActive()
         }
         .onChange(of: scenePhase) { _, phase in
             // 試験中: フォアグラウンドに戻るたびも出す
             if phase == .active {
                 showTutorial = true
+                StrollNudge.noteAppBecameActive()
             }
         }
         .fullScreenCover(isPresented: $showTutorial) {

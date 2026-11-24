@@ -161,9 +161,19 @@ export default function StationMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  /** G3 · 歩いた軌跡（予定ナビ線とは別レイヤ） */
+  const trailLayerRef = useRef<L.LayerGroup | null>(null);
+  const trailPointsRef = useRef<Array<[number, number]>>([]);
   const tileRef = useRef<L.TileLayer | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+
+  // id ゆれで消えないよう、正規化駅名で保存する。
+  const trailStorageKey = `mishiranu.walkTrail.${String(station.name ?? station.id)
+    .replace(/駅$/u, "")
+    .trim()
+    .toLowerCase()}`;
+  const trailStorageKeyLegacy = `mishiranu.walkTrail.${station.id}`;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -190,6 +200,7 @@ export default function StationMap({
     tileRef.current = tile;
 
     layerRef.current = L.layerGroup().addTo(map);
+    trailLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
     const invalidate = () => map.invalidateSize({ pan: false });
@@ -205,6 +216,7 @@ export default function StationMap({
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      trailLayerRef.current = null;
       tileRef.current = null;
     };
     // station identity only for initial mount; updates handled below
@@ -484,6 +496,83 @@ export default function StationMap({
       cancelled = true;
     };
   }, [station, spots, radiusKm, activeSpotId, courseStopIds, corridors, mapDetail]);
+
+  // G3 · 歩いた軌跡。予定ルートは描かない。
+  useEffect(() => {
+    const map = mapRef.current;
+    const trailLayer = trailLayerRef.current;
+    if (!map || !trailLayer) return;
+
+    const paint = (points: Array<[number, number]>) => {
+      trailLayer.clearLayers();
+      if (points.length < 2) return;
+      L.polyline(points, {
+        color: "#9a3d31",
+        weight: 4,
+        opacity: 0.88,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: false,
+      }).addTo(trailLayer);
+    };
+
+    try {
+      let raw = localStorage.getItem(trailStorageKey);
+      if (!raw && trailStorageKeyLegacy !== trailStorageKey) {
+        raw = localStorage.getItem(trailStorageKeyLegacy);
+        if (raw) {
+          localStorage.setItem(trailStorageKey, raw);
+        }
+      }
+      const parsed = raw ? (JSON.parse(raw) as Array<[number, number]>) : [];
+      trailPointsRef.current = Array.isArray(parsed) ? parsed.slice(-2500) : [];
+    } catch {
+      trailPointsRef.current = [];
+    }
+    paint(trailPointsRef.current);
+
+    if (!navigator.geolocation || !(courseStopIds && courseStopIds.length > 0)) {
+      return;
+    }
+
+    const center = stationLatLng(station);
+    const maxKm = Math.max(radiusKm, 0.8) * 1.35;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (pos.coords.accuracy > 45) return;
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (haversineKm({ lat, lng }, center) > maxKm) return;
+        const prev = trailPointsRef.current.at(-1);
+        if (prev) {
+          const step = haversineKm({ lat: prev[0], lng: prev[1] }, { lat, lng });
+          if (step < 0.01 || step > 0.18) return;
+        }
+        const next: Array<[number, number]> = [
+          ...trailPointsRef.current,
+          [lat, lng],
+        ];
+        trailPointsRef.current = next.slice(-2500);
+        try {
+          localStorage.setItem(
+            trailStorageKey,
+            JSON.stringify(trailPointsRef.current),
+          );
+        } catch {
+          /* quota */
+        }
+        paint(trailPointsRef.current);
+      },
+      () => {
+        /* ignore */
+      },
+      { enableHighAccuracy: true, maximumAge: 5_000, timeout: 20_000 },
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [station, radiusKm, courseStopIds, trailStorageKey, trailStorageKeyLegacy]);
 
   return (
     <div className="mishiranu-map mishiranu-map--live" aria-label={`${station.name}駅周辺の地図`}>

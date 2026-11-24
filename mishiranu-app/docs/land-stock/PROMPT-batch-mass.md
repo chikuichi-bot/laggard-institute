@@ -88,9 +88,25 @@ npm run land:gemini -- --pack L   # 指定パック
 
 **見込みストック:** 261 + 480 ≒ **741駅**（重複名・巨大除外の関係で実取込は前後する）
 
+| T1 | 阪神武庫川線 · 武庫川〜武庫川団地前 | **取込済4** | `prompts/PROMPT-T1.md` | `hanshin-mukogawa.md` |
+| T2B | 能勢電鉄妙見線 · 鶯の森〜平野（T2欠落） | **取込済4** | `prompts/PROMPT-T2B.md` | `nose.md` |
+| T2 | 能勢電鉄妙見線 · 滝山〜妙見口 | **取込済9** | `prompts/PROMPT-T2.md` | `nose.md` |
+| T3 | 能勢電鉄日生線 · 日生中央 | **取込済1** | `prompts/PROMPT-T3.md` | `nose.md` |
+| T4 | 神戸電鉄有馬線 · 湊川〜鈴蘭台 | **取込済5** | `prompts/PROMPT-T4.md` | `shintetsu-arima.md` |
+| T5 | 神戸電鉄有馬線 · 北鈴蘭台〜有馬温泉 | **取込済10** | `prompts/PROMPT-T5.md` | `shintetsu-arima.md` |
+| T6 | JR草津線 · 草津〜柘植 | 8 | `prompts/PROMPT-T6.md` | `jr-kusatsu.md` |
+| T7 | 神戸電鉄粟生線 · 鈴蘭台西口〜志染 | **取込済7** | `prompts/PROMPT-T7.md` | `shintetsu-ao.md` |
+| T8 | JR湖西線 · 大津京〜堅田 | 5 | `prompts/PROMPT-T8.md` | `jr-kosei.md` |
+| T9 | JR湖西線 · 小野〜比良 | 5 | `prompts/PROMPT-T9.md` | `jr-kosei.md` |
+| T10 | JR湖西線 · 近江舞子〜近江塩津 | 9 | `prompts/PROMPT-T10.md` | `jr-kosei.md` |
+| T11 | 山陽電鉄本線 · 人丸前〜飾磨 | 8 | `prompts/PROMPT-T11.md` | `sanyo-west.md` |
+| T12 | 山陽電鉄本線 · 西飾磨〜山陽網干 | 6 | `prompts/PROMPT-T12.md` | `sanyo-west.md` |
+| T13 | 和歌山電鐵貴志川線 · 和歌山〜貴志 | 13 | `prompts/PROMPT-T13.md` | `wakayama-kishigawa.md` |
+
 ## まだ足せる（次々回）
 
-- 近鉄名古屋線・山田線・鳥羽線、JR草津・湖西、京都市営烏丸以外、阪神武庫川線、山陽飾磨以西、和歌山電鐵、神戸電鉄、能勢電、京阪宇治以外の残り など
+- Wave2（T1〜）: 武庫川線・能勢電・神鉄有馬・草津・湖西・山陽以西・貴志川 **プロンプト化済**
+- さらに次: 近鉄名古屋線・山田線・鳥羽線、神鉄粟生線、京阪京津 など
 - 目標1000に向けて、返ってきた線から順に追記パックを足す
 
 ## エージェント向け

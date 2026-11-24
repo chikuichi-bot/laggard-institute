@@ -89,45 +89,94 @@ enum StationCandidateSearch {
     }
 
     /// 現在地のまわりの駅を Apple 地図から近い順に。保存駅が近くに無いとき用。
-    static func nearby(lat: Double, lng: Double, limit: Int = 5) async -> [StationNameCandidate] {
+    /// POI だけでは空になる端末があるので、自然文検索も併用する。
+    static func nearby(
+        lat: Double,
+        lng: Double,
+        in stations: [Station] = [],
+        limit: Int = 5
+    ) async -> [StationNameCandidate] {
         let here = CLLocation(latitude: lat, longitude: lng)
-        let request = MKLocalPointsOfInterestRequest(center: here.coordinate, radius: 3000)
-        request.pointOfInterestFilter = MKPointOfInterestFilter(including: [.publicTransport])
-        guard let response = try? await MKLocalSearch(request: request).start() else { return [] }
+        let center = here.coordinate
+        let radiusMeters = 3500.0
 
-        var rows: [(name: String, km: Double)] = []
+        // 端末の保存・同梱カタログを先に距離で拾う（MapKit より確実）。
+        var rows: [(name: String, km: Double, known: Station?)] = []
         var seen = Set<String>()
-        for item in response.mapItems {
-            guard let full = item.name?.trimmingCharacters(in: .whitespacesAndNewlines) else { continue }
-            // 「出町柳駅（京阪）」の路線注記は外して一つにまとめる。
-            let raw = full
-                .replacingOccurrences(of: #"\s*[（(].*[)）]\s*$"#, with: "", options: .regularExpression)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            // バス停・タクシー乗り場（「出町柳駅前 - Eのりば」等）は除き、駅名そのものだけ。
-            let notStation = ["のりば", "乗り場", "乗場", "バス", "タクシー", "停留所", "駅前"]
-            guard raw.hasSuffix("駅"), raw.count > 1,
-                  !notStation.contains(where: { raw.contains($0) })
-            else { continue }
-            let k = key(raw)
+        for station in stations {
+            let km = here.distance(from: CLLocation(latitude: station.lat, longitude: station.lng)) / 1000
+            guard km <= nearbyStationKm else { continue }
+            let label = station.name.hasSuffix("駅") ? station.name : "\(station.name)駅"
+            let k = key(label)
             guard !k.isEmpty, !seen.contains(k) else { continue }
             seen.insert(k)
-            let km = here.distance(from: CLLocation(
-                latitude: item.placemark.coordinate.latitude,
-                longitude: item.placemark.coordinate.longitude
-            )) / 1000
-            rows.append((raw, km))
+            rows.append((label, km, station))
+        }
+
+        async let poiItems = searchNearbyPOI(center: center, radiusMeters: radiusMeters)
+        async let queryItems = searchNearbyQuery("駅", center: center, radiusMeters: radiusMeters)
+        async let railItems = searchNearbyQuery("鉄道駅", center: center, radiusMeters: radiusMeters)
+        let batches = await [poiItems, queryItems, railItems]
+
+        for item in batches.flatMap({ $0 }) {
+            guard let name = stationName(from: item) else { continue }
+            let k = key(name)
+            guard !k.isEmpty, !seen.contains(k) else { continue }
+            let coord = item.placemark.coordinate
+            let km = here.distance(from: CLLocation(latitude: coord.latitude, longitude: coord.longitude)) / 1000
+            guard km <= nearbyStationKm else { continue }
+            seen.insert(k)
+            let known = stations.first { key($0.name) == k }
+            rows.append((name, km, known))
         }
         return rows
             .sorted { $0.km < $1.km }
             .prefix(limit)
             .map {
                 StationNameCandidate(
-                    id: "near-\(key($0.name))",
+                    id: $0.known?.id ?? "near-\(key($0.name))",
                     name: $0.name,
                     detail: "現在地から\(Geo.distanceLabel(km: $0.km))",
-                    knownStation: nil
+                    knownStation: $0.known
                 )
             }
+    }
+
+    private static func searchNearbyPOI(center: CLLocationCoordinate2D, radiusMeters: Double) async -> [MKMapItem] {
+        let request = MKLocalPointsOfInterestRequest(center: center, radius: radiusMeters)
+        request.pointOfInterestFilter = MKPointOfInterestFilter(including: [.publicTransport])
+        return (try? await MKLocalSearch(request: request).start())?.mapItems ?? []
+    }
+
+    private static func searchNearbyQuery(
+        _ query: String,
+        center: CLLocationCoordinate2D,
+        radiusMeters: Double
+    ) async -> [MKMapItem] {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.resultTypes = [.pointOfInterest]
+        request.region = MKCoordinateRegion(
+            center: center,
+            latitudinalMeters: radiusMeters * 2,
+            longitudinalMeters: radiusMeters * 2
+        )
+        return (try? await MKLocalSearch(request: request).start())?.mapItems ?? []
+    }
+
+    private static func stationName(from item: MKMapItem) -> String? {
+        guard let full = item.name?.trimmingCharacters(in: .whitespacesAndNewlines), !full.isEmpty
+        else { return nil }
+        // 「出町柳駅（京阪）」の路線注記は外して一つにまとめる。
+        let raw = full
+            .replacingOccurrences(of: #"\s*[（(].*[)）]\s*$"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        // バス停・タクシー乗り場（「出町柳駅前 - Eのりば」等）は除き、駅名そのものだけ。
+        let notStation = ["のりば", "乗り場", "乗場", "バス", "タクシー", "停留所", "駅前"]
+        guard raw.hasSuffix("駅"), raw.count > 1,
+              !notStation.contains(where: { raw.contains($0) })
+        else { return nil }
+        return raw
     }
 
     private static func key(_ name: String) -> String {

@@ -93,7 +93,7 @@ struct TourMapPage: View {
         return "\(station.id)|\(course.id)|\(ids)"
     }
 
-    /// 地図下の一行。徒歩圏・コース名・所要。線は引かず、点だけ示す。
+    /// 地図下の一行。予定ナビ線は引かず、点＋歩いた軌跡だけ。
     private var mapFootLine: String {
         var parts = ["徒歩圏 約 \(formatKm(model.radiusKm)) km"]
         if let course = model.selectedCourse {
@@ -103,7 +103,21 @@ struct TourMapPage: View {
             }
             parts.append("歩き方は自由 · 点はおすすめ")
         }
+        let meters = model.walkTrail.pathLengthMeters
+        if meters >= 30 {
+            if meters >= 1000 {
+                parts.append(String(format: "歩いた道 %.1f km", meters / 1000))
+            } else {
+                parts.append("歩いた道 \(Int(meters.rounded())) m")
+            }
+        }
         return parts.joined(separator: " · ")
+    }
+
+    private var walkedTrailCoordinates: [CLLocationCoordinate2D] {
+        // coordinates を直接読んで Observation を繋ぐ（ネストした @Observable）
+        let pts = model.walkTrail.coordinates
+        return pts.count >= 2 ? pts : []
     }
 
     /// walkGuide 先頭（正本）。地図は点、言葉が最初の一歩を支える。
@@ -517,10 +531,22 @@ struct TourMapPage: View {
                 .accessibilityLabel("歩き方。\(card)")
             }
 
-            Text(mapFootLine)
-                .font(.caption)
-                .foregroundStyle(Palette.fog)
-                .lineLimit(2)
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(mapFootLine)
+                    .font(.caption)
+                    .foregroundStyle(Palette.fog)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if walkedTrailCoordinates.count >= 2 {
+                    Button("軌跡を消す") {
+                        model.clearWalkTrail()
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.warm)
+                    .buttonStyle(.plain)
+                    .accessibilityHint("この駅で歩いた道の線を消します")
+                }
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 10)
@@ -544,7 +570,16 @@ struct TourMapPage: View {
                         .foregroundStyle(Palette.river.opacity(0.08))
                         .stroke(Palette.river.opacity(0.45), lineWidth: 1)
 
-                    // 動線の線は引かない。歩き方は自由。おすすめの通り・境内は点だけ。
+                    // 予定のナビ線は引かない。G3 · 歩いた軌跡（事実）だけ残す。
+                    if walkedTrailCoordinates.count >= 2 {
+                        MapPolyline(coordinates: walkedTrailCoordinates)
+                            .stroke(
+                                Palette.warm.opacity(0.88),
+                                style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+                            )
+                    }
+
+                    // おすすめの通り・境内は点だけ。
                     ForEach(hintMarks) { hint in
                         Annotation(hint.label, coordinate: hint.coordinate, anchor: .center) {
                             AtmosphereHintPin(
@@ -672,6 +707,7 @@ struct TourMapPage: View {
         }
         .onAppear {
             model.syncWalkCourse()
+            model.syncWalkTrailRecording()
             if let spot = model.activeSpot {
                 focusOnSpot(spot, animated: false)
             } else {

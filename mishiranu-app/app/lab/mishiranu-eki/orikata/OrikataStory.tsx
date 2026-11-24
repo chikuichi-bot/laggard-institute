@@ -3,7 +3,7 @@ import Link from "next/link";
 import { TUTORIAL_PAGES } from "../tutorial-copy";
 import "./orikata.css";
 
-const [verse, intro, beginning, ...rest] = TUTORIAL_PAGES;
+const [intro, beginning, ...rest] = TUTORIAL_PAGES;
 const howTo = rest[rest.length - 1]!;
 const featurePages = rest.slice(0, -1);
 
@@ -12,28 +12,6 @@ export default function OrikataStory() {
     <div className="orikata">
       <div className="orikata-shell">
         <header className="orikata-hero">
-          {verse!.verseLines?.length ? (
-            <div
-              className={[
-                "orikata-verse",
-                verse.verseMotion ? `orikata-verse--${verse.verseMotion}` : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              lang="ja"
-              aria-label="帰りの縦書き3列"
-            >
-              {verse.verseLines.map((line, i) => (
-                <p
-                  key={line}
-                  className="orikata-verse-line"
-                  style={{ ["--i" as string]: i }}
-                >
-                  {line}
-                </p>
-              ))}
-            </div>
-          ) : null}
           <p className="orikata-brand">見知らぬ駅</p>
           <h1 className="orikata-title">{intro!.title}</h1>
           {intro!.bodies.map((body) => (

@@ -22,7 +22,8 @@
   さくら : grayjaguar21.sakura.ne.jp
   上げ先 : ~/www/mishiranu-cache/
   公開URL: https://lagado.jp/mishiranu-cache
-  上げる : put.php  .htaccess  cache-token.txt
+  上げる : put.php  tts.php  .htaccess  cache-token.txt
+           （任意）device-token.txt  xai-api-key.txt ← 土地案内 xVoice 用
 
 v1/ フォルダは put.php が自動で作ります。先に作らなくて構いません。
 lagado2026 のような Basic 認証はここには掛けません（アプリが直接読むため）。

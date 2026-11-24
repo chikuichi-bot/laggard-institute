@@ -211,6 +211,74 @@ enum StationAPIClient {
         }
     }
 
+    /// 土地案内 xVoice（xAI TTS）。MP3。失敗時は呼び出し側で AVSpeech にフォールバック。
+    static func synthesizeXvoice(text: String) async throws -> Data {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw StationAPIError.badStatus(400, "empty_text")
+        }
+
+        #if DEBUG
+        if let lan = await resolveLanBaseURL() {
+            do {
+                return try await synthesizeXvoiceOnce(text: trimmed, endpoint: lan.appendingPathComponent("api/mishiranu/tts"))
+            } catch {
+                #if DEBUG
+                print("[MishiranuAPI] xvoice LAN failed: \(error)")
+                #endif
+            }
+        }
+        #endif
+
+        // 屋外 / LAN 不通: さくらの tts.php
+        let sakura = SakuraStationCache.baseURL.appendingPathComponent("tts.php")
+        return try await synthesizeXvoiceOnce(text: trimmed, endpoint: sakura)
+    }
+
+    private static func synthesizeXvoiceOnce(text: String, endpoint: URL) async throws -> Data {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applyDeviceAuth(to: &request, base: endpoint)
+        request.timeoutInterval = 45
+        let payload: [String: Any] = [
+            "text": text,
+            "voice": "eve",
+            // 土地案内: 落ち着きを残しつつ句点後が間延びしない速度
+            "speed": 1.05,
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let ctype = (response as? HTTPURLResponse)?
+                .value(forHTTPHeaderField: "Content-Type")?
+                .lowercased() ?? ""
+            if !(200 ... 299).contains(status) {
+                let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+                let message = (body["message"] as? String)
+                    ?? Self.fallbackMessage(status: status, error: body["error"] as? String, base: endpoint)
+                throw StationAPIError.badStatus(status, message)
+            }
+            if data.count < 64 {
+                throw StationAPIError.badStatus(502, "empty_audio")
+            }
+            // JSON エラーを誤って再生しない
+            if ctype.contains("application/json") || data.first == 0x7B || data.first == 0x5B {
+                throw StationAPIError.badStatus(502, "tts_failed")
+            }
+            return data
+        } catch let error as StationAPIError {
+            throw error
+        } catch let urlError as URLError {
+            throw StationAPIError.badStatus(
+                urlError.errorCode,
+                Self.networkFailureMessage(urlError, base: endpoint)
+            )
+        }
+    }
+
     /// 死んだ LAN は 2 秒で捨て、生きている Mac だけ本生成に使う。
     private static func resolveLanBaseURL() async -> URL? {
         #if DEBUG

@@ -1140,6 +1140,37 @@ enum CourseBuilder {
             )
 
         var out: [WalkCourse] = []
+
+        // ひと寄り: 時間がない人向け。地図に出せる確かなピンだけ・1〜2か所。
+        let microTrusted = nearStroll.filter { MapPinTrust.allowsOnMap($0, in: prepared) }
+        let microPool = microTrusted.isEmpty ? nearStroll : microTrusted
+        let microBone = usingLandOrder
+            ? Array(preservePoolOrder(microPool, preferred: narrative).prefix(Self.microStrollMaxStops))
+            : Array(sortNearStation(microPool, station: prepared).prefix(Self.microStrollMaxStops))
+        let microSet = trimToStrollBudget(
+            microBone.filter(hasCourseCoordinate).filter(isShortStrollSpot),
+            station: prepared,
+            budgetMinutes: Self.microStrollBudgetMinutes,
+            stayForDwell: .oneHour,
+            mustProtect: []
+        )
+        if !microSet.isEmpty,
+           let micro = buildOrdinaryVariant(
+            id: "ordinary-micro-\(bare)-\(dayPart.rawValue)",
+            title: "駅から、ひと寄り",
+            subtitle: "次の電車まで · 約15分 · 位置の確かな先だけ",
+            vibe: "改札を出て、ひとつ寄って、同じ駅へ戻る",
+            spots: microSet,
+            station: prepared,
+            dayPart: dayPart,
+            stay: .oneHour,
+            startHour: startHour,
+            preserveLandOrder: usingLandOrder
+           )
+        {
+            out.append(micro)
+        }
+
         // 小回りは常に「約1時間の散歩」予算（軽い滞在）で組む
         if let short = buildOrdinaryVariant(
             id: "ordinary-short-\(bare)-\(dayPart.rawValue)",
@@ -1457,6 +1488,9 @@ enum CourseBuilder {
         }
     }
 
+    /// ひと寄り＝次の電車までの短い寄り道（シミュレーション上「時間が無い」への応答）。
+    private static let microStrollBudgetMinutes = 22
+    private static let microStrollMaxStops = 2
     /// 小回り＝土地の歩き方を約1時間で辿る（歩き＋軽い滞在＋駅帰還）。
     private static let shortStrollBudgetMinutes = 70
     private static let shortStrollMaxStops = 5

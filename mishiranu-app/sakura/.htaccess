@@ -1,6 +1,12 @@
 # 見知らぬ駅 · 案内キャッシュ
-# 合言葉は配らない
+# 合言葉・API キーは配らない
 <Files "cache-token.txt">
+  Require all denied
+</Files>
+<Files "xai-api-key.txt">
+  Require all denied
+</Files>
+<Files "device-token.txt">
   Require all denied
 </Files>
 

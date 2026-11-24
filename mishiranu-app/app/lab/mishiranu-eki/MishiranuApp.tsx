@@ -957,7 +957,9 @@ export default function MishiranuApp({
         const { lat, lng } = await pending;
         // Precise GPS never leaves the browser. Match against seed + saved library only.
         const local = findNearestStation(lat, lng, catalog);
-        if (local && local.km <= 3.5) {
+        // 3.5km 以内の保存駅で即確定すると、隣駅（中書島→鳥羽伏見など）を取り違える。
+        // 駅の直近（約550m）だけ「ここは」確認へ。
+        if (local && local.km <= 0.55) {
           setHeroNote(null);
           // いきなり開かず、確認してから案内へ。
           setPendingConfirm({ kind: "locate", station: local.station });
@@ -1800,6 +1802,7 @@ export default function MishiranuApp({
                       {(() => {
                         const variants = courses.filter(
                           (c) =>
+                            c.id.includes("ordinary-micro") ||
                             c.id.includes("ordinary-short") ||
                             c.id.includes("ordinary-long"),
                         );
@@ -1812,9 +1815,11 @@ export default function MishiranuApp({
                           >
                             {variants.map((option) => {
                               const on = option.id === selectedCourse.id;
-                              const label = option.id.includes("long")
-                                ? "大回り"
-                                : "小回り";
+                              const label = option.id.includes("micro")
+                                ? "ひと寄り"
+                                : option.id.includes("long")
+                                  ? "大回り"
+                                  : "小回り";
                               return (
                                 <button
                                   key={option.id}

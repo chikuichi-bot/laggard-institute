@@ -115,6 +115,38 @@ import {
   KINTETSU_MINAMI_OSAKA_LAND_DEPTH_BY_NAME,
 } from "@/lib/mishiranu-kintetsu-minami-osaka-land-depth";
 import {
+  HANSHIN_MUKOGAWA_LAND_DEPTH,
+  HANSHIN_MUKOGAWA_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-hanshin-mukogawa-land-depth";
+import {
+  JR_KAKOGAWA_LAND_DEPTH,
+  JR_KAKOGAWA_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-jr-kakogawa-land-depth";
+import {
+  HOJO_LAND_DEPTH,
+  HOJO_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-hojo-land-depth";
+import {
+  SHINTETSU_AO_LAND_DEPTH,
+  SHINTETSU_AO_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-shintetsu-ao-land-depth";
+import {
+  SHINTETSU_KOEN_TOSHI_LAND_DEPTH,
+  SHINTETSU_KOEN_TOSHI_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-shintetsu-koen-toshi-land-depth";
+import {
+  SHINTETSU_SANDA_LAND_DEPTH,
+  SHINTETSU_SANDA_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-shintetsu-sanda-land-depth";
+import {
+  SHINTETSU_ARIMA_LAND_DEPTH,
+  SHINTETSU_ARIMA_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-shintetsu-arima-land-depth";
+import {
+  NOSE_LAND_DEPTH,
+  NOSE_LAND_DEPTH_BY_NAME,
+} from "@/lib/mishiranu-nose-land-depth";
+import {
   HANSHIN_LAND_DEPTH,
   HANSHIN_LAND_DEPTH_BY_NAME,
 } from "@/lib/mishiranu-hanshin-land-depth";
@@ -769,6 +801,14 @@ export const AREA_DEPTH: Record<string, AreaDepth> = {
   ...KINTETSU_OSAKA_EAST_LAND_DEPTH,
   ...KINTETSU_MINAMI_OSAKA_LAND_DEPTH,
   ...HANSHIN_LAND_DEPTH,
+  ...HANSHIN_MUKOGAWA_LAND_DEPTH,
+  ...JR_KAKOGAWA_LAND_DEPTH,
+  ...HOJO_LAND_DEPTH,
+  ...SHINTETSU_AO_LAND_DEPTH,
+  ...SHINTETSU_KOEN_TOSHI_LAND_DEPTH,
+  ...SHINTETSU_SANDA_LAND_DEPTH,
+  ...SHINTETSU_ARIMA_LAND_DEPTH,
+  ...NOSE_LAND_DEPTH,
   ...HANSHIN_NAMBA_LAND_DEPTH,
   ...HANKYU_KOBE_LAND_DEPTH,
   ...HANKYU_TAKARAZUKA_LAND_DEPTH,
@@ -826,6 +866,14 @@ const AREA_DEPTH_BY_NAME: Record<string, string> = {
   ...KINTETSU_OSAKA_EAST_LAND_DEPTH_BY_NAME,
   ...KINTETSU_MINAMI_OSAKA_LAND_DEPTH_BY_NAME,
   ...HANSHIN_LAND_DEPTH_BY_NAME,
+  ...HANSHIN_MUKOGAWA_LAND_DEPTH_BY_NAME,
+  ...JR_KAKOGAWA_LAND_DEPTH_BY_NAME,
+  ...HOJO_LAND_DEPTH_BY_NAME,
+  ...SHINTETSU_AO_LAND_DEPTH_BY_NAME,
+  ...SHINTETSU_KOEN_TOSHI_LAND_DEPTH_BY_NAME,
+  ...SHINTETSU_SANDA_LAND_DEPTH_BY_NAME,
+  ...SHINTETSU_ARIMA_LAND_DEPTH_BY_NAME,
+  ...NOSE_LAND_DEPTH_BY_NAME,
   ...HANSHIN_NAMBA_LAND_DEPTH_BY_NAME,
   ...HANKYU_KOBE_LAND_DEPTH_BY_NAME,
   ...HANKYU_TAKARAZUKA_LAND_DEPTH_BY_NAME,
@@ -1435,6 +1483,14 @@ export const LAND_STOCK_SPOT_BATCH: ReadonlyArray<{
     | "jr-gakken"
     | "kintetsu-osaka"
     | "hanshin"
+    | "hanshin-mukogawa"
+    | "jr-kakogawa"
+    | "hojo"
+    | "shintetsu-ao"
+    | "shintetsu-koen-toshi"
+    | "shintetsu-sanda"
+    | "shintetsu-arima"
+    | "nose"
     | "hanshin-namba"
     | "hankyu-kobe"
     | "hankyu-takarazuka"
@@ -1708,6 +1764,10 @@ export const LAND_STOCK_SPOT_BATCH: ReadonlyArray<{
   { line: "hanshin", name: "尼崎センタープール前" },
   { line: "hanshin", name: "武庫川" },
   { line: "hanshin", name: "鳴尾・武庫川女子大前" },
+  // 阪神武庫川線 · T1（武庫川は本線と共有 id · 東鳴尾〜団地前は新規）
+  { line: "hanshin-mukogawa", name: "東鳴尾" },
+  { line: "hanshin-mukogawa", name: "洲先" },
+  { line: "hanshin-mukogawa", name: "武庫川団地前" },
   { line: "hanshin", name: "甲子園" },
   { line: "hanshin", name: "久寿川" },
   { line: "hanshin", name: "阪神今津" },
@@ -2265,6 +2325,62 @@ export const LAND_STOCK_SPOT_BATCH: ReadonlyArray<{
   { line: "osaka-monorail", name: "南摂津" },
   { line: "osaka-monorail", name: "大日（モノレール）" },
   { line: "osaka-monorail", name: "門真市（モノレール）" },
+  { line: "nose", name: "滝山" },
+  { line: "nose", name: "絹延橋" },
+  { line: "nose", name: "一の鳥居" },
+  { line: "nose", name: "畦野" },
+  { line: "nose", name: "山下" },
+  { line: "nose", name: "笹部" },
+  { line: "nose", name: "光風台" },
+  { line: "nose", name: "ときわ台" },
+  { line: "nose", name: "妙見口" },
+  { line: "shintetsu-arima", name: "湊川" },
+  { line: "shintetsu-arima", name: "長田" },
+  { line: "shintetsu-arima", name: "丸山" },
+  { line: "shintetsu-arima", name: "鵯越" },
+  { line: "shintetsu-arima", name: "鈴蘭台" },
+  { line: "shintetsu-sanda", name: "五社" },
+  { line: "shintetsu-sanda", name: "岡場" },
+  { line: "shintetsu-sanda", name: "田尾寺" },
+  { line: "shintetsu-sanda", name: "二郎" },
+  { line: "shintetsu-sanda", name: "道場南口" },
+  { line: "shintetsu-sanda", name: "神鉄道場" },
+  { line: "shintetsu-sanda", name: "横山" },
+  { line: "shintetsu-sanda", name: "三田本町" },
+  { line: "shintetsu-sanda", name: "三田" },
+  { line: "shintetsu-koen-toshi", name: "フラワータウン" },
+  { line: "shintetsu-koen-toshi", name: "南ウッディタウン" },
+  { line: "shintetsu-koen-toshi", name: "ウッディタウン中央" },
+  { line: "shintetsu-ao", name: "鈴蘭台西口" },
+  { line: "shintetsu-ao", name: "西鈴蘭台" },
+  { line: "shintetsu-ao", name: "藍那" },
+  { line: "shintetsu-ao", name: "木津" },
+  { line: "shintetsu-ao", name: "木幡" },
+  { line: "shintetsu-ao", name: "栄" },
+  { line: "shintetsu-ao", name: "押部谷" },
+  { line: "shintetsu-ao", name: "緑が丘" },
+  { line: "shintetsu-ao", name: "広野ゴルフ場前" },
+  { line: "shintetsu-ao", name: "志染" },
+  { line: "hojo", name: "網引" },
+  { line: "hojo", name: "田原" },
+  { line: "hojo", name: "法華口" },
+  { line: "hojo", name: "播磨下里" },
+  { line: "hojo", name: "長" },
+  { line: "hojo", name: "播磨横田" },
+  { line: "hojo", name: "北条町" },
+  { line: "jr-kakogawa", name: "加古川" },
+  { line: "jr-kakogawa", name: "日岡" },
+  { line: "jr-kakogawa", name: "神野" },
+  { line: "jr-kakogawa", name: "厄神" },
+  { line: "jr-kakogawa", name: "市場" },
+  { line: "jr-kakogawa", name: "小野町" },
+  { line: "jr-kakogawa", name: "粟生" },
+  { line: "jr-kakogawa", name: "河合西" },
+  { line: "jr-kakogawa", name: "青野ケ原" },
+  { line: "jr-kakogawa", name: "社町" },
+  { line: "jr-kakogawa", name: "滝野" },
+  { line: "jr-kakogawa", name: "滝" },
+  { line: "jr-kakogawa", name: "西脇市" },
 ];
 
 export function listLandStockSpotBatchTargets(opts?: {

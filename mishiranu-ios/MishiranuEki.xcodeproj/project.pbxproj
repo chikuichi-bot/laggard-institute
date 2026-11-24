@@ -138,7 +138,7 @@
 				INFOPLIST_FILE = Supporting/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "見知らぬ駅";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "いる場所からいちばん近い保存済みの駅を探すために使います。正確な位置は端末の外に送りません。";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "いる場所からいちばん近い駅を探すためと、散歩中に歩いた道を地図に残すために使います。位置は端末の外に送りません。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -171,7 +171,7 @@
 				INFOPLIST_FILE = Supporting/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "見知らぬ駅";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "いる場所からいちばん近い保存済みの駅を探すために使います。正確な位置は端末の外に送りません。";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "いる場所からいちばん近い駅を探すためと、散歩中に歩いた道を地図に残すために使います。位置は端末の外に送りません。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
