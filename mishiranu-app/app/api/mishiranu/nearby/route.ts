@@ -1,12 +1,11 @@
-import { STATIONS } from "@/data/mishiranu-stations";
-import { findNearestStation, fuzzLatLngForExternal } from "@/lib/mishiranu-geo";
+import { requireStationViewer } from "@/lib/mishiranu-device-auth";
+import { fuzzLatLngForExternal } from "@/lib/mishiranu-geo";
 import {
   allowViewerRequest,
   hasViewerHourlyBudget,
 } from "@/lib/mishiranu-rate-limit";
 import { requireJsonContentType } from "@/lib/mishiranu-request";
 import { generateNearbyStationWithGemini } from "@/lib/mishiranu-station-ai";
-import { requireIdentity } from "../../../../cursor/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,17 +18,16 @@ type Body = {
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 3;
-const CURATED_RADIUS_KM = 3.5;
 const NO_STORE = { "cache-control": "private, no-store" };
 
 export async function POST(request: Request) {
-  const identity = await requireIdentity(request);
-  if (identity instanceof Response) return identity;
+  const viewer = await requireStationViewer(request);
+  if (viewer instanceof Response) return viewer;
 
   const media = requireJsonContentType(request);
   if (media) return media;
 
-  if (!allowViewerRequest(`nearby:${identity.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
+  if (!allowViewerRequest(`nearby:${viewer.sub}`, RATE_MAX, RATE_WINDOW_MS)) {
     return Response.json(
       {
         error: "rate_limited",
@@ -68,31 +66,10 @@ export async function POST(request: Request) {
   // Clients should send already-coarsened coords. Re-fuzz defensively so
   // precise GPS never reaches Gemini even if an older client posts raw values.
   const coarse = fuzzLatLngForExternal(lat, lng);
-  const nearest = findNearestStation(coarse.lat, coarse.lng, STATIONS);
-  if (nearest && nearest.km <= CURATED_RADIUS_KM) {
-    return Response.json(
-      {
-        station: nearest.station,
-        source: "seed" as const,
-        km: Math.round(nearest.km * 10) / 10,
-      },
-      { headers: NO_STORE },
-    );
-  }
+  // 収録シードは使わない。最寄り駅も Gemini 解析のみ。
 
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
-    if (nearest) {
-      return Response.json(
-        {
-          station: nearest.station,
-          source: "seed" as const,
-          km: Math.round(nearest.km * 10) / 10,
-          note: "編集リスト外の最寄り特定には API キーが必要なため、近い編集駅を返しました。",
-        },
-        { headers: NO_STORE },
-      );
-    }
     return Response.json(
       {
         error: "no_api_key",
@@ -103,7 +80,7 @@ export async function POST(request: Request) {
   }
 
   // Soft peek only — each Gemini HTTP call charges the hourly budget itself.
-  if (!hasViewerHourlyBudget(identity.sub)) {
+  if (!hasViewerHourlyBudget(viewer.sub)) {
     return Response.json(
       {
         error: "rate_limited",
@@ -118,7 +95,7 @@ export async function POST(request: Request) {
       coarse.lat,
       coarse.lng,
       apiKey,
-      identity.sub,
+      viewer.sub,
     );
     if ("error" in result) {
       const status =
@@ -129,13 +106,7 @@ export async function POST(request: Request) {
             : 422;
       return Response.json(result, { status, headers: NO_STORE });
     }
-    return Response.json(
-      {
-        ...result,
-        km: nearest ? Math.round(nearest.km * 10) / 10 : undefined,
-      },
-      { headers: NO_STORE },
-    );
+    return Response.json(result, { headers: NO_STORE });
   } catch {
     return Response.json(
       {

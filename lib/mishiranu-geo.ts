@@ -83,7 +83,7 @@ export const SPOT_LL: Record<string, { lat: number; lng: number }> = {
   "demachi-9": { lat: 35.0389, lng: 135.7728 }, // 下鴨神社・糺の森
   "demachi-7": { lat: 35.02705, lng: 135.76855 }, // 河原町今出川
   "demachi-8": { lat: 35.0287, lng: 135.77015 }, // 紙もの雑貨
-  "demachi-11": { lat: 35.02875, lng: 135.77045 }, // 駅前レンタサイクル
+  "demachi-11": { lat: 35.02875, lng: 135.77045 }, // CLEW 京阪出町柳（えむじかは 2026-01 閉業）
 };
 
 export function stationLatLng(station: StationSeed): { lat: number; lng: number } {

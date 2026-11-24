@@ -1,0 +1,54 @@
+# 見知らぬ駅 · 座標ロック（正しいピンの正本）
+
+淡島様 2026-11-12: **推測の緯度経度は使い物にならない。** 朝日屋を社殿寄りに仮置きした事故を再発禁止とする。
+
+## 地図に出してよい座標（アプリ側）
+
+| trust | 意味 | 地図 |
+|-------|------|------|
+| `lock` | `landmark-locks.json` の検証済み正本 | OK |
+| `apple` | Apple MapKit が店名一致で返した座標 | 駅から **1.5km 以内**のみ（`reach-` は 2.4km） |
+| `unverified` | AI・推測・町名の代表点 | **禁止** |
+
+文章・案内リストには未確定も残してよい。**ピンだけは lock / apple。**
+
+### 駅中心（A）と距離ゲート（B）
+
+- **A:** 駅中心は `lockedStationCenter` か、MapKit の「○○駅」＋鉄道 POI だけ採用。神社・寺・社殿は拒否。ヒットが無いとき Apple ピンは地図に出さない（ロックのみ）。
+- **B:** `MapPinTrust` / `allowsOnMap` で駅中心から 1.5km 超の Apple は落とす（同名の飛び地防止）。
+
+## Cursor / エージェントがロックを足す・直すとき（省略禁止）
+
+次を **すべて** 満たすまで `lat`/`lng` を書かない・変えない。
+
+1. **住所の正本**（公式・食べログ・ぐるなびのいずれか）を控える  
+2. **店そのものの座標**を取る（次のいずれか）  
+   - OpenStreetMap の **店舗ノード**（`node/…`）。町名・社殿・バス停の代表点は不可  
+   - 食べログ／Yahoo地図などの **店ピン埋め込み lat/lng**  
+   - Mac 上の MapKit `MKLocalSearch` で店名が一致し、駅から徒歩分と矛盾しないヒット  
+3. **クロスチェック**  
+   - 駅中心からの距離 ≈ `walkMinutes`（目安: 分 ≈ km×13〜15）  
+   - 石清水のように **駅と社殿が離れる土地**では、社殿座標に寄せない  
+4. **両方の JSON を同じ内容に**  
+   - `mishiranu-app/data/landmark-locks.json`  
+   - `mishiranu-ios/MishiranuEki/Resources/landmark-locks.json`  
+5. 可能なら `scripts/verify-landmark-locks.swift` を走らせる  
+6. **`npm run audit:locks`（mishiranu-app）で ok を確認する。** 同名の OSM 地物（道 way・橋・境内の面・店ノード）からの距離を測る。near / far / missing は理由を書くまで採用しない。Nominatim の先頭ヒット（住所の通り名が一致しただけの学校・銀行）を lock にしない
+
+### 実行時のピン（ロック以外）
+
+- 散歩コースの番号ピンも `MapPinTrust.allowsOnMap` を通す（AI 仮座標の立ち寄りは文だけ）
+- 空気の道の点は、正本 corridor か、地図に出せるピンから 80m 以内の中点だけ
+- Apple 名前一致はバス停・駐車場・学校・病院・銀行などの種別を拒否（`SpotLocator.isWrongKindHit`）
+- 駅中心はサーバー（OSM railway）とアプリ（MapKit「○○駅」）の両方で先に照合する  
+
+## 禁止
+
+- 「駅前だから社殿の近く」「高坊の町名代表点」など **イメージで緯度経度を当てる**  
+- `apple:店名` だけ書いて、実測せず仮の数字を入れる  
+- AI 生成の `lat`/`lng` を `lock` 扱いする  
+- 片方の `landmark-locks.json` だけ更新する  
+
+## ユーザーから頼まれたとき
+
+「正しい場所に」＝上記手順で **検証ソースを明示して** 直す。ソースが取れないときは地図ピンに出さず、案内文だけにするか確認を取る。

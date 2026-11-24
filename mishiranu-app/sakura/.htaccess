@@ -1,0 +1,24 @@
+# 見知らぬ駅 · 案内キャッシュ
+# 合言葉・API キーは配らない
+<Files "cache-token.txt">
+  Require all denied
+</Files>
+<Files "xai-api-key.txt">
+  Require all denied
+</Files>
+<Files "device-token.txt">
+  Require all denied
+</Files>
+
+# 書きかけは見せない
+<FilesMatch "\.tmp$">
+  Require all denied
+</FilesMatch>
+
+# 案内 JSON は誰でも読める（アプリが直接 GET する）
+<IfModule mod_headers.c>
+  <FilesMatch "\.json$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Cache-Control "public, max-age=3600"
+  </FilesMatch>
+</IfModule>

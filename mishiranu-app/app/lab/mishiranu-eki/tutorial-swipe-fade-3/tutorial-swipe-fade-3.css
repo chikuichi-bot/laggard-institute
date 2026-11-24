@@ -1,0 +1,203 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&display=swap");
+
+.tsf3 {
+  --bg: #efeae2;
+  --paper: #faf6ef;
+  --ink: #1c1915;
+  --mute: #6e675c;
+  --line: #d4cdc0;
+  --warm: #b08968;
+  min-height: 100dvh;
+  margin: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(176, 137, 104, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(60, 80, 70, 0.08), transparent 50%),
+    var(--bg);
+  color: var(--ink);
+  font-family: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+
+.tsf3-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem 1.15rem 3.5rem;
+}
+
+.tsf3-eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: var(--mute);
+}
+
+.tsf3-title {
+  margin: 0.4rem 0 0.55rem;
+  font-size: clamp(1.35rem, 3.5vw, 1.85rem);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.tsf3-lede {
+  margin: 0;
+  max-width: 42em;
+  color: var(--mute);
+  line-height: 1.75;
+  font-size: 0.94rem;
+}
+
+.tsf3-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 960px) {
+  .tsf3-grid {
+    grid-template-columns: 1fr;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.tsf3-col-name {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.tsf3-col-blurb {
+  margin: 0 0 0.9rem;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--mute);
+  min-height: 2.8em;
+}
+
+.tsf3-pager {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.tsf3-stage {
+  --fade-ms: 200ms;
+  position: relative;
+  height: 320px;
+  border: 1px solid var(--ink);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--paper);
+  touch-action: pan-y;
+  box-shadow: 0 14px 36px rgba(28, 25, 21, 0.08);
+  user-select: none;
+}
+
+.tsf3-stage--passing {
+  touch-action: none;
+}
+
+/* 一枚だけ。消えてから次（被らない） */
+.tsf3-solo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.15rem 1.1rem 1rem;
+  will-change: opacity;
+}
+
+.tsf3-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tsf3-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  color: var(--mute);
+}
+
+.tsf3-brand {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.28em;
+}
+
+.tsf3-card-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+}
+
+.tsf3-card-body {
+  margin: 0;
+  flex: 1;
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: var(--ink);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  -webkit-box-orient: vertical;
+}
+
+.tsf3-card-num {
+  margin: 0.75rem 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--mute);
+}
+
+.tsf3-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.tsf3-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.tsf3-dot--on {
+  width: 14px;
+  background: var(--warm);
+}
+
+.tsf3-bar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tsf3-btn {
+  flex: 1;
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.tsf3-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tsf3-btn--next {
+  background: var(--paper);
+  border-color: rgba(28, 25, 21, 0.45);
+}

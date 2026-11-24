@@ -1,0 +1,126 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600&display=swap");
+
+.hrw-page {
+  --ink: #1f1b17;
+  --paper: #f9f4e6;
+  --canvas: #f5eedc;
+  --line: #e3d5c1;
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+  padding: 1.5rem 1.2rem 4rem;
+}
+
+.hrw-head {
+  max-width: 52rem;
+  margin: 0 auto 1.5rem;
+}
+
+.hrw-kicker {
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.hrw-title {
+  margin: 0 0 0.55rem;
+  font-weight: 500;
+  font-size: clamp(1.55rem, 4vw, 2.1rem);
+}
+
+.hrw-lead {
+  margin: 0;
+  max-width: 42em;
+  line-height: 1.75;
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
+}
+
+.hrw-grid {
+  max-width: 64rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.35rem;
+}
+
+.hrw-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.9rem 0.9rem 1.05rem;
+}
+
+.hrw-slot {
+  position: relative;
+  aspect-ratio: 160 / 168;
+  overflow: hidden;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--canvas) 70%, white);
+}
+
+.hrw-slot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hrw-bank {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 42%, transparent);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hrw-road {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 22%, transparent);
+  stroke-width: 1.35;
+  stroke-linecap: square;
+}
+
+.hrw-station {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+.hrw-card h2 {
+  margin: 0.75rem 0 0.28rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.hrw-num {
+  display: inline-block;
+  margin-right: 0.35rem;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--ink) 48%, transparent);
+}
+
+.hrw-look {
+  margin: 0 0 0.35rem;
+  font-size: 0.84rem;
+  color: color-mix(in srgb, var(--ink) 78%, transparent);
+}
+
+.hrw-look strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.hrw-card p:last-child {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--ink) 68%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hrw-page animate {
+    display: none;
+  }
+}

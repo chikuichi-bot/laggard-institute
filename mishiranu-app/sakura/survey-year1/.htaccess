@@ -1,0 +1,8 @@
+# 見知らぬ駅 · 1年アンケート
+# 回答ファイルは公開しない
+<Files "responses.jsonl">
+  Require all denied
+</Files>
+<FilesMatch "\.(env|txt|jsonl)$">
+  Require all denied
+</FilesMatch>

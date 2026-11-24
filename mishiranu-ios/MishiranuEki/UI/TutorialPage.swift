@@ -1,0 +1,473 @@
+import SwiftUI
+
+/// ホームページ（orikata）紹介を、アプリ内のページ分けチュートリアルにしたもの。
+/// ページ送りは「ゆるく」フェード: いまの頁が消えて → 短い紙色 → 次が同じ場所に現れる（被らない）。
+struct TutorialPage: View {
+    var onFinished: (() -> Void)? = nil
+    /// 設定から開いたときは閉じるボタン、初回は「はじめる」。
+    var finishLabel: String = "はじめる"
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var page = 0
+    @State private var pass = TutorialSoftPassState()
+
+    private let pages = TutorialCopy.pages
+
+    private func finish() {
+        if let onFinished {
+            onFinished()
+        } else {
+            dismiss()
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer(minLength: 0)
+                if onFinished != nil, page < pages.count - 1 {
+                    Button {
+                        finish()
+                    } label: {
+                        Text("×")
+                            .font(.system(size: 22, weight: .regular))
+                            .foregroundStyle(Palette.mist)
+                            .frame(minWidth: 32, minHeight: 32)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("とばす")
+                    .padding(.trailing, 2)
+                }
+            }
+            .frame(height: 36)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+
+            TutorialSoftPager(page: $page, pass: $pass, pages: pages)
+                .padding(.horizontal, 20)
+
+            pageDots
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+
+            bottomBar
+                .padding(.horizontal, 20)
+                .padding(.bottom, 18)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Palette.canvas.ignoresSafeArea())
+        // fullScreenCover 既定の白背景が左上に欠けるのを防ぐ
+        .presentationBackground(Palette.canvas)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if onFinished == nil {
+                ToolbarItem(placement: .principal) {
+                    Text("見知らぬ駅について")
+                        .font(.mincho(.headline, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                }
+            }
+        }
+    }
+
+    private var pageDots: some View {
+        HStack(spacing: 7) {
+            ForEach(0..<pages.count, id: \.self) { i in
+                Capsule()
+                    .fill(i == page ? Palette.warm : Palette.line)
+                    .frame(width: i == page ? 16 : 7, height: 7)
+                    .animation(.easeInOut(duration: 0.18), value: page)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("ページ \(page + 1) / \(pages.count)")
+    }
+
+    private var bottomBar: some View {
+        HStack(spacing: 12) {
+            if page > 0 {
+                Button {
+                    TutorialSoftPager.go(to: page - 1, page: $page, pass: $pass, count: pages.count)
+                } label: {
+                    Text("戻る")
+                        .font(.readable(.callout, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Palette.line, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(PlainHapticButtonStyle())
+                .fixedSize(horizontal: true, vertical: false)
+                .disabled(pass.busy)
+                .accessibilityLabel("戻る")
+            }
+
+            Button {
+                if page >= pages.count - 1 {
+                    finish()
+                } else {
+                    TutorialSoftPager.go(to: page + 1, page: $page, pass: $pass, count: pages.count)
+                }
+            } label: {
+                Text(page >= pages.count - 1 ? finishLabel : "つぎへ")
+                    .font(.readable(.body, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Palette.paper)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Palette.ink.opacity(0.45), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(PlainHapticButtonStyle())
+            .disabled(pass.busy && page < pages.count - 1)
+        }
+    }
+}
+
+// MARK: - ゆるくフェード（消えて → 紙色 → 次）
+
+private enum TutorialSoftTiming {
+    /// ラボ「ゆるく」と同一
+    static let total: TimeInterval = 0.56
+    static let blankHold: TimeInterval = 0.14
+    static var out: TimeInterval { total * ((1 - blankHold) / 2) }
+    static var hold: TimeInterval { total * blankHold }
+    static var fadeIn: TimeInterval { total - out - hold }
+}
+
+private struct TutorialSoftPassState {
+    var shown = 0
+    var opacity: Double = 1
+    var busy = false
+    var axis: Axis? = nil
+
+    enum Axis {
+        case horizontal
+        case vertical
+    }
+}
+
+private struct TutorialSoftPager: View {
+    @Binding var page: Int
+    @Binding var pass: TutorialSoftPassState
+    let pages: [TutorialCopy.Page]
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = max(geo.size.width, 1)
+            TutorialSlide(
+                page: pages[pass.shown],
+                isLast: pass.shown == pages.count - 1
+            )
+            .opacity(pass.opacity)
+            .animation(.easeInOut(duration: TutorialSoftTiming.out), value: pass.opacity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .allowsHitTesting(!pass.busy)
+            .simultaneousGesture(dragGesture(width: width))
+        }
+        .onAppear {
+            if pass.shown != page {
+                pass.shown = page
+            }
+        }
+    }
+
+    private func dragGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 12, coordinateSpace: .local)
+            .onChanged { value in
+                guard !pass.busy else { return }
+                let dx = value.translation.width
+                let dy = value.translation.height
+                if pass.axis == nil {
+                    if abs(dx) > abs(dy) + 6 {
+                        pass.axis = .horizontal
+                    } else if abs(dy) > abs(dx) + 6 {
+                        pass.axis = .vertical
+                    }
+                }
+            }
+            .onEnded { value in
+                defer { pass.axis = nil }
+                guard !pass.busy else { return }
+                guard pass.axis == .horizontal else { return }
+                let predicted = value.predictedEndTranslation.width
+                let threshold = width * 0.2
+                if (-predicted > threshold || -value.translation.width > threshold),
+                   page + 1 < pages.count
+                {
+                    Self.go(to: page + 1, page: $page, pass: $pass, count: pages.count)
+                } else if (predicted > threshold || value.translation.width > threshold),
+                          page > 0
+                {
+                    Self.go(to: page - 1, page: $page, pass: $pass, count: pages.count)
+                }
+            }
+    }
+
+    static func go(
+        to newPage: Int,
+        page: Binding<Int>,
+        pass: Binding<TutorialSoftPassState>,
+        count: Int
+    ) {
+        guard !pass.wrappedValue.busy else { return }
+        guard newPage >= 0, newPage < count, newPage != page.wrappedValue else { return }
+
+        var start = pass.wrappedValue
+        start.busy = true
+        start.axis = nil
+        start.opacity = 0
+        pass.wrappedValue = start
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + TutorialSoftTiming.out) {
+            var mid = pass.wrappedValue
+            mid.shown = newPage
+            pass.wrappedValue = mid
+            page.wrappedValue = newPage
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + TutorialSoftTiming.hold) {
+                var fade = pass.wrappedValue
+                fade.opacity = 1
+                pass.wrappedValue = fade
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + TutorialSoftTiming.fadeIn) {
+                    var done = pass.wrappedValue
+                    done.busy = false
+                    pass.wrappedValue = done
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Slide
+
+private struct TutorialSlide: View {
+    let page: TutorialCopy.Page
+    let isLast: Bool
+
+    private var contentAlignment: Alignment {
+        page.showBrand ? .center : .leading
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ScrollView {
+                VStack(alignment: page.showBrand ? .center : .leading, spacing: 16) {
+                    if let kicker = page.kicker {
+                        Text(kicker)
+                            .font(.readable(.caption, weight: .semibold))
+                            .tracking(2)
+                            .foregroundStyle(Palette.warm)
+                            .frame(maxWidth: .infinity, alignment: contentAlignment)
+                    }
+
+                    if page.showBrand {
+                        Text("見知らぬ駅")
+                            .font(.system(size: 34, weight: .medium, design: .serif))
+                            .tracking(10)
+                            .foregroundStyle(Palette.ink)
+                            .frame(maxWidth: .infinity)
+                    }
+
+                    Text(page.title)
+                        .font(.mincho(.title2, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: contentAlignment)
+                        .multilineTextAlignment(page.showBrand ? .center : .leading)
+
+                    if let quote = page.quote {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(quote)
+                                .font(.mincho(.body))
+                                .foregroundStyle(Palette.ink)
+                                .lineSpacing(6)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if let quoteBy = page.quoteBy {
+                                Text(quoteBy)
+                                    .font(.readable(.caption))
+                                    .foregroundStyle(Palette.mist)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+                        .padding(.leading, 14)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .overlay(alignment: .leading) {
+                            Rectangle()
+                                .fill(Palette.warm.opacity(0.55))
+                                .frame(width: 2)
+                        }
+                    }
+
+                    ForEach(Array(page.bodies.enumerated()), id: \.offset) { _, body in
+                        Text(body)
+                            .font(.readable(.body))
+                            .foregroundStyle(Palette.fog)
+                            .lineSpacing(5)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: contentAlignment)
+                            .multilineTextAlignment(page.showBrand ? .center : .leading)
+                    }
+
+                    if let imageName = page.imageName {
+                        Image(imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: 220)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(Palette.line, lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 4)
+                            .accessibilityLabel(page.imageAlt ?? "")
+                    }
+
+                    if !page.steps.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(Array(page.steps.enumerated()), id: \.offset) { i, step in
+                                HStack(alignment: .top, spacing: 12) {
+                                    Text(String(format: "%02d", i + 1))
+                                        .font(.mincho(.callout, weight: .semibold))
+                                        .foregroundStyle(Palette.warm)
+                                        .frame(width: 28, alignment: .leading)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(step.title)
+                                            .font(.mincho(.body, weight: .semibold))
+                                            .foregroundStyle(Palette.ink)
+                                        Text(step.body)
+                                            .font(.readable(.callout))
+                                            .foregroundStyle(Palette.fog)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    if isLast {
+                        Image("tutorial-icon")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 8)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: contentAlignment)
+                // 収まるページは縦中央。長いページは minHeight でスクロール可のまま。
+                .frame(minHeight: geo.size.height, alignment: .center)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+}
+
+// MARK: - Copy（ホームページ orikata と同趣旨）
+
+enum TutorialCopy {
+    struct Step: Equatable {
+        var title: String
+        var body: String
+    }
+
+    struct Page: Equatable {
+        var kicker: String?
+        var title: String
+        var bodies: [String]
+        var quote: String? = nil
+        var quoteBy: String? = nil
+        var imageName: String? = nil
+        var imageAlt: String? = nil
+        var steps: [Step] = []
+        var showBrand: Bool = false
+    }
+
+    static let pages: [Page] = [
+        Page(
+            kicker: nil,
+            title: "知らない駅に降りてみる",
+            bodies: [
+                "名前だけ知っている駅に、私は降りる。",
+                "名前だけのからっぽだった駅が、私の散歩道になる。",
+            ],
+            showBrand: true
+        ),
+        Page(
+            kicker: "はじまり",
+            title: "名前を知って、見なくなった駅",
+            bodies: [
+                "日本には、約九千もの駅がある。",
+                "いつもは、その名前を読むだけで通り過ぎる。分かったつもりになって、降りない。",
+                "名前だけが残り、その土地の姿を、私は一度も見ていない。九千のうちのほとんどは、私にとって存在しないもののようになっていました。",
+            ],
+            showBrand: true
+        ),
+        Page(
+            kicker: "なにができるか · 01",
+            title: "ホームに、一度降りる",
+            bodies: [
+                "ドアが開く。知らない駅のホームに、私は一度降りる。次の電車まで、まだ少し時間がある。",
+                "このアプリを開いて、いまいる駅を確かめる。まず届くのは、この土地にまつわる物語のゆかりがひとかけら。ここから、空っぽだった駅名が散歩道へと変わっていく。",
+            ],
+            imageName: "tutorial-arrive",
+            imageAlt: "到着確認の画面",
+            showBrand: true
+        ),
+        Page(
+            kicker: "なにができるか · 02",
+            title: "土地の案内を声で聴く",
+            bodies: [
+                "改札を出て、イヤホンをつける。散歩道の案内を開くと、この土地の成り立ちと、いまの空気を、声で読み上げてくれる。",
+                "スマホはポケットにしまって、私は顔を上げる。聴いているうちに、ただの文字だった名前に、目の前の川や坂が重なっていく。",
+            ],
+            imageName: "tutorial-land",
+            imageAlt: "土地の案内と読み上げ",
+            showBrand: true
+        ),
+        Page(
+            kicker: "なにができるか · 03",
+            title: "歩いたところが、道になる",
+            bodies: [
+                "地図には、寄るところの点と入り口の手がかりを置く。ナビの線は引かない。歩き方は土地の案内を聴きながら、足のほうを信じる。橋や田畑の道、境内や川辺など、無駄に見える寄り道こそが、このアプリの魅力です。",
+                "見たことがあるようで、見たことのない角を曲がり、駅へ戻る。歩いたぶんだけ、名前は散歩道になっていく。",
+            ],
+            imageName: "tutorial-map",
+            imageAlt: "徒歩圏の地図とおすすめの点",
+            showBrand: true
+        ),
+        Page(
+            kicker: "使い方",
+            title: "同じ名前が、違って見える",
+            bodies: [
+                "帰りの電車で、私はその駅名をもう一度読む。同じ名前なのに、もう空っぽではない。そこには、私の歩いた散歩道がある。",
+            ],
+            steps: [
+                Step(title: "知らない駅に降りてみる", body: "現在地の近くの駅を選ぶか、気になっていた駅名を入れる。"),
+                Step(title: "物語のゆかりを読む", body: "土地にまつわるひとかけらを読む。ここまでは無料。"),
+                Step(title: "散歩道を開く", body: "コインを1枚使って、徒歩圏の散歩道の案内をつくる。一度つくった駅は端末に残り、開き直しにコインはいらない。"),
+                Step(title: "聴きながら歩き、駅へ帰る", body: "土地の歴史と今を耳でたどり、無駄な寄り道をして同じ駅へ戻る。"),
+            ],
+            showBrand: true
+        ),
+    ]
+}

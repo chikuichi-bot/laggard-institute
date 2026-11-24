@@ -1,0 +1,620 @@
+.mh {
+  --ink: #1f1b17;
+  --body: #12100e;
+  --fog: #4a433a;
+  --mist: #6e675e;
+  --paper: #f9f4e6;
+  --canvas: #f5eedc;
+  --warm: #b5493a;
+  --river: #6b8cca;
+  --moss: #5f7d6a;
+  --gold: #c5a059;
+  --line: #e3d5c1;
+  --display: var(--font-mishiranu-display), "Hiragino Mincho ProN", serif;
+  --sans: var(--font-mishiranu-sans), "Hiragino Sans", sans-serif;
+
+  min-height: 100vh;
+  color: var(--body);
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(107, 140, 202, 0.1), transparent 55%),
+    radial-gradient(ellipse 70% 40% at 90% 10%, rgba(181, 73, 58, 0.08), transparent 50%),
+    linear-gradient(180deg, #f7f0e0 0%, var(--canvas) 40%, #efe6d2 100%);
+  font-family: var(--display);
+  padding: 2rem 1.25rem 4rem;
+}
+
+.mh * {
+  box-sizing: border-box;
+}
+
+.mh-hero {
+  width: min(1080px, 100%);
+  margin: 0 auto 2rem;
+}
+
+.mh-hero-kicker {
+  margin: 0 0 0.6rem;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  color: var(--mist);
+}
+
+.mh-hero h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.55rem, 4vw, 2.2rem);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.mh-hero-lead {
+  margin: 0 0 1rem;
+  max-width: 42rem;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--fog);
+}
+
+.mh-hero-lead strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.mh-hero-now {
+  margin: 0 0 1.4rem;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+}
+
+.mh-hero-now a {
+  color: var(--warm);
+}
+
+.mh-picker {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 800px) {
+  .mh-picker {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.mh-pick {
+  display: block;
+  text-align: left;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.mh-pick strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.98rem;
+}
+
+.mh-pick span {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--mist);
+}
+
+.mh-pick--on {
+  border-color: var(--warm);
+  box-shadow: inset 0 0 0 1px var(--warm);
+  background: #fffaf0;
+}
+
+.mh-stage {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.mh-stage-desktop {
+  display: none;
+  gap: 1.25rem;
+  justify-content: center;
+}
+
+.mh-stage-mobile {
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 1100px) {
+  .mh-stage-desktop {
+    display: flex;
+  }
+  .mh-stage-mobile {
+    display: none;
+  }
+}
+
+.mh-phone {
+  margin: 0;
+  width: min(360px, 100%);
+}
+
+.mh-phone-cap {
+  margin-top: 0.75rem;
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--mist);
+}
+
+.mh-phone-bezel {
+  background: #2a2622;
+  border-radius: 28px;
+  padding: 10px;
+  box-shadow:
+    0 18px 40px rgba(31, 27, 23, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.mh-phone-notch {
+  width: 34%;
+  height: 18px;
+  margin: 0 auto 8px;
+  background: #1a1714;
+  border-radius: 0 0 12px 12px;
+}
+
+.mh-phone-screen {
+  height: 680px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--canvas);
+}
+
+.mh-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+  color: var(--body);
+  font-family: var(--display);
+}
+
+.mh-back {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--mist);
+  cursor: pointer;
+  text-align: left;
+}
+
+.mh-meta {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--mist);
+  line-height: 1.4;
+}
+
+.mh-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+  flex-shrink: 0;
+}
+
+.mh-tab {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  padding: 8px 2px 6px;
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  color: var(--mist);
+}
+
+.mh-tab img {
+  opacity: 0.55;
+}
+
+.mh-tab--on {
+  color: var(--warm);
+}
+
+.mh-tab--on img {
+  opacity: 1;
+  filter: sepia(0.6) saturate(3) hue-rotate(-20deg);
+}
+
+.mh-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.75rem;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--fog);
+}
+
+.mh-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mh-footer {
+  padding: 0.65rem 0.9rem 0.75rem;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+/* —— 地図モック —— */
+.mh-map {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background:
+    linear-gradient(160deg, #e8f0e4 0%, #dde8d8 40%, #d5e0d2 100%);
+  overflow: hidden;
+}
+
+.mh-map--compact {
+  flex: 1;
+  min-height: 180px;
+}
+
+.mh-map-river {
+  position: absolute;
+  background: color-mix(in srgb, var(--river) 55%, #c5d8ef);
+  border-radius: 40px;
+  opacity: 0.85;
+}
+
+.mh-map-river--w {
+  width: 42px;
+  height: 120%;
+  left: 28%;
+  top: -10%;
+  transform: rotate(18deg);
+}
+
+.mh-map-river--e {
+  width: 36px;
+  height: 120%;
+  left: 48%;
+  top: -15%;
+  transform: rotate(-22deg);
+}
+
+.mh-map-delta {
+  position: absolute;
+  left: 34%;
+  top: 48%;
+  width: 70px;
+  height: 48px;
+  background: color-mix(in srgb, #c8b89a 70%, #efe8d6);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  opacity: 0.9;
+}
+
+.mh-map-pin {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(31, 27, 23, 0.2);
+  transform: translate(-50%, -50%);
+}
+
+.mh-map-pin--station {
+  width: auto;
+  height: auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  border: 0;
+}
+
+.mh-map-pin--sight {
+  background: var(--moss);
+}
+.mh-map-pin--meal {
+  background: var(--warm);
+}
+.mh-map-pin--gift {
+  background: #9a7a8c;
+}
+.mh-map-pin--rest {
+  background: var(--gold);
+}
+.mh-map-pin--tip {
+  background: var(--river);
+}
+
+.mh-map-recenter {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+/* —— いまの問題形 —— */
+.mh-current-top {
+  padding: 0.55rem 1rem 0.7rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.mh-current-top h1 {
+  margin: 0.15rem 0 0.1rem;
+  font-size: 1.55rem;
+  font-weight: 600;
+}
+
+.mh-current-top .mh-sub {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--fog);
+  line-height: 1.4;
+}
+
+.mh-current-card {
+  padding: 0.7rem 1rem 0.75rem;
+  background: var(--canvas);
+  flex-shrink: 0;
+}
+
+.mh-eyebrow {
+  margin: 0 0 0.2rem;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--mist);
+}
+
+.mh-current-card h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.mh-catch {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  color: var(--fog);
+  line-height: 1.45;
+}
+
+.mh-radius {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--river);
+}
+
+/* —— A · 一行ストリップ —— */
+.mh-a-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.mh-a-title-wrap h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.mh-a-title-wrap p {
+  margin: 0.1rem 0 0;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--mist);
+}
+
+.mh-a-pins {
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--river) 16%, var(--paper));
+  color: var(--river);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 650;
+  display: grid;
+  place-items: center;
+}
+
+.mh-a-foot {
+  padding: 0.55rem 0.85rem 0.65rem;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.mh-a-catch {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--fog);
+  line-height: 1.45;
+}
+
+/* —— B · 一枚カード —— */
+.mh-b-card {
+  padding: 0.65rem 0.95rem 0.85rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mh-b-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mh-b-chip {
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--warm);
+  border: 1px solid color-mix(in srgb, var(--warm) 35%, transparent);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  background: color-mix(in srgb, var(--warm) 8%, var(--paper));
+}
+
+.mh-b-station {
+  margin: 0.15rem 0 0;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--mist);
+}
+
+.mh-b-card h1 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.mh-b-catch {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--fog);
+  line-height: 1.5;
+}
+
+.mh-b-stats {
+  margin: 0.15rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--river);
+}
+
+.mh-b-stats span:not(:last-child)::after {
+  content: "";
+}
+
+/* —— C · 地図の上に浮く —— */
+.mh-c-mapwrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mh-c .mh-map {
+  position: absolute;
+  inset: 0;
+}
+
+.mh-c-float {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  box-shadow: 0 8px 22px rgba(31, 27, 23, 0.12);
+}
+
+.mh-c-back {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--fog);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mh-c-float h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.mh-c-float p {
+  margin: 0.1rem 0 0;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--mist);
+}
+
+.mh-c-sheet {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  box-shadow: 0 8px 22px rgba(31, 27, 23, 0.1);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.mh-c-catch {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--fog);
+}
