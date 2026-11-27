@@ -50,3 +50,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# private sakura preview auth (local only)
+.preview-apps-intro-auth/
+preview-apps-intro-bundle/
+**/.htpasswd
