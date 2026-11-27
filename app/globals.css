@@ -711,6 +711,49 @@ body:has(.content-card--home) {
   margin-bottom: 0;
 }
 
+.app-detail-section--gallery {
+  margin-top: 4px;
+}
+
+.app-detail-gallery-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-sub);
+}
+
+.app-detail-gallery {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.app-detail-gallery-item {
+  margin: 0;
+  border: 1px solid #cfc0ab;
+  border-radius: 14px;
+  background: #fffef8;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(43, 39, 34, 0.06);
+}
+
+.app-detail-gallery-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: top;
+}
+
+@media (min-width: 720px) {
+  .app-detail-gallery {
+    grid-template-columns: repeat(3, minmax(0, 180px));
+  }
+}
+
 .app-detail-facts {
   margin: 0 0 28px;
   padding: 0;

@@ -19,7 +19,7 @@ mkdir -p "$OUT_DIR/$ASSET_DIR"
 # Next の静的アセットは HTML とセットで必須
 cp -R "$SRC_DIR/$ASSET_DIR/_next" "$OUT_DIR/$ASSET_DIR/_next"
 
-# アプリページ本体
+# アプリページ本体（個別紹介 HTML + public/apps 由来の画面ギャラリー）
 cp -R "$SRC_DIR/$ASSET_DIR/apps" "$OUT_DIR/$ASSET_DIR/apps"
 
 # アイコン（アプリ一覧で使用）
@@ -32,7 +32,9 @@ if [[ -d "$SRC_DIR/$ASSET_DIR/icons" ]]; then
     wazukana-byo.png \
     tsuitara-memo.png \
     4s-camera.png \
-    abomon-game.png
+    abomon-game.png \
+    sorakara.png \
+    past-today.png
   do
     if [[ -f "$SRC_DIR/$ASSET_DIR/icons/$name" ]]; then
       cp "$SRC_DIR/$ASSET_DIR/icons/$name" "$OUT_DIR/$ASSET_DIR/icons/$name"
@@ -59,7 +61,7 @@ cat > "$OUT_DIR/README-UPLOAD.txt" <<EOF
 【このフォルダの中身をそのまま上書き】
   lagado2026/apps/
   lagado2026/_next/
-  lagado2026/icons/   （7個のアイコン）
+  lagado2026/icons/
   lagado2026/favicon.ico （あれば）
 
 【公開URL】

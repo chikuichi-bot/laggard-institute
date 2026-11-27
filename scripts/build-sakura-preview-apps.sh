@@ -58,6 +58,16 @@ fi
 cp -R "$SRC/apps" "$OUT_ROOT/$ASSET_DIR/apps"
 cp -R "$SRC/_next" "$OUT_ROOT/$ASSET_DIR/_next"
 
+# public/apps の画面ギャラリーが export に載っていなければ補完
+if [[ -d public/apps ]]; then
+  for slug_dir in public/apps/*; do
+    [[ -d "$slug_dir" ]] || continue
+    slug="$(basename "$slug_dir")"
+    mkdir -p "$OUT_ROOT/$ASSET_DIR/apps/$slug"
+    cp -R "$slug_dir"/. "$OUT_ROOT/$ASSET_DIR/apps/$slug"/
+  done
+fi
+
 mkdir -p "$OUT_ROOT/$ASSET_DIR/icons"
 for name in \
   omikuji-bunko.png \

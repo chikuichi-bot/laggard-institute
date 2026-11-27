@@ -57,6 +57,33 @@ export default function AppDetailView({ app, others }: AppDetailViewProps) {
         </div>
       </section>
 
+      {app.gallery && app.gallery.length > 0 ? (
+        <section
+          className="app-detail-section app-detail-section--gallery"
+          aria-labelledby="app-detail-gallery"
+        >
+          <h2 id="app-detail-gallery" className="app-detail-section-title">
+            画面のようす
+          </h2>
+          <p className="app-detail-gallery-note">
+            App Store に掲載されている画面です（見た目の参考）。
+          </p>
+          <ul className="app-detail-gallery">
+            {app.gallery.map((src, index) => (
+              <li key={src} className="app-detail-gallery-item">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="app-detail-gallery-image"
+                  src={assetUrl(src)}
+                  alt={`${app.name}の画面 ${index + 1}`}
+                  loading="lazy"
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <dl className="app-detail-facts">
         <div className="app-detail-fact">
           <dt>制作日</dt>
