@@ -703,6 +703,14 @@ body:has(.content-card--home) {
   color: var(--text-main);
 }
 
+.app-detail-description > p {
+  margin: 0 0 1em;
+}
+
+.app-detail-description > p:last-child {
+  margin-bottom: 0;
+}
+
 .app-detail-facts {
   margin: 0 0 28px;
   padding: 0;

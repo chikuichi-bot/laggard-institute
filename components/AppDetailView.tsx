@@ -3,6 +3,7 @@ import { StoreBadges } from "@/components/StoreBadges";
 import { assetUrl } from "@/lib/asset-path";
 import {
   appHref,
+  appIntroParagraphs,
   formatAppPlatformLine,
   formatAppReleasedAt,
   type CatalogApp,
@@ -15,6 +16,7 @@ type AppDetailViewProps = {
 
 export default function AppDetailView({ app, others }: AppDetailViewProps) {
   const platformLine = formatAppPlatformLine(app.editions);
+  const introParagraphs = appIntroParagraphs(app);
 
   return (
     <article className="content-card content-card--apps app-detail">
@@ -48,7 +50,11 @@ export default function AppDetailView({ app, others }: AppDetailViewProps) {
         <h2 id="app-detail-about" className="app-detail-section-title">
           紹介
         </h2>
-        <p className="app-detail-description">{app.description}</p>
+        <div className="app-detail-description">
+          {introParagraphs.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
       </section>
 
       <dl className="app-detail-facts">
