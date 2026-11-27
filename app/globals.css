@@ -621,7 +621,10 @@ body:has(.content-card--home) {
   display: flex;
   flex-direction: column;
   gap: 22px;
+  width: 100%;
   max-width: 42rem;
+  margin-inline: auto;
+  align-self: center;
 }
 
 .app-detail-nav {
@@ -1747,8 +1750,17 @@ body:has(.content-card--home) {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
+  width: 100%;
+  max-width: 980px;
+  margin-inline: auto;
   padding: 32px 24px;
   overflow: visible;
+  box-sizing: border-box;
+}
+
+/* 詳細は読み幅を保ちつつカード内でも中央 */
+.content-card--apps.app-detail {
+  max-width: 42rem;
 }
 
 .content-card--flat {
