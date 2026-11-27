@@ -620,18 +620,21 @@ body:has(.content-card--home) {
 .app-detail {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 22px;
+  max-width: 42rem;
 }
 
 .app-detail-nav {
-  margin: 0 0 20px;
+  margin: 0;
 }
 
 .app-detail-header {
   display: flex;
   align-items: flex-start;
   gap: 18px;
-  margin: 0 0 28px;
+  margin: 0;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #e0d2bc;
 }
 
 .app-detail-icon-wrap {
@@ -658,87 +661,127 @@ body:has(.content-card--home) {
 .app-detail-heading {
   flex: 1;
   min-width: 0;
-  padding-top: 4px;
+  padding-top: 6px;
 }
 
 .app-detail-eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
   color: var(--text-sub);
 }
 
 .app-detail-title {
-  margin: 0 0 8px;
-  font-size: 26px;
+  margin: 0 0 10px;
+  font-size: clamp(24px, 4.2vw, 30px);
   font-weight: 600;
-  letter-spacing: 0.03em;
-  line-height: 1.35;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
   color: var(--text-main);
 }
 
 .app-detail-platforms {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
+  letter-spacing: 0.04em;
   color: var(--text-sub);
 }
 
-.app-detail-section {
-  margin: 0 0 24px;
+.app-detail-panel {
+  margin: 0;
+  padding: 18px 18px 20px;
+  border: 1px solid #e0d2bc;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fffdf7 0%, #f7f0e0 100%);
+}
+
+.app-detail-panel-head {
+  margin: 0 0 14px;
 }
 
 .app-detail-section-title {
-  margin: 0 0 10px;
-  font-size: 14px;
+  margin: 0 0 14px;
+  padding-left: 10px;
+  border-left: 3px solid var(--accent-color);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--text-sub);
-}
-
-.app-detail-description {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.9;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
   color: var(--text-main);
 }
 
-.app-detail-description > p {
-  margin: 0 0 1em;
+.app-detail-panel-head .app-detail-section-title {
+  margin-bottom: 6px;
 }
 
-.app-detail-description > p:last-child {
-  margin-bottom: 0;
+.app-detail-intro {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.app-detail-section--gallery {
-  margin-top: 4px;
+.app-detail-intro-item {
+  margin: 0;
+  padding: 0 0 16px;
+  border-bottom: 1px solid #e8dcc8;
+}
+
+.app-detail-intro-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.app-detail-intro-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--accent-color);
+}
+
+.app-detail-intro-body {
+  margin: 0;
+  max-width: 36em;
+  font-size: 16px;
+  line-height: 1.95;
+  letter-spacing: 0.02em;
+  color: var(--text-main);
+  text-wrap: pretty;
 }
 
 .app-detail-gallery-note {
-  margin: 0 0 14px;
+  margin: 0;
   font-size: 12px;
   letter-spacing: 0.04em;
+  line-height: 1.6;
   color: var(--text-sub);
 }
 
 .app-detail-gallery {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 4px 2px 2px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 14px;
-  align-items: start;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(148px, 168px);
+  gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
 }
 
 .app-detail-gallery-item {
   margin: 0;
-  border: 1px solid #cfc0ab;
+  border: 1px solid #d4c4ad;
   border-radius: 14px;
   background: #fffef8;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(43, 39, 34, 0.06);
+  scroll-snap-align: start;
 }
 
 .app-detail-gallery-image {
@@ -750,46 +793,56 @@ body:has(.content-card--home) {
 
 @media (min-width: 720px) {
   .app-detail-gallery {
-    grid-template-columns: repeat(3, minmax(0, 180px));
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, minmax(0, 168px));
+    grid-auto-columns: unset;
+    overflow-x: visible;
   }
 }
 
+.app-detail-panel--facts {
+  padding: 14px 18px;
+  background: #f3ecdc;
+}
+
 .app-detail-facts {
-  margin: 0 0 28px;
+  margin: 0;
   padding: 0;
   display: grid;
-  gap: 10px 24px;
+  gap: 10px 28px;
+}
+
+@media (min-width: 520px) {
+  .app-detail-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .app-detail-fact {
   display: grid;
-  grid-template-columns: 7em 1fr;
-  gap: 8px;
-  align-items: baseline;
+  gap: 4px;
+  align-items: start;
 }
 
 .app-detail-fact dt {
   margin: 0;
-  font-size: 12px;
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   color: var(--text-sub);
 }
 
 .app-detail-fact dd {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
+  letter-spacing: 0.03em;
   color: var(--text-main);
-}
-
-.app-detail-section--actions {
-  padding-top: 4px;
 }
 
 .app-detail-actions {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
 }
 
 .app-detail .store-badges {
@@ -808,10 +861,9 @@ body:has(.content-card--home) {
   gap: 8px;
 }
 
-.app-detail-section--others {
-  margin-top: 8px;
-  padding-top: 20px;
-  border-top: 1px solid #e4d8c6;
+.app-detail-panel--others {
+  background: transparent;
+  border-style: dashed;
 }
 
 .app-detail-others {
@@ -820,7 +872,7 @@ body:has(.content-card--home) {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 14px;
+  gap: 10px 16px;
 }
 
 .app-detail-other-link {
@@ -828,6 +880,7 @@ body:has(.content-card--home) {
   text-decoration: underline;
   text-underline-offset: 3px;
   font-size: 14px;
+  letter-spacing: 0.02em;
 }
 
 .app-detail-other-link:hover {
@@ -835,8 +888,13 @@ body:has(.content-card--home) {
 }
 
 @media (max-width: 719px) {
+  .app-detail {
+    gap: 16px;
+  }
+
   .app-detail-header {
     gap: 14px;
+    padding-bottom: 16px;
   }
 
   .app-detail-icon-wrap {
@@ -846,16 +904,14 @@ body:has(.content-card--home) {
     border-radius: 18px;
   }
 
-  .app-detail-title {
-    font-size: 22px;
+  .app-detail-panel {
+    padding: 16px 14px 18px;
+    border-radius: 14px;
   }
 
-  .app-detail-description {
+  .app-detail-intro-body {
     font-size: 15px;
-  }
-
-  .app-detail-fact {
-    grid-template-columns: 6em 1fr;
+    line-height: 1.9;
   }
 }
 

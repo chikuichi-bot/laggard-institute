@@ -14,6 +14,8 @@ type AppDetailViewProps = {
   others: CatalogApp[];
 };
 
+const INTRO_LABELS = ["なにか", "だれ向け", "どう使うか"] as const;
+
 export default function AppDetailView({ app, others }: AppDetailViewProps) {
   const platformLine = formatAppPlatformLine(app.editions);
   const introParagraphs = appIntroParagraphs(app);
@@ -46,28 +48,40 @@ export default function AppDetailView({ app, others }: AppDetailViewProps) {
         </div>
       </header>
 
-      <section className="app-detail-section" aria-labelledby="app-detail-about">
+      <section
+        className="app-detail-panel app-detail-panel--intro"
+        aria-labelledby="app-detail-about"
+      >
         <h2 id="app-detail-about" className="app-detail-section-title">
           紹介
         </h2>
-        <div className="app-detail-description">
-          {introParagraphs.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </div>
+        <ol className="app-detail-intro">
+          {introParagraphs.map((paragraph, index) => {
+            const label =
+              index < INTRO_LABELS.length ? INTRO_LABELS[index] : `続き ${index + 1}`;
+            return (
+              <li key={paragraph} className="app-detail-intro-item">
+                <p className="app-detail-intro-label">{label}</p>
+                <p className="app-detail-intro-body">{paragraph}</p>
+              </li>
+            );
+          })}
+        </ol>
       </section>
 
       {app.gallery && app.gallery.length > 0 ? (
         <section
-          className="app-detail-section app-detail-section--gallery"
+          className="app-detail-panel app-detail-panel--gallery"
           aria-labelledby="app-detail-gallery"
         >
-          <h2 id="app-detail-gallery" className="app-detail-section-title">
-            画面のようす
-          </h2>
-          <p className="app-detail-gallery-note">
-            App Store に掲載されている画面です（見た目の参考）。
-          </p>
+          <div className="app-detail-panel-head">
+            <h2 id="app-detail-gallery" className="app-detail-section-title">
+              画面のようす
+            </h2>
+            <p className="app-detail-gallery-note">
+              App Store に掲載されている画面です（見た目の参考）。
+            </p>
+          </div>
           <ul className="app-detail-gallery">
             {app.gallery.map((src, index) => (
               <li key={src} className="app-detail-gallery-item">
@@ -84,22 +98,27 @@ export default function AppDetailView({ app, others }: AppDetailViewProps) {
         </section>
       ) : null}
 
-      <dl className="app-detail-facts">
-        <div className="app-detail-fact">
-          <dt>制作日</dt>
-          <dd>{formatAppReleasedAt(app.releasedAt)}</dd>
-        </div>
-        {app.updatedAt ? (
+      <section
+        className="app-detail-panel app-detail-panel--facts"
+        aria-label="制作情報"
+      >
+        <dl className="app-detail-facts">
           <div className="app-detail-fact">
-            <dt>最新更新日</dt>
-            <dd>{formatAppReleasedAt(app.updatedAt)}</dd>
+            <dt>制作日</dt>
+            <dd>{formatAppReleasedAt(app.releasedAt)}</dd>
           </div>
-        ) : null}
-      </dl>
+          {app.updatedAt ? (
+            <div className="app-detail-fact">
+              <dt>最新更新日</dt>
+              <dd>{formatAppReleasedAt(app.updatedAt)}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </section>
 
       {app.editions.length > 0 || app.friendOffer ? (
         <section
-          className="app-detail-section app-detail-section--actions"
+          className="app-detail-panel app-detail-panel--actions"
           aria-labelledby="app-detail-get"
         >
           <h2 id="app-detail-get" className="app-detail-section-title">
@@ -132,7 +151,7 @@ export default function AppDetailView({ app, others }: AppDetailViewProps) {
 
       {others.length > 0 ? (
         <section
-          className="app-detail-section app-detail-section--others"
+          className="app-detail-panel app-detail-panel--others"
           aria-labelledby="app-detail-others"
         >
           <h2 id="app-detail-others" className="app-detail-section-title">
