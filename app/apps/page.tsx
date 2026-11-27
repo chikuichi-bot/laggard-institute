@@ -1,7 +1,8 @@
+import Link from "next/link";
 import SiteShell from "@/components/SiteShell";
-import { StoreBadges } from "@/components/StoreBadges";
 import { assetUrl } from "@/lib/asset-path";
 import {
+  appHref,
   apps,
   commissionedApps,
   formatAppPlatformLine,
@@ -21,36 +22,39 @@ function AppListItem({
 
   return (
     <li className="app-connect-item">
-      <div className="app-connect-row">
-        <span className="app-connect-icon-wrap" aria-hidden="true">
-          {app.icon ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="app-connect-icon" src={assetUrl(app.icon)} alt="" />
-          ) : (
-            <span className="app-connect-icon app-connect-icon--placeholder" />
-          )}
-        </span>
-        <div className="app-connect-copy">
-          <div className="app-connect-name">
-            {app.name}
-            {commissioned ? (
-              <span className="app-commissioned-tag">委託</span>
+      <Link href={appHref(app.slug)} className="app-connect-link">
+        <div className="app-connect-row">
+          <span className="app-connect-icon-wrap" aria-hidden="true">
+            {app.icon ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="app-connect-icon" src={assetUrl(app.icon)} alt="" />
+            ) : (
+              <span className="app-connect-icon app-connect-icon--placeholder" />
+            )}
+          </span>
+          <div className="app-connect-copy">
+            <div className="app-connect-name">
+              {app.name}
+              {commissioned ? (
+                <span className="app-commissioned-tag">委託</span>
+              ) : null}
+            </div>
+            {platformLine ? (
+              <div className="app-connect-platforms">{platformLine}</div>
             ) : null}
+            <p className="app-connect-desc">{app.description}</p>
+            <p className="app-connect-date">
+              制作日 {formatAppReleasedAt(app.releasedAt)}
+            </p>
+            {app.updatedAt ? (
+              <p className="app-connect-date">
+                最新更新日 {formatAppReleasedAt(app.updatedAt)}
+              </p>
+            ) : null}
+            <p className="app-connect-more">紹介を見る</p>
           </div>
-          {platformLine ? (
-            <div className="app-connect-platforms">{platformLine}</div>
-          ) : null}
-          <p className="app-connect-desc">{app.description}</p>
-          <p className="app-connect-date">
-            制作日 {formatAppReleasedAt(app.releasedAt)}
-          </p>
         </div>
-      </div>
-      {app.editions.length > 0 ? (
-        <div className="app-connect-actions">
-          <StoreBadges editions={app.editions} />
-        </div>
-      ) : null}
+      </Link>
     </li>
   );
 }
@@ -64,11 +68,11 @@ export default function AppsPage() {
       <article className="content-card content-card--apps">
         <div className="apps-block horizontal-body">
           <p className="apps-lead">
-            これはラガード研究所（Lagado）が開発したアプリです。
+            これはラガード研究所（Lagado）が開発したアプリです。タップすると、それぞれの紹介ページへ進みます。
           </p>
           <ul className="app-list app-list--connect">
             {appsByDate.map((app) => (
-              <AppListItem key={app.name} app={app} />
+              <AppListItem key={app.slug} app={app} />
             ))}
           </ul>
 
@@ -81,7 +85,7 @@ export default function AppsPage() {
             </p>
             <ul className="app-list app-list--connect">
               {commissionedByDate.map((app) => (
-                <AppListItem key={app.name} app={app} commissioned />
+                <AppListItem key={app.slug} app={app} commissioned />
               ))}
             </ul>
           </section>
