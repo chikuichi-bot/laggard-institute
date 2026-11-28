@@ -41,9 +41,6 @@ export default function AmappolaPage() {
 
         {canPurchase ? (
           <section className="detail-antique-section detail-antique-section--actions">
-            {product.priceLabel ? (
-              <p className="detail-antique-price amappola-price-display">{product.priceLabel}</p>
-            ) : null}
             <Link href="/amappola/purchase" className="action-btn action-btn--primary detail-antique-buy">
               購入する
             </Link>
