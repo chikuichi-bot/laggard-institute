@@ -97,7 +97,7 @@ export default function ItemDetailView({ category, item, items }: ItemDetailView
     <>
       <div className="action-bar">
         <Link href={base} className="action-btn">
-          ← {categoryLabel(category)}一覧
+          ← {categoryLabel(category)}
         </Link>
       </div>
 

@@ -1,16 +1,15 @@
-
 import FramedCatalog from "@/components/FramedCatalog";
-import ItemGrid from "@/components/ItemGrid";
+import RandomFind from "@/components/RandomFind";
 import SiteShell from "@/components/SiteShell";
-import { readCatalog, shuffleItems } from "@/lib/items";
+import { readCatalog } from "@/lib/items";
 
 export default async function CityPage() {
-  const items = shuffleItems(await readCatalog("city"));
+  const items = await readCatalog("city");
 
   return (
     <SiteShell tagline="街に落ちていた、名前のない断片。">
       <FramedCatalog>
-        <ItemGrid category="city" items={items} />
+        <RandomFind category="city" items={items} />
       </FramedCatalog>
     </SiteShell>
   );
