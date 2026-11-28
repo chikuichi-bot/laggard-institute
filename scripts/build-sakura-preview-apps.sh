@@ -2,8 +2,9 @@
 # 私設プレビュー用: basePath=/preview-apps-intro で静的ビルドし、
 # www/preview-apps-intro/ に上げる束だけを作る（本番 lagado2026 には触れない）
 #
-# 含む: apps 紹介 · 街で見つけたモノ · 海で見つけたモノ
-# 含まない: antiques · amappola · api/admin（本番公開面・認証付き本番とは別）
+# 含む: apps 紹介 · 街で見つけたモノ · 海で見つけたモノ · アマポーラ詩集
+# 含まない: antiques · api/admin（本番公開面・認証付き本番とは別）
+# 注: 購入 API（Stripe）は静的束に含まない。購入ページは表示のみ（カード決済はプレビューでは動かない）
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -14,12 +15,11 @@ PREVIEW_BASE="/preview-apps-intro"
 OUT_ROOT="preview-apps-intro-bundle"
 ASSET_DIR="preview-apps-intro"
 
-# city / sea は私設プレビューに載せる（SKIP しない）
+# city / sea / amappola は私設プレビューに載せる（SKIP しない）
 SKIP_MOVE=(
   "app/api"
   "app/admin"
   "app/antiques"
-  "app/amappola"
 )
 
 restore_skipped() {
@@ -38,7 +38,7 @@ for path in "${SKIP_MOVE[@]}"; do
   stash_path_for_export "$path"
 done
 
-echo "→ 私設プレビュービルド basePath=${PREVIEW_BASE}（apps + city + sea）"
+echo "→ 私設プレビュービルド basePath=${PREVIEW_BASE}（apps + city + sea + amappola）"
 LOLIPOP_EXPORT=1 LOLIPOP_BASE_PATH="$PREVIEW_BASE" npm run build
 
 restore_skipped
@@ -70,6 +70,7 @@ copy_tree "_next"
 copy_tree "apps"
 copy_tree "city"
 copy_tree "sea"
+copy_tree "amappola"
 
 # ルート HTML（あれば）
 if [[ -f "$SRC/index.html" ]]; then
@@ -95,7 +96,7 @@ if [[ -d public/apps ]]; then
   done
 fi
 
-# 街・海の画像（カタログが参照する uploads）
+# 街・海・アマポーラの画像（カタログが参照する uploads）
 mkdir -p "$OUT_ROOT/$ASSET_DIR/uploads"
 if [[ -d public/uploads/city ]]; then
   echo "→ uploads/city を同梱"
@@ -104,6 +105,10 @@ fi
 if [[ -d public/uploads/sea ]]; then
   echo "→ uploads/sea を同梱"
   cp -R public/uploads/sea "$OUT_ROOT/$ASSET_DIR/uploads/sea"
+fi
+if [[ -d public/uploads/amappola ]]; then
+  echo "→ uploads/amappola を同梱"
+  cp -R public/uploads/amappola "$OUT_ROOT/$ASSET_DIR/uploads/amappola"
 fi
 
 mkdir -p "$OUT_ROOT/$ASSET_DIR/icons"
@@ -142,13 +147,14 @@ if [[ ! -f "$OUT_ROOT/$ASSET_DIR/index.html" ]]; then
   <p><a href="${PREVIEW_BASE}/apps/">アプリ一覧へ</a></p>
   <p><a href="${PREVIEW_BASE}/city/">街で見つけたモノ</a></p>
   <p><a href="${PREVIEW_BASE}/sea/">海で見つけたモノ</a></p>
+  <p><a href="${PREVIEW_BASE}/amappola/">アマポーラ詩集</a></p>
 </body>
 </html>
 EOF
 fi
 
 cat > "$OUT_ROOT/README-UPLOAD.txt" <<EOF
-私設プレビュー（apps + 街 + 海）
+私設プレビュー（apps + 街 + 海 + アマポーラ詩集）
 
 【上げ先】
   さくら www/preview-apps-intro/ のみ
@@ -161,6 +167,8 @@ cat > "$OUT_ROOT/README-UPLOAD.txt" <<EOF
   https://lagado.jp/preview-apps-intro/apps/
   https://lagado.jp/preview-apps-intro/city/
   https://lagado.jp/preview-apps-intro/sea/
+  https://lagado.jp/preview-apps-intro/amappola/
+  https://lagado.jp/preview-apps-intro/amappola/purchase/
 EOF
 
 echo "→ 完了: $OUT_ROOT/$ASSET_DIR/"
@@ -171,3 +179,5 @@ echo "  city:"
 find "$OUT_ROOT/$ASSET_DIR/city" -name index.html 2>/dev/null | wc -l
 echo "  sea:" 
 find "$OUT_ROOT/$ASSET_DIR/sea" -name index.html 2>/dev/null | wc -l
+echo "  amappola:" 
+find "$OUT_ROOT/$ASSET_DIR/amappola" -name index.html 2>/dev/null | wc -l
