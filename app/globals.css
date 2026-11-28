@@ -309,12 +309,6 @@ body:has(.content-card--home) {
   margin: 0;
 }
 
-.amappola-price-display {
-  margin: 0 0 4px;
-  text-align: center;
-  font-size: 17px;
-}
-
 .card-actions {
   display: none;
 }
